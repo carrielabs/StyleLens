@@ -98,14 +98,16 @@ export default function ImageUploader({ onStart, onSuccess, onError, disabled }:
   return (
     <div 
       style={{
-        border: `1px dashed ${isDragging ? 'var(--border-strong)' : 'var(--border-base)'}`,
-        backgroundColor: isDragging ? 'var(--bg-hover)' : 'transparent',
-        borderRadius: 'var(--radius-base)',
-        padding: '40px 24px',
+        border: 'none',
+        backgroundColor: isDragging ? 'var(--bg-hover)' : 'var(--bg-elevated)',
+        borderRadius: '24px',
+        padding: '64px 32px',
         textAlign: 'center',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'all 0.2s',
-        opacity: disabled ? 0.5 : 1
+        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        opacity: disabled ? 0.5 : 1,
+        transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+        boxShadow: isDragging ? '0 24px 48px rgba(0,0,0,0.06)' : 'none'
       }}
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
@@ -123,14 +125,14 @@ export default function ImageUploader({ onStart, onSuccess, onError, disabled }:
         onChange={handleChange}
         disabled={disabled}
       />
-      <div style={{ fontSize: '28px', marginBottom: '12px', opacity: isDragging ? 0.8 : 0.4 }}>
-        ↗
+      <div style={{ fontSize: '32px', fontWeight: 300, marginBottom: '20px', color: 'var(--text-secondary)', opacity: isDragging ? 1 : 0.4, transition: 'all 0.3s' }}>
+        +
       </div>
-      <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-        <strong style={{ color: 'var(--text-primary)' }}>拖拽图片到此处</strong> / 点击选择 / 或是直接粘贴 (Ctrl+V)
+      <div style={{ fontSize: '15px', color: 'var(--text-secondary)', letterSpacing: '-0.01em' }}>
+        <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Drop an image here</strong> or paste (Ctrl+V)
       </div>
-      <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
-        支持 JPG、PNG、WebP、GIF · 最大 20MB
+      <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '8px', letterSpacing: '0.02em' }}>
+        High-res UI screenshots yield the deepest analytical parsing.
       </div>
     </div>
   )

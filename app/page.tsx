@@ -6,6 +6,7 @@ import UrlInput from '@/components/extractor/UrlInput'
 import StyleReportView from '@/components/report/StyleReport'
 import ColorHighlighter from '@/components/report/ColorHighlighter'
 import type { StyleReport } from '@/lib/types'
+import Link from 'next/link'
 
 export default function Home() {
   const [isExtracting, setIsExtracting] = useState(false)
@@ -58,8 +59,8 @@ export default function Home() {
       {/* Editorial Navbar */}
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 40px', height: '64px',
-        borderBottom: '1px solid var(--border-subtle)'
+        padding: '0 40px', height: '80px',
+        borderBottom: 'none'
       }}>
         <div style={{
           fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, fontStyle: 'italic',
@@ -67,13 +68,13 @@ export default function Home() {
         }}>
           StyleLens Design Office
         </div>
-        <div style={{ display: 'flex', gap: '32px', fontSize: '13px', fontWeight: 500 }}>
-          <a href="/" className="nav-link" style={{ color: 'var(--text-primary)', borderBottom: '1px solid var(--text-primary)', paddingBottom: '4px' }}>提取风格</a>
-          <a href="/library" className="nav-link" style={{ color: 'var(--text-secondary)' }}>我的记录</a>
+        <div style={{ display: 'flex', gap: '32px', fontSize: '13px', fontWeight: 500, letterSpacing: '0.02em' }}>
+          <a href="/" className="nav-link" style={{ color: 'var(--text-primary)' }}>EXTRACT</a>
+          <a href="/library" className="nav-link" style={{ color: 'var(--text-tertiary)' }}>RECORDS</a>
         </div>
-        <button style={{ fontSize: '13px', color: 'var(--bg-base)', background: 'var(--text-primary)', padding: '6px 16px', borderRadius: '100px', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
-          登录
-        </button>
+        <Link href="/auth" style={{ fontSize: '12px', color: 'var(--text-inverse)', background: 'var(--text-primary)', padding: '10px 20px', borderRadius: '100px', textDecoration: 'none', fontWeight: 600, letterSpacing: '0.02em', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          LOGIN
+        </Link>
       </nav>
 
       {/* Main Studio Canvas */}
@@ -92,25 +93,23 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Minimal Input Board */}
-        <div style={{ width: '100%', maxWidth: '600px', background: 'var(--bg-surface)', padding: '40px', borderRadius: '16px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-subtle)' }}>
+        {/* Naked Input Cluster */}
+        <div style={{ width: '100%', maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
           {error && (
-            <div style={{ padding: '12px 16px', background: '#FDF7F7', border: '1px solid var(--error)', borderRadius: '8px', color: 'var(--error)', fontSize: '13px', marginBottom: '24px' }}>
+            <div style={{ padding: '14px 20px', background: '#FDF7F7', borderRadius: '12px', color: 'var(--error)', fontSize: '13px', textAlign: 'center' }}>
               {error}
             </div>
           )}
 
           <ImageUploader 
-            onStart={() => startExtraction('正在审视画面细节...')}
+            onStart={() => startExtraction('Running architectural analysis on image pixels...')}
             onSuccess={handleExtractionSuccess}
             onError={handleExtractionError}
             disabled={isExtracting}
           />
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '32px 0', color: 'var(--text-tertiary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-            or extract website
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+          <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 600 }}>
+            Or input url directly
           </div>
 
           <UrlInput

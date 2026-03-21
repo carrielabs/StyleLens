@@ -44,19 +44,16 @@ export default function AuthPage() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       
       <div style={{ 
-        width: '100%', maxWidth: '360px', 
-        background: 'var(--bg-surface)', 
-        border: '1px solid var(--border-subtle)', 
-        borderRadius: 'var(--radius-base)',
-        padding: '32px'
+        width: '100%', maxWidth: '380px', 
+        display: 'flex', flexDirection: 'column'
       }}>
         
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <Link href="/" style={{ fontSize: '18px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-            StyleLens
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <Link href="/" style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', fontStyle: 'italic', textDecoration: 'none' }}>
+            StyleLens Design Office
           </Link>
-          <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-            {isLogin ? '登录以访问素材库' : '创建新账号'}
+          <div style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginTop: '12px', letterSpacing: '0.02em' }}>
+            {isLogin ? 'Sign in to access your aesthetic records' : 'Create an account'}
           </div>
         </div>
 
@@ -73,24 +70,28 @@ export default function AuthPage() {
         <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>邮箱地址</label>
+            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Email Address</label>
             <input
               type="email"
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              style={inputStyle}
+              style={inputStyle as any}
+              onFocus={e => { e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onBlur={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)' }}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>密码</label>
+            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Password</label>
             <input
               type="password"
               required
               value={password}
               onChange={e => setPassword(e.target.value)}
-              style={inputStyle}
+              style={inputStyle as any}
+              onFocus={e => { e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onBlur={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)' }}
             />
           </div>
 
@@ -98,24 +99,28 @@ export default function AuthPage() {
             type="submit"
             disabled={loading}
             style={{
-              height: '40px', background: 'var(--text-primary)', color: 'var(--text-inverse)',
-              border: 'none', borderRadius: 'var(--radius-base)', fontSize: '14px', fontWeight: 500,
-              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, marginTop: '8px'
+              height: '56px', background: 'var(--text-primary)', color: 'var(--text-inverse)',
+              border: 'none', borderRadius: '100px', fontSize: '15px', fontWeight: 600, letterSpacing: '0.02em',
+              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, marginTop: '24px',
+              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxShadow: loading ? 'none' : '0 8px 24px rgba(0,0,0,0.15)'
             }}
+            onMouseEnter={e => !loading && (e.currentTarget.style.transform = 'translateY(-2px)' )}
+            onMouseLeave={e => !loading && (e.currentTarget.style.transform = 'translateY(0)' )}
           >
-            {loading ? '处理中...' : (isLogin ? '登录' : '注册')}
+            {loading ? 'Authenticating...' : (isLogin ? 'Sign In' : 'Create Account')}
           </button>
 
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-          {isLogin ? '没有账号？' : '已有账号？'}
+        <div style={{ textAlign: 'center', marginTop: '32px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+          {isLogin ? 'New to StyleLens?' : 'Already have an account?'}
           <button 
             type="button" 
             onClick={() => { setIsLogin(!isLogin); setError(null) }}
-            style={{ background: 'none', border: 'none', color: 'var(--text-primary)', marginLeft: '8px', cursor: 'pointer', fontWeight: 500 }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-primary)', marginLeft: '8px', cursor: 'pointer', fontWeight: 600, borderBottom: '1px solid var(--text-primary)', paddingBottom: '2px' }}
           >
-            {isLogin ? '点击注册' : '返回登录'}
+            {isLogin ? 'Create one' : 'Sign in'}
           </button>
         </div>
 
@@ -126,7 +131,9 @@ export default function AuthPage() {
 }
 
 const inputStyle = {
-  width: '100%', height: '40px', padding: '0 12px',
-  background: 'var(--bg-base)', border: '1px solid var(--border-base)',
-  borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none'
+  width: '100%', height: '56px', padding: '0 24px',
+  background: 'var(--bg-surface)', border: 'none',
+  borderRadius: '16px', color: 'var(--text-primary)', fontSize: '15px', outline: 'none',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+  transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
 }

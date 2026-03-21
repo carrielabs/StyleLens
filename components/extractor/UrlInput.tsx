@@ -73,12 +73,22 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
       style={{
         display: 'flex',
         alignItems: 'center',
-        background: 'var(--bg-surface)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: 'var(--radius-sm)',
-        overflow: 'hidden',
-        transition: 'border-color var(--duration-fast)',
-        opacity: disabled ? 0.5 : 1
+        background: 'var(--bg-elevated)',
+        borderRadius: '100px',
+        padding: '6px',
+        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        opacity: disabled ? 0.5 : 1,
+        width: '100%'
+      }}
+      onFocus={(e) => {
+        e.currentTarget.style.background = 'var(--bg-surface)'
+        e.currentTarget.style.boxShadow = '0 24px 48px rgba(0,0,0,0.06)'
+        e.currentTarget.style.transform = 'translateY(-2px)'
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.background = 'var(--bg-elevated)'
+        e.currentTarget.style.boxShadow = 'none'
+        e.currentTarget.style.transform = 'translateY(0)'
       }}
     >
       <input
@@ -89,29 +99,32 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
         disabled={disabled}
         style={{
           flex: 1,
-          height: '42px',
-          padding: '0 16px',
+          height: '48px',
+          padding: '0 24px',
           border: 'none',
           background: 'transparent',
           color: 'var(--text-primary)',
-          fontSize: '14px',
-          outline: 'none'
+          fontSize: '15px',
+          outline: 'none',
+          letterSpacing: '-0.01em'
         }}
       />
       <button
         type="submit"
         disabled={disabled || !url}
         style={{
-          height: '42px',
-          padding: '0 24px',
+          height: '48px',
+          padding: '0 32px',
           background: 'var(--text-primary)',
           color: 'var(--text-inverse)',
           border: 'none',
-          borderLeft: '1px solid var(--border-subtle)',
-          fontSize: '13px',
-          fontWeight: 500,
+          borderRadius: '100px',
+          fontSize: '14px',
+          fontWeight: 600,
+          letterSpacing: '0.02em',
           cursor: disabled || !url ? 'not-allowed' : 'pointer',
-          transition: 'opacity var(--duration-fast)'
+          transition: 'all var(--duration-fast)',
+          boxShadow: disabled || !url ? 'none' : '0 4px 12px rgba(0,0,0,0.1)'
         }}
         onMouseEnter={e => !disabled && url && (e.currentTarget.style.opacity = '0.88')}
         onMouseLeave={e => !disabled && url && (e.currentTarget.style.opacity = '1')}
