@@ -60,27 +60,28 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
           const style = styles[idx] || { ...styles[idx-1], size: '12px', label: 'SECONDARY' }
           
           return (
-            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
               
-              {/* The label itself IS the styled specimen, fulfilling user's 'no dummy text' vision */}
+              {/* The label itself IS the styled specimen */}
               <div style={{ 
                 fontSize: style.size, fontWeight: style.weight, color: 'var(--text-primary)', 
                 fontFamily: `"${font}", var(--font-sans), sans-serif`, 
-                lineHeight: style.lh, letterSpacing: data.letterSpacing, maxWidth: '100%',
+                lineHeight: style.lh, letterSpacing: 'normal', maxWidth: '100%',
                 wordBreak: 'break-word', margin: 0
               }}>
-                {style.label} · {font}
+                {style.label}
               </div>
               
-              {/* Technical Data Points under the Specimen */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>Weight: {style.weight}</div>
-                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>Size: {style.size}</div>
-                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>Letter-Sp: {data.letterSpacing || 'normal'}</div>
-                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>Line-Ht: {style.lh}</div>
+              {/* Technical Data Points Boxed Tags */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                 <MetricTag label="Font" value={font} />
+                 <MetricTag label="Weight" value={style.weight} />
+                 <MetricTag label="Size" value={style.size} />
+                 <MetricTag label="Line-Height" value={style.lh} />
+                 <MetricTag label="Letter-Spacing" value={data.letterSpacing} />
               </div>
               
-              {/* Divider between specimens, except the last one */}
+              {/* Sub-divider */}
               {idx < displayFonts.length - 1 && (
                 <div style={{ height: '1px', background: 'var(--border-subtle)', width: '100%', marginTop: '16px' }} />
               )}
@@ -89,7 +90,25 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
         })}
 
       </div>
+    </div>
+  )
+}
 
+function MetricTag({ label, value }: { label: string, value: any }) {
+  if (!value) return null
+  let displayValue = String(value)
+  // Hard truncation to defensively prevent AI paragraphs from breaking the UI
+  if (displayValue.length > 20) {
+    displayValue = displayValue.substring(0, 18) + '...'
+  }
+  return (
+    <div style={{ 
+      display: 'inline-flex', alignItems: 'center', gap: '6px', 
+      padding: '4px 10px', background: '#fff', borderRadius: '6px', 
+      border: '1px solid rgba(0,0,0,0.06)', fontSize: '11px', fontFamily: 'var(--font-mono)'
+    }} title={String(value)}>
+      <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>{label}</span>
+      <span style={{ color: 'var(--text-secondary)' }}>{displayValue}</span>
     </div>
   )
 }

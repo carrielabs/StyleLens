@@ -81,8 +81,8 @@ const USER_PROMPT_TEMPLATE = `Analyze this design and return a complete style re
     "headingWeight": 700,
     "bodyWeight": 400,
     "fontSizeScale": "Description of the type scale",
-    "lineHeight": "Estimated line-height value",
-    "letterSpacing": "Estimated letter-spacing",
+    "lineHeight": "Exact number or CSS (e.g. '1.5', '24px'). NO descriptive text.",
+    "letterSpacing": "Exact CSS value (e.g. '-0.02em', 'normal'). NO descriptive text.",
     "alignment": "left|center|justify",
     "textTreatment": "solid|gradient|translucent",
     "googleFontsAlt": "Closest Google Fonts alternative"
