@@ -60,24 +60,29 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
           const style = styles[idx] || { ...styles[idx-1], size: '12px', label: 'SECONDARY' }
           
           return (
-            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ padding: '4px 8px', background: '#fff', borderRadius: '4px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
-                   {style.label}
-                </span>
-                <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>{font} / W{style.weight}</span>
-              </div>
+            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              
+              {/* The label itself IS the styled specimen, fulfilling user's 'no dummy text' vision */}
               <div style={{ 
                 fontSize: style.size, fontWeight: style.weight, color: 'var(--text-primary)', 
                 fontFamily: `"${font}", var(--font-sans), sans-serif`, 
-                lineHeight: style.lh, letterSpacing: data.letterSpacing, maxWidth: '580px'
+                lineHeight: style.lh, letterSpacing: data.letterSpacing, maxWidth: '100%',
+                wordBreak: 'break-word', margin: 0
               }}>
-                {style.text}
+                {style.label} · {font}
+              </div>
+              
+              {/* Technical Data Points under the Specimen */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>Weight: {style.weight}</div>
+                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>Size: {style.size}</div>
+                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>Letter-Sp: {data.letterSpacing || 'normal'}</div>
+                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>Line-Ht: {style.lh}</div>
               </div>
               
               {/* Divider between specimens, except the last one */}
               {idx < displayFonts.length - 1 && (
-                <div style={{ height: '1px', background: 'var(--border-subtle)', width: '40px', marginTop: '20px' }} />
+                <div style={{ height: '1px', background: 'var(--border-subtle)', width: '100%', marginTop: '16px' }} />
               )}
             </div>
           )
