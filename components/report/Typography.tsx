@@ -14,9 +14,10 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
   let displayFonts = fontNames.filter(f => !['sans-serif', 'serif', 'system-ui', '-apple-system', 'blinkmacsystemfont'].includes(f.toLowerCase()))
   if (displayFonts.length === 0) displayFonts = [fontNames[0] || 'System Font']
   
-  // Cap at 3 for a focused, high-end editorial look
-  displayFonts = displayFonts.slice(0, 3)
+  // Cap at 4 to cover full hierarchy without breaking UI bounds
+  displayFonts = displayFonts.slice(0, 4)
 
+  // Ensure we always have at least enough base levels for visual structure
   while (displayFonts.length < 3) {
     displayFonts.push(displayFonts[0])
   }
@@ -47,6 +48,14 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
         ? '优秀的设计是尽可能少的设计。它专注于最本质的方面，使得产品不被非必要元素所拖累。抛弃繁芜，回归本真。当界面变得隐形时，内容才能真正与用户产生共鸣与连接。' 
         : 'Good design is as little design as possible. It concentrates on the essential aspects, not burdening the product with non-essentials. When the interface becomes invisible, content truly connects.',
       isBody: true
+    },
+    {
+      label: lang === 'zh' ? '辅助说明' : 'CAPTION',
+      size: '13px',
+      weight: 400,
+      lh: 1.4,
+      text: lang === 'zh' ? '细节决定成败。' : 'Details make the design.',
+      isBody: false
     }
   ]
 
@@ -54,17 +63,17 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
   if (parsedSpacing.length > 15) parsedSpacing = 'normal' // hard truncate AI paragraph bleed
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'auto', paddingBottom: '16px' }}>
-      <div style={{ minWidth: '680px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'hidden' }}>
+      <div style={{ width: '100%' }}>
         
         {/* Explicit 6-Column Header */}
         <div style={{ 
           display: 'flex', alignItems: 'center', paddingBottom: '16px', 
           borderBottom: '1px solid var(--border-subtle)', 
-          fontSize: '12px', color: 'var(--text-tertiary)' 
+          fontSize: '13px', color: 'var(--text-tertiary)' 
         }}>
-          <div style={{ flex: '0 0 16%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
-          <div style={{ flex: '0 0 34%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
+          <div style={{ flex: '0 0 14%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
+          <div style={{ flex: '0 0 36%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
           <div style={{ flex: '0 0 12.5%' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
           <div style={{ flex: '0 0 12.5%' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
           <div style={{ flex: '0 0 12.5%' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
@@ -72,25 +81,26 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
         </div>
 
         {displayFonts.map((font, idx) => {
-          const style = styles[idx]
+          // If extracted array is longer than predefined styles, fallback to BODY style scaling
+          const style = styles[idx] || { ...styles[2], size: '14px', label: lang === 'zh' ? '其他' : 'OTHER' }
           
           return (
             <div key={idx} style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              padding: '28px 0', 
+              padding: '24px 0', 
               borderBottom: idx < displayFonts.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none' 
             }}>
               
               {/* 1. SCENARIO */}
-              <div style={{ flex: '0 0 16%', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
                 {style.label}
               </div>
 
               {/* 2. FONT (The Specimen) */}
               <div style={{ 
-                flex: '0 0 34%', 
-                fontSize: `clamp(18px, ${style.size}, 36px)`, 
+                flex: '0 0 36%', 
+                fontSize: `clamp(18px, ${style.size}, 32px)`, 
                 fontWeight: style.weight, 
                 color: 'var(--text-primary)', 
                 fontFamily: `"${font}", var(--font-sans), sans-serif`, 
@@ -104,22 +114,22 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
               </div>
 
               {/* 3. SIZE */}
-              <div style={{ flex: '0 0 12.5%', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+              <div style={{ flex: '0 0 12.5%', fontSize: '14px', color: 'var(--text-secondary)' }}>
                 {style.size}
               </div>
 
               {/* 4. WEIGHT */}
-              <div style={{ flex: '0 0 12.5%', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+              <div style={{ flex: '0 0 12.5%', fontSize: '14px', color: 'var(--text-secondary)' }}>
                 {style.weight}
               </div>
 
               {/* 5. LINE HEIGHT */}
-              <div style={{ flex: '0 0 12.5%', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+              <div style={{ flex: '0 0 12.5%', fontSize: '14px', color: 'var(--text-secondary)' }}>
                 {style.lh}
               </div>
 
               {/* 6. SPACING */}
-              <div style={{ flex: '0 0 12.5%', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+              <div style={{ flex: '0 0 12.5%', fontSize: '14px', color: 'var(--text-secondary)' }}>
                 {parsedSpacing}
               </div>
 
