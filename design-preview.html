@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StyleLens — Design Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── Tokens ─────────────────────────────────────────── */
+    :root {
+      --bg-base:        #0D0D0B;
+      --bg-surface:     #141412;
+      --bg-elevated:    #1C1C19;
+      --bg-hover:       #222220;
+
+      --border-subtle:  #232321;
+      --border-base:    #2E2E2B;
+      --border-strong:  #3D3D39;
+
+      --text-primary:   #EEECEA;
+      --text-secondary: #8C8C87;
+      --text-tertiary:  #555552;
+      --text-inverse:   #0D0D0B;
+
+      --accent:         #C9A96E;
+      --accent-subtle:  rgba(201,169,110,0.08);
+      --accent-hover:   #D4B882;
+
+      --success:        #5C8C6E;
+      --error:          #9E4848;
+
+      --shadow-sm:   0 1px 2px rgba(0,0,0,0.4);
+      --shadow-base: 0 2px 8px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4);
+      --shadow-lg:   0 8px 24px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.4);
+
+      --radius-sm:   4px;
+      --radius-base: 6px;
+      --radius-lg:   10px;
+
+      --ease-base: cubic-bezier(0.16, 1, 0.3, 1);
+      --duration-fast: 120ms;
+      --duration-base: 200ms;
+
+      --font-sans: 'Inter', 'PingFang SC', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    /* ─── Reset ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 15px; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────── */
+    .page { max-width: 1080px; margin: 0 auto; padding: 64px 32px; }
+    .section { margin-bottom: 72px; }
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+    .col { display: flex; flex-direction: column; gap: 12px; }
+    .divider { height: 1px; background: var(--border-subtle); margin: 0; border: none; }
+
+    /* ─── Buttons ────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+      height: 34px; padding: 0 14px;
+      border-radius: var(--radius-base);
+      border: none; cursor: pointer;
+      transition: opacity var(--duration-fast) var(--ease-base),
+                  background var(--duration-fast) var(--ease-base),
+                  border-color var(--duration-fast) var(--ease-base),
+                  color var(--duration-fast) var(--ease-base);
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--text-primary);
+      color: var(--text-inverse);
+    }
+    .btn-primary:hover { opacity: 0.88; }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border-base);
+    }
+    .btn-secondary:hover { background: var(--bg-elevated); border-color: var(--border-strong); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: none;
+    }
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    .btn-accent {
+      background: var(--accent-subtle);
+      color: var(--accent);
+      border: 1px solid rgba(201,169,110,0.2);
+    }
+    .btn-accent:hover { background: rgba(201,169,110,0.14); }
+
+    .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+    .btn-lg { height: 40px; padding: 0 20px; font-size: 14px; }
+
+    /* ─── Inputs ─────────────────────────────────────────── */
+    .input-wrap { display: flex; flex-direction: column; gap: 6px; width: 300px; }
+    .input-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+    .input {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font-sans); font-size: 14px;
+      height: 36px; padding: 0 12px;
+      outline: none; width: 100%;
+      transition: border-color var(--duration-fast) var(--ease-base);
+    }
+    .input::placeholder { color: var(--text-tertiary); }
+    .input:focus { border-color: var(--border-strong); }
+
+    .input-with-btn {
+      display: flex; align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      transition: border-color var(--duration-fast) var(--ease-base);
+    }
+    .input-with-btn:focus-within { border-color: var(--border-strong); }
+    .input-with-btn .input { border: none; border-radius: 0; flex: 1; height: 38px; }
+    .input-with-btn .btn { border-radius: 0; border: none; border-left: 1px solid var(--border-subtle); height: 38px; font-size: 12px; }
+
+    /* ─── Cards ──────────────────────────────────────────── */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-base);
+      padding: 20px;
+      transition: border-color var(--duration-fast) var(--ease-base);
+    }
+    .card:hover { border-color: var(--border-base); }
+    .card-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+
+    /* ─── Badges ─────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center;
+      height: 20px; padding: 0 7px;
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-base);
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+    }
+    .badge-accent {
+      background: var(--accent-subtle);
+      border-color: rgba(201,169,110,0.2);
+      color: var(--accent);
+    }
+    .badge-success {
+      background: rgba(92,140,110,0.08);
+      border-color: rgba(92,140,110,0.2);
+      color: var(--success);
+    }
+
+    /* ─── Color Swatches ─────────────────────────────────── */
+    .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+    .swatch {
+      display: flex; flex-direction: column; gap: 8px;
+      width: 80px;
+    }
+    .swatch-dot {
+      width: 80px; height: 56px;
+      border-radius: var(--radius-base);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    .swatch-hex { font-size: 11px; font-family: var(--font-mono); color: var(--text-tertiary); }
+    .swatch-name { font-size: 11px; color: var(--text-secondary); }
+
+    /* ─── Skeleton ───────────────────────────────────────── */
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg,
+        var(--bg-elevated) 25%,
+        var(--bg-hover) 50%,
+        var(--bg-elevated) 75%
+      );
+      background-size: 800px 100%;
+      animation: shimmer 1.6s infinite linear;
+      border-radius: var(--radius-sm);
+    }
+
+    /* ─── Toast ──────────────────────────────────────────── */
+    .toast {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-base);
+      padding: 10px 14px;
+      font-size: 13px;
+      box-shadow: var(--shadow-lg);
+    }
+    .toast-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+    .toast-dot.error { background: var(--error); }
+    .toast-dot.accent { background: var(--accent); }
+
+    /* ─── Progress bar ───────────────────────────────────── */
+    .progress-track {
+      height: 2px;
+      background: var(--border-subtle);
+      border-radius: 999px;
+      overflow: hidden;
+      width: 100%;
+    }
+    @keyframes progress {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(200%); }
+    }
+    .progress-fill {
+      height: 100%;
+      width: 40%;
+      background: var(--accent);
+      border-radius: 999px;
+      animation: progress 1.8s var(--ease-base) infinite;
+    }
+
+    /* ─── Demo App: Extractor ────────────────────────────── */
+    .demo-app {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .app-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 52px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .app-logo {
+      font-size: 14px; font-weight: 600; letter-spacing: -0.02em;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .app-logo-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    }
+    .app-nav-links { display: flex; gap: 4px; }
+    .nav-link {
+      font-size: 13px; color: var(--text-secondary); padding: 4px 10px;
+      border-radius: var(--radius-sm); cursor: pointer;
+      transition: background var(--duration-fast), color var(--duration-fast);
+    }
+    .nav-link:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .nav-link.active { color: var(--text-primary); background: var(--bg-hover); }
+    .app-body { padding: 48px 40px; }
+
+    /* Hero */
+    .hero-label {
+      font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 16px;
+    }
+    .hero-title {
+      font-size: 36px; font-weight: 600; line-height: 1.2;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+    .hero-sub { font-size: 15px; color: var(--text-secondary); margin-bottom: 40px; max-width: 480px; }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 1px dashed var(--border-base);
+      border-radius: var(--radius-base);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--duration-base), background var(--duration-base);
+      margin-bottom: 12px;
+    }
+    .upload-zone:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+    .upload-icon { font-size: 28px; margin-bottom: 12px; opacity: 0.4; }
+    .upload-text { font-size: 13px; color: var(--text-secondary); }
+    .upload-text strong { color: var(--text-primary); }
+    .upload-divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 16px 0; color: var(--text-tertiary); font-size: 12px;
+    }
+    .upload-divider::before, .upload-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border-subtle);
+    }
+
+    /* Style Report preview */
+    .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 32px; }
+    .report-card { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-base); padding: 16px; }
+    .report-card-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px; }
+    .color-pills { display: flex; gap: 6px; margin-bottom: 8px; }
+    .color-pill { width: 28px; height: 28px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.06); }
+    .export-tabs { display: flex; gap: 2px; background: var(--bg-elevated); border-radius: var(--radius-sm); padding: 3px; }
+    .export-tab { padding: 4px 10px; font-size: 12px; color: var(--text-secondary); border-radius: 4px; cursor: pointer; }
+    .export-tab.active { background: var(--bg-surface); color: var(--text-primary); }
+    .code-preview {
+      background: var(--bg-base); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm); padding: 12px;
+      font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);
+      line-height: 1.7; margin-top: 8px;
+    }
+    .code-preview .cm { color: var(--text-tertiary); }
+    .code-preview .ck { color: var(--text-secondary); }
+    .code-preview .cv { color: var(--accent); }
+
+    /* Typography showcase */
+    .type-sample { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle); }
+    .type-sample:last-child { border: none; margin: 0; padding: 0; }
+    .type-meta { font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px; font-family: var(--font-mono); }
+
+    /* ─── Misc ───────────────────────────────────────────── */
+    .mono { font-family: var(--font-mono); }
+    .accent-text { color: var(--accent); }
+    .muted { color: var(--text-secondary); }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="section">
+    <p style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:8px;">StyleLens</p>
+    <h1 style="font-size:28px;font-weight:600;letter-spacing:-0.025em;margin-bottom:8px;">Design System Preview</h1>
+    <p style="font-size:14px;color:var(--text-secondary);">视觉风格预览 — 去AI化，编辑排版感，克制单色调</p>
+  </div>
+  <hr class="divider" style="margin-bottom:72px;">
+
+  <!-- ① 完整 App Demo -->
+  <div class="section">
+    <p class="section-label">① Complete App Preview</p>
+    <div class="demo-app">
+      <nav class="app-nav">
+        <div class="app-logo">
+          <div class="app-logo-dot"></div>
+          StyleLens
+        </div>
+        <div class="app-nav-links">
+          <div class="nav-link active">提取</div>
+          <div class="nav-link">素材库</div>
+        </div>
+        <button class="btn btn-secondary btn-sm">登录</button>
+      </nav>
+      <div class="app-body">
+        <p class="hero-label">Visual Style Extractor</p>
+        <h2 class="hero-title">上传一张图，<br>获得完整风格系统</h2>
+        <p class="hero-sub">自动提取色彩、字体、设计细节，一键复制 Prompt 和 CSS，直接用于 vibe coding。</p>
+
+        <div class="upload-zone">
+          <div class="upload-icon">↑</div>
+          <div class="upload-text"><strong>拖拽图片到此处</strong>，或点击选择文件</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-top:6px;">支持 JPG、PNG、WebP · 最大 20MB</div>
+        </div>
+
+        <div class="upload-divider">或</div>
+
+        <div class="input-with-btn" style="max-width:480px;">
+          <input class="input" type="text" placeholder="粘贴网站 URL，如 https://linear.app" />
+          <button class="btn btn-primary" style="border-radius:0 5px 5px 0;">分析</button>
+        </div>
+
+        <!-- Mock Report -->
+        <div style="margin-top:40px;padding-top:32px;border-top:1px solid var(--border-subtle);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <div style="width:36px;height:36px;border-radius:var(--radius-sm);background:#0A0E1A;border:1px solid var(--border-subtle);"></div>
+                <div>
+                  <div style="font-size:13px;font-weight:500;">linear.app</div>
+                  <div style="font-size:11px;color:var(--text-tertiary);">2 秒前分析完成</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span class="badge">Minimalist</span>
+                <span class="badge">Dark Mode</span>
+                <span class="badge accent-text" style="background:var(--accent-subtle);border-color:rgba(201,169,110,0.2);">Typographic</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-secondary btn-sm">保存到库</button>
+              <button class="btn btn-primary btn-sm">复制 Prompt</button>
+            </div>
+          </div>
+
+          <div class="report-grid">
+            <div class="report-card">
+              <div class="report-card-label">色彩系统</div>
+              <div class="color-pills">
+                <div class="color-pill" style="background:#0A0E1A;" title="#0A0E1A"></div>
+                <div class="color-pill" style="background:#131720;" title="#131720"></div>
+                <div class="color-pill" style="background:#5B6AF8;" title="#5B6AF8"></div>
+                <div class="color-pill" style="background:#FFFFFF;" title="#FFFFFF"></div>
+                <div class="color-pill" style="background:#6B7280;" title="#6B7280"></div>
+              </div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;">5 个主色 · 深色模式 · 无渐变</div>
+            </div>
+            <div class="report-card">
+              <div class="report-card-label">字体排版</div>
+              <div style="font-size:13px;margin-bottom:4px;">Inter, system-ui</div>
+              <div style="font-size:11px;color:var(--text-secondary);">600 标题 · 400 正文 · -0.03em 字间距</div>
+              <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">行高 1.4 · 大圆角文字无渐变</div>
+            </div>
+            <div class="report-card" style="grid-column:1/-1;">
+              <div class="report-card-label">导出</div>
+              <div class="export-tabs" style="width:fit-content;">
+                <div class="export-tab active">CSS</div>
+                <div class="export-tab">Prompt</div>
+                <div class="export-tab">Markdown</div>
+                <div class="export-tab">JSON</div>
+              </div>
+              <div class="code-preview">
+                <div><span class="cm">/* Colors */</span></div>
+                <div><span class="ck">--color-bg:</span> <span class="cv">#0A0E1A</span>;</div>
+                <div><span class="ck">--color-accent:</span> <span class="cv">#5B6AF8</span>;</div>
+                <div><span class="ck">--color-text:</span> <span class="cv">#FFFFFF</span>;</div>
+                <div><span class="ck">--font-family:</span> <span class="cv">'Inter'</span>, system-ui;</div>
+                <div><span class="ck">--radius-base:</span> <span class="cv">6px</span>;</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② Typography -->
+  <div class="section">
+    <p class="section-label">② Typography</p>
+    <div class="card">
+      <div class="type-sample">
+        <div class="type-meta">36px / weight 600 / tracking -0.03em — Hero Title</div>
+        <div style="font-size:36px;font-weight:600;letter-spacing:-0.03em;line-height:1.2;">视觉风格提取工具</div>
+      </div>
+      <div class="type-sample">
+        <div class="type-meta">22px / weight 600 / tracking -0.025em — Section Title</div>
+        <div style="font-size:22px;font-weight:600;letter-spacing:-0.025em;">色彩系统分析</div>
+      </div>
+      <div class="type-sample">
+        <div class="type-meta">15px / weight 400 / tracking -0.01em — Body</div>
+        <div style="font-size:15px;font-weight:400;letter-spacing:-0.01em;color:var(--text-secondary);max-width:560px;line-height:1.6;">上传一张图片或粘贴网站 URL，StyleLens 会自动提取完整的视觉风格系统，包括色彩、字体、设计细节，并生成可直接使用的 CSS 代码和 AI Prompt。</div>
+      </div>
+      <div class="type-sample">
+        <div class="type-meta">11px / weight 500 / tracking 0.08em / uppercase — Label</div>
+        <div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-tertiary);">Color System</div>
+      </div>
+      <div class="type-sample">
+        <div class="type-meta">13px / JetBrains Mono — Code</div>
+        <div style="font-size:13px;font-family:var(--font-mono);color:var(--accent);">--color-accent: #C9A96E;</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ Buttons -->
+  <div class="section">
+    <p class="section-label">③ Buttons</p>
+    <div class="card">
+      <div class="row" style="margin-bottom:16px;">
+        <button class="btn btn-primary">分析风格</button>
+        <button class="btn btn-secondary">保存到库</button>
+        <button class="btn btn-ghost">查看更多</button>
+        <button class="btn btn-accent">复制 CSS</button>
+      </div>
+      <div class="row">
+        <button class="btn btn-primary btn-sm">一键复制</button>
+        <button class="btn btn-secondary btn-sm">登录</button>
+        <button class="btn btn-ghost btn-sm">取消</button>
+        <button class="btn btn-primary btn-lg">开始分析</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ Color System -->
+  <div class="section">
+    <p class="section-label">④ Color Tokens</p>
+    <div class="card">
+      <div class="swatches">
+        <div class="swatch">
+          <div class="swatch-dot" style="background:#0D0D0B;"></div>
+          <div class="swatch-hex">#0D0D0B</div>
+          <div class="swatch-name">Base</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-dot" style="background:#141412;"></div>
+          <div class="swatch-hex">#141412</div>
+          <div class="swatch-name">Surface</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-dot" style="background:#1C1C19;"></div>
+          <div class="swatch-hex">#1C1C19</div>
+          <div class="swatch-name">Elevated</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-dot" style="background:#2E2E2B;border-color:var(--border-base);"></div>
+          <div class="swatch-hex">#2E2E2B</div>
+          <div class="swatch-name">Border</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-dot" style="background:#8C8C87;"></div>
+          <div class="swatch-hex">#8C8C87</div>
+          <div class="swatch-name">Muted</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-dot" style="background:#EEECEA;"></div>
+          <div class="swatch-hex">#EEECEA</div>
+          <div class="swatch-name">Primary</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-dot" style="background:#C9A96E;"></div>
+          <div class="swatch-hex">#C9A96E</div>
+          <div class="swatch-name accent-text">Accent ✦</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-dot" style="background:#5C8C6E;"></div>
+          <div class="swatch-hex">#5C8C6E</div>
+          <div class="swatch-name" style="color:var(--success);">Success</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-dot" style="background:#9E4848;"></div>
+          <div class="swatch-hex">#9E4848</div>
+          <div class="swatch-name" style="color:var(--error);">Error</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ Input & Forms -->
+  <div class="section">
+    <p class="section-label">⑤ Inputs</p>
+    <div class="card">
+      <div class="row" style="align-items:flex-end;">
+        <div class="input-wrap">
+          <label class="input-label">图片上传</label>
+          <input class="input" type="text" placeholder="选择或拖拽图片..." readonly />
+        </div>
+        <div class="input-wrap" style="width:400px;">
+          <label class="input-label">网站 URL（带分析按钮）</label>
+          <div class="input-with-btn">
+            <input class="input" type="text" placeholder="https://linear.app" />
+            <button class="btn btn-primary" style="border-radius:0 4px 4px 0;border-left:1px solid rgba(0,0,0,0.3);">分析</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ Cards & Badges -->
+  <div class="section">
+    <p class="section-label">⑥ Cards & Badges</p>
+    <div class="row" style="align-items:stretch;">
+      <div class="card" style="flex:1;min-width:220px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+          <div class="card-title">Glassmorphism</div>
+          <span class="badge">UI</span>
+        </div>
+        <div class="card-desc">深色磨砂玻璃风格，以半透明面板、模糊背景为核心特征。</div>
+        <div style="display:flex;gap:6px;margin-top:14px;">
+          <div style="width:18px;height:18px;border-radius:3px;background:#0A0F1E;"></div>
+          <div style="width:18px;height:18px;border-radius:3px;background:#4FC3F7;"></div>
+          <div style="width:18px;height:18px;border-radius:3px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.1);"></div>
+        </div>
+      </div>
+      <div class="card" style="flex:1;min-width:220px;border-color:var(--border-base);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+          <div class="card-title">Brutalist Editorial</div>
+          <span class="badge badge-accent">Hot</span>
+        </div>
+        <div class="card-desc">粗犷排版，极强对比度，原始质感。近期在独立设计师中流行。</div>
+        <div style="display:flex;gap:6px;margin-top:14px;">
+          <div style="width:18px;height:18px;border-radius:3px;background:#F5F0E8;"></div>
+          <div style="width:18px;height:18px;border-radius:3px;background:#1A1A1A;"></div>
+          <div style="width:18px;height:18px;border-radius:3px;background:#E63A2E;"></div>
+        </div>
+      </div>
+      <div class="card" style="flex:1;min-width:220px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+          <div class="card-title">Soft Neutral</div>
+          <span class="badge badge-success">Saved</span>
+        </div>
+        <div class="card-desc">柔和中性色调，米白底色，自然温润的设计语言。</div>
+        <div style="display:flex;gap:6px;margin-top:14px;">
+          <div style="width:18px;height:18px;border-radius:3px;background:#F7F4EF;"></div>
+          <div style="width:18px;height:18px;border-radius:3px;background:#8B7355;"></div>
+          <div style="width:18px;height:18px;border-radius:3px;background:#2C2C2C;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ Feedback States -->
+  <div class="section">
+    <p class="section-label">⑦ Feedback & Status</p>
+    <div class="card">
+      <div class="col">
+        <!-- Progress -->
+        <div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">分析中... 正在提取色彩系统</div>
+          <div class="progress-track" style="max-width:400px;">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+        <!-- Skeleton -->
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:400px;margin-top:8px;">
+          <div class="skeleton" style="height:14px;width:60%;"></div>
+          <div class="skeleton" style="height:14px;width:85%;"></div>
+          <div class="skeleton" style="height:14px;width:40%;"></div>
+        </div>
+        <!-- Toasts -->
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+          <div class="toast">
+            <div class="toast-dot"></div>
+            <span>CSS 已复制到剪贴板</span>
+          </div>
+          <div class="toast">
+            <div class="toast-dot accent"></div>
+            <span>风格报告已保存到库</span>
+          </div>
+          <div class="toast">
+            <div class="toast-dot error"></div>
+            <span>该网站限制了自动访问</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding-top:40px;border-top:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:13px;color:var(--text-tertiary);">StyleLens Design System v1.0</div>
+    <div style="font-size:12px;color:var(--text-tertiary);font-family:var(--font-mono);">去AI化 · 编辑排版感 · 克制单色调</div>
+  </div>
+
+</div>
+</body>
+</html>
