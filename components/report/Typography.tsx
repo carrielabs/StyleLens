@@ -72,8 +72,8 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
           borderBottom: '1px solid var(--border-subtle)', 
           fontSize: '13px', color: 'var(--text-tertiary)' 
         }}>
-          <div style={{ flex: '0 0 45%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
-          <div style={{ flex: '0 0 11%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
+          <div style={{ flex: '0 0 40%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
+          <div style={{ flex: '0 0 16%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
           <div style={{ flex: '0 0 11%' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
           <div style={{ flex: '0 0 11%' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
           <div style={{ flex: '0 0 11%' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
@@ -94,8 +94,8 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
               
               {/* 1. FONT (The Specimen) */}
               <div style={{ 
-                flex: '0 0 45%', 
-                fontSize: `clamp(18px, ${style.size}, 32px)`, 
+                flex: '0 0 40%', 
+                fontSize: `clamp(13px, ${style.size}, 36px)`, 
                 fontWeight: style.weight, 
                 color: 'var(--text-primary)', 
                 fontFamily: `"${font}", var(--font-sans), sans-serif`, 
@@ -109,7 +109,7 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
               </div>
 
               {/* 2. SCENARIO */}
-              <div style={{ flex: '0 0 11%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 16%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
                 {style.label}
               </div>
 
