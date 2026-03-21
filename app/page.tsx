@@ -18,9 +18,9 @@ export default function Home() {
   const [hoveredHex, setHoveredHex] = useState<string | null>(null)
 
   useEffect(() => {
-    const handleColorHover = (e: any) => setHoveredHex(e.detail)
-    window.addEventListener('color-hover', handleColorHover)
-    return () => window.removeEventListener('color-hover', handleColorHover)
+    const handleColorHover = (e: CustomEvent<string>) => setHoveredHex(e.detail)
+    window.addEventListener('color-hover', handleColorHover as EventListener)
+    return () => window.removeEventListener('color-hover', handleColorHover as EventListener)
   }, [])
 
   const handleExtractionSuccess = (result: StyleReport) => {
@@ -62,8 +62,8 @@ export default function Home() {
           StyleLens
         </span>
         <div style={{ display: 'flex', gap: '36px', fontSize: '13px', fontWeight: 500 }}>
-          <a href="/" style={{ color: '#1A1A1A', textDecoration: 'none' }}>提取中心</a>
-          <a href="/library" style={{ color: '#999', textDecoration: 'none' }}>分析记录</a>
+          <Link href="/" style={{ color: '#1A1A1A', textDecoration: 'none' }}>提取中心</Link>
+          <Link href="/library" style={{ color: '#999', textDecoration: 'none' }}>分析记录</Link>
         </div>
         <Link href="/auth" style={{ fontSize: '13px', color: '#fff', background: '#1A1A1A', padding: '9px 22px', borderRadius: '100px', textDecoration: 'none', fontWeight: 500, letterSpacing: '0.02em' }}>
           登录
