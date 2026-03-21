@@ -54,56 +54,97 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
   if (parsedSpacing.length > 15) parsedSpacing = 'normal' // hard truncate AI paragraph bleed
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div style={{ 
+      display: 'flex', flexDirection: 'column', 
+      border: '1px solid var(--border-subtle)', 
+      borderRadius: '16px', overflow: 'hidden',
+      background: '#fff',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+    }}>
         
         {displayFonts.map((font, idx) => {
           const style = styles[idx]
           
           return (
             <div key={idx} style={{ 
-              padding: idx === 0 ? '0 0 40px 0' : '40px 0', 
-              borderBottom: idx < displayFonts.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
-              display: 'flex', flexDirection: 'column', gap: '24px'
+              display: 'flex', 
+              flexDirection: 'row', 
+              borderBottom: idx < displayFonts.length - 1 ? '1px solid var(--border-subtle)' : 'none' 
             }}>
               
-              {/* Top Row: Meta & Metrics */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>
-                    {style.label}
-                  </span>
-                  <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
-                    {font}
-                  </span>
-                </div>
-                
-                <div style={{ display: 'flex', gap: '20px', fontSize: '13px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-                   <span>W{style.weight}</span>
-                   <span>{style.size}</span>
-                   <span>{style.lh} LH</span>
-                   <span>{parsedSpacing} LS</span>
+              {/* Preview Canvas (Left) */}
+              <div style={{ 
+                flex: 1, 
+                padding: '40px 32px', 
+                background: 'var(--bg-elevated)', 
+                display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+                overflow: 'hidden'
+              }}>
+                <div style={{ 
+                  fontSize: style.size, 
+                  fontWeight: style.weight, 
+                  color: 'var(--text-primary)', 
+                  fontFamily: `"${font}", var(--font-sans), sans-serif`, 
+                  lineHeight: style.lh, 
+                  letterSpacing: parsedSpacing, 
+                  maxWidth: '100%',
+                  wordBreak: 'break-word',
+                  transition: 'all 0.2s ease'
+                }}>
+                  {style.text}
                 </div>
               </div>
-              
-              {/* Bottom Row: Editorial Specimen Text */}
+
+              {/* CSS Inspector Panel (Right) */}
               <div style={{ 
-                fontSize: style.size, 
-                fontWeight: style.weight, 
-                color: 'var(--text-primary)', 
-                fontFamily: `"${font}", var(--font-sans), sans-serif`, 
-                lineHeight: style.lh, 
-                letterSpacing: parsedSpacing, 
-                maxWidth: style.isBody ? '800px' : '100%',
-                wordBreak: 'break-word',
-                transition: 'all 0.2s ease'
+                width: '320px', flexShrink: 0,
+                padding: '32px 24px', 
+                borderLeft: '1px solid var(--border-subtle)', 
+                background: '#fff',
+                display: 'flex', flexDirection: 'column',
+                justifyContent: 'center'
               }}>
-                {style.text}
+                 {/* Header Row */}
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '24px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>
+                      {style.label}
+                    </div>
+                 </div>
+                 
+                 {/* CSS Properties (Mimicking Developer Tools) */}
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <CssProp label="font-family" value={font} />
+                    <CssProp label="font-weight" value={style.weight} />
+                    <CssProp label="font-size" value={style.size} />
+                    <CssProp label="line-height" value={style.lh} />
+                    <CssProp label="letter-spacing" value={parsedSpacing} />
+                 </div>
               </div>
 
             </div>
           )
         })}
 
+    </div>
+  )
+}
+
+function CssProp({ label, value }: { label: string; value: any }) {
+  if (!value) return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+        {label}
+      </span>
+      <span style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+        :
+      </span>
+      <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 500 }}>
+        {value}
+      </span>
+      <span style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+        ;
+      </span>
     </div>
   )
 }
