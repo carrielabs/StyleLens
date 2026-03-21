@@ -76,8 +76,8 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
           <div style={{ flex: '0 0 15%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
           <div style={{ flex: '0 0 10%' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
           <div style={{ flex: '0 0 12%' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
-          <div style={{ flex: '0 0 15%' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
           <div style={{ flex: '0 0 13%' }}>{lang === 'zh' ? '字间距' : 'Spacing'}</div>
+          <div style={{ flex: '0 0 15%', textAlign: 'right' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
         </div>
 
         {displayFonts.map((font, idx) => {
@@ -123,14 +123,14 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
                 {style.weight}
               </div>
 
-              {/* 5. LINE HEIGHT */}
-              <div style={{ flex: '0 0 15%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
-                {style.lh}
-              </div>
-
-              {/* 6. SPACING */}
+              {/* 5. SPACING */}
               <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
                 {parsedSpacing}
+              </div>
+
+              {/* 6. LINE HEIGHT */}
+              <div style={{ flex: '0 0 15%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
+                {style.lh}
               </div>
 
             </div>
