@@ -14,12 +14,13 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
   let displayFonts = fontNames.filter(f => !['sans-serif', 'serif', 'system-ui', '-apple-system', 'blinkmacsystemfont'].includes(f.toLowerCase()))
   if (displayFonts.length === 0) displayFonts = [fontNames[0] || 'System Font']
   
-  // Cap at 3 for UI layout bounds
-  displayFonts = displayFonts.slice(0, 3)
+  // Cap at 4 for UI layout bounds
+  displayFonts = displayFonts.slice(0, 4)
 
-  // CRITICAL FIX: The user wants to see the visual hierarchy (Heading vs Body sizes),
-  // so if AI only extracted 1 font family, we explicitly duplicate it to show both styles.
-  if (displayFonts.length === 1) {
+  // CRITICAL FIX: The user wants to see the full visual hierarchy scale.
+  // We expand the array to always have 4 elements (Heading, Subheading, Body, Menu)
+  // by inheriting the primary font if the AI didn't extract enough distinct fonts.
+  while (displayFonts.length < 4) {
     displayFonts.push(displayFonts[0])
   }
 
@@ -29,25 +30,32 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
       size: '44px',
       weight: data.headingWeight || 700,
       lh: 1.1,
-      text: lang === 'zh' ? '探索设计的内在秩序' : 'The quick brown fox'
+    },
+    {
+      label: lang === 'zh' ? '副标题 SUBHEAD' : 'SUBHEAD',
+      size: '24px',
+      weight: data.headingWeight ? Math.max(400, Number(data.headingWeight) - 100) : 600,
+      lh: 1.3,
     },
     {
       label: lang === 'zh' ? '正文 BODY' : 'BODY',
       size: '16px',
       weight: data.bodyWeight || 400,
       lh: data.lineHeight || 1.6,
-      text: lang === 'zh' 
-        ? '优秀的设计是尽可能少的设计。它专注于最本质的方面，使得产品不被非必要元素所拖累。纯粹，简单。' 
-        : 'Good design is as little design as possible. It concentrates on the essential aspects.'
     },
     {
-      label: lang === 'zh' ? '辅助字 ACCENT' : 'ACCENT',
+      label: lang === 'zh' ? '菜单 MENU' : 'MENU',
       size: '13px',
       weight: 500,
       lh: 1.4,
-      text: lang === 'zh' ? '细节决定成败。0123456789' : 'Details make the design. 0123456789'
     }
   ]
+
+  const tFont = lang === 'zh' ? '字体' : 'Font'
+  const tWeight = lang === 'zh' ? '字重' : 'Weight'
+  const tSize = lang === 'zh' ? '字号' : 'Size'
+  const tLh = lang === 'zh' ? '行高' : 'Line-Height'
+  const tLs = lang === 'zh' ? '字间距' : 'Letter-Spacing'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -74,11 +82,11 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
               
               {/* Technical Data Points Boxed Tags */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                 <MetricTag label="Font" value={font} />
-                 <MetricTag label="Weight" value={style.weight} />
-                 <MetricTag label="Size" value={style.size} />
-                 <MetricTag label="Line-Height" value={style.lh} />
-                 <MetricTag label="Letter-Spacing" value={data.letterSpacing} />
+                 <MetricTag label={tFont} value={font} />
+                 <MetricTag label={tWeight} value={style.weight} />
+                 <MetricTag label={tSize} value={style.size} />
+                 <MetricTag label={tLh} value={style.lh} />
+                 <MetricTag label={tLs} value={data.letterSpacing} />
               </div>
               
               {/* Sub-divider */}
