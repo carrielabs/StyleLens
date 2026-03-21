@@ -11,7 +11,7 @@ export default async function LibraryPage() {
     redirect('/auth')
   }
 
-  const { data: records, error } = await fetchLibrary('newest')
+  const { data: records, error } = await fetchLibrary('newest', supabase)
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

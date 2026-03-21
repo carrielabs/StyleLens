@@ -3,10 +3,11 @@ import type { StyleReport, LibraryRecord, SortOrder } from '@/lib/types'
 
 export async function saveToLibrary(
   report: StyleReport,
-  imageBase64?: string
+  imageBase64?: string,
+  supabaseIn?: any
 ): Promise<{ success: boolean; data?: LibraryRecord; error?: string }> {
   try {
-    const supabase = createClient()
+    const supabase = supabaseIn || createClient()
     
     // 1. Get current user
     const { data: { user } } = await supabase.auth.getUser()
@@ -65,9 +66,9 @@ export async function saveToLibrary(
   }
 }
 
-export async function fetchLibrary(sort: SortOrder = 'newest'): Promise<{ data: LibraryRecord[] | null; error?: string }> {
+export async function fetchLibrary(sort: SortOrder = 'newest', supabaseIn?: any): Promise<{ data: LibraryRecord[] | null; error?: string }> {
   try {
-    const supabase = createClient()
+    const supabase = supabaseIn || createClient()
     const { data, error } = await supabase
       .from('style_records')
       .select('*')
