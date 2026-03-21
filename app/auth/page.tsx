@@ -40,6 +40,23 @@ export default function AuthPage() {
     }
   }
 
+  const handleGoogleLogin = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${location.origin}/auth/callback`
+        }
+      })
+      if (error) throw error
+    } catch (err: any) {
+      setError(err.message || 'Google 登录失败')
+      setLoading(false)
+    }
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       
@@ -112,6 +129,35 @@ export default function AuthPage() {
           </button>
 
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '32px 0' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+          <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>OR</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+        </div>
+
+        <button
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          style={{
+            height: '56px', background: '#FFFFFF', color: 'var(--text-primary)',
+            border: '1px solid var(--border-base)', borderRadius: '100px', 
+            fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', 
+            justifyContent: 'center', gap: '12px', cursor: loading ? 'not-allowed' : 'pointer',
+            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
+          }}
+          onMouseEnter={e => !loading && (e.currentTarget.style.background = 'var(--bg-hover)')}
+          onMouseLeave={e => !loading && (e.currentTarget.style.background = '#FFFFFF')}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84a4.14 4.14 0 01-1.8 2.71v2.26h2.91a8.78 8.78 0 002.69-6.6z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.8.54-1.83.86-3.05.86-2.34 0-4.33-1.57-5.04-3.7H.95v2.32A9 9 0 009 18z"/>
+            <path fill="#FBBC05" d="M3.96 10.71a5.41 5.41 0 010-3.42V4.97H.95a9 9 0 000 8.06l3.01-2.32z"/>
+            <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35L15.02 2.3A9 9 0 00.95 4.97l3.01 2.32c.71-2.13 2.7-3.71 5.04-3.71z"/>
+          </svg>
+          Continue with Google
+        </button>
 
         <div style={{ textAlign: 'center', marginTop: '32px', fontSize: '13px', color: 'var(--text-secondary)' }}>
           {isLogin ? 'New to StyleLens?' : 'Already have an account?'}
