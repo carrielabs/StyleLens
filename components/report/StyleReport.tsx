@@ -72,12 +72,7 @@ export default function StyleReport({ report, lang = 'zh' }: { report: ReportTyp
       fontFamily: 'var(--font-sans)'
     }}>
       
-      {/* Header with Title */}
-      <section style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', lineHeight: 1.1, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {report.sourceLabel}
-        </h1>
-      </section>
+
 
       {/* 1. 风格描述 */}
       <section>

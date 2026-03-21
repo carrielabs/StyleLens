@@ -9,8 +9,8 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'StyleLens — 视觉风格提取工具',
-  description: '提取设计系统的顶级工具',
+  title: 'StyleLens — 解构全球顶级网页设计',
+  description: '专业的视觉风格提取与方案生成工具，沉淀你的设计灵感。',
 }
 
 export default function RootLayout({
@@ -20,7 +20,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN" className={jakarta.variable}>
-      <body style={{ fontFamily: 'var(--font-sans), system-ui, sans-serif' }}>
+      <body style={{ 
+        fontFamily: 'var(--font-sans)', 
+        backgroundColor: 'var(--bg-base)',
+        color: 'var(--text-primary)',
+        margin: 0
+      }}>
         {children}
       </body>
     </html>
