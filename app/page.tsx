@@ -77,56 +77,66 @@ export default function Home() {
         </Link>
       </nav>
 
-      {/* Main Studio Canvas */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', position: 'relative' }}>
+      {/* Main Studio Canvas - Dribbble Asymmetric Layout */}
+      <main style={{ 
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', 
+        padding: '80px 64px', maxWidth: '1440px', margin: '0 auto', gap: '80px', width: '100%',
+        flexWrap: 'wrap'
+      }}>
         
-        {/* Title Area */}
-        <div style={{ textAlign: 'center', marginBottom: '80px' }}>
-          <h1 style={{
-            fontFamily: 'var(--font-serif)', fontSize: '56px', fontWeight: 600,
-            color: 'var(--text-primary)', marginBottom: '24px', letterSpacing: '0.02em'
-          }}>
-            探寻视觉的内在秩序
-          </h1>
-          <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '440px', margin: '0 auto', lineHeight: 1.8, letterSpacing: '0.02em' }}>
-            上传高精度设计稿或直接解析目标公网网站，系统将在极短时间内深度剖析构成美学的色彩、排版参数与架构规则。
-          </p>
-        </div>
+        {/* Left: Typography & URL */}
+        <div style={{ flex: 1, minWidth: '400px', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
+          
+          <div>
+            <h1 style={{
+              fontFamily: 'var(--font-sans)', fontSize: '64px', fontWeight: 900,
+              color: 'var(--text-primary)', marginBottom: '24px', letterSpacing: '-0.03em', lineHeight: 1.1
+            }}>
+              解构全球顶级<br/>设计资产
+            </h1>
+            <p style={{ fontSize: '18px', color: 'var(--text-secondary)', lineHeight: 1.6, letterSpacing: '0.01em', fontWeight: 400 }}>
+              粘贴网页链接或上传设计图，系统将极其精准地逆向工程并解析其深层色彩与排版体系。
+            </p>
+          </div>
 
-        {/* Naked Input Cluster */}
-        <div style={{ width: '100%', maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
+          <UrlInput
+            onStart={() => startExtraction('正在解析网页链路，重构设计树 (约需 15 秒)...')}
+            onSuccess={handleExtractionSuccess}
+            onError={handleExtractionError}
+            disabled={isExtracting}
+          />
+
           {error && (
-            <div style={{ padding: '14px 20px', background: '#FDF7F7', borderRadius: '12px', color: 'var(--error)', fontSize: '13px', textAlign: 'center' }}>
+            <div style={{ padding: '14px 20px', background: '#FDF7F7', borderRadius: '12px', color: 'var(--error)', fontSize: '14px', border: '1px solid var(--error)', fontWeight: 500 }}>
               {error}
             </div>
           )}
 
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginTop: '-16px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Popular:</span>
+            <span style={{ padding: '6px 16px', borderRadius: '100px', border: '1px solid var(--border-subtle)', fontSize: '12px', color: 'var(--text-secondary)' }}>dashboard</span>
+            <span style={{ padding: '6px 16px', borderRadius: '100px', border: '1px solid var(--border-subtle)', fontSize: '12px', color: 'var(--text-secondary)' }}>landing page</span>
+            <span style={{ padding: '6px 16px', borderRadius: '100px', border: '1px solid var(--border-subtle)', fontSize: '12px', color: 'var(--text-secondary)' }}>e-commerce</span>
+          </div>
+
+          {isExtracting && (
+             <div style={{ animation: 'fadeIn 0.3s', marginTop: '16px' }}>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px', fontWeight: 500, letterSpacing: '0.02em' }}>{statusText}</p>
+                <div style={{ width: '100%', height: '4px', background: 'var(--border-subtle)', position: 'relative', overflow: 'hidden', borderRadius: '100px' }}>
+                   <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '30%', background: 'var(--text-primary)', animation: 'slideRight 1.5s infinite ease-in-out', borderRadius: '100px' }} />
+                </div>
+             </div>
+          )}
+        </div>
+
+        {/* Right: Drag & Drop Graphic */}
+        <div style={{ flex: 1, minWidth: '500px', display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
           <ImageUploader 
             onStart={() => startExtraction('正在深入像素层，提取全局排版规范与色彩矩阵...')}
             onSuccess={handleExtractionSuccess}
             onError={handleExtractionError}
             disabled={isExtracting}
           />
-          
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '8px 0', color: 'var(--text-tertiary)', fontSize: '12px', letterSpacing: '0.1em', fontWeight: 500 }}>
-            或输入网站 URL 直接解析
-          </div>
-
-          <UrlInput
-            onStart={() => startExtraction('正在全时域解析网页，AI 深度重构中 (这可能需要 15 秒)...')}
-            onSuccess={handleExtractionSuccess}
-            onError={handleExtractionError}
-            disabled={isExtracting}
-          />
-          
-          {isExtracting && (
-             <div style={{ marginTop: '32px', textAlign: 'center', animation: 'fadeIn 0.3s' }}>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px', fontWeight: 500, letterSpacing: '0.02em' }}>{statusText}</p>
-                <div style={{ width: '120px', height: '1px', background: 'var(--border-subtle)', margin: '0 auto', position: 'relative', overflow: 'hidden' }}>
-                   <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', background: 'var(--text-primary)', animation: 'slideRight 1.5s infinite ease-in-out' }} />
-                </div>
-             </div>
-          )}
         </div>
       </main>
 

@@ -73,63 +73,63 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
       style={{
         display: 'flex',
         alignItems: 'center',
-        background: 'var(--bg-surface)',
+        background: '#F3F3F4',
         border: 'none',
-        borderRadius: '16px',
+        borderRadius: '100px',
         padding: '8px',
-        transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         opacity: disabled ? 0.5 : 1,
-        width: '100%',
-        boxShadow: '0 12px 32px rgba(0,0,0,0.04)'
+        width: '100%'
       }}
       onFocus={(e) => {
-        e.currentTarget.style.boxShadow = '0 24px 64px rgba(0,0,0,0.08)'
+        e.currentTarget.style.background = 'var(--bg-surface)'
+        e.currentTarget.style.boxShadow = '0 12px 48px rgba(0,0,0,0.08)'
         e.currentTarget.style.transform = 'translateY(-2px)'
       }}
       onBlur={(e) => {
-        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.04)'
+        e.currentTarget.style.background = '#F3F3F4'
+        e.currentTarget.style.boxShadow = 'none'
         e.currentTarget.style.transform = 'translateY(0)'
       }}
     >
       <input
         type="text"
-        placeholder="https://"
+        placeholder="What website design are you interested in?"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         disabled={disabled}
         style={{
           flex: 1,
-          height: '48px',
+          height: '56px',
           padding: '0 24px',
           border: 'none',
           background: 'transparent',
           color: 'var(--text-primary)',
-          fontSize: '15px',
+          fontSize: '16px',
           outline: 'none',
-          letterSpacing: '0.02em'
         }}
       />
       <button
         type="submit"
         disabled={disabled || !url}
         style={{
-          height: '48px',
-          padding: '0 32px',
-          background: 'var(--text-primary)',
-          color: 'var(--bg-base)',
+          height: '56px',
+          padding: '0 40px',
+          background: '#EA4C89', /* Dribbble Pink Accent */
+          color: '#FFFFFF',
           border: 'none',
-          borderRadius: '12px',
-          fontSize: '14px',
-          fontWeight: 600,
-          letterSpacing: '0.04em',
+          borderRadius: '100px',
+          fontSize: '15px',
+          fontWeight: 700,
           cursor: disabled || !url ? 'not-allowed' : 'pointer',
           transition: 'all var(--duration-fast)',
-          opacity: disabled || !url ? 0.4 : 1
+          opacity: disabled || !url ? 0.4 : 1,
+          boxShadow: disabled || !url ? 'none' : '0 8px 24px rgba(234, 76, 137, 0.3)'
         }}
-        onMouseEnter={e => !disabled && url && (e.currentTarget.style.opacity = '0.88')}
-        onMouseLeave={e => !disabled && url && (e.currentTarget.style.opacity = '1')}
+        onMouseEnter={e => !disabled && url && (e.currentTarget.style.transform = 'scale(1.02)')}
+        onMouseLeave={e => !disabled && url && (e.currentTarget.style.transform = 'scale(1)')}
       >
-        提取风格
+        提取重构
       </button>
     </form>
   )
