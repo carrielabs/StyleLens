@@ -72,12 +72,12 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
           borderBottom: '1px solid var(--border-subtle)', 
           fontSize: '13px', color: 'var(--text-tertiary)' 
         }}>
-          <div style={{ flex: '0 0 40%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
-          <div style={{ flex: '0 0 16%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
-          <div style={{ flex: '0 0 11%' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
-          <div style={{ flex: '0 0 11%' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
-          <div style={{ flex: '0 0 11%' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
-          <div style={{ flex: '0 0 11%' }}>{lang === 'zh' ? '字间距' : 'Spacing'}</div>
+          <div style={{ flex: '0 0 35%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
+          <div style={{ flex: '0 0 15%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
+          <div style={{ flex: '0 0 10%' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
+          <div style={{ flex: '0 0 12%' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
+          <div style={{ flex: '0 0 15%' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
+          <div style={{ flex: '0 0 13%' }}>{lang === 'zh' ? '字间距' : 'Spacing'}</div>
         </div>
 
         {displayFonts.map((font, idx) => {
@@ -94,7 +94,7 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
               
               {/* 1. FONT (The Specimen) */}
               <div style={{ 
-                flex: '0 0 40%', 
+                flex: '0 0 35%', 
                 fontSize: `clamp(13px, ${style.size}, 36px)`, 
                 fontWeight: style.weight, 
                 color: 'var(--text-primary)', 
@@ -109,27 +109,27 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
               </div>
 
               {/* 2. SCENARIO */}
-              <div style={{ flex: '0 0 16%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 15%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
                 {style.label}
               </div>
 
               {/* 3. SIZE */}
-              <div style={{ flex: '0 0 11%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 10%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
                 {style.size}
               </div>
 
               {/* 4. WEIGHT */}
-              <div style={{ flex: '0 0 11%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 12%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
                 {style.weight}
               </div>
 
               {/* 5. LINE HEIGHT */}
-              <div style={{ flex: '0 0 11%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 15%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
                 {style.lh}
               </div>
 
               {/* 6. SPACING */}
-              <div style={{ flex: '0 0 11%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
                 {parsedSpacing}
               </div>
 
