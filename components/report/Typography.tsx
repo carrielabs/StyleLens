@@ -54,7 +54,22 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
   if (parsedSpacing.length > 15) parsedSpacing = 'normal' // hard truncate AI paragraph bleed
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'auto', paddingBottom: '16px' }}>
+      <div style={{ minWidth: '680px' }}>
+        
+        {/* Explicit 6-Column Header */}
+        <div style={{ 
+          display: 'flex', alignItems: 'center', paddingBottom: '16px', 
+          borderBottom: '1px solid var(--border-subtle)', 
+          fontSize: '12px', color: 'var(--text-tertiary)' 
+        }}>
+          <div style={{ flex: '0 0 16%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
+          <div style={{ flex: '0 0 34%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
+          <div style={{ flex: '0 0 12.5%' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
+          <div style={{ flex: '0 0 12.5%' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
+          <div style={{ flex: '0 0 12.5%' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
+          <div style={{ flex: '0 0 12.5%' }}>{lang === 'zh' ? '字间距' : 'Spacing'}</div>
+        </div>
 
         {displayFonts.map((font, idx) => {
           const style = styles[idx]
@@ -62,46 +77,57 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
           return (
             <div key={idx} style={{ 
               display: 'flex', 
-              flexDirection: 'column', 
-              paddingTop: idx === 0 ? '0' : '48px',
-              paddingBottom: '48px', 
+              alignItems: 'center', 
+              padding: '28px 0', 
               borderBottom: idx < displayFonts.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none' 
             }}>
               
-              {/* Top: Role Label */}
-              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.02em' }}>
+              {/* 1. SCENARIO */}
+              <div style={{ flex: '0 0 16%', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
                 {style.label}
               </div>
 
-              {/* Middle: The Self-Referential Specimen (e.g. "48px San Francisco") */}
+              {/* 2. FONT (The Specimen) */}
               <div style={{ 
-                fontSize: style.size, 
+                flex: '0 0 34%', 
+                fontSize: `clamp(18px, ${style.size}, 36px)`, 
                 fontWeight: style.weight, 
                 color: 'var(--text-primary)', 
                 fontFamily: `"${font}", var(--font-sans), sans-serif`, 
-                lineHeight: style.lh, 
-                letterSpacing: parsedSpacing, 
-                wordBreak: 'break-word',
-                marginTop: '16px',
-                marginBottom: '24px'
-              }}>
-                {style.size} {font}
+                lineHeight: 1.2, 
+                paddingRight: '16px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }} title={font}>
+                {font}
               </div>
 
-              {/* Bottom: Technical Metrics Stack */}
-              <div style={{ 
-                display: 'flex', flexDirection: 'column', gap: '8px', 
-                fontSize: '13px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' 
-              }}>
-                <span>W{style.weight}</span>
-                <span>{style.lh} LH</span>
-                <span>{parsedSpacing} LS</span>
+              {/* 3. SIZE */}
+              <div style={{ flex: '0 0 12.5%', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                {style.size}
+              </div>
+
+              {/* 4. WEIGHT */}
+              <div style={{ flex: '0 0 12.5%', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                {style.weight}
+              </div>
+
+              {/* 5. LINE HEIGHT */}
+              <div style={{ flex: '0 0 12.5%', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                {style.lh}
+              </div>
+
+              {/* 6. SPACING */}
+              <div style={{ flex: '0 0 12.5%', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                {parsedSpacing}
               </div>
 
             </div>
           )
         })}
 
+      </div>
     </div>
   )
 }
