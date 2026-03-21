@@ -63,17 +63,17 @@ export default function Home() {
         borderBottom: 'none'
       }}>
         <div style={{
-          fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, fontStyle: 'italic',
+          fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, fontStyle: 'italic',
           letterSpacing: '0.02em', color: 'var(--text-primary)'
         }}>
-          StyleLens Design Office
+          StyleLens
         </div>
-        <div style={{ display: 'flex', gap: '32px', fontSize: '13px', fontWeight: 500, letterSpacing: '0.02em' }}>
-          <a href="/" className="nav-link" style={{ color: 'var(--text-primary)' }}>EXTRACT</a>
-          <a href="/library" className="nav-link" style={{ color: 'var(--text-tertiary)' }}>RECORDS</a>
+        <div style={{ display: 'flex', gap: '40px', fontSize: '14px', fontWeight: 500, letterSpacing: '0.04em' }}>
+          <a href="/" className="nav-link" style={{ color: 'var(--text-primary)', paddingBottom: '4px', borderBottom: '1px solid var(--text-primary)' }}>提取中心</a>
+          <a href="/library" className="nav-link" style={{ color: 'var(--text-secondary)' }}>分析记录</a>
         </div>
-        <Link href="/auth" style={{ fontSize: '12px', color: 'var(--text-inverse)', background: 'var(--text-primary)', padding: '10px 20px', borderRadius: '100px', textDecoration: 'none', fontWeight: 600, letterSpacing: '0.02em', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-          LOGIN
+        <Link href="/auth" style={{ fontSize: '13px', color: 'var(--text-primary)', background: 'transparent', padding: '8px 20px', borderRadius: '100px', textDecoration: 'none', fontWeight: 600, letterSpacing: '0.04em', border: '1px solid var(--border-strong)', transition: 'all 0.2s' }}>
+          登录
         </Link>
       </nav>
 
@@ -81,15 +81,20 @@ export default function Home() {
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', position: 'relative' }}>
         
         {/* Title Area */}
-        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '80px', position: 'relative' }}>
+          {/* Subtle architectural background texture metric */}
+          <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', fontSize: '11px', color: 'var(--border-strong)', letterSpacing: '0.1em', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>
+            [ ALGORITHM : GEMINI 2.5 FLASH PRO ]
+          </div>
+          
           <h1 style={{
-            fontFamily: 'var(--font-serif)', fontSize: '48px', fontWeight: 600,
-            color: 'var(--text-primary)', marginBottom: '16px', letterSpacing: '-0.02em'
+            fontFamily: 'var(--font-serif)', fontSize: '56px', fontWeight: 600,
+            color: 'var(--text-primary)', marginBottom: '24px', letterSpacing: '0.02em'
           }}>
-            探寻视觉的内在秩序
+            探寻视觉内在秩序
           </h1>
-          <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '440px', margin: '0 auto', lineHeight: 1.6 }}>
-            上传设计稿或输入网页地址，我们将为你优雅解析深层色彩、排版细节与视觉脉络设置。
+          <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '440px', margin: '0 auto', lineHeight: 1.8, letterSpacing: '0.02em' }}>
+            上传高精度设计稿或直接解析目标公网网站，系统将在极短时间内深度剖析构成美学的色彩、排版参数与架构规则。
           </p>
         </div>
 
@@ -102,14 +107,16 @@ export default function Home() {
           )}
 
           <ImageUploader 
-            onStart={() => startExtraction('Running architectural analysis on image pixels...')}
+            onStart={() => startExtraction('正在深入像素层，提取全局排版规范与色彩矩阵...')}
             onSuccess={handleExtractionSuccess}
             onError={handleExtractionError}
             disabled={isExtracting}
           />
           
-          <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 600 }}>
-            Or input url directly
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', margin: '8px 0', color: 'var(--text-tertiary)', fontSize: '12px', letterSpacing: '0.2em', fontWeight: 600 }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+            直接解析网站链路
+            <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
           </div>
 
           <UrlInput

@@ -73,58 +73,57 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
       style={{
         display: 'flex',
         alignItems: 'center',
-        background: 'var(--bg-elevated)',
-        borderRadius: '100px',
-        padding: '6px',
-        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border-base)',
+        borderRadius: '8px',
+        padding: '4px',
+        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         opacity: disabled ? 0.5 : 1,
         width: '100%'
       }}
       onFocus={(e) => {
-        e.currentTarget.style.background = 'var(--bg-surface)'
-        e.currentTarget.style.boxShadow = '0 24px 48px rgba(0,0,0,0.06)'
-        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.borderColor = 'var(--text-primary)'
+        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.04)'
       }}
       onBlur={(e) => {
-        e.currentTarget.style.background = 'var(--bg-elevated)'
+        e.currentTarget.style.borderColor = 'var(--border-base)'
         e.currentTarget.style.boxShadow = 'none'
-        e.currentTarget.style.transform = 'translateY(0)'
       }}
     >
       <input
         type="text"
-        placeholder="粘贴网站 URL 提取风格，例如 linear.app"
+        placeholder="粘贴公网 URL，深入解析整个网站系统 (例如 linear.app)"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         disabled={disabled}
         style={{
           flex: 1,
-          height: '48px',
-          padding: '0 24px',
+          height: '40px',
+          padding: '0 16px',
           border: 'none',
           background: 'transparent',
           color: 'var(--text-primary)',
-          fontSize: '15px',
+          fontSize: '14px',
           outline: 'none',
-          letterSpacing: '-0.01em'
+          letterSpacing: '0.02em'
         }}
       />
       <button
         type="submit"
         disabled={disabled || !url}
         style={{
-          height: '48px',
-          padding: '0 32px',
+          height: '40px',
+          padding: '0 24px',
           background: 'var(--text-primary)',
-          color: 'var(--text-inverse)',
+          color: 'var(--bg-base)',
           border: 'none',
-          borderRadius: '100px',
-          fontSize: '14px',
+          borderRadius: '6px',
+          fontSize: '13px',
           fontWeight: 600,
-          letterSpacing: '0.02em',
+          letterSpacing: '0.04em',
           cursor: disabled || !url ? 'not-allowed' : 'pointer',
           transition: 'all var(--duration-fast)',
-          boxShadow: disabled || !url ? 'none' : '0 4px 12px rgba(0,0,0,0.1)'
+          opacity: disabled || !url ? 0.4 : 1
         }}
         onMouseEnter={e => !disabled && url && (e.currentTarget.style.opacity = '0.88')}
         onMouseLeave={e => !disabled && url && (e.currentTarget.style.opacity = '1')}

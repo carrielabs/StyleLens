@@ -98,16 +98,16 @@ export default function ImageUploader({ onStart, onSuccess, onError, disabled }:
   return (
     <div 
       style={{
-        border: 'none',
-        backgroundColor: isDragging ? 'var(--bg-hover)' : 'var(--bg-elevated)',
-        borderRadius: '24px',
-        padding: '64px 32px',
+        border: isDragging ? '1px solid var(--text-primary)' : '1px dashed var(--border-strong)',
+        backgroundColor: isDragging ? 'var(--bg-hover)' : 'transparent',
+        borderRadius: 'var(--radius-lg)',
+        padding: '56px 32px',
         textAlign: 'center',
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         opacity: disabled ? 0.5 : 1,
-        transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-        boxShadow: isDragging ? '0 24px 48px rgba(0,0,0,0.06)' : 'none'
+        transform: isDragging ? 'scale(1.01)' : 'scale(1)',
+        boxShadow: isDragging ? '0 12px 32px rgba(0,0,0,0.04)' : 'none'
       }}
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
@@ -125,14 +125,18 @@ export default function ImageUploader({ onStart, onSuccess, onError, disabled }:
         onChange={handleChange}
         disabled={disabled}
       />
-      <div style={{ fontSize: '32px', fontWeight: 300, marginBottom: '20px', color: 'var(--text-secondary)', opacity: isDragging ? 1 : 0.4, transition: 'all 0.3s' }}>
-        +
+      <div style={{ marginBottom: '24px', opacity: isDragging ? 1 : 0.8, transition: 'all 0.3s' }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
       </div>
-      <div style={{ fontSize: '15px', color: 'var(--text-secondary)', letterSpacing: '-0.01em' }}>
-        <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Drop an image here</strong> or paste (Ctrl+V)
+      <div style={{ fontSize: '15px', color: 'var(--text-secondary)', letterSpacing: '0.02em', fontWeight: 500 }}>
+        <span style={{ color: 'var(--text-primary)' }}>拖拽设计图到此处</span> / 或直接粘贴 (Ctrl+V)
       </div>
-      <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '8px', letterSpacing: '0.02em' }}>
-        High-res UI screenshots yield the deepest analytical parsing.
+      <div style={{ fontSize: '13px', color: 'var(--text-tertiary)', marginTop: '12px', letterSpacing: '0.02em' }}>
+        支持高分辨率 UI 截图，最高像素解析度以揭示细微差异
       </div>
     </div>
   )
