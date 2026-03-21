@@ -53,12 +53,12 @@ Be highly specific with color values (exact HEX codes). For colors you cannot de
 const USER_PROMPT_TEMPLATE = `Analyze this design and return a complete style report as JSON with this exact structure:
 
 {
-  "summary": "One sentence describing the overall visual style in Chinese",
-  "summaryEn": "Same summary translated perfectly to English",
-  "summaryZh": "Same summary in Chinese",
-  "tags": ["tag1", "tag2", "tag3"],
-  "tagsEn": ["Minimalist", "Dark Mode", "Editorial"],
-  "tagsZh": ["极简主义", "深色模式", "杂志排版"],
+  "summary": "Deprecated field, but provide a tiny string to be safe.",
+  "summaryEn": "A comprehensive 2-3 sentence paragraph detailing the overall visual aesthetic, structural layout theme, color theory impression, and target audience emotion.",
+  "summaryZh": "A highly professional 2-3 sentence paragraph in Chinese detailing the overall visual aesthetic, layout theme, and brand impression. (e.g. 采用了极简主义与大面积留白，结合高对比度无衬线字体，传递出极具未来感的技术品牌调性...)",
+  "tags": ["tag1", "tag2"],
+  "tagsEn": ["Minimalist", "Dark Mode", "Editorial", "High Contrast", "Glassmorphism", "Geometric", "(Provide EXACTLY 6 to 10 highly specific tags)"],
+  "tagsZh": ["极简主义", "深色模式", "杂志排版", "高对比度", "毛玻璃", "几何感", "(Provide EXACTLY 6 to 10 highly specific tags)"],
   "colors": [
     {
       "role": "background|surface|primary|secondary|accent|text|border|other",
