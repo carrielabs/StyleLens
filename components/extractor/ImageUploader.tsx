@@ -98,21 +98,19 @@ export default function ImageUploader({ onStart, onSuccess, onError, disabled }:
   return (
     <div 
       style={{
-        border: 'none',
-        background: 'linear-gradient(135deg, #F8F9FA 0%, #E9ECEF 100%)',
-        borderRadius: '32px',
-        padding: '32px',
+        border: isDragging ? '2px dashed var(--text-primary)' : '2px dashed #E2E2E2',
+        backgroundColor: isDragging ? 'var(--bg-hover)' : '#F9F9FB',
+        borderRadius: '24px',
+        padding: '48px 32px',
         width: '100%',
-        maxWidth: '680px',
-        minHeight: '480px',
+        minHeight: '200px',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'all 0.3s ease',
         opacity: disabled ? 0.5 : 1,
-        transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-        boxShadow: isDragging ? '0 32px 64px rgba(0,0,0,0.1)' : '0 24px 48px rgba(0,0,0,0.06)'
       }}
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
@@ -131,27 +129,16 @@ export default function ImageUploader({ onStart, onSuccess, onError, disabled }:
         disabled={disabled}
       />
 
-      <div style={{
-        background: 'var(--bg-surface)',
-        borderRadius: '24px',
-        width: '100%', height: '100%',
-        minHeight: '360px',
-        boxShadow: '0 12px 32px rgba(0,0,0,0.04)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        border: isDragging ? '2px dashed var(--text-primary)' : '2px dashed transparent',
-        transition: 'all 0.3s'
-      }}>
-        <div style={{ marginBottom: '24px', opacity: isDragging ? 1 : 0.8, transition: 'all 0.4s', transform: isDragging ? 'translateY(-8px)' : 'none' }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontSize: '36px', color: 'var(--text-inverse)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
-            +
-          </div>
+      <div style={{ marginBottom: '16px', opacity: isDragging ? 1 : 0.6, transition: 'all 0.3s', transform: isDragging ? 'translateY(-4px)' : 'none' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontSize: '24px', color: 'var(--text-inverse)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          +
         </div>
-        <div style={{ fontSize: '24px', color: 'var(--text-primary)', letterSpacing: '-0.02em', fontWeight: 800, marginBottom: '12px' }}>
-          拖拽设计图到此处
-        </div>
-        <div style={{ fontSize: '15px', color: 'var(--text-secondary)', letterSpacing: '0.01em', fontWeight: 500 }}>
-          或点击上传，支持 JPG / PNG / WebP
-        </div>
+      </div>
+      <div style={{ fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.01em', fontWeight: 700, marginBottom: '8px' }}>
+        拖拽设计图到此处
+      </div>
+      <div style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+        或点击上传，支持 JPG / PNG / WebP
       </div>
     </div>
   )
