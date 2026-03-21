@@ -63,21 +63,21 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
   if (parsedSpacing.length > 15) parsedSpacing = 'normal' // hard truncate AI paragraph bleed
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'hidden' }}>
-      <div style={{ width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'auto', paddingBottom: '16px' }}>
+      <div style={{ minWidth: '600px' }}>
         
         {/* Explicit 6-Column Header */}
         <div style={{ 
-          display: 'flex', alignItems: 'center', paddingBottom: '16px', 
+          display: 'flex', alignItems: 'baseline', paddingBottom: '16px', 
           borderBottom: '1px solid var(--border-subtle)', 
           fontSize: '13px', color: 'var(--text-tertiary)' 
         }}>
-          <div style={{ flex: '0 0 35%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
-          <div style={{ flex: '0 0 15%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
-          <div style={{ flex: '0 0 10%', textAlign: 'right' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
-          <div style={{ flex: '0 0 12%', textAlign: 'right' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
+          <div style={{ flex: '0 0 32%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
+          <div style={{ flex: '0 0 16%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
+          <div style={{ flex: '0 0 13%', textAlign: 'right' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
+          <div style={{ flex: '0 0 13%', textAlign: 'right' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
           <div style={{ flex: '0 0 13%', textAlign: 'right' }}>{lang === 'zh' ? '字间距' : 'Spacing'}</div>
-          <div style={{ flex: '0 0 15%', textAlign: 'right' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
+          <div style={{ flex: '0 0 13%', textAlign: 'right' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
         </div>
 
         {displayFonts.map((font, idx) => {
@@ -87,14 +87,14 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
           return (
             <div key={idx} style={{ 
               display: 'flex', 
-              alignItems: 'center', 
+              alignItems: 'baseline', 
               padding: '24px 0', 
               borderBottom: idx < displayFonts.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none' 
             }}>
               
               {/* 1. FONT (The Specimen) */}
               <div style={{ 
-                flex: '0 0 35%', 
+                flex: '0 0 32%', 
                 fontSize: `clamp(13px, ${style.size}, 36px)`, 
                 fontWeight: style.weight, 
                 color: 'var(--text-primary)', 
@@ -109,17 +109,17 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
               </div>
 
               {/* 2. SCENARIO */}
-              <div style={{ flex: '0 0 15%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 16%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
                 {style.label}
               </div>
 
               {/* 3. SIZE */}
-              <div style={{ flex: '0 0 10%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
+              <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
                 {style.size}
               </div>
 
               {/* 4. WEIGHT */}
-              <div style={{ flex: '0 0 12%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
+              <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
                 {style.weight}
               </div>
 
@@ -129,7 +129,7 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
               </div>
 
               {/* 6. LINE HEIGHT */}
-              <div style={{ flex: '0 0 15%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
+              <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
                 {style.lh}
               </div>
 
