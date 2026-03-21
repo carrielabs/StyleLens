@@ -74,9 +74,9 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
         }}>
           <div style={{ flex: '0 0 35%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
           <div style={{ flex: '0 0 15%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
-          <div style={{ flex: '0 0 10%' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
-          <div style={{ flex: '0 0 12%' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
-          <div style={{ flex: '0 0 13%' }}>{lang === 'zh' ? '字间距' : 'Spacing'}</div>
+          <div style={{ flex: '0 0 10%', textAlign: 'right' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
+          <div style={{ flex: '0 0 12%', textAlign: 'right' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
+          <div style={{ flex: '0 0 13%', textAlign: 'right' }}>{lang === 'zh' ? '字间距' : 'Spacing'}</div>
           <div style={{ flex: '0 0 15%', textAlign: 'right' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
         </div>
 
@@ -114,17 +114,17 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
               </div>
 
               {/* 3. SIZE */}
-              <div style={{ flex: '0 0 10%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 10%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
                 {style.size}
               </div>
 
               {/* 4. WEIGHT */}
-              <div style={{ flex: '0 0 12%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 12%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
                 {style.weight}
               </div>
 
               {/* 5. SPACING */}
-              <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+              <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
                 {parsedSpacing}
               </div>
 
