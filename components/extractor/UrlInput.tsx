@@ -73,63 +73,63 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
       style={{
         display: 'flex',
         alignItems: 'center',
-        background: '#F3F3F4',
-        border: 'none',
+        background: '#F5F5F5',
+        border: '1px solid transparent',
         borderRadius: '100px',
-        padding: '8px',
-        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        padding: '6px 6px 6px 24px',
+        transition: 'all 0.25s ease',
         opacity: disabled ? 0.5 : 1,
-        width: '100%'
+        width: '100%',
       }}
       onFocus={(e) => {
-        e.currentTarget.style.background = 'var(--bg-surface)'
-        e.currentTarget.style.boxShadow = '0 12px 48px rgba(0,0,0,0.08)'
-        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.background = '#FFFFFF'
+        e.currentTarget.style.border = '1px solid #E0E0E0'
+        e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.07)'
       }}
       onBlur={(e) => {
-        e.currentTarget.style.background = '#F3F3F4'
+        e.currentTarget.style.background = '#F5F5F5'
+        e.currentTarget.style.border = '1px solid transparent'
         e.currentTarget.style.boxShadow = 'none'
-        e.currentTarget.style.transform = 'translateY(0)'
       }}
     >
       <input
         type="text"
-        placeholder="What website design are you interested in?"
+        placeholder="粘贴网页 URL，例如 https://linear.app"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         disabled={disabled}
         style={{
           flex: 1,
-          height: '56px',
-          padding: '0 24px',
+          height: '44px',
           border: 'none',
           background: 'transparent',
-          color: 'var(--text-primary)',
-          fontSize: '16px',
+          color: '#1A1A1A',
+          fontSize: '15px',
           outline: 'none',
+          fontFamily: 'inherit',
         }}
       />
       <button
         type="submit"
         disabled={disabled || !url}
         style={{
-          height: '56px',
-          padding: '0 40px',
-          background: '#EA4C89', /* Dribbble Pink Accent */
-          color: '#FFFFFF',
+          height: '44px',
+          padding: '0 28px',
+          background: !url ? '#E0E0E0' : '#1A1A1A',
+          color: !url ? '#999' : '#FFFFFF',
           border: 'none',
           borderRadius: '100px',
-          fontSize: '15px',
-          fontWeight: 700,
+          fontSize: '14px',
+          fontWeight: 600,
           cursor: disabled || !url ? 'not-allowed' : 'pointer',
-          transition: 'all var(--duration-fast)',
-          opacity: disabled || !url ? 0.4 : 1,
-          boxShadow: disabled || !url ? 'none' : '0 8px 24px rgba(234, 76, 137, 0.3)'
+          transition: 'all 0.2s ease',
+          flexShrink: 0,
+          fontFamily: 'inherit',
         }}
-        onMouseEnter={e => !disabled && url && (e.currentTarget.style.transform = 'scale(1.02)')}
-        onMouseLeave={e => !disabled && url && (e.currentTarget.style.transform = 'scale(1)')}
+        onMouseEnter={e => { if (!disabled && url) e.currentTarget.style.opacity = '0.85' }}
+        onMouseLeave={e => { if (!disabled && url) e.currentTarget.style.opacity = '1' }}
       >
-        提取重构
+        解析
       </button>
     </form>
   )

@@ -98,19 +98,19 @@ export default function ImageUploader({ onStart, onSuccess, onError, disabled }:
   return (
     <div 
       style={{
-        border: isDragging ? '2px dashed var(--text-primary)' : '2px dashed #E2E2E2',
-        backgroundColor: isDragging ? 'var(--bg-hover)' : '#F9F9FB',
-        borderRadius: '24px',
-        padding: '48px 32px',
+        border: isDragging ? '1.5px dashed #1A1A1A' : '1.5px dashed #D8D8D8',
+        backgroundColor: isDragging ? '#F8F8F8' : '#FAFAFA',
+        borderRadius: '16px',
+        padding: '36px 32px',
         width: '100%',
-        minHeight: '200px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'all 0.3s ease',
+        transition: 'all 0.25s ease',
         opacity: disabled ? 0.5 : 1,
+        gap: '12px',
       }}
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
@@ -129,16 +129,22 @@ export default function ImageUploader({ onStart, onSuccess, onError, disabled }:
         disabled={disabled}
       />
 
-      <div style={{ marginBottom: '16px', opacity: isDragging ? 1 : 0.6, transition: 'all 0.3s', transform: isDragging ? 'translateY(-4px)' : 'none' }}>
-        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontSize: '24px', color: 'var(--text-inverse)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-          +
+      <div style={{
+        width: '40px', height: '40px', borderRadius: '50%',
+        background: isDragging ? '#1A1A1A' : '#EBEBEB',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '20px',
+        color: isDragging ? '#fff' : '#999',
+        transition: 'all 0.25s ease',
+      }}>+</div>
+
+      <div>
+        <div style={{ fontSize: '15px', color: '#1A1A1A', fontWeight: 600, textAlign: 'center', marginBottom: '4px', fontFamily: 'inherit' }}>
+          拖拽设计图至此处
         </div>
-      </div>
-      <div style={{ fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.01em', fontWeight: 700, marginBottom: '8px' }}>
-        拖拽设计图到此处
-      </div>
-      <div style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-        或点击上传，支持 JPG / PNG / WebP
+        <div style={{ fontSize: '13px', color: '#BBBBBB', textAlign: 'center', fontFamily: 'inherit' }}>
+          支持 JPG、PNG、WebP，最大 20MB
+        </div>
       </div>
     </div>
   )
