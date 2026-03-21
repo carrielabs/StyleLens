@@ -61,38 +61,52 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
       {/* Visual Hierarchy */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', padding: '24px', background: 'var(--bg-elevated)', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.03)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
         
         {displayFonts.map((font, idx) => {
           // If we run out of predefined styles, inherit the previous one but scale down
           const style = styles[idx] || { ...styles[idx-1], size: '12px', label: 'SECONDARY' }
           
           return (
-            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
+            <div key={idx} style={{ 
+              background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', 
+              border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', 
+              justifyContent: 'space-between', minHeight: '220px', position: 'relative', overflow: 'hidden' 
+            }}>
               
-              {/* The label itself IS the styled specimen */}
+              {/* Top: Massive Decorative Letter Aa */}
               <div style={{ 
-                fontSize: style.size, fontWeight: style.weight, color: 'var(--text-primary)', 
+                fontSize: Number(style.size.replace('px', '')) > 20 ? '72px' : '48px', 
+                fontWeight: style.weight, color: 'var(--text-primary)', 
                 fontFamily: `"${font}", var(--font-sans), sans-serif`, 
-                lineHeight: style.lh, letterSpacing: 'normal', maxWidth: '100%',
-                wordBreak: 'break-word', margin: 0
+                lineHeight: 1, letterSpacing: '-0.04em', margin: '-8px 0 32px -4px'
               }}>
-                {style.label}
+                Aa
               </div>
               
-              {/* Technical Data Points Boxed Tags */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                 <MetricTag label={tFont} value={font} />
-                 <MetricTag label={tWeight} value={style.weight} />
-                 <MetricTag label={tSize} value={style.size} />
-                 <MetricTag label={tLh} value={style.lh} />
-                 <MetricTag label={tLs} value={data.letterSpacing} />
+              {/* Bottom: Structured Specs */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: 'auto' }}>
+                 
+                 {/* Roles & Font Family */}
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>
+                      {style.label}
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
+                      {font}
+                    </div>
+                 </div>
+
+                 {/* Engineering Data Sheet Grid */}
+                 <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                    <MetricBlock label={tWeight} value={style.weight} />
+                    <MetricBlock label={tSize} value={style.size} />
+                    <MetricBlock label={tLh} value={style.lh} />
+                    <MetricBlock label={tLs} value={data.letterSpacing} />
+                 </div>
+
               </div>
-              
-              {/* Sub-divider */}
-              {idx < displayFonts.length - 1 && (
-                <div style={{ height: '1px', background: 'var(--border-subtle)', width: '100%', marginTop: '16px' }} />
-              )}
+
             </div>
           )
         })}
@@ -102,21 +116,21 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
   )
 }
 
-function MetricTag({ label, value }: { label: string, value: any }) {
+function MetricBlock({ label, value }: { label: string, value: any }) {
   if (!value) return null
   let displayValue = String(value)
-  // Hard truncation to defensively prevent AI paragraphs from breaking the UI
-  if (displayValue.length > 20) {
-    displayValue = displayValue.substring(0, 18) + '...'
+  // Hard truncation for historical legacy data paragraphs
+  if (displayValue.length > 15) {
+    displayValue = displayValue.substring(0, 12) + '...'
   }
   return (
-    <div style={{ 
-      display: 'inline-flex', alignItems: 'center', gap: '6px', 
-      padding: '4px 10px', background: '#fff', borderRadius: '6px', 
-      border: '1px solid rgba(0,0,0,0.06)', fontSize: '11px', fontFamily: 'var(--font-mono)'
-    }} title={String(value)}>
-      <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>{label}</span>
-      <span style={{ color: 'var(--text-secondary)' }}>{displayValue}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }} title={String(value)}>
+      <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        {label}
+      </span>
+      <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 500 }}>
+        {displayValue}
+      </span>
     </div>
   )
 }
