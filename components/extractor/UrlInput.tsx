@@ -74,36 +74,37 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
         display: 'flex',
         alignItems: 'center',
         background: 'var(--bg-surface)',
-        border: '1px solid var(--border-base)',
-        borderRadius: '8px',
-        padding: '4px',
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        border: 'none',
+        borderRadius: '16px',
+        padding: '8px',
+        transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
         opacity: disabled ? 0.5 : 1,
-        width: '100%'
+        width: '100%',
+        boxShadow: '0 12px 32px rgba(0,0,0,0.04)'
       }}
       onFocus={(e) => {
-        e.currentTarget.style.borderColor = 'var(--text-primary)'
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.04)'
+        e.currentTarget.style.boxShadow = '0 24px 64px rgba(0,0,0,0.08)'
+        e.currentTarget.style.transform = 'translateY(-2px)'
       }}
       onBlur={(e) => {
-        e.currentTarget.style.borderColor = 'var(--border-base)'
-        e.currentTarget.style.boxShadow = 'none'
+        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.04)'
+        e.currentTarget.style.transform = 'translateY(0)'
       }}
     >
       <input
         type="text"
-        placeholder="粘贴公网 URL，深入解析整个网站系统 (例如 linear.app)"
+        placeholder="https://"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         disabled={disabled}
         style={{
           flex: 1,
-          height: '40px',
-          padding: '0 16px',
+          height: '48px',
+          padding: '0 24px',
           border: 'none',
           background: 'transparent',
           color: 'var(--text-primary)',
-          fontSize: '14px',
+          fontSize: '15px',
           outline: 'none',
           letterSpacing: '0.02em'
         }}
@@ -112,13 +113,13 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
         type="submit"
         disabled={disabled || !url}
         style={{
-          height: '40px',
-          padding: '0 24px',
+          height: '48px',
+          padding: '0 32px',
           background: 'var(--text-primary)',
           color: 'var(--bg-base)',
           border: 'none',
-          borderRadius: '6px',
-          fontSize: '13px',
+          borderRadius: '12px',
+          fontSize: '14px',
           fontWeight: 600,
           letterSpacing: '0.04em',
           cursor: disabled || !url ? 'not-allowed' : 'pointer',

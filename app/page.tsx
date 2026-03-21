@@ -72,7 +72,7 @@ export default function Home() {
           <a href="/" className="nav-link" style={{ color: 'var(--text-primary)', paddingBottom: '4px', borderBottom: '1px solid var(--text-primary)' }}>提取中心</a>
           <a href="/library" className="nav-link" style={{ color: 'var(--text-secondary)' }}>分析记录</a>
         </div>
-        <Link href="/auth" style={{ fontSize: '13px', color: 'var(--text-primary)', background: 'transparent', padding: '8px 20px', borderRadius: '100px', textDecoration: 'none', fontWeight: 600, letterSpacing: '0.04em', border: '1px solid var(--border-strong)', transition: 'all 0.2s' }}>
+        <Link href="/auth" style={{ fontSize: '13px', color: 'var(--text-inverse)', background: 'var(--text-primary)', padding: '8px 20px', borderRadius: '100px', textDecoration: 'none', fontWeight: 600, letterSpacing: '0.04em', border: 'none', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
           登录
         </Link>
       </nav>
@@ -81,17 +81,12 @@ export default function Home() {
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', position: 'relative' }}>
         
         {/* Title Area */}
-        <div style={{ textAlign: 'center', marginBottom: '80px', position: 'relative' }}>
-          {/* Subtle architectural background texture metric */}
-          <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', fontSize: '11px', color: 'var(--border-strong)', letterSpacing: '0.1em', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>
-            [ ALGORITHM : GEMINI 2.5 FLASH PRO ]
-          </div>
-          
+        <div style={{ textAlign: 'center', marginBottom: '80px' }}>
           <h1 style={{
             fontFamily: 'var(--font-serif)', fontSize: '56px', fontWeight: 600,
             color: 'var(--text-primary)', marginBottom: '24px', letterSpacing: '0.02em'
           }}>
-            探寻视觉内在秩序
+            探寻视觉的内在秩序
           </h1>
           <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '440px', margin: '0 auto', lineHeight: 1.8, letterSpacing: '0.02em' }}>
             上传高精度设计稿或直接解析目标公网网站，系统将在极短时间内深度剖析构成美学的色彩、排版参数与架构规则。
@@ -113,10 +108,8 @@ export default function Home() {
             disabled={isExtracting}
           />
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', margin: '8px 0', color: 'var(--text-tertiary)', fontSize: '12px', letterSpacing: '0.2em', fontWeight: 600 }}>
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-            直接解析网站链路
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '8px 0', color: 'var(--text-tertiary)', fontSize: '12px', letterSpacing: '0.1em', fontWeight: 500 }}>
+            或输入网站 URL 直接解析
           </div>
 
           <UrlInput
