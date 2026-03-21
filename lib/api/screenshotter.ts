@@ -1,46 +1,128 @@
+import fs from 'fs'
+import path from 'path'
 import type { ScreenshotResponse } from '@/lib/types'
 
-export async function captureScreenshot(url: string): Promise<ScreenshotResponse> {
-  // Free fallback MVP: Use ScreenshotOne API or a public alternative to get the screenshot.
-  // Using a widely available free endpoint for MVP:
-  const apiKey = process.env.SCREENSHOT_ONE_API_KEY || process.env.SCREENSHOT_ONE_API_KEY_2
+// Persistent file-based cache to survive server restarts (HMR/Next.js Dev)
+const CACHE_FILE = path.resolve(process.cwd(), '.screenshot_cache.json')
+
+function getPersistentCache(): Map<string, string> {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'))
+      return new Map(Object.entries(data))
+    }
+  } catch (e) {
+    console.error('[Screenshotter] Failed to read cache file:', e)
+  }
+  return new Map()
+}
+
+function savePersistentCache(cache: Map<string, string>) {
+  try {
+    const data = Object.fromEntries(cache)
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(data, null, 2))
+  } catch (e) {
+    console.error('[Screenshotter] Failed to save cache file:', e)
+  }
+}
+
+const screenshotCache = getPersistentCache()
+
+export async function captureScreenshot(targetUrl: string): Promise<ScreenshotResponse> {
+  const normalizedUrl = targetUrl.toLowerCase().trim()
   
-  if (!apiKey) {
+  // 1. Check local cache
+  if (screenshotCache.has(normalizedUrl)) {
+    console.log(`[Screenshotter] Serving from cache: ${normalizedUrl}`)
     return {
-      success: false,
-      error: 'Screenshot service API key (1 or 2) not configured in environment.'
+      success: true,
+      screenshotUrl: screenshotCache.get(normalizedUrl)!,
+      extractedCss: ''
     }
   }
 
-  try {
-    // ScreenshotOne API params
-    const params = new URLSearchParams({
-      access_key: apiKey,
-      url: url,
-      viewport_width: '1280',
-      viewport_height: '960',
-      device_scale_factor: '2',
-      format: 'jpg',
-      image_quality: '80',
-      block_ads: 'true',
-      block_cookie_banners: 'true',
-      delay: '3', // Wait for animations to settle
-      full_page: 'true' // V8 User requested full page capture
-    })
+  /**
+   * Rotation Rule: Each ScreenshotOne key has a FREE quota of 100 screenshots per month.
+   * With 6 keys, we have a total pool of 600 free screenshots per month.
+   * The system will cycle through keys 1-6 if a "quota reached" error occurs.
+   */
+  const apiKeys = [
+    process.env.SCREENSHOT_ONE_API_KEY,      // Key 1 (Primary)
+    process.env.SCREENSHOT_ONE_API_KEY_2,    // Key 2 (Backup 1)
+    process.env.SCREENSHOT_ONE_API_KEY_3,    // Key 3 (Backup 2)
+    process.env.SCREENSHOT_ONE_API_KEY_4,    // Key 4 (Backup 3)
+    process.env.SCREENSHOT_ONE_API_KEY_5,    // Key 5 (Backup 4)
+    process.env.SCREENSHOT_ONE_API_KEY_6     // Key 6 (Backup 5)
+  ].filter(Boolean) as string[]
 
-    const endpoint = `https://api.screenshotone.com/take?${params.toString()}`
+  if (apiKeys.length === 0) {
+    return { success: false, error: 'No ScreenshotOne API keys configured.' }
+  }
 
-    return {
-      success: true,
-      screenshotUrl: endpoint,
-      // For MVP without headless browser, we leave extractedCss empty.
-      // Phase 2 will implement Playwright for CSS scraping.
-      extractedCss: ''
+  let lastError = null
+
+  // 2. Try keys sequentially
+  for (let i = 0; i < apiKeys.length; i++) {
+    const apiKey = apiKeys[i]
+    try {
+      console.log(`[Screenshotter] Attempting capture with Key ${i + 1}/${apiKeys.length}...`)
+      const params = new URLSearchParams({
+        access_key: apiKey,
+        url: targetUrl,
+        viewport_width: '1280',
+        viewport_height: '960',
+        device_scale_factor: '2',
+        format: 'jpg',
+        image_quality: '80',
+        block_ads: 'true',
+        block_cookie_banners: 'true',
+        delay: '3',
+        full_page: 'true'
+      })
+
+      const endpoint = `https://api.screenshotone.com/take?${params.toString()}`
+      
+      const response = await fetch(endpoint)
+      
+      if (response.status === 400 || response.status === 402 || response.status === 429) {
+        const errorData = await response.json().catch(() => ({}))
+        const errorMsg = errorData.error_message || errorData.error || 'Quota/Limit error'
+        console.warn(`[Screenshotter] Key ${i+1} failed: ${errorMsg}`)
+        lastError = errorMsg
+        
+        if (i < apiKeys.length - 1) {
+          console.log('[Screenshotter] Rotating to backup key...')
+          continue 
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(`Screenshot API returned ${response.status}`)
+      }
+
+      // Convert to Base64 Data URL
+      const buffer = await response.arrayBuffer()
+      const base64 = Buffer.from(buffer).toString('base64')
+      const dataUrl = `data:image/jpeg;base64,${base64}`
+
+      // Update Cache
+      screenshotCache.set(normalizedUrl, dataUrl)
+      savePersistentCache(screenshotCache)
+      console.log(`[Screenshotter] Capture successful and cached. Size: ${buffer.byteLength}`)
+
+      return {
+        success: true,
+        screenshotUrl: dataUrl,
+        extractedCss: ''
+      }
+    } catch (err: any) {
+      lastError = err.message
+      if (i < apiKeys.length - 1) continue
     }
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err.message || 'Failed to capture screenshot'
-    }
+  }
+
+  return {
+    success: false,
+    error: `Screenshot failed after trying all keys. Last error: ${lastError}`
   }
 }

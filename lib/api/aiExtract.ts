@@ -5,17 +5,19 @@ import fetchNode from 'node-fetch'
 
 // We patch globalThis.fetch specifically for Gemini, as the SDK removed clean proxy overrides.
 const setupProxy = () => {
-  const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY || process.env.http_proxy || process.env.HTTP_PROXY
+  const proxyUrl = process.env.STYLELENS_HTTP_PROXY || process.env.https_proxy || process.env.HTTPS_PROXY || process.env.http_proxy || process.env.HTTP_PROXY
   if (!proxyUrl) return
 
   if (!(globalThis as any).__gemini_fetch_patched__) {
-    console.log('Patching global fetch for Gemini API to use proxy:', proxyUrl)
+    console.log('[aiExtract] Patching global fetch to use proxy:', proxyUrl)
     const agent = new HttpsProxyAgent(proxyUrl)
     const originalFetch = globalThis.fetch
     
     globalThis.fetch = async (url, init) => {
-      // Intercept only Google Generative AI requests
-      if (typeof url === 'string' && url.includes('generativelanguage.googleapis.com')) {
+      // Intercept Google Generative AI & ScreenshotOne requests if needed
+      const urlStr = typeof url === 'string' ? url : url.toString()
+      if (urlStr.includes('generativelanguage.googleapis.com') || urlStr.includes('screenshotone.com')) {
+        console.log(`[aiExtract] Proxying request to: ${urlStr.slice(0, 60)}...`)
         return fetchNode(url as any, { ...init, agent } as any) as any
       }
       return originalFetch(url, init)
@@ -32,13 +34,28 @@ setupProxy()
  * Fetches an image from a URL and converts it to a base64 string.
  */
 async function fetchImageAsBase64(url: string): Promise<{ data: string; mediaType: string }> {
+  // 1. If it's already a Data URL, parse it directly
+  if (url.startsWith('data:')) {
+    console.log('[aiExtract] Detected Data URL, parsing directly...')
+    const [header, base64] = url.split(',')
+    const mimeMatch = header.match(/data:([^;]+)/)
+    return {
+      data: base64,
+      mediaType: (mimeMatch ? mimeMatch[1] : 'image/jpeg') as any
+    }
+  }
+
+  // 2. Otherwise, fetch normally (Proxy applied via global patch)
+  console.log(`[aiExtract] Fetching image from URL: ${url.slice(0, 50)}...`)
   const response = await fetch(url)
   if (!response.ok) {
+    console.error(`[aiExtract] Image fetch failed with status: ${response.status}`)
     throw new Error(`Failed to fetch screenshot from URL (Status: ${response.status})`)
   }
   const buffer = await response.arrayBuffer()
   const base64 = Buffer.from(buffer).toString('base64')
   const contentType = response.headers.get('content-type') || 'image/jpeg'
+  console.log(`[aiExtract] Successfully fetched image. Type: ${contentType}, Size: ${buffer.byteLength}`)
   
   return {
     data: base64,
@@ -120,79 +137,112 @@ Rules:
 - If no gradients detected, return empty array []`
 
 export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleReport> {
-  const apiKey = process.env.STYLELENS_GEMINI_API_KEY
-  if (!apiKey) {
-    throw new Error('Gemini API key not configured in environment variables.')
+  const geminiKeys = [
+    process.env.STYLELENS_GEMINI_API_KEY,
+    process.env.STYLELENS_GEMINI_API_KEY_2,
+    process.env.STYLELENS_GEMINI_API_KEY_3,
+    process.env.STYLELENS_GEMINI_API_KEY_4
+  ].filter(Boolean) as string[]
+
+  if (geminiKeys.length === 0) {
+    throw new Error('No Gemini API keys configured in environment variables.')
   }
 
   let base64Data = ''
   let mimeType = ''
 
   if (req.imageBase64) {
+    console.log('[aiExtract] Using provided imageBase64')
     base64Data = req.imageBase64
     mimeType = req.imageBase64.startsWith('/9j/') || req.imageBase64.includes('jpeg')
       ? 'image/jpeg'
       : req.imageBase64.startsWith('iVBOR') ? 'image/png' : 'image/jpeg'
   } else if (req.screenshotUrl) {
+    console.log(`[aiExtract] Handling screenshotUrl: ${req.screenshotUrl.slice(0, 50)}`)
     const { data, mediaType } = await fetchImageAsBase64(req.screenshotUrl)
     base64Data = data
     mimeType = mediaType
   }
 
+  console.log(`[aiExtract] Image prepared. Mime: ${mimeType}, B64 Length: ${base64Data.length}`)
+
   let promptText = USER_PROMPT_TEMPLATE
   if (req.extractedCss) {
+    console.log(`[aiExtract] Adding CSS context (${req.extractedCss.length} bytes)`)
     promptText += `\n\nAdditional context — extracted CSS from the page:\n\`\`\`css\n${req.extractedCss.slice(0, 3000)}\n\`\`\``
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey)
+  let lastError = null
   
-  // Use gemini-2.5-flash as it is highly capable and heavily supported on the free tier
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    systemInstruction: SYSTEM_PROMPT,
-  })
+  // ── Multi-Key Rotation Strategy ────────────────────────────────────
+  for (let i = 0; i < geminiKeys.length; i++) {
+    const apiKey = geminiKeys[i]
+    try {
+      console.log(`[Attempt ${i + 1}/${geminiKeys.length}] Style extraction with Gemini 1.5 Flash...`)
+      
+      const genAI = new GoogleGenerativeAI(apiKey)
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        systemInstruction: SYSTEM_PROMPT,
+      })
 
-  // Format array payload for Gemini multimodal model
-  const imagePart = {
-    inlineData: {
-      data: base64Data,
-      mimeType: mimeType,
-    },
+      const imagePart = {
+        inlineData: { data: base64Data, mimeType }
+      }
+      const parts = [promptText, imagePart]
+
+      const result = await model.generateContent(parts)
+      const response = await result.response
+      const rawText = response.text().trim()
+      
+      return parseAndFormatResponse(rawText, req, mimeType, base64Data)
+    } catch (err: any) {
+      lastError = err
+      const isQuotaError = err.message?.includes('429') || err.message?.toLowerCase().includes('quota')
+      console.warn(`Gemini Key ${i + 1} failed:`, err.message)
+      
+      if (i < geminiKeys.length - 1) {
+        console.log('Switching to backup Gemini key...')
+        continue // Try next key
+      }
+    }
   }
 
-  const parts = [promptText, imagePart]
+  // If we reach here, all Gemini keys failed
+  throw new Error(`[All Gemini Keys Failed] Last error: ${lastError?.message || 'Unknown error'}`)
+}
 
+/**
+ * Shared parser for AI response
+ */
+function parseAndFormatResponse(
+  rawText: string, 
+  req: ExtractRequest, 
+  mimeType: string, 
+  base64Data: string
+): StyleReport {
+  let parsed: Omit<StyleReport, 'id' | 'sourceType' | 'sourceLabel' | 'thumbnailUrl' | 'createdAt'>
   try {
-    const result = await model.generateContent(parts)
-    const response = await result.response
-    const rawText = response.text().trim()
+    const clean = rawText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    parsed = JSON.parse(clean)
+  } catch {
+    throw new Error(`AI returned invalid JSON: ${rawText.slice(0, 200)}`)
+  }
 
-    let parsed: Omit<StyleReport, 'id' | 'sourceType' | 'sourceLabel' | 'thumbnailUrl' | 'createdAt'>
-    try {
-      const clean = rawText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
-      parsed = JSON.parse(clean)
-    } catch {
-      throw new Error(`AI returned invalid JSON: ${rawText.slice(0, 200)}`)
-    }
-
-    return {
-      sourceType: req.sourceType,
-      sourceLabel: req.sourceLabel,
-      thumbnailUrl: req.screenshotUrl || (req.imageBase64 ? `data:${mimeType};base64,${req.imageBase64}` : undefined),
-      summary: parsed.summary,
-      summaryEn: parsed.summaryEn || parsed.summary,
-      summaryZh: parsed.summaryZh || parsed.summary,
-      tags: parsed.tags,
-      tagsEn: parsed.tagsEn || parsed.tags,
-      tagsZh: parsed.tagsZh || parsed.tags,
-      colors: parsed.colors,
-      gradients: parsed.gradients || [],
-      typography: parsed.typography,
-      designDetails: parsed.designDetails,
-      createdAt: new Date().toISOString(),
-    }
-  } catch (error: any) {
-    console.error('Gemini extraction failed:', error)
-    throw new Error(`Extraction failed: ${error.message || 'Unknown error'}`)
+  return {
+    sourceType: req.sourceType,
+    sourceLabel: req.sourceLabel,
+    thumbnailUrl: req.screenshotUrl || (base64Data ? `data:${mimeType};base64,${base64Data}` : undefined),
+    summary: parsed.summary,
+    summaryEn: parsed.summaryEn || parsed.summary,
+    summaryZh: parsed.summaryZh || parsed.summary,
+    tags: parsed.tags,
+    tagsEn: parsed.tagsEn || parsed.tags,
+    tagsZh: parsed.tagsZh || parsed.tags,
+    colors: parsed.colors,
+    gradients: parsed.gradients || [],
+    typography: parsed.typography,
+    designDetails: parsed.designDetails,
+    createdAt: new Date().toISOString(),
   }
 }

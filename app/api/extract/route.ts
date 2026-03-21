@@ -30,9 +30,17 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, report })
   } catch (error: any) {
-    console.error('Extraction Error:', error)
+    console.error('Final Extraction Error Interface:', error)
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to extract style' },
+      { 
+        success: false, 
+        error: error.message || 'Failed to extract style',
+        debug: {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        }
+      },
       { status: 500 }
     )
   }

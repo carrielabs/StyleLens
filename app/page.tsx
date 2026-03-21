@@ -16,9 +16,9 @@ export default function Home() {
   const [isExtracting, setIsExtracting] = useState(false)
   const [report, setReport] = useState<StyleReport | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [statusText, setStatusText] = useState('')
   const [reportLang, setReportLang] = useState<'zh' | 'en'>('zh')
   const [hoveredHex, setHoveredHex] = useState<string | null>(null)
+  const [extractionProgress, setExtractionProgress] = useState(0)
 
   // ── Auth state ──
   const [isAuthVisible, setIsAuthVisible] = useState(false)
@@ -32,11 +32,24 @@ export default function Home() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [sidebarTab, setSidebarTab] = useState<'recent' | 'pinned'>('recent')
+  const [isModalImageLoading, setIsModalImageLoading] = useState(true)
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+  const [lightboxUrl, setLightboxUrl] = useState('')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+
+  // ── Modal Background Lock ──
+  useEffect(() => {
+    if (isExtracting || (report && !activeItemId) || isLightboxOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'auto'
+    }
+    return () => { document.body.style.overflow = 'auto' }
+  }, [isExtracting, report, activeItemId, isLightboxOpen])
 
   // ── Keyboard & global events ──
   useEffect(() => {
@@ -80,6 +93,29 @@ export default function Home() {
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [report, isSearchOpen])
+
+  useEffect(() => {
+    if (report) setIsModalImageLoading(true)
+  }, [report])
+
+  // ── Extraction Progress Timer ──
+  useEffect(() => {
+    let interval: any
+    if (isExtracting && !report) {
+      setExtractionProgress(0)
+      interval = setInterval(() => {
+        setExtractionProgress(prev => {
+          if (prev >= 95) return 95
+          // Linear progress for 15s (approx 6.6% per sec, but we'll do 1% per 150ms for smoothness)
+          return prev + 1
+        })
+      }, 150)
+    } else {
+      setExtractionProgress(0)
+      if (interval) clearInterval(interval)
+    }
+    return () => { if (interval) clearInterval(interval) }
+  }, [isExtracting, report])
 
   // ── Data loading ──
   const loadHistory = async (userId: string) => {
@@ -147,9 +183,19 @@ export default function Home() {
       body: JSON.stringify(payload),
     })
     const data = await res.json()
-    if (!data.success) throw new Error(data.error || '提取失败，请重试')
+    if (!data.success) {
+      console.error('Extraction API Failure Details:', data)
+      throw new Error(data.error || '提取失败，请重试')
+    }
     return data.report as StyleReport
   }
+
+  const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = error => reject(error)
+  })
 
   const handleUrlSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -157,11 +203,11 @@ export default function Home() {
     if (!user) { setIsAuthVisible(true); return }
 
     setIsExtracting(true)
-    setStatusText('正在截图...')
     setReport(null)
     setActiveItemId(null)
     setError(null)
     try {
+      // 1. Screenshot
       const ssRes = await fetch('/api/screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -169,21 +215,28 @@ export default function Home() {
       })
       const ssData = await ssRes.json()
       if (!ssData.success) throw new Error(ssData.error || '截图失败')
-      setStatusText('正在分析设计风格...')
-      let label = url.trim()
-      try { label = new URL(label).hostname.replace(/^www\./, '') } catch(e){}
+      
+      // 2. Extract
+      const labelStr = url.trim()
+      let label = labelStr
+      try { label = new URL(labelStr).hostname.replace(/^www\./, '') } catch(e){}
+      
       const result = await callExtractAPI({ screenshotUrl: ssData.screenshotUrl, sourceLabel: label })
       result.thumbnailUrl = ssData.screenshotUrl
-      setReport(result)
-      setUrl('')
+      
+      // 3. Save
       await saveExtraction(result, ssData.screenshotUrl)
+      
+      // 4. Show portal
+      setReport(result)
+      setIsExtracting(false)
+      setUrl('')
     } catch (err: unknown) {
       let msg = err instanceof Error ? err.message : '未知错误'
       if (msg.includes('Failed to fetch')) msg = '网络连接失败，请检查网络后重试'
       setError(msg)
     } finally {
       setIsExtracting(false)
-      setStatusText('')
     }
   }
 
@@ -193,28 +246,22 @@ export default function Home() {
     if (!user) { setIsAuthVisible(true); return }
 
     setIsExtracting(true)
-    setStatusText('正在分析图像...')
     setReport(null)
     setActiveItemId(null)
     setError(null)
     try {
-      const reader = new FileReader()
-      const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
+      const base64 = await toBase64(file)
       const result = await callExtractAPI({ imageBase64: base64, sourceLabel: file.name })
       result.thumbnailUrl = base64
-      setReport(result)
+      
       await saveExtraction(result, base64)
-    } catch (err: unknown) {
-      let msg = err instanceof Error ? err.message : '未知错误'
-      if (msg.includes('Failed to fetch')) msg = '网络解析失败，请检查连接后重试'
-      setError(msg)
+      
+      setReport(result)
+      setIsExtracting(false)
+    } catch (err: any) {
+      setError(err.message || '上传分析失败')
     } finally {
       setIsExtracting(false)
-      setStatusText('')
     }
   }
 
@@ -255,11 +302,37 @@ export default function Home() {
   const displayList = sidebarTab === 'pinned' ? pinnedList : recentList
 
   return (
-    <div style={{
-      height: '100vh', width: '100vw', display: 'flex', flexDirection: 'row',
-      fontFamily: 'var(--font-sans)', WebkitFontSmoothing: 'antialiased' as any,
-      userSelect: 'none', overflow: 'hidden', backgroundColor: '#FFFFFF'
-    }}>
+    <>
+      <style>{`
+        @keyframes scan {
+          0% { left: -40%; }
+          100% { left: 100%; }
+        }
+        .animate-scan {
+          animation: scan 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        .scroll-mask-top {
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 60px;
+          background: linear-gradient(to bottom, #FFFFFF 0%, rgba(255,255,255,0) 100%);
+          pointer-events: none;
+          z-index: 20;
+        }
+        .scroll-mask-modal-left {
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 60px;
+          background: linear-gradient(to bottom, #F5F4F1 0%, rgba(245,244,241,0) 100%);
+          pointer-events: none;
+          z-index: 20;
+        }
+      `}</style>
+      <div style={{
+        height: '100vh', width: '100vw', display: 'flex', flexDirection: 'row',
+        fontFamily: 'var(--font-sans)', WebkitFontSmoothing: 'antialiased' as any,
+        userSelect: 'none', overflow: 'hidden', backgroundColor: '#FFFFFF'
+      }}>
 
       {/* ══════════════════════════════════════════
           SIDEBAR
@@ -276,8 +349,9 @@ export default function Home() {
         {/* Top Actions */}
         <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
           <SidebarBtn
-            icon={<Plus size={16} strokeWidth={1.5} />}
+            icon={<Plus size={16} strokeWidth={2} />}
             label="New Extraction"
+            active={!activeItemId && !report && !isExtracting}
             onClick={() => {
               setReport(null)
               setActiveItemId(null)
@@ -287,7 +361,7 @@ export default function Home() {
             }}
           />
           <SidebarBtn
-            icon={<Search size={16} strokeWidth={1.5} />}
+            icon={<Search size={16} strokeWidth={2} />}
             label="Search"
             active={isSearchOpen}
             onClick={() => {
@@ -351,6 +425,7 @@ export default function Home() {
                   setActiveItemId(item.id)
                   setReport(item.style_data)
                   setError(null)
+                  setIsModalImageLoading(true)
                 }}
                 onPin={() => togglePin(item.id)}
               />
@@ -392,29 +467,21 @@ export default function Home() {
               else setShowUserMenu(!showUserMenu)
             }}
             style={{
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '6px',
-              borderRadius: '8px', cursor: 'pointer', transition: 'background 0.15s',
-              backgroundColor: showUserMenu ? 'rgba(0,0,0,0.03)' : 'transparent'
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px',
+              borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s',
+              backgroundColor: showUserMenu ? 'rgba(0,0,0,0.03)' : 'transparent',
+              border: '1px solid transparent'
             }}
             onMouseEnter={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)')}
             onMouseLeave={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             {user ? (
-              <div style={{
-                width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
-                backgroundColor: 'rgba(0,0,0,0.06)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#8E8E93', fontSize: '10px', fontWeight: 600
-              }}>
-                <UserIcon size={12} strokeWidth={2} />
-              </div>
+               <UserIcon size={14} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
             ) : (
-              <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <UserIcon size={12} style={{ color: '#8E8E93' }} strokeWidth={2} />
-              </div>
+               <UserIcon size={14} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
             )}
-            <span style={{ fontSize: '14px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {user ? (user.email?.split('@')[0] || 'Ingridyz Davised') : '登录 / 注册'}
+            <span style={{ fontSize: '13px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {user ? (user.email?.split('@')[0] || 'User') : '登录 / 注册'}
             </span>
           </div>
         </div>
@@ -433,280 +500,290 @@ export default function Home() {
           />
         </div>
 
-        {/* ── Home content (shown when no report) ── */}
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          padding: '48px', gap: '0', position: 'relative'
-        }}>
-
-          {/* Error toast */}
-          {error && (
-            <div style={{
-              position: 'absolute', top: '24px', left: '50%', transform: 'translateX(-50%)',
-              width: '100%', maxWidth: '500px', padding: '14px 18px', borderRadius: '12px',
-              backgroundColor: '#FFF2F1', border: '1px solid rgba(255,59,48,0.12)',
-              display: 'flex', alignItems: 'center', gap: '10px', animation: 'slideUp 0.25s ease-out',
-              boxShadow: '0 4px 16px rgba(255,59,48,0.08)'
+        {/* ── 1. History Page View (Active) ── */}
+        {activeItemId && report && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
+            
+            {/* Left: Image Panel (Independent Scroll) */}
+            <div className="no-scrollbar" style={{ 
+              width: '48%', height: '100%', backgroundColor: '#FFFFFF', 
+              position: 'relative'
             }}>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#FF3B30', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>!</div>
-              <span style={{ flex: 1, fontSize: '13px', color: '#C0392B', fontWeight: 500 }}>{error}</span>
-              <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C0392B', opacity: 0.5, display: 'flex', padding: 0 }}><X size={14} /></button>
-            </div>
-          )}
-
-          <div style={{ width: '100%', maxWidth: '500px' }}>
-
-            {/* Heading */}
-            <div style={{ textAlign: 'center', marginBottom: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '16px', backgroundColor: '#F5F5F7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1D1D1F' }}>
-                <Sparkles size={24} strokeWidth={1.5} />
-              </div>
-              <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.02em', margin: 0 }}>开始解析设计</h1>
-            </div>
-
-            {/* URL input */}
-            <form onSubmit={handleUrlSubmit} style={{ position: 'relative', marginBottom: '32px' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center',
-                backgroundColor: '#FFFFFF', border: `1px solid ${isExtracting ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.08)'}`,
-                borderRadius: '16px', height: '64px', overflow: 'hidden', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                boxShadow: isExtracting ? '0 8px 32px rgba(0,0,0,0.08)' : '0 4px 16px rgba(0,0,0,0.04)'
-              }}>
-                <div style={{ paddingLeft: '24px', paddingRight: '12px', color: '#8E8E93', flexShrink: 0 }}>
-                  <Link2 size={22} strokeWidth={2} />
-                </div>
-                <input
-                  ref={urlInputRef}
-                  type="text"
-                  placeholder="粘贴网页链接，如 https://linear.app"
-                  style={{
-                    flex: 1, border: 'none', outline: 'none', fontSize: '16px',
-                    color: '#1D1D1F', fontWeight: 500, backgroundColor: 'transparent',
-                    fontFamily: 'var(--font-sans)', height: '100%'
+              <div className="scroll-mask-top" />
+              <div style={{ height: '100%', overflowY: 'auto', padding: '40px', overscrollBehavior: 'contain' }} className="no-scrollbar">
+                <div 
+                  onClick={() => { setLightboxUrl((report as any).screenshotUrl || (report as any).thumbnailUrl); setIsLightboxOpen(true) }}
+                  style={{ 
+                    cursor: 'zoom-in', borderRadius: '16px', overflow: 'hidden', 
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.06)', transition: 'transform 0.2s' 
                   }}
-                  value={url}
-                  onChange={e => setUrl(e.target.value)}
-                  disabled={isExtracting}
-                />
-                <button
-                  type="submit"
-                  disabled={isExtracting || !url.trim()}
-                  style={{
-                    margin: '8px 10px', padding: '0 24px', height: '44px',
-                    borderRadius: '10px', border: 'none',
-                    backgroundColor: '#1D1D1F', color: '#FFFFFF', 
-                    fontSize: '14px', fontWeight: 600, cursor: (isExtracting || !url.trim()) ? 'default' : 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    opacity: (isExtracting || !url.trim()) ? 0.3 : 1,
-                    transition: 'all 0.2s', flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                  }}
-                  onMouseEnter={e => { if(!isExtracting && !!url.trim()) e.currentTarget.style.backgroundColor = '#333333' }}
-                  onMouseLeave={e => { if(!isExtracting && !!url.trim()) e.currentTarget.style.backgroundColor = '#1D1D1F' }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  {isExtracting ? (
-                    <div style={{ width: '18px', height: '18px', border: '2px solid rgba(255,255,255,0.25)', borderTopColor: '#FFF', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
-                  ) : '立即解析'}
+                  <img 
+                    src={(report as any).screenshotUrl || (report as any).thumbnailUrl} 
+                    alt="Source" 
+                    style={{ width: '100%', display: 'block' }} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Content Panel (Independent Scroll) */}
+            <div className="no-scrollbar" style={{ flex: 1, height: '100%', overflowY: 'auto', backgroundColor: '#FFFFFF', position: 'relative' }}>
+              <div className="scroll-mask-top" />
+              
+              {/* Sticky Header inside the scrollable area for report context */}
+              <div style={{ 
+                position: 'sticky', top: 0, backgroundColor: 'rgba(255,255,255,0.9)', 
+                backdropFilter: 'blur(8px)', zIndex: 10, padding: '24px 48px 16px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                   {(['zh', 'en'] as const).map(l => (
+                     <button key={l} onClick={() => setReportLang(l)} style={{
+                       fontSize: '11px', fontWeight: reportLang === l ? 700 : 500,
+                       border: 'none', background: 'none', cursor: 'pointer',
+                       color: reportLang === l ? '#1D1D1F' : '#A1A1A6',
+                       padding: '2px 6px', transition: 'color 0.2s'
+                     }}>
+                       {l === 'zh' ? '中文' : 'EN'}
+                     </button>
+                   ))}
+                </div>
+              </div>
+
+              {/* Report Body */}
+              <div style={{ padding: '0 48px 80px' }}>
+                <h1 style={{ 
+                  fontSize: '32px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 40px 0', 
+                  lineHeight: 1.1, letterSpacing: '-0.03em' 
+                }}>
+                  {report.sourceLabel}
+                </h1>
+                <StyleReportView report={report} lang={reportLang} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── 2. Home Content (Idle/Initial/Extracting) ── */}
+        {(!activeItemId || !report || isExtracting) && (
+          <div style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '48px', gap: '0', position: 'relative', animation: 'fadeIn 0.4s ease-out'
+          }}>
+
+            {/* Error toast */}
+            {error && (
+              <div style={{
+                position: 'absolute', top: '24px', left: '50%', transform: 'translateX(-50%)',
+                width: '100%', maxWidth: '500px', padding: '14px 18px', borderRadius: '12px',
+                backgroundColor: '#FFF2F1', border: '1px solid rgba(255,59,48,0.12)',
+                display: 'flex', alignItems: 'center', gap: '10px', animation: 'slideUp 0.25s ease-out',
+                boxShadow: '0 4px 16px rgba(255,59,48,0.08)', zIndex: 100
+              }}>
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#FF3B30', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>!</div>
+                <span style={{ flex: 1, fontSize: '13px', color: '#C0392B', fontWeight: 500 }}>{error}</span>
+                <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C0392B', opacity: 0.5, display: 'flex', padding: 0 }}><X size={14} /></button>
+              </div>
+            )}
+
+            <div style={{ width: '100%', maxWidth: '500px' }}>
+
+              {/* Heading */}
+              <div style={{ textAlign: 'center', marginBottom: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                <div style={{ width: '48%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1D1D1F' }}>
+                  <Sparkles size={24} strokeWidth={1.5} />
+                </div>
+                <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.02em', margin: 0 }}>开始解析设计</h1>
+              </div>
+
+              {/* URL input */}
+              <form onSubmit={handleUrlSubmit} style={{ position: 'relative', marginBottom: '32px' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center',
+                  backgroundColor: '#FFFFFF', border: `1px solid ${isExtracting ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.08)'}`,
+                  borderRadius: '16px', height: '64px', overflow: 'hidden', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  boxShadow: isExtracting ? '0 8px 32px rgba(0,0,0,0.08)' : '0 4px 16px rgba(0,0,0,0.04)'
+                }}>
+                  <div style={{ paddingLeft: '24px', paddingRight: '12px', color: '#8E8E93', flexShrink: 0 }}>
+                    <Link2 size={22} strokeWidth={2} />
+                  </div>
+                  <input
+                    ref={urlInputRef}
+                    type="text"
+                    placeholder="粘贴网页链接，如 https://linear.app"
+                    style={{
+                      flex: 1, border: 'none', outline: 'none', fontSize: '16px',
+                      color: '#1D1D1F', fontWeight: 500, backgroundColor: 'transparent',
+                      fontFamily: 'var(--font-sans)', height: '100%'
+                    }}
+                    value={url}
+                    onChange={e => setUrl(e.target.value)}
+                    disabled={isExtracting}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isExtracting || !url.trim()}
+                    style={{
+                      margin: '8px 10px', padding: '0 24px', height: '44px',
+                      borderRadius: '10px', border: 'none',
+                      backgroundColor: isExtracting ? '#8E8E93' : '#1D1D1F', color: '#FFFFFF', 
+                      fontSize: '14px', fontWeight: 600, cursor: (isExtracting || !url.trim()) ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: (!isExtracting && !url.trim()) ? 0.3 : 1,
+                      transition: 'all 0.2s', flexShrink: 0,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    }}
+                    onMouseEnter={e => { if(!isExtracting && !!url.trim()) e.currentTarget.style.backgroundColor = '#333333' }}
+                    onMouseLeave={e => { if(!isExtracting && !!url.trim()) e.currentTarget.style.backgroundColor = '#1D1D1F' }}
+                  >
+                    {isExtracting ? '解析中' : '立即解析'}
+                  </button>
+                </div>
+              </form>
+
+              {/* OR divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '6px 0 24px' }}>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
+                <span style={{ fontSize: '10px', color: '#8E8E93', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' }}>或</span>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
+              </div>
+
+              {/* Drop zone */}
+              <div
+                style={{
+                  width: '100%', height: '180px', borderRadius: '12px',
+                  border: `1px solid ${isDragging ? '#1D1D1F' : 'rgba(0,0,0,0.06)'}`,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  justifyContent: 'center', gap: '12px', cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  backgroundColor: isDragging ? 'rgba(0,0,0,0.01)' : '#FFFFFF',
+                  opacity: isExtracting ? 0.45 : 1,
+                  pointerEvents: isExtracting ? 'none' : 'auto',
+                  borderStyle: 'dashed'
+                }}
+                onMouseEnter={e => !isDragging && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.01)')}
+                onMouseLeave={e => !isDragging && (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+                onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
+                onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
+                onDrop={handleDrop}
+                onDragOver={e => e.preventDefault()}
+                onClick={() => user ? fileInputRef.current?.click() : setIsAuthVisible(true)}
+                onPaste={handlePaste}
+                tabIndex={0}
+              >
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '50%',
+                  backgroundColor: '#F5F5F7', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', color: '#1D1D1F'
+                }}>
+                  <Plus size={16} strokeWidth={1.5} />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#1D1D1F', marginBottom: '8px' }}>
+                    {isDragging ? '释放以上传' : '拖拽设计图至此处'}
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#8E8E93', fontWeight: 400 }}>支持 JPG、PNG、WebP，最大 20MB</div>
+                </div>
+              </div>
+
+              {/* Progress UI - Scanner Style (Below Drop Zone) */}
+              {isExtracting && (
+                <div style={{ marginTop: '48px', animation: 'fadeIn 0.3s ease-out' }}>
+                  <div style={{ fontSize: '12px', color: '#1D1D1F', marginBottom: '12px', opacity: 0.6, fontWeight: 500 }}>
+                    正在解析网页链路，重构设计树 (约需 15 秒) ...
+                  </div>
+                  <div style={{ 
+                    width: '100%', height: '1px', backgroundColor: '#F5F5F7', 
+                    borderRadius: '1px', overflow: 'hidden', position: 'relative' 
+                  }}>
+                    <div className="animate-scan" style={{ 
+                      position: 'absolute', top: 0, width: '40%', height: '100%', 
+                      backgroundColor: '#1D1D1F', opacity: 0.8
+                    }} />
+                  </div>
+                </div>
+              )}
+
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0]) }} />
+            </div>
+          </div>
+        )}
+
+        {/* ── 3. Extraction Result Modal (Vercel Production Style) ── */}
+        {report && !activeItemId && !isExtracting && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            background: 'rgba(255,255,255,0.88)',
+            backdropFilter: 'blur(20px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '40px',
+            animation: 'fadeIn 0.4s ease'
+          }} onClick={() => { 
+            const latest = extractions[0];
+            if (latest) {
+              setActiveItemId(latest.id);
+              setReport(latest.style_data);
+            } else {
+              setReport(null);
+            }
+          }}>
+            <div style={{
+              background: '#FFFFFF',
+              width: '100%', maxWidth: '1440px', height: '100%', maxHeight: '900px',
+              borderRadius: '20px',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04)',
+              display: 'flex', flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+              border: '1px solid #F0F0F0'
+            }} onClick={e => e.stopPropagation()}>
+              
+              {/* Floating Controls (No SOURCE text) */}
+              <div style={{ position: 'absolute', top: '24px', right: '32px', zIndex: 10, display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '2px', background: '#F5F5F5', padding: '4px', borderRadius: '100px' }}>
+                  <button onClick={() => setReportLang('zh')} style={{ padding: '5px 14px', borderRadius: '100px', border: 'none', background: reportLang === 'zh' ? '#fff' : 'transparent', fontSize: '11px', fontWeight: reportLang === 'zh' ? 600 : 400, color: reportLang === 'zh' ? '#1D1D1F' : '#999', cursor: 'pointer', transition: 'all 0.2s', boxShadow: reportLang === 'zh' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>中文</button>
+                  <button onClick={() => setReportLang('en')} style={{ padding: '5px 14px', borderRadius: '100px', border: 'none', background: reportLang === 'en' ? '#fff' : 'transparent', fontSize: '12px', fontWeight: reportLang === 'en' ? 600 : 400, color: reportLang === 'en' ? '#1D1D1F' : '#999', cursor: 'pointer', transition: 'all 0.2s', boxShadow: reportLang === 'en' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>EN</button>
+                </div>
+                <button
+                  onClick={() => {
+                    const latest = extractions[0];
+                    if (latest) {
+                      setActiveItemId(latest.id);
+                      setReport(latest.style_data);
+                    } else {
+                      setReport(null);
+                    }
+                  }}
+                  style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5F5F5', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#1A1A1A', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#EBEBEB' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#F5F5F5' }}
+                >
+                  <X size={18} strokeWidth={2} />
                 </button>
               </div>
 
-              {/* Status Text outside the button to prevent width shifting */}
-              <div style={{
-                position: 'absolute', top: 'calc(100% + 12px)', left: 0, right: 0,
-                textAlign: 'center', fontSize: '13px', color: '#8E8E93', fontWeight: 500,
-                opacity: isExtracting ? 1 : 0, transition: 'opacity 0.2s', pointerEvents: 'none',
-                transform: isExtracting ? 'translateY(0)' : 'translateY(-4px)'
-              }}>
-                {statusText || '正在解析中...'}
-              </div>
-
-              {/* Shimmer progress bar — absolute positioned, DOES NOT shift layout */}
-              {isExtracting && (
-                <div style={{
-                  position: 'absolute', bottom: '-1px', left: '14px', right: '14px',
-                  height: '2px', borderRadius: '0 0 4px 4px', overflow: 'hidden', zIndex: 1
-                }}>
-                  <div style={{
-                    height: '100%', width: '100%',
-                    background: 'linear-gradient(90deg, transparent 0%, #1D1D1F 40%, transparent 100%)',
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer 1.8s infinite linear'
-                  }} />
-                </div>
-              )}
-            </form>
-
-            {/* OR divider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '6px 0 24px' }}>
-              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
-              <span style={{ fontSize: '10px', color: '#8E8E93', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' }}>OR</span>
-              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
-            </div>
-
-            {/* Drop zone */}
-            <div
-              style={{
-                width: '100%', height: '180px', borderRadius: '12px',
-                border: `1px solid ${isDragging ? '#1D1D1F' : 'rgba(0,0,0,0.06)'}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', gap: '12px', cursor: 'pointer',
-                transition: 'all 0.2s',
-                backgroundColor: isDragging ? 'rgba(0,0,0,0.01)' : '#FFFFFF',
-                opacity: isExtracting ? 0.45 : 1,
-                pointerEvents: isExtracting ? 'none' : 'auto',
-              }}
-              onMouseEnter={e => !isDragging && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.01)')}
-              onMouseLeave={e => !isDragging && (e.currentTarget.style.backgroundColor = '#FFFFFF')}
-              onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
-              onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
-              onDrop={handleDrop}
-              onDragOver={e => e.preventDefault()}
-              onClick={() => user ? fileInputRef.current?.click() : setIsAuthVisible(true)}
-              onPaste={handlePaste}
-              tabIndex={0}
-            >
-              <div style={{
-                width: '32px', height: '32px', borderRadius: '50%',
-                backgroundColor: '#F5F5F7', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', color: '#1D1D1F'
-              }}>
-                <Plus size={16} strokeWidth={1.5} />
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '15px', fontWeight: 600, color: '#1D1D1F', marginBottom: '8px' }}>
-                  {isDragging ? '释放以上传' : '拖拽设计图至此处'}
-                </div>
-                <div style={{ fontSize: '13px', color: '#8E8E93', fontWeight: 400 }}>支持 JPG、PNG、WebP，最大 20MB</div>
-              </div>
-            </div>
-
-            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-              onChange={e => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0]) }} />
-          </div>
-        </div>
-
-        {/* ═══════════════════════════════════════
-            REPORT OVERLAY — only covers main area
-            (sidebar stays visible on the left)
-        ════════════════════════════════════════ */}
-        {(report || isExtracting) && (
-          <div style={{
-            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.02)', zIndex: 100,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px',
-            backdropFilter: 'blur(8px)', animation: 'overlayFade 0.2s ease-out'
-          }} onClick={() => { if (!isExtracting) { setReport(null); setActiveItemId(null) } }}>
-            
-            <div style={{
-              width: '100%', maxWidth: '1400px', height: '100%', maxHeight: '90vh',
-              backgroundColor: '#FFFFFF', borderRadius: '32px',
-              boxShadow: '0 32px 80px rgba(0,0,0,0.1)',
-              display: 'flex', overflow: 'hidden',
-              animation: 'tooltipPop 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            }} onClick={e => e.stopPropagation()}>
-              
-              {/* Left: Screenshot Card or Skeleton */}
-              <div className="no-scrollbar" style={{
-                width: '45%', overflowY: 'auto', backgroundColor: '#F8F7F4',
-                display: 'block', padding: '48px 40px',
-              }}>
-                {isExtracting ? (
-                  <div style={{
-                    width: '100%', height: '100%', minHeight: '600px',
-                    borderRadius: '16px', overflow: 'hidden',
-                    backgroundColor: '#F0EFEA',
-                    backgroundImage: 'linear-gradient(90deg, #F0EFEA 0px, #EBE9E4 50%, #F0EFEA 100%)',
-                    backgroundSize: '400% 100%', animation: 'shimmer 1.5s infinite linear'
-                  }} />
-                ) : (
-                  <div style={{
-                    width: '100%',
-                    borderRadius: '16px', overflow: 'hidden',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.06)', 
-                    position: 'relative',
-                    cursor: 'zoom-in'
-                  }} onClick={() => window.open((report as any).screenshotUrl || (report as any).thumbnailUrl, '_blank')}>
+              {/* Split View */}
+              <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                {/* Left: Component View (44%) */}
+                <div className="no-scrollbar" style={{ width: '44%', background: '#FFFFFF', padding: '64px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
+                  <div style={{ position: 'relative', width: '100%', maxWidth: '480px' }}>
                     <img
                       src={(report as any).screenshotUrl || (report as any).thumbnailUrl}
                       alt="Source"
-                      style={{ width: '100%', display: 'block' }}
-                    />
-                    <ColorHighlighter
-                      src={(report as any).screenshotUrl || (report as any).thumbnailUrl}
-                      targetHex={hoveredHex}
+                      style={{ width: '100%', display: 'block', objectFit: 'contain', cursor: 'zoom-in', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}
+                      onClick={() => { setLightboxUrl((report as any).screenshotUrl || (report as any).thumbnailUrl); setIsLightboxOpen(true) }}
                     />
                   </div>
-                )}
-              </div>
-
-              {/* Right: Analysis & Header */}
-              <div className="no-scrollbar" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', backgroundColor: '#FFFFFF', position: 'relative' }}>
-                
-                {/* Header Row (Close btn & Lang toggle) */}
-                <div style={{ 
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                  padding: '32px 48px 16px' 
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                       <span style={{ fontSize: '11px', color: '#8E8E93', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>SOURCE</span>
-                       <div style={{ width: '1px', height: '10px', backgroundColor: 'rgba(0,0,0,0.1)', margin: '0 4px' }} />
-                       {(['zh', 'en'] as const).map(l => (
-                         <button key={l} onClick={() => setReportLang(l)} style={{
-                           fontSize: '11px', fontWeight: reportLang === l ? 700 : 500,
-                           border: 'none', background: 'none', cursor: 'pointer',
-                           color: reportLang === l ? '#1D1D1F' : '#A1A1A6',
-                           padding: 0, transition: 'color 0.15s'
-                         }}>
-                           {l === 'zh' ? '中文' : 'EN'}
-                         </button>
-                       ))}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => { if (!isExtracting) { setReport(null); setActiveItemId(null) } }}
-                    style={{
-                      width: '32px', height: '32px', borderRadius: '100px', border: 'none', background: 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#8E8E93', cursor: (isExtracting ? 'not-allowed' : 'pointer'), transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={e => { if (!isExtracting) { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)'; e.currentTarget.style.color = '#1D1D1F' } }}
-                    onMouseLeave={e => { if (!isExtracting) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#8E8E93' } }}
-                  >
-                    <X size={16} strokeWidth={2} />
-                  </button>
                 </div>
 
-                {/* Main Title (Website Name) */}
-                <div style={{ padding: '0 48px 24px' }}>
-                  {isExtracting ? (
-                    <div style={{ width: '240px', height: '48px', borderRadius: '8px', backgroundColor: '#F5F5F7', backgroundImage: 'linear-gradient(90deg, #F5F5F7 0px, #EEEEEE 50%, #F5F5F7 100%)', backgroundSize: '400% 100%', animation: 'shimmer 1.5s infinite linear', marginBottom: '8px' }} />
-                  ) : (
-                    <h1 style={{ 
-                      fontSize: '40px', fontWeight: 700, color: '#1D1D1F', margin: 0, lineHeight: 1.2,
-                      letterSpacing: '-0.03em', overflowWrap: 'anywhere'
-                    }}>
-                      {report?.sourceLabel || new URL((report as any)?.thumbnailUrl || 'https://example.com').hostname.replace('www.', '')}
-                    </h1>
-                  )}
+                {/* Right: Analysis View (56%) */}
+                <div className="no-scrollbar" style={{ width: '56%', padding: '64px', overflowY: 'auto', background: '#FFFFFF' }}>
+                  <StyleReportView report={report!} lang={reportLang} />
                 </div>
-
-                {/* Analysis Content */}
-                <div style={{ padding: '0 48px 64px' }}>
-                  {isExtracting ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginTop: '16px' }}>
-                       {[1, 2, 3].map(i => (
-                         <div key={i}>
-                           <div style={{ width: '120px', height: '14px', borderRadius: '4px', backgroundColor: '#F5F5F7', marginBottom: '16px' }} />
-                           <div style={{ width: '100%', height: '80px', borderRadius: '12px', backgroundColor: '#F5F5F7', backgroundImage: 'linear-gradient(90deg, #F5F5F7 0px, #EEEEEE 50%, #F5F5F7 100%)', backgroundSize: '400% 100%', animation: 'shimmer 1.5s infinite linear' }} />
-                         </div>
-                       ))}
-                    </div>
-                  ) : (
-                    <StyleReportView report={report!} lang={reportLang} />
-                  )}
-                </div>
-
               </div>
             </div>
           </div>
@@ -762,6 +839,7 @@ export default function Home() {
                         setReport(item.style_data)
                         setError(null)
                         setIsSearchOpen(false)
+                        setIsModalImageLoading(true)
                       }}
                       style={{
                         padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px',
@@ -796,9 +874,46 @@ export default function Home() {
 
       </main>
 
+      {/* Lightbox full-screen viewer */}
+      {isLightboxOpen && (
+        <div 
+          onClick={() => setIsLightboxOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+            animation: 'fadeIn 0.2s ease-out', cursor: 'zoom-out'
+          }}
+        >
+          <button 
+            onClick={(e) => { e.stopPropagation(); setIsLightboxOpen(false); }}
+            style={{
+              position: 'absolute', top: '30px', right: '30px', 
+              background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
+              width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'white', cursor: 'pointer', transition: 'background 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+          >
+            <X size={24} />
+          </button>
+          <img 
+            src={lightboxUrl} 
+            alt="Full view" 
+            style={{ 
+              maxWidth: '95%', maxHeight: '95vh', objectFit: 'contain', 
+              boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+              animation: 'tooltipPop 0.3s cubic-bezier(0.16, 1, 0.3, 1)' 
+            }} 
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       {/* Auth overlay */}
       {isAuthVisible && <AuthOverlay onClose={() => setIsAuthVisible(false)} />}
     </div>
+    </>
   )
 }
 
