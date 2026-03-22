@@ -121,30 +121,41 @@ export default function StyleReport({ report, lang = 'zh' }: { report: ReportTyp
         <SectionLabel>{t.export}</SectionLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          {/* Top-Tier Segmented Tabs (MacOS/Vercel Style) */}
+          {/* Technical Minimalist Tabs (Pro/IDE Style) */}
           <div style={{ 
-            display: 'inline-flex', 
-            padding: '4px', 
-            background: 'rgba(0,0,0,0.03)', 
-            borderRadius: '10px',
-            alignSelf: 'flex-start'
+            display: 'flex', 
+            gap: '24px', 
+            borderBottom: '1px solid rgba(0,0,0,0.04)',
+            paddingBottom: '0',
+            alignItems: 'baseline'
           }}>
             {(['markdown', 'css', 'prompt'] as const).map(type => (
               <button 
                 key={type}
                 onClick={() => setActiveCode(type)}
                 style={{
-                  padding: '6px 14px', fontSize: '12px', fontWeight: activeCode === type ? 600 : 500,
-                  borderRadius: '7px',
-                  background: activeCode === type ? '#FFFFFF' : 'transparent',
-                  boxShadow: activeCode === type ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                  color: activeCode === type ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                  cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  padding: '8px 0 12px 0', 
+                  fontSize: '11px', 
+                  fontWeight: activeCode === type ? 600 : 400,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.12em',
+                  background: 'none', 
                   border: 'none',
+                  color: activeCode === type ? '#1D1D1F' : '#AEAEB2',
+                  cursor: 'pointer', 
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
                   fontFamily: 'var(--font-outfit)'
                 }}
               >
                 {t[`tab_${type}` as keyof typeof t]}
+                {activeCode === type && (
+                  <div style={{ 
+                    position: 'absolute', bottom: '-1px', left: '0', right: '0', 
+                    height: '1.5px', background: '#1D1D1F',
+                    borderRadius: '1px'
+                  }} />
+                )}
               </button>
             ))}
           </div>
@@ -153,35 +164,51 @@ export default function StyleReport({ report, lang = 'zh' }: { report: ReportTyp
             {t[`${activeCode}_desc` as keyof typeof t]}
           </div>
 
-          {/* Code View (Editor Style) */}
-          <div style={{ 
-            background: '#F9FAFB', borderRadius: '14px', 
-            padding: '24px', position: 'relative',
-            border: '1px solid rgba(0,0,0,0.04)',
-            boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.015)',
-            transition: 'all 0.3s ease'
-          }}>
+          {/* Code View (Floating Sheet / IDE Style) */}
+          <div 
+            className="group"
+            style={{ 
+              background: '#FFFFFF', borderRadius: '12px', 
+              padding: '24px 28px', position: 'relative',
+              border: '1px solid rgba(0,0,0,0.05)',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02)',
+              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          >
             <button 
               onClick={handleCopy}
+              className="copy-button"
               style={{
                 position: 'absolute', top: '16px', right: '16px',
                 background: copied ? '#E8F5E9' : '#FFFFFF', 
-                border: '1px solid rgba(0,0,0,0.06)', 
+                border: '1px solid rgba(0,0,0,0.08)', 
                 width: '32px', height: '32px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '8px',
-                color: copied ? '#2E7D32' : 'var(--text-secondary)', 
-                cursor: 'pointer', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                borderRadius: '50%', // Circle for pro tool look
+                color: copied ? '#2E7D32' : '#8E8E93', 
+                cursor: 'pointer', 
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                opacity: 0, // Ghost by default
+                pointerEvents: 'auto'
+              }}
+              onMouseEnter={e => {
+                if (!copied) e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'
+              }}
+              onMouseLeave={e => {
+                if (!copied) e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'
               }}
               title={t.copy}
             >
-              {copied ? <Check size={16} strokeWidth={2.5} /> : <Copy size={16} strokeWidth={2} />}
+              <style jsx>{`
+                .group:hover .copy-button { opacity: 1 !important; transform: translateY(0) !important; }
+              `}</style>
+              {copied ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
             </button>
             <pre className="no-scrollbar" style={{ 
               margin: 0, fontSize: '13px', fontFamily: 'var(--font-mono)', lineHeight: 1.6, 
-              color: 'rgba(29, 29, 31, 0.8)', maxHeight: '380px', overflowY: 'auto',
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word', paddingTop: '12px'
+              color: 'rgba(29, 29, 31, 0.75)', maxHeight: '420px', overflowY: 'auto',
+              whiteSpace: 'pre-wrap', wordBreak: 'break-word', paddingTop: '8px'
             }}>
               {contentMap[activeCode]}
             </pre>
