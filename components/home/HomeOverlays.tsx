@@ -101,7 +101,7 @@ export default function HomeOverlays({
             </div>
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-              <div className="no-scrollbar" style={{ width: '44%', background: '#FFFFFF', padding: '64px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
+              <div className="no-scrollbar" style={{ width: '44%', background: '#F5F4F1', padding: '64px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
                 <div style={{ position: 'relative', width: '100%', maxWidth: '480px' }}>
                   <img
                     src={(report as any).screenshotUrl || (report as any).thumbnailUrl}

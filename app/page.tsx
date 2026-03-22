@@ -1,39 +1,15 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import type { ClipboardEvent, DragEvent, FormEvent } from 'react'
+import type { ClipboardEvent as ReactClipboardEvent, DragEvent, FormEvent } from 'react'
 import HomeOverlays from '@/components/home/HomeOverlays'
 import HomeSidebar from '@/components/home/HomeSidebar'
 import HomeWorkspace from '@/components/home/HomeWorkspace'
-import {
-  clearGuestHistory,
-  clearGuestMigrationSnapshot,
-  getGuestHistory,
-  getGuestMigrationSnapshot,
-  saveGuestHistory,
-} from '@/lib/storage/guestStore'
+import { useHistory } from '@/hooks/useHistory'
 import { createClient } from '@/lib/storage/supabaseClient'
-import { deleteFromLibrary, renameInLibrary } from '@/lib/storage/libraryStore'
 import { getGreeting, GreetingData } from '@/lib/utils/greeting'
 import type { StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
-
-const GUEST_TRIAL_KEY = 'stylelens_trial_used'
-
-function buildGuestCacheRecord(record: {
-  user_id: string | null
-  source_label: string
-  style_data: StyleReport
-  thumbnail_url: string | null
-  created_at: string
-}) {
-  return {
-    ...record,
-    id: 'guest_1',
-    thumbnail_url: record.thumbnail_url,
-    style_data: record.style_data,
-  }
-}
 
 export default function Home() {
   // ── Core state ──
@@ -52,12 +28,7 @@ export default function Home() {
   const [isAuthResolved, setIsAuthResolved] = useState(false)
 
   // ── Sidebar state ──
-  const [extractions, setExtractions] = useState<any[]>([])
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [modalSearchQuery, setModalSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState('')
 
@@ -66,98 +37,57 @@ export default function Home() {
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null)
   const [uploadZoneHovered, setUploadZoneHovered] = useState(false)
 
-  // ── Sidebar context menu / rename state ──
-  const [contextMenuId, setContextMenuId] = useState<string | null>(null)
-  const [renamingId, setRenamingId] = useState<string | null>(null)
-  const [renameValue, setRenameValue] = useState('')
-
-  // ── Undo delete toast ──
-  const [undoItem, setUndoItem] = useState<{ id: string; label: string; record: any } | null>(null)
-  const deleteTimerRef = useRef<{ [key: string]: any }>({})
-
-  // ── Sidebar section collapse ──
-  const [pinnedCollapsed, setPinnedCollapsed] = useState(false)
-  const [historyCollapsed, setHistoryCollapsed] = useState(false)
-
   // ── Sidebar panel toggle ──
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // ── Dynamic Greeting state ──
   const [greeting, setGreeting] = useState<GreetingData | null>(null)
 
-  const historyLoadedRef = useRef(false)
-  const currentHistoryUserIdRef = useRef<string | null>(null)
-  const hasLoadedExtractionsRef = useRef(false)
   const extractAbortRef = useRef<AbortController | null>(null)
-  const guestMigrationInFlightRef = useRef<Promise<void> | null>(null)
-  const lastGuestMigrationKeyRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
-
-  const migrateGuestHistoryToAccount = async (userId: string) => {
-    const snapshotRecord = getGuestMigrationSnapshot()
-    const guestHistory = snapshotRecord ?? await getGuestHistory().catch(() => null)
-    if (!guestHistory) {
-      return
-    }
-
-    const migrationKey = [userId, guestHistory.source_label, guestHistory.created_at].join('::')
-
-    if (lastGuestMigrationKeyRef.current === migrationKey) {
-      return
-    }
-
-    if (guestMigrationInFlightRef.current) {
-      await guestMigrationInFlightRef.current
-      return
-    }
-
-    const payload = {
-      user_id: userId,
-      source_label: guestHistory.source_label,
-      style_data: guestHistory.style_data,
-      thumbnail_url: guestHistory.thumbnail_url,
-      created_at: guestHistory.created_at,
-    }
-
-    const migrationTask = (async () => {
-      try {
-        const { data: existingRecords, error: existingError } = await supabase
-          .from('style_records')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('source_label', payload.source_label)
-          .eq('created_at', payload.created_at)
-          .limit(1)
-
-        if (existingError) throw existingError
-
-        if (existingRecords && existingRecords.length > 0) {
-          clearGuestMigrationSnapshot()
-          lastGuestMigrationKeyRef.current = migrationKey
-          return
-        }
-
-        const { error } = await supabase
-          .from('style_records')
-          .insert([payload])
-
-        if (error) throw error
-
-        clearGuestMigrationSnapshot()
-        lastGuestMigrationKeyRef.current = migrationKey
-      } catch (err: any) {
-        console.error('Failed to migrate guest history:', err?.message || err)
-      } finally {
-        guestMigrationInFlightRef.current = null
-      }
-    })()
-
-    guestMigrationInFlightRef.current = migrationTask
-    await migrationTask
-  }
+  const {
+    extractions,
+    isLoadingHistory,
+    searchQuery,
+    setSearchQuery,
+    modalSearchQuery,
+    setModalSearchQuery,
+    activeItemId,
+    setActiveItemId,
+    contextMenuId,
+    setContextMenuId,
+    renamingId,
+    setRenamingId,
+    renameValue,
+    setRenameValue,
+    undoItem,
+    pinnedCollapsed,
+    setPinnedCollapsed,
+    historyCollapsed,
+    setHistoryCollapsed,
+    modalFiltered,
+    pinnedList,
+    recentList,
+    saveExtraction,
+    syncHistoryForSession,
+    togglePin,
+    deleteItem,
+    undoDelete,
+    startRename,
+    submitRename,
+    cancelRename,
+  } = useHistory({
+    user,
+    supabase,
+    report,
+    setReport,
+    setError,
+    setGuestTrialUsed,
+    setIsAuthVisible,
+  })
 
   // ── Modal Background Lock ──
   useEffect(() => {
@@ -174,25 +104,7 @@ export default function Home() {
     const syncSession = async (session: { user: User } | null) => {
       try {
         setUser(session?.user ?? null)
-
-        if (session) {
-          const sameUser = currentHistoryUserIdRef.current === session.user.id
-          const shouldSkipRefresh = sameUser && historyLoadedRef.current && hasLoadedExtractionsRef.current
-          if (shouldSkipRefresh) return
-
-          setIsAuthVisible(false)
-          currentHistoryUserIdRef.current = session.user.id
-
-          await migrateGuestHistoryToAccount(session.user.id)
-          await loadHistory(session.user.id)
-          historyLoadedRef.current = true
-        } else {
-          const trialValue = localStorage.getItem(GUEST_TRIAL_KEY) === 'true'
-          setGuestTrialUsed(trialValue)
-          historyLoadedRef.current = false
-          currentHistoryUserIdRef.current = null
-          await loadHistory('')
-        }
+        await syncHistoryForSession(session)
       } finally {
         setIsAuthResolved(true)
       }
@@ -212,7 +124,7 @@ export default function Home() {
 
   // ── Global paste handler ──
   useEffect(() => {
-    const handleGlobalPaste = (e: ClipboardEvent) => {
+    const handleGlobalPaste = (e: globalThis.ClipboardEvent) => {
       // Don't intercept if user is typing in an input or textarea
       const target = e.target as HTMLElement;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
@@ -256,10 +168,6 @@ export default function Home() {
     return () => clearInterval(timer)
   }, [user])
 
-  useEffect(() => {
-    hasLoadedExtractionsRef.current = extractions.length > 0
-  }, [extractions.length])
-
   // ── Keyboard & click-outside handler ──
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -285,181 +193,6 @@ export default function Home() {
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [report, isSearchOpen, contextMenuId, renamingId])
-
-  // ── Data loading ──
-  const loadHistory = async (userId: string) => {
-    if (!hasLoadedExtractionsRef.current) {
-      setIsLoadingHistory(true)
-    }
-    try {
-      if (!userId) {
-        // Load guest record if any
-        const guestRecord = await getGuestHistory().catch(err => {
-          console.warn('Failed to read guest history from IndexedDB:', err)
-          return null
-        })
-
-        if (guestRecord) {
-          setExtractions([guestRecord])
-        } else {
-          setExtractions([])
-        }
-        return
-      }
-
-      const { data, error } = await supabase
-        .from('style_records')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(50)
-      if (error) throw error
-      setExtractions(data || [])
-    } catch (err: any) {
-      console.error('Failed to load history:', err.message || err)
-    } finally {
-      setIsLoadingHistory(false)
-    }
-  }
-
-  const saveExtraction = async (report: StyleReport, thumb?: string) => {
-    const record = {
-      user_id: user?.id || null,
-      source_label: report.sourceLabel || url.trim().replace(/^https?:\/\//, '').replace(/\/$/, ''),
-      style_data: report,
-      thumbnail_url: thumb || report.thumbnailUrl || null,
-      created_at: new Date().toISOString()
-    }
-
-    if (!user) {
-      const guestRecord = { ...record, id: 'guest_1' }
-      const guestCacheRecord = buildGuestCacheRecord(record)
-
-      // Keep the current session fully usable even if localStorage needs a lighter payload.
-      setExtractions([guestRecord])
-
-      try {
-        await saveGuestHistory(guestCacheRecord)
-        localStorage.setItem(GUEST_TRIAL_KEY, 'true')
-        setGuestTrialUsed(true)
-      } catch (err) {
-        console.warn('Failed to persist guest history to IndexedDB:', err)
-        await clearGuestHistory().catch(() => undefined)
-        localStorage.removeItem(GUEST_TRIAL_KEY)
-        setGuestTrialUsed(false)
-      }
-
-      return
-    }
-
-    try {
-      const { error } = await supabase
-        .from('style_records')
-        .insert([record])
-      if (error) throw error
-      await loadHistory(user.id)
-    } catch (err: any) {
-      console.error('Failed to save extraction:', err.message || err)
-    }
-  }
-
-  const togglePin = async (itemId: string) => {
-    setContextMenuId(null)
-    setExtractions(prev => prev.map(item => {
-      if (item.id !== itemId) return item
-      const isPinned = item.style_data?.__pinned === true
-      return { ...item, style_data: { ...item.style_data, __pinned: !isPinned } }
-    }))
-    const item = extractions.find(e => e.id === itemId)
-    if (item) {
-      const isPinned = item.style_data?.__pinned === true
-      await supabase
-        .from('style_records')
-        .update({ style_data: { ...item.style_data, __pinned: !isPinned } })
-        .eq('id', itemId)
-    }
-  }
-
-  // ── Delete with undo ──
-  const deleteItem = (id: string) => {
-    const record = extractions.find(e => e.id === id)
-    if (!record) return
-    const label = record.source_label || '未命名分析'
-
-    // Optimistic remove
-    setExtractions(prev => prev.filter(e => e.id !== id))
-    if (activeItemId === id) { setActiveItemId(null); setReport(null) }
-    setContextMenuId(null)
-
-    // Show undo toast
-    setUndoItem({ id, label, record })
-
-    // 5s timer to actually delete
-    deleteTimerRef.current[id] = setTimeout(async () => {
-      await deleteFromLibrary(id, supabase)
-      setUndoItem(prev => (prev?.id === id ? null : prev))
-    }, 5000)
-  }
-
-  const undoDelete = () => {
-    if (!undoItem) return
-    clearTimeout(deleteTimerRef.current[undoItem.id])
-    delete deleteTimerRef.current[undoItem.id]
-    setExtractions(prev => {
-      const exists = prev.find(e => e.id === undoItem.id)
-      if (exists) return prev
-      return [undoItem.record, ...prev].sort((a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )
-    })
-    setUndoItem(null)
-  }
-
-  // ── Rename ──
-  const startRename = (id: string, currentLabel: string) => {
-    setRenamingId(id)
-    setRenameValue(currentLabel)
-    setContextMenuId(null)
-  }
-
-  const submitRename = async (id: string) => {
-    const trimmed = renameValue.trim()
-    if (!trimmed) { cancelRename(); return }
-    setExtractions(prev => prev.map(e => e.id === id ? { ...e, source_label: trimmed } : e))
-    
-    // Sync with active report if renamed item is current
-    if (id === activeItemId && report) {
-      setReport({ ...report, sourceLabel: trimmed })
-    }
-
-    setRenamingId(null)
-    setRenameValue('')
-
-    if (!user) {
-      const renamedRecord = extractions.find(e => e.id === id)
-      if (renamedRecord) {
-        await saveGuestHistory({
-          ...renamedRecord,
-          id,
-          source_label: trimmed,
-        }).catch((err) => {
-          console.error('Guest rename error', err)
-          setError('游客历史重命名失败')
-        })
-      }
-      return
-    }
-
-    const result = await renameInLibrary(id, trimmed, supabase)
-    if (!result.success) {
-      setError(result.error || '重命名失败')
-    }
-  }
-
-  const cancelRename = () => {
-    setRenamingId(null)
-    setRenameValue('')
-  }
 
   // ── Extraction ──
   const callExtractAPI = async (payload: { screenshotUrl?: string; imageBase64?: string; sourceLabel?: string }, signal?: AbortSignal) => {
@@ -598,7 +331,7 @@ export default function Home() {
     if (file) handleFilePreview(file)
   }
 
-  const handlePaste = async (e: ClipboardEvent) => {
+  const handlePaste = async (e: ReactClipboardEvent) => {
     const items = e.clipboardData.items
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf('image') !== -1) {
@@ -608,15 +341,6 @@ export default function Home() {
       }
     }
   }
-
-  const allFiltered = extractions.filter(item =>
-    !searchQuery || (item.source_label || '').toLowerCase().includes(searchQuery.toLowerCase())
-  )
-  const modalFiltered = extractions.filter(item =>
-    !modalSearchQuery || (item.source_label || '').toLowerCase().includes(modalSearchQuery.toLowerCase())
-  )
-  const pinnedList = allFiltered.filter(item => item.style_data?.__pinned === true)
-  const recentList = allFiltered.filter(item => !item.style_data?.__pinned)
 
   // ── Upload zone state derivation ──
   const isImageExtraction = Boolean(pendingFile || pendingPreviewUrl)
