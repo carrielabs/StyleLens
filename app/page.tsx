@@ -697,13 +697,12 @@ export default function Home() {
         {activeItemId && report && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
 
-            {/* Left: Image Panel */}
             <div className="no-scrollbar" style={{
-              width: '48%', height: '100%', backgroundColor: '#FFFFFF',
-              position: 'relative', borderRight: '1px solid rgba(0,0,0,0.04)'
+              width: '40%', height: '100%', backgroundColor: '#FFFFFF',
+              position: 'relative'
             }}>
               <div className="scroll-mask-top" />
-              <div style={{ height: '100%', overflowY: 'auto', padding: '40px', overscrollBehavior: 'contain' }} className="no-scrollbar">
+              <div style={{ height: '100%', overflowY: 'auto', padding: '64px 40px 40px', overscrollBehavior: 'contain' }} className="no-scrollbar">
                 <div
                   onClick={() => { setLightboxUrl((report as any).screenshotUrl || (report as any).thumbnailUrl); setIsLightboxOpen(true) }}
                   style={{
@@ -750,7 +749,7 @@ export default function Home() {
                 }}>
                   {report.sourceLabel}
                 </h1>
-                <StyleReportView report={report} lang={reportLang} />
+                <StyleReportView report={report} lang={reportLang} fullWidth={true} />
               </div>
             </div>
           </div>

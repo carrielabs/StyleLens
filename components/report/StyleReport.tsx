@@ -45,7 +45,7 @@ const i18n = {
   }
 }
 
-export default function StyleReport({ report, lang = 'zh' }: { report: ReportType, lang?: 'zh' | 'en' }) {
+export default function StyleReport({ report, lang = 'zh', fullWidth = false }: { report: ReportType, lang?: 'zh' | 'en', fullWidth?: boolean }) {
   const [activeCode, setActiveCode] = useState<'markdown' | 'css' | 'prompt'>('markdown')
   const [copied, setCopied] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
@@ -69,7 +69,7 @@ export default function StyleReport({ report, lang = 'zh' }: { report: ReportTyp
       display: 'flex', 
       flexDirection: 'column', 
       gap: '40px', 
-      maxWidth: '680px', 
+      maxWidth: fullWidth ? 'none' : '680px', 
       paddingBottom: '80px',
       fontFamily: 'var(--font-sans)'
     }}>
@@ -108,7 +108,7 @@ export default function StyleReport({ report, lang = 'zh' }: { report: ReportTyp
       {/* 4. 字体排版 */}
       <section>
          <SectionLabel>{t.typo}</SectionLabel>
-         <Typography data={report.typography} lang={lang} />
+         <Typography data={report.typography} lang={lang} fullWidth={fullWidth} />
       </section>
 
       {/* 5. 细节解析 */}

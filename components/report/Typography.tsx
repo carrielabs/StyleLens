@@ -2,7 +2,7 @@
 
 import type { Typography as TypoType } from '@/lib/types'
 
-export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' | 'en' }) {
+export default function Typography({ data, lang, fullWidth = false }: { data: TypoType, lang: 'zh' | 'en', fullWidth?: boolean }) {
   const fontNames = data.fontFamily.split(',').map(f => {
     let clean = f.replace(/['"]/g, '').replace(/e\.g\.,/gi, '').trim()
     if (clean.includes(':')) clean = clean.split(':')[1]?.trim() || clean
@@ -64,7 +64,7 @@ export default function Typography({ data, lang }: { data: TypoType, lang: 'zh' 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'auto', paddingBottom: '16px' }}>
-      <div style={{ minWidth: '600px' }}>
+      <div style={{ minWidth: fullWidth ? '100%' : '640px' }}>
         
         {/* Explicit 6-Column Header */}
         <div style={{ 
