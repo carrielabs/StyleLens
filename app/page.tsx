@@ -1121,17 +1121,15 @@ export default function Home() {
         {isSearchOpen && (
           <div style={{
             position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.06)', zIndex: 100,
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-            paddingTop: '12vh',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             backdropFilter: 'none', animation: 'overlayFade 0.2s ease-out'
           }} onClick={() => { setIsSearchOpen(false); setModalSearchQuery('') }}>
             <div style={{
-              width: '100%', maxWidth: '600px', height: '540px', backgroundColor: '#FFFFFF', borderRadius: '16px',
+              width: '100%', maxWidth: '600px', height: '510px', backgroundColor: '#FFFFFF', borderRadius: '16px',
               boxShadow: '0 20px 70px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)',
               display: 'flex', flexDirection: 'column', overflow: 'hidden',
               animation: 'searchModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
-              margin: '0 20px',
-              transform: 'translateX(40px)'
+              margin: '0 20px'
             }} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                 <Search size={18} strokeWidth={1.8} style={{ color: '#8E8E93', marginRight: '14px' }} />
@@ -1194,7 +1192,7 @@ export default function Home() {
                           )}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
-                          <span style={{ fontSize: '14.5px', color: '#1D1D1F', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: '14px', color: '#1D1D1F', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {item.source_label}
                           </span>
                         </div>
