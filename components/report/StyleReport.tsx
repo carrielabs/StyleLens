@@ -8,6 +8,7 @@ import DesignDetails from './DesignDetails'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateMarkdown } from '@/lib/exporters/markdownExporter'
+import { Copy, Check } from 'lucide-react'
 
 const i18n = {
   zh: {
@@ -120,22 +121,30 @@ export default function StyleReport({ report, lang = 'zh' }: { report: ReportTyp
         <SectionLabel>{t.export}</SectionLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          {/* Top-Tier Ghost Tabs (Vercel Style) */}
-          <div style={{ display: 'flex', gap: '24px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0' }}>
+          {/* Top-Tier Segmented Tabs (MacOS/Vercel Style) */}
+          <div style={{ 
+            display: 'inline-flex', 
+            padding: '4px', 
+            background: 'rgba(0,0,0,0.03)', 
+            borderRadius: '10px',
+            alignSelf: 'flex-start'
+          }}>
             {(['markdown', 'css', 'prompt'] as const).map(type => (
               <button 
                 key={type}
                 onClick={() => setActiveCode(type)}
                 style={{
-                  padding: '0 0 10px 0', fontSize: '13px', fontWeight: activeCode === type ? 600 : 500, letterSpacing: '0.02em',
-                  background: 'none', border: 'none',
+                  padding: '6px 14px', fontSize: '12px', fontWeight: activeCode === type ? 600 : 500,
+                  borderRadius: '7px',
+                  background: activeCode === type ? '#FFFFFF' : 'transparent',
+                  boxShadow: activeCode === type ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
                   color: activeCode === type ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                  cursor: 'pointer', transition: 'color 0.2s', position: 'relative'
+                  cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  border: 'none',
+                  fontFamily: 'var(--font-outfit)'
                 }}
               >
                 {t[`tab_${type}` as keyof typeof t]}
-                {/* Active Indicator Line */}
-                {activeCode === type && <div style={{ position: 'absolute', bottom: '-1px', left: 0, right: 0, height: '2px', background: 'var(--text-primary)', borderRadius: '2px' }} />}
               </button>
             ))}
           </div>
@@ -144,29 +153,35 @@ export default function StyleReport({ report, lang = 'zh' }: { report: ReportTyp
             {t[`${activeCode}_desc` as keyof typeof t]}
           </div>
 
-          {/* Code View */}
+          {/* Code View (Editor Style) */}
           <div style={{ 
-            background: 'var(--bg-elevated)', borderRadius: '12px', 
+            background: '#F9FAFB', borderRadius: '14px', 
             padding: '24px', position: 'relative',
-            border: '1px solid rgba(0,0,0,0.03)' // pure subtle definition
+            border: '1px solid rgba(0,0,0,0.04)',
+            boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.015)',
+            transition: 'all 0.3s ease'
           }}>
             <button 
               onClick={handleCopy}
               style={{
                 position: 'absolute', top: '16px', right: '16px',
-                background: copied ? 'var(--success)' : '#fff', 
-                border: '1px solid var(--border-subtle)', fontSize: '12px', fontWeight: 500, 
-                padding: '4px 12px', borderRadius: '100px',
-                color: copied ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s',
-                boxShadow: copied ? 'none' : '0 1px 2px rgba(0,0,0,0.05)'
+                background: copied ? '#E8F5E9' : '#FFFFFF', 
+                border: '1px solid rgba(0,0,0,0.06)', 
+                width: '32px', height: '32px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '8px',
+                color: copied ? '#2E7D32' : 'var(--text-secondary)', 
+                cursor: 'pointer', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
               }}
+              title={t.copy}
             >
-              {copied ? t.copied : t.copy}
+              {copied ? <Check size={16} strokeWidth={2.5} /> : <Copy size={16} strokeWidth={2} />}
             </button>
             <pre className="no-scrollbar" style={{ 
               margin: 0, fontSize: '13px', fontFamily: 'var(--font-mono)', lineHeight: 1.6, 
-              color: 'var(--text-secondary)', maxHeight: '320px', overflowY: 'auto',
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word', paddingTop: '16px'
+              color: 'rgba(29, 29, 31, 0.8)', maxHeight: '380px', overflowY: 'auto',
+              whiteSpace: 'pre-wrap', wordBreak: 'break-word', paddingTop: '12px'
             }}>
               {contentMap[activeCode]}
             </pre>
