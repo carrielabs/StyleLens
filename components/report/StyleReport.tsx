@@ -48,6 +48,7 @@ const i18n = {
 export default function StyleReport({ report, lang = 'zh' }: { report: ReportType, lang?: 'zh' | 'en' }) {
   const [activeCode, setActiveCode] = useState<'markdown' | 'css' | 'prompt'>('markdown')
   const [copied, setCopied] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
 
   const t = i18n[lang]
 
@@ -160,49 +161,42 @@ export default function StyleReport({ report, lang = 'zh' }: { report: ReportTyp
             ))}
           </div>
 
-          <div style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: '12px', color: '#8E8E93', letterSpacing: '0.01em' }}>
             {t[`${activeCode}_desc` as keyof typeof t]}
           </div>
 
           {/* Code View (Floating Sheet / IDE Style) */}
           <div 
-            className="group"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             style={{ 
               background: '#FFFFFF', borderRadius: '12px', 
               padding: '24px 28px', position: 'relative',
-              border: '1px solid rgba(0,0,0,0.05)',
+              border: '1px solid rgba(0,0,0,0.06)',
               boxShadow: '0 20px 50px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02)',
-              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
           >
             <button 
               onClick={handleCopy}
-              className="copy-button"
               style={{
                 position: 'absolute', top: '16px', right: '16px',
                 background: copied ? '#E8F5E9' : '#FFFFFF', 
-                border: '1px solid rgba(0,0,0,0.08)', 
+                border: copied ? '1px solid #C8E6C9' : '1px solid rgba(0,0,0,0.1)', 
                 width: '32px', height: '32px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '50%', // Circle for pro tool look
-                color: copied ? '#2E7D32' : '#8E8E93', 
+                borderRadius: '50%',
+                color: copied ? '#2E7D32' : '#1D1D1F', 
                 cursor: 'pointer', 
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-                opacity: 0, // Ghost by default
-                pointerEvents: 'auto'
-              }}
-              onMouseEnter={e => {
-                if (!copied) e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'
-              }}
-              onMouseLeave={e => {
-                if (!copied) e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                opacity: (isHovered || copied) ? 1 : 0,
+                transform: (isHovered || copied) ? 'translateY(0)' : 'translateY(4px)',
+                pointerEvents: (isHovered || copied) ? 'auto' : 'none',
+                zIndex: 10
               }}
               title={t.copy}
             >
-              <style jsx>{`
-                .group:hover .copy-button { opacity: 1 !important; transform: translateY(0) !important; }
-              `}</style>
               {copied ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
             </button>
             <pre className="no-scrollbar" style={{ 
