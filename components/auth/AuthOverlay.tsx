@@ -132,9 +132,9 @@ export default function AuthOverlay({ onClose }: AuthOverlayProps) {
         input::placeholder { color: #C1C1C6; }
       `}} />
 
-      {/* ── Branding Pane (1/2) ── */}
+      {/* ── Branding Pane (37%) ── */}
       <div style={{
-        flex: 1,
+        flex: '0 0 37%',
         backgroundColor: '#FFFFFF',
         padding: '60px 80px',
         display: 'flex',
@@ -264,10 +264,10 @@ export default function AuthOverlay({ onClose }: AuthOverlayProps) {
                     onClick={() => { setStep('email'); setMessage(null); setOtp(''); }}
                     style={{
                       position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', color: '#007AFF', fontSize: '13px', fontWeight: 500,
+                      background: 'none', border: 'none', color: '#515151', fontSize: '13px', fontWeight: 500,
                       cursor: 'pointer', padding: '4px 8px', borderRadius: '8px'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,122,255,0.08)'}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     修改

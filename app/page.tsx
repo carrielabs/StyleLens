@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin, ChevronDown, SidebarClose, SidebarOpen, ArrowUp } from 'lucide-react'
+import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin, PinOff, PencilLine, Trash2, ChevronDown, SidebarClose, SidebarOpen, ArrowUp } from 'lucide-react'
 import StyleReportView from '@/components/report/StyleReport'
 import AuthOverlay from '@/components/auth/AuthOverlay'
 import { createClient } from '@/lib/storage/supabaseClient'
@@ -44,8 +44,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('')
   const [modalSearchQuery, setModalSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [isNewSelected, setIsNewSelected] = useState(false)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
+  const isNewSelected = !activeItemId && !isSearchOpen
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState('')
 
@@ -131,6 +131,44 @@ export default function Home() {
       subscription.unsubscribe()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Global paste handler ──
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      // Don't intercept if user is typing in an input or textarea
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      
+      const files: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) files.push(file);
+        }
+      }
+      
+      if (files.length > 0) {
+        if (!user) {
+          setIsAuthVisible(true);
+          return;
+        }
+        const file = files[0];
+        setPendingFile(file);
+        setPendingPreviewUrl(URL.createObjectURL(file));
+        // If it's the home view, focus it visually
+        setActiveItemId(null);
+        setIsSearchOpen(false);
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [user]);
 
   // ── Update Greeting when user changes ──
   useEffect(() => {
@@ -247,6 +285,7 @@ export default function Home() {
   }
 
   const togglePin = async (itemId: string) => {
+    setContextMenuId(null)
     setExtractions(prev => prev.map(item => {
       if (item.id !== itemId) return item
       const isPinned = item.style_data?.__pinned === true
@@ -560,7 +599,22 @@ export default function Home() {
           flexShrink: 0, minWidth: sidebarOpen ? '270px' : '48px'
         }}>
           {sidebarOpen && (
-            <span style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', letterSpacing: '-0.025em', whiteSpace: 'nowrap' }}>StyleLens</span>
+            <span
+              onClick={() => {
+                setActiveItemId(null);
+                setIsSearchOpen(false);
+                setReport(null);
+                setError(null);
+                setUrl('');
+                clearPendingFile();
+                setShowUserMenu(false);
+                setContextMenuId(null);
+                setTimeout(() => urlInputRef.current?.focus(), 50);
+              }}
+              style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', letterSpacing: '-0.025em', whiteSpace: 'nowrap', cursor: 'pointer' }}
+            >
+              StyleLens
+            </span>
           )}
           <button
             onClick={() => setSidebarOpen(v => !v)}
@@ -581,20 +635,21 @@ export default function Home() {
         </div>
 
         {/* Top Actions */}
-        <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px', minWidth: '48px' }}>
+        <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '48px' }}>
           <SidebarBtn
             icon={<Plus size={15} strokeWidth={2} />}
             label="New Extraction"
             collapsed={!sidebarOpen}
-            active={isNewSelected}
+            active={false}
             onClick={() => {
-              setIsNewSelected(true)
               setIsSearchOpen(false)
               setReport(null)
               setActiveItemId(null)
               setError(null)
               setUrl('')
               clearPendingFile()
+              setShowUserMenu(false) // Close user menu on new extraction
+              setContextMenuId(null) // Close any open context menu
               setTimeout(() => urlInputRef.current?.focus(), 50)
             }}
           />
@@ -605,7 +660,6 @@ export default function Home() {
             active={isSearchOpen}
             onClick={() => {
               setIsSearchOpen(true)
-              setIsNewSelected(false)
               setModalSearchQuery('') // Reset modal search on open
               setTimeout(() => searchInputRef.current?.focus(), 100)
             }}
@@ -631,8 +685,8 @@ export default function Home() {
                     renamingId={renamingId}
                     renameValue={renameValue}
                     onRenameChange={setRenameValue}
-                    onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null) }}
-                    onContextMenu={(e) => { e.stopPropagation(); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
+                    onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null); setShowUserMenu(false) }}
+                    onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
                     onPin={() => togglePin(item.id)}
                     onDelete={() => deleteItem(item.id)}
                     onStartRename={() => startRename(item.id, item.source_label || 'Untitled')}
@@ -678,8 +732,8 @@ export default function Home() {
                 renamingId={renamingId}
                 renameValue={renameValue}
                 onRenameChange={setRenameValue}
-                onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null) }}
-                onContextMenu={(e) => { e.stopPropagation(); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
+                    onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null); setShowUserMenu(false) }}
+                    onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
                 onPin={() => togglePin(item.id)}
                 onDelete={() => deleteItem(item.id)}
                 onStartRename={() => startRename(item.id, item.source_label || '未命名分析')}
@@ -705,7 +759,7 @@ export default function Home() {
                 onClick={async () => { await supabase.auth.signOut(); setShowUserMenu(false) }}
                 style={{
                   width: '100%', padding: '7px 12px', textAlign: 'left', border: 'none',
-                  backgroundColor: 'transparent', color: '#FF3B30', fontSize: '13px', fontWeight: 500,
+                  backgroundColor: 'transparent', color: '#1D1D1F', fontSize: '13px', fontWeight: 400,
                   cursor: 'pointer', borderRadius: '8px', fontFamily: 'var(--font-sans)', transition: 'background 0.1s'
                 }}
                 onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,59,48,0.05)'}
@@ -720,6 +774,7 @@ export default function Home() {
             className="user-menu-trigger"
             onClick={e => {
               e.stopPropagation()
+              setContextMenuId(null)
               if (!user) setIsAuthVisible(true)
               else setShowUserMenu(!showUserMenu)
             }}
@@ -733,9 +788,17 @@ export default function Home() {
             onMouseEnter={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)')}
             onMouseLeave={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'transparent')}
           >
-            <UserIcon size={14} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
+            {user ? (
+              <img
+                src={user.user_metadata?.avatar_url || user.user_metadata?.picture || `https://ui-avatars.com/api/?name=${user.email}&background=f4f4f5&color=1d1d1f&size=64`}
+                style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, border: '1px solid rgba(0,0,0,0.05)' }}
+                alt="avatar"
+              />
+            ) : (
+              <UserIcon size={16} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
+            )}
             {sidebarOpen && (
-              <span style={{ fontSize: '14px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--font-sans)' }}>
+              <span style={{ fontSize: '14px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--font-sans)', marginLeft: '4px' }}>
                 {user ? (user.email?.split('@')[0] || 'User') : 'Log in'}
               </span>
             )}
@@ -810,7 +873,7 @@ export default function Home() {
                   fontSize: '32px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 40px 0',
                   lineHeight: 1.1, letterSpacing: '-0.03em'
                 }}>
-                  {report.sourceLabel}
+                  {extractions.find(e => e.id === activeItemId)?.source_label || report.sourceLabel}
                 </h1>
                 <StyleReportView report={report} lang={reportLang} fullWidth={true} />
               </div>
@@ -848,7 +911,7 @@ export default function Home() {
                 alignItems: 'flex-start', gap: '0', animation: 'fadeIn 0.6s ease-out'
               }}>
                 <h1 style={{
-                  fontSize: '52px', color: '#1D1D1F', fontWeight: 300,
+                  fontSize: '52px', color: '#4B4B4B', fontWeight: 300,
                   fontFamily: 'var(--font-sans)', letterSpacing: '-0.04em',
                   margin: 0, transition: 'all 0.3s ease',
                   lineHeight: '1.1', display: 'flex', alignItems: 'baseline', gap: '0.2em'
@@ -863,14 +926,14 @@ export default function Home() {
                 <div style={{
                   display: 'flex', alignItems: 'center',
                   backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)',
-                  borderRadius: '12px', height: '54px', overflow: 'hidden',
+                  borderRadius: '99px', height: '54px', overflow: 'hidden',
                   boxShadow: '0 8px 30px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02)',
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
                 onFocusCapture={e => {
                   const el = e.currentTarget as HTMLElement
                   el.style.borderColor = 'rgba(0,0,0,0.12)'
-                  el.style.boxShadow = '0 0 0 4px rgba(0,0,0,0.03), 0 8px 30px rgba(0,0,0,0.04)'
+                  el.style.boxShadow = '0 10px 40px rgba(0,0,0,0.08)'
                 }}
                 onBlurCapture={e => {
                   const el = e.currentTarget as HTMLElement
@@ -878,13 +941,14 @@ export default function Home() {
                   el.style.boxShadow = '0 8px 30px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02)'
                 }}
                 >
-                  <div style={{ paddingLeft: '18px', paddingRight: '10px', color: '#8E8E93', flexShrink: 0 }}>
+                  <div style={{ paddingLeft: '18px', paddingRight: '10px', color: '#8E8E93', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                     <Link2 size={18} strokeWidth={1.8} />
                   </div>
                   <input
                     ref={urlInputRef}
                     type="text"
                     placeholder="粘贴网页链接，如 https://linear.app"
+                    className="url-input-placeholder"
                     style={{
                       flex: 1, border: 'none', outline: 'none', fontSize: '15px',
                       color: '#1D1D1F', fontWeight: 450, backgroundColor: 'transparent',
@@ -894,6 +958,12 @@ export default function Home() {
                     onChange={e => setUrl(e.target.value)}
                     disabled={isExtracting}
                   />
+                  <style>{`
+                    .url-input-placeholder::placeholder {
+                      color: #989999 !important;
+                      opacity: 1;
+                    }
+                  `}</style>
                   <button
                     type="submit"
                     disabled={isExtracting}
@@ -932,7 +1002,7 @@ export default function Home() {
               {/* Drop zone — 6 states */}
               <div
                 style={{
-                  width: '100%', height: '200px', borderRadius: '14px',
+                  width: '100%', height: '200px', borderRadius: '24px',
                   border: uploadState === 'dragover'
                     ? '1.5px solid rgba(0,0,0,0.22)'
                     : uploadState === 'hover'
@@ -1054,7 +1124,7 @@ export default function Home() {
                     </div>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1F', marginBottom: '5px', letterSpacing: '-0.01em' }}>
-                        {uploadState === 'dragover' ? '释放以解析' : '拖拽设计图 / 点击上传'}
+                        {uploadState === 'dragover' ? '释放以解析' : '点击上传 / 将图片拖拽至此 / 直接粘贴图片'}
                       </div>
                       <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>支持 JPG、PNG、WebP，最大 20MB</div>
                     </div>
@@ -1501,25 +1571,29 @@ function HistoryItem({
       {contextMenuOpen && (
         <div style={{
           position: 'absolute', right: '6px', top: 'calc(100% + 4px)',
-          backgroundColor: '#FFFFFF', borderRadius: '10px', zIndex: 50,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)',
-          padding: '5px', minWidth: '160px',
-          animation: 'slideDown 0.15s cubic-bezier(0.16, 1, 0.3, 1)'
+          backgroundColor: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderRadius: '14px', zIndex: 100,
+          boxShadow: '0 10px 40px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
+          padding: '6px', minWidth: '185px',
+          animation: 'slideDown 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+          pointerEvents: 'auto'
         }}>
           <ContextMenuItem
-            label={isPinned ? '取消置顶' : '置顶'}
-            icon={<Pin size={13} strokeWidth={1.8} />}
+            label={isPinned ? 'Unpin' : 'Pin'}
+            icon={isPinned ? <PinOff size={14} strokeWidth={1.8} /> : <Pin size={14} strokeWidth={1.8} />}
             onClick={e => { e.stopPropagation(); onPin() }}
           />
           <ContextMenuItem
-            label="重命名"
-            icon={<span style={{ fontSize: '13px', lineHeight: 1 }}>✎</span>}
+            label="Rename"
+            icon={<PencilLine size={14} strokeWidth={1.8} />}
             onClick={e => { e.stopPropagation(); onStartRename() }}
           />
-          <div style={{ height: '1px', backgroundColor: 'rgba(0,0,0,0.06)', margin: '4px 0' }} />
+          <div style={{ height: '0.5px', backgroundColor: 'rgba(0,0,0,0.06)', margin: '4px 8px' }} />
           <ContextMenuItem
-            label="删除"
-            icon={<X size={13} strokeWidth={2} />}
+            label="Delete"
+            icon={<Trash2 size={14} strokeWidth={1.8} />}
             danger
             onClick={e => { e.stopPropagation(); onDelete() }}
           />
@@ -1536,14 +1610,14 @@ function ContextMenuItem({ label, icon, onClick, danger = false }: {
     <button
       onClick={onClick}
       style={{
-        width: '100%', padding: '7px 10px', border: 'none', borderRadius: '6px',
+        width: '100%', padding: '10px 12px', border: 'none', borderRadius: '10px',
         background: 'transparent', cursor: 'pointer', textAlign: 'left',
-        display: 'flex', alignItems: 'center', gap: '8px',
-        fontSize: '13px', fontWeight: 500,
-        color: danger ? '#FF3B30' : '#1D1D1F',
-        fontFamily: 'var(--font-sans)', transition: 'background 0.1s'
+        display: 'flex', alignItems: 'center', gap: '12px',
+        fontSize: '14px', fontWeight: 500,
+        color: danger ? '#FF453A' : '#1D1D1F',
+        fontFamily: 'var(--font-sans)', transition: 'all 0.15s'
       }}
-      onMouseEnter={e => e.currentTarget.style.background = danger ? 'rgba(255,59,48,0.06)' : 'rgba(0,0,0,0.04)'}
+      onMouseEnter={e => e.currentTarget.style.background = danger ? 'rgba(255,69,58,0.1)' : 'rgba(0,0,0,0.05)'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
       <span style={{ opacity: 0.7, display: 'flex', alignItems: 'center' }}>{icon}</span>
