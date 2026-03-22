@@ -1121,8 +1121,8 @@ export default function Home() {
         {isSearchOpen && (
           <div style={{
             position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.06)', zIndex: 100,
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
-            paddingTop: '12vh', paddingLeft: '290px',
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+            paddingTop: '12vh',
             backdropFilter: 'none', animation: 'overlayFade 0.2s ease-out'
           }} onClick={() => { setIsSearchOpen(false); setModalSearchQuery('') }}>
             <div style={{
@@ -1130,36 +1130,30 @@ export default function Home() {
               boxShadow: '0 20px 70px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)',
               display: 'flex', flexDirection: 'column', overflow: 'hidden',
               animation: 'searchModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
-              margin: '0 20px'
+              margin: '0 20px',
+              transform: 'translateX(40px)'
             }} onClick={e => e.stopPropagation()}>
-              <div style={{ padding: '12px 14px' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', padding: '10px 18px',
-                  backgroundColor: '#F5F5F7', borderRadius: '12px',
-                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
-                  transition: 'background 0.2s'
-                }}>
-                  <Search size={18} strokeWidth={1.8} style={{ color: '#8E8E93', marginRight: '14px' }} />
-                  <input
-                    ref={searchInputRef}
-                    autoFocus
-                    type="text"
-                    value={modalSearchQuery}
-                    onChange={e => setModalSearchQuery(e.target.value)}
-                    placeholder="搜索历史记录..."
-                    style={{
-                      flex: 1, border: 'none', outline: 'none', fontSize: '16px', color: '#1D1D1F',
-                      backgroundColor: 'transparent', fontFamily: 'var(--font-sans)', padding: '4px 0',
-                      fontWeight: 400
-                    }}
-                  />
-                  <button onClick={() => { setIsSearchOpen(false); setModalSearchQuery('') }} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', color: '#8E8E93',
-                    borderRadius: '6px', transition: 'background 0.1s'
-                  }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <X size={16} />
-                  </button>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                <Search size={18} strokeWidth={1.8} style={{ color: '#8E8E93', marginRight: '14px' }} />
+                <input
+                  ref={searchInputRef}
+                  autoFocus
+                  type="text"
+                  value={modalSearchQuery}
+                  onChange={e => setModalSearchQuery(e.target.value)}
+                  placeholder="搜索历史记录..."
+                  style={{
+                    flex: 1, border: 'none', outline: 'none', fontSize: '16px', color: '#1D1D1F',
+                    backgroundColor: 'transparent', fontFamily: 'var(--font-sans)', padding: '4px 0',
+                    fontWeight: 400
+                  }}
+                />
+                <button onClick={() => { setIsSearchOpen(false); setModalSearchQuery('') }} style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', color: '#8E8E93',
+                  borderRadius: '6px', transition: 'background 0.1s'
+                }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  <X size={16} />
+                </button>
               </div>
               <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '8px 0', display: 'flex', flexDirection: 'column' }}>
                 {modalFiltered.length === 0 ? (
