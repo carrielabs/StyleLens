@@ -136,8 +136,8 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
                 onClick={() => setActiveCode(type)}
                 style={{
                   padding: '8px 0 12px 0', 
-                  fontSize: '11px', 
-                  fontWeight: activeCode === type ? 600 : 400,
+                  fontSize: '13px', 
+                  fontWeight: activeCode === type ? 600 : 500,
                   textTransform: 'none',
                   letterSpacing: '0',
                   background: 'none', 
@@ -217,8 +217,8 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <h3 style={{ 
-      fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', 
-      marginBottom: '16px'
+      fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', 
+      marginBottom: '16px', letterSpacing: '-0.01em'
     }}>
       {children}
     </h3>

@@ -501,7 +501,7 @@ export default function Home() {
           flexShrink: 0, minWidth: sidebarOpen ? '270px' : '48px'
         }}>
           {sidebarOpen && (
-            <span style={{ fontSize: '17px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>StyleLens</span>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', letterSpacing: '-0.025em', whiteSpace: 'nowrap' }}>StyleLens</span>
           )}
           <button
             onClick={() => setSidebarOpen(v => !v)}
@@ -672,7 +672,7 @@ export default function Home() {
           >
             <UserIcon size={14} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
             {sidebarOpen && (
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--font-sans)' }}>
+              <span style={{ fontSize: '14px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--font-sans)' }}>
                 {user ? (user.email?.split('@')[0] || 'User') : '登录 / 注册'}
               </span>
             )}
@@ -1275,9 +1275,8 @@ function SidebarBtn({ icon, label, onClick, active = false, collapsed = false }:
         justifyContent: collapsed ? 'center' : 'flex-start',
         gap: collapsed ? 0 : '9px',
         padding: collapsed ? '8px 0' : '7px 10px', borderRadius: '8px', border: 'none',
-        backgroundColor: active ? 'rgba(0,0,0,0.05)' : 'transparent',
         color: '#1D1D1F', cursor: 'pointer', textAlign: 'left',
-        fontSize: '13px', fontWeight: 500, fontFamily: 'var(--font-sans)',
+        fontSize: '14px', fontWeight: 500, fontFamily: 'var(--font-sans)',
         transition: 'background 0.1s'
       }}
       onMouseEnter={e => !active && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)')}
@@ -1379,7 +1378,7 @@ function HistoryItem({
             />
           ) : (
             <span style={{
-              fontSize: '13px', fontWeight: isActive ? 500 : 400,
+              fontSize: '14px', fontWeight: isActive ? 500 : 400,
               color: isActive ? '#1D1D1F' : '#3C3C3E',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip',
               display: 'block', lineHeight: 1.3
@@ -1504,7 +1503,7 @@ function SectionHeader({ label, collapsed, onToggle }: {
         cursor: 'pointer', fontFamily: 'var(--font-sans)'
       }}
     >
-      <span style={{ fontSize: '10px', fontWeight: 700, color: hovered ? '#8E8E93' : '#AEAEB2', letterSpacing: '0.02em', textTransform: 'none', transition: 'color 0.15s' }}>
+      <span style={{ fontSize: '12px', fontWeight: 500, color: hovered ? '#8E8E93' : '#AEAEB2', letterSpacing: '0.01em', textTransform: 'none', transition: 'color 0.15s' }}>
         {label}
       </span>
       <ChevronDown

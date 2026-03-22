@@ -48,7 +48,7 @@ export default function DesignDetails({ data, lang, fullWidth = false }: { data:
             onClick={() => setActiveTab(tab.key)}
             style={{
               padding: '12px 0', border: 'none', cursor: 'pointer',
-              fontSize: '11px', fontWeight: activeTab === tab.key ? 600 : 400,
+              fontSize: '13px', fontWeight: activeTab === tab.key ? 600 : 500,
               textTransform: 'none', letterSpacing: '0',
               background: 'none',
               color: activeTab === tab.key ? '#1D1D1F' : '#AEAEB2',
@@ -218,10 +218,10 @@ function RedlineLabel({ value }: { value: string }) {
 function TagBadge({ label, theme = 'light' }: { label: string, theme?: 'light' | 'dark' }) {
   return (
     <span style={{ 
-      padding: '4px 12px', 
+      padding: '5px 14px', 
       background: theme === 'light' ? '#F2F2F7' : '#1D1D1F', 
       color: theme === 'light' ? '#1D1D1F' : '#FFF', 
-      borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+      borderRadius: '8px', fontSize: '12px', fontWeight: 600,
       fontFamily: 'var(--font-sans)',
       whiteSpace: 'nowrap'
     }}>

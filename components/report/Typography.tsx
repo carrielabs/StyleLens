@@ -70,7 +70,7 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
         <div style={{ 
           display: 'flex', alignItems: 'baseline', paddingBottom: '16px', 
           borderBottom: '1px solid var(--border-subtle)', 
-          fontSize: '13px', color: 'var(--text-tertiary)' 
+          fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600
         }}>
           <div style={{ flex: '0 0 32%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
           <div style={{ flex: '0 0 16%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
