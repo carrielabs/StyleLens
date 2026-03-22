@@ -9,7 +9,7 @@ import { useHistory } from '@/hooks/useHistory'
 import { createClient } from '@/lib/storage/supabaseClient'
 import { getGreeting, GreetingData } from '@/lib/utils/greeting'
 import type { StyleReport } from '@/lib/types'
-import type { User } from '@supabase/supabase-js'
+import type { Session, User } from '@supabase/supabase-js'
 
 export default function Home() {
   // ── Core state ──
@@ -35,7 +35,7 @@ export default function Home() {
   // ── Dynamic Greeting state ──
   const [greeting, setGreeting] = useState<GreetingData | null>(null)
 
-  const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const supabase = createClient()
   const {
     extractions,
@@ -121,7 +121,7 @@ export default function Home() {
 
   // ── Auth listener (stable, empty deps) ──
   useEffect(() => {
-    const syncSession = async (session: { user: User } | null) => {
+    const syncSession = async (session: Session | null) => {
       try {
         setUser(session?.user ?? null)
         await syncHistoryForSession(session)
