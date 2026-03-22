@@ -42,6 +42,7 @@ export default function Home() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isNewSelected, setIsNewSelected] = useState(false)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState('')
@@ -268,6 +269,12 @@ export default function Home() {
     const trimmed = renameValue.trim()
     if (!trimmed) { cancelRename(); return }
     setExtractions(prev => prev.map(e => e.id === id ? { ...e, source_label: trimmed } : e))
+    
+    // Sync with active report if renamed item is current
+    if (id === activeItemId && report) {
+      setReport({ ...report, sourceLabel: trimmed })
+    }
+
     setRenamingId(null)
     setRenameValue('')
     await renameInLibrary(id, trimmed, supabase)
@@ -525,10 +532,10 @@ export default function Home() {
         <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px', minWidth: '48px' }}>
           <SidebarBtn
             icon={<Plus size={15} strokeWidth={2} />}
-            label="New Extraction"
-            collapsed={!sidebarOpen}
-            active={!activeItemId && !isExtracting && !isSearchOpen}
+            active={isNewSelected}
             onClick={() => {
+              setIsNewSelected(true)
+              setIsSearchOpen(false)
               setReport(null)
               setActiveItemId(null)
               setError(null)
@@ -544,6 +551,7 @@ export default function Home() {
             active={isSearchOpen}
             onClick={() => {
               setIsSearchOpen(true)
+              setIsNewSelected(false)
               setTimeout(() => searchInputRef.current?.focus(), 100)
             }}
           />
@@ -1275,6 +1283,7 @@ function SidebarBtn({ icon, label, onClick, active = false, collapsed = false }:
         justifyContent: collapsed ? 'center' : 'flex-start',
         gap: collapsed ? 0 : '9px',
         padding: collapsed ? '8px 0' : '7px 10px', borderRadius: '8px', border: 'none',
+        backgroundColor: active ? 'rgba(0,0,0,0.05)' : 'transparent',
         color: '#1D1D1F', cursor: 'pointer', textAlign: 'left',
         fontSize: '14px', fontWeight: 500, fontFamily: 'var(--font-sans)',
         transition: 'background 0.1s'
