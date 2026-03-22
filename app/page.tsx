@@ -532,6 +532,8 @@ export default function Home() {
         <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px', minWidth: '48px' }}>
           <SidebarBtn
             icon={<Plus size={15} strokeWidth={2} />}
+            label="New Extraction"
+            collapsed={!sidebarOpen}
             active={isNewSelected}
             onClick={() => {
               setIsNewSelected(true)
