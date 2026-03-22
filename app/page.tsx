@@ -527,7 +527,7 @@ export default function Home() {
             icon={<Plus size={15} strokeWidth={2} />}
             label="New Extraction"
             collapsed={!sidebarOpen}
-            active={!activeItemId && !report && !isExtracting}
+            active={!activeItemId && !isExtracting && !isSearchOpen}
             onClick={() => {
               setReport(null)
               setActiveItemId(null)
