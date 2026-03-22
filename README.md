@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+ # StyleLens
 
-## Getting Started
+ StyleLens is a Next.js app for extracting visual style references from URLs and images.
 
-First, run the development server:
+ ## Development
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+ Run the development server:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ ```bash
+ npm run dev
+ ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+ Useful local checks:
 
-## Learn More
+ ```bash
+ npm run lint
+ npx tsc --noEmit
+ npm test
+ ```
 
-To learn more about Next.js, take a look at the following resources:
+ ## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+ Main app areas:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+ - `app/page.tsx`
+   Homepage composition layer. Wires auth state, history state, extraction state, page layout and overlays together.
+ - `hooks/useHistory.ts`
+   History list state, guest history, account history, guest-to-account migration, rename/delete/undo/pin/search behavior.
+ - `hooks/useExtraction.ts`
+   URL extraction, image extraction, upload preview, drag/paste input, cancel flow, loading states and extraction errors.
+ - `components/home/HomeSidebar.tsx`
+   Sidebar history UI.
+ - `components/home/HomeWorkspace.tsx`
+   Main page-mode report container.
+ - `components/home/HomeOverlays.tsx`
+   Modal-mode report container and overlays.
+ - `components/report/*`
+   Shared report presentation building blocks.
+ - `lib/types/index.ts`
+   Shared app types, including homepage report and history display types.
+ - `docs/`
+   Product and design reference documents.
+ - `scripts/`
+   Local helper scripts.
 
-## Deploy on Vercel
+ ## Important Conventions
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+ - `walkthrough.md` is maintained outside this workflow and should not be touched during normal refactors.
+ - The report uses a "single source, dual view" structure:
+   - Page mode lives in `HomeWorkspace`
+   - Modal mode lives in `HomeOverlays`
+   - Shared report content can be reused, but the two containers should not be collapsed into one generic shell if that changes UX details.
+ - Homepage refactors should prefer low-risk steps:
+   - preserve behavior first
+   - preserve UI details first
+   - split structure before changing logic
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+ ## Current Testing
+
+ Vitest is set up for lightweight logic coverage.
+
+ Current test focus:
+
+ - `hooks/useHistory.test.tsx`
+ - `hooks/useExtraction.test.tsx`
+
+ Run all tests with:
+
+ ```bash
+ npm test
+ ```
+
+ ## Notes
+
+ - Screenshot caching and guest history behavior are part of the product cost-control strategy and should be treated carefully.
+ - AI extraction availability can depend on provider or network constraints, so user-facing errors should stay friendly and should not expose raw backend or provider messages.
