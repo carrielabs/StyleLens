@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin, ChevronDown, PanelLeft } from 'lucide-react'
+import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin, ChevronDown, SidebarClose, SidebarOpen } from 'lucide-react'
 import StyleReportView from '@/components/report/StyleReport'
 import AuthOverlay from '@/components/auth/AuthOverlay'
 import { createClient } from '@/lib/storage/supabaseClient'
@@ -470,7 +470,7 @@ export default function Home() {
           SIDEBAR
       ══════════════════════════════════════════ */}
       <aside style={{
-        width: sidebarOpen ? '260px' : '48px', flexShrink: 0, display: 'flex', flexDirection: 'column',
+        width: sidebarOpen ? '270px' : '48px', flexShrink: 0, display: 'flex', flexDirection: 'column',
         backgroundColor: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.06)',
         overflow: 'hidden', transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
@@ -479,7 +479,7 @@ export default function Home() {
           padding: sidebarOpen ? '22px 16px 14px' : '18px 10px 14px',
           display: 'flex', alignItems: 'center',
           justifyContent: sidebarOpen ? 'space-between' : 'center',
-          flexShrink: 0, minWidth: sidebarOpen ? '260px' : '48px'
+          flexShrink: 0, minWidth: sidebarOpen ? '270px' : '48px'
         }}>
           {sidebarOpen && (
             <span style={{ fontSize: '17px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>StyleLens</span>
@@ -495,7 +495,10 @@ export default function Home() {
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#8E8E93' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#C7C7CC' }}
           >
-            <PanelLeft size={16} strokeWidth={1.8} style={{ transform: sidebarOpen ? 'none' : 'rotate(180deg)', transition: 'transform 0.25s' }} />
+            {sidebarOpen
+              ? <SidebarClose size={16} strokeWidth={1.6} />
+              : <SidebarOpen size={16} strokeWidth={1.6} />
+            }
           </button>
         </div>
 
@@ -1302,7 +1305,8 @@ function HistoryItem({
       <button
         onClick={isRenaming ? undefined : onClick}
         style={{
-          width: '100%', padding: '8px 10px', borderRadius: '8px',
+          width: '100%', padding: '8px 10px', paddingRight: (hovered || contextMenuOpen) && !isRenaming ? '32px' : '10px',
+          borderRadius: '8px',
           backgroundColor: isActive ? 'rgba(0,0,0,0.05)' : (hovered ? 'rgba(0,0,0,0.025)' : 'transparent'),
           border: 'none', cursor: isRenaming ? 'default' : 'pointer', textAlign: 'left',
           fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: '10px',
@@ -1311,7 +1315,7 @@ function HistoryItem({
       >
         {/* Thumbnail — portrait 3:4 */}
         <div style={{
-          width: '34px', height: '46px', borderRadius: '5px', overflow: 'hidden',
+          width: '40px', height: '42px', borderRadius: '5px', overflow: 'hidden',
           flexShrink: 0, backgroundColor: '#F0F0F0'
         }}>
           {thumbnailContent}
@@ -1354,11 +1358,12 @@ function HistoryItem({
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {topColors.map((c, i) => (
                 <div key={i} style={{
-                  width: '12px', height: '12px', borderRadius: '50%',
+                  width: '15px', height: '15px', borderRadius: '50%',
                   backgroundColor: c.hex || '#CCCCCC',
-                  border: '2px solid #FFFFFF',
-                  boxShadow: '0 0 0 0.5px rgba(0,0,0,0.1)',
-                  marginLeft: i === 0 ? 0 : '-4px',
+                  boxShadow: i === 0
+                    ? '0 0 0 1px rgba(0,0,0,0.08)'
+                    : '0 0 0 1.5px #FFFFFF, 0 0 0 2px rgba(0,0,0,0.08)',
+                  marginLeft: i === 0 ? 0 : '-5px',
                   flexShrink: 0
                 }} />
               ))}
