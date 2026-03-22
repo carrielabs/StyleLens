@@ -6,6 +6,7 @@ import StyleReportView from '@/components/report/StyleReport'
 import AuthOverlay from '@/components/auth/AuthOverlay'
 import { createClient } from '@/lib/storage/supabaseClient'
 import { deleteFromLibrary, renameInLibrary } from '@/lib/storage/libraryStore'
+import { getGreeting, GreetingData } from '@/lib/utils/greeting'
 import type { StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
@@ -66,6 +67,9 @@ export default function Home() {
   // ── Sidebar panel toggle ──
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
+  // ── Dynamic Greeting state ──
+  const [greeting, setGreeting] = useState<GreetingData | null>(null)
+
   const historyLoadedRef = useRef(false)
   const extractAbortRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -111,6 +115,14 @@ export default function Home() {
       subscription.unsubscribe()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Update Greeting when user changes ──
+  useEffect(() => {
+    setGreeting(getGreeting(user?.email))
+    // Update every minute to catch hour transitions
+    const timer = setInterval(() => setGreeting(getGreeting(user?.email)), 60000)
+    return () => clearInterval(timer)
+  }, [user])
 
   // ── Keyboard & click-outside handler ──
   useEffect(() => {
@@ -459,6 +471,13 @@ export default function Home() {
         .upload-icon-float:hover svg {
           animation: uploadIconFloat 0.6s ease-in-out;
         }
+        @keyframes doodleFloat {
+          0%, 100% { transform: translateY(0) scale(1.1); }
+          50% { transform: translateY(-4px) scale(1.12); }
+        }
+        .doodle-illustration {
+          animation: doodleFloat 4s ease-in-out infinite;
+        }
       `}</style>
       <div style={{
         height: '100vh', width: '100vw', display: 'flex', flexDirection: 'row',
@@ -759,12 +778,22 @@ export default function Home() {
               </div>
             )}
 
-            <div style={{ width: '100%', maxWidth: '500px' }}>
+            <div style={{ width: '100%', maxWidth: '700px' }}>
 
-              {/* Heading */}
-              <div style={{ textAlign: 'center', marginBottom: '36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
-                <Sparkles size={20} strokeWidth={1.5} style={{ color: '#1D1D1F' }} />
-                <h1 style={{ fontSize: '22px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.03em', margin: 0 }}>开始解析设计</h1>
+              {/* Heading — Dynamic Greeting (Simplified) */}
+              <div style={{
+                textAlign: 'left', marginBottom: '40px', display: 'flex', flexDirection: 'column',
+                alignItems: 'flex-start', gap: '0', animation: 'fadeIn 0.6s ease-out'
+              }}>
+                <h1 style={{
+                  fontSize: '52px', color: '#1D1D1F', fontWeight: 300,
+                  fontFamily: 'var(--font-outfit)', letterSpacing: '-0.05em',
+                  margin: 0, transition: 'all 0.3s ease',
+                  lineHeight: '1.0', display: 'flex', alignItems: 'baseline', gap: '0.2em'
+                }}>
+                  <span>{greeting?.prefix}</span>
+                  <span style={{ opacity: 1.0 }}>{greeting?.name}</span>
+                </h1>
               </div>
 
               {/* URL input */}
@@ -797,7 +826,7 @@ export default function Home() {
                     style={{
                       flex: 1, border: 'none', outline: 'none', fontSize: '15px',
                       color: '#1D1D1F', fontWeight: 450, backgroundColor: 'transparent',
-                      fontFamily: 'var(--font-sans)', height: '100%'
+                      fontFamily: 'var(--font-outfit)', height: '100%'
                     }}
                     value={url}
                     onChange={e => setUrl(e.target.value)}
@@ -835,7 +864,7 @@ export default function Home() {
               {/* Drop zone — 6 states */}
               <div
                 style={{
-                  width: '100%', height: '180px', borderRadius: '14px',
+                  width: '100%', height: '220px', borderRadius: '14px',
                   border: uploadState === 'dragover'
                     ? '1.5px solid rgba(0,0,0,0.28)'
                     : uploadState === 'hover'
