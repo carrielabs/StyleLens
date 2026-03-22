@@ -10,7 +10,7 @@ import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateMarkdown } from '@/lib/exporters/markdownExporter'
 import { Copy, Check } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 const i18n = {
   zh: {
@@ -202,21 +202,23 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
               {copied ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
             </button>
             <div className="no-scrollbar" style={{ 
-              borderRadius: '8px', overflow: 'hidden', padding: '0',
-              border: 'none', background: '#FAFAFA'
+              borderRadius: '12px', overflow: 'hidden', padding: '0',
+              border: '1px solid rgba(0,0,0,0.05)', background: '#1E1E1E'
             }}>
               <SyntaxHighlighter
-                language={activeCode === 'markdown' ? 'markdown' : activeCode === 'css' ? 'css' : 'text'}
-                style={oneLight}
+                language={(activeCode === 'markdown' || activeCode === 'prompt') ? 'markdown' : 'css'}
+                style={vscDarkPlus}
+                showLineNumbers={true}
+                lineNumberStyle={{ minWidth: '3.25em', paddingRight: '1em', color: '#858585', textAlign: 'right', fontSize: '11px', userSelect: 'none' }}
                 customStyle={{
                   margin: 0,
-                  padding: '24px',
-                  fontSize: '13px',
+                  padding: '24px 16px',
+                  fontSize: '12.5px',
                   fontFamily: 'var(--font-mono)',
-                  lineHeight: '1.6',
-                  backgroundColor: '#FAFAFA',
+                  lineHeight: '1.7',
+                  backgroundColor: '#1E1E1E',
                   border: 'none',
-                  maxHeight: '420px',
+                  maxHeight: '480px',
                 }}
                 codeTagProps={{
                   style: {
