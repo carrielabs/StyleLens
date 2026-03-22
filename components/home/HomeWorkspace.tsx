@@ -4,22 +4,16 @@ import type { ClipboardEvent, Dispatch, DragEvent, FormEvent, RefObject, SetStat
 import type { User } from '@supabase/supabase-js'
 import { ArrowUp, HelpCircle, Link2, Upload, X } from 'lucide-react'
 import StyleReportView from '@/components/report/StyleReport'
-import type { LibraryRecord, StyleReport } from '@/lib/types'
+import type { DisplayStyleReport, HomeHistoryRecord } from '@/lib/types'
 import type { UploadState } from '@/hooks/useExtraction'
-
-type WorkspaceReport = StyleReport & {
-  screenshotUrl?: string
-}
-
-type WorkspaceExtraction = Pick<LibraryRecord, 'id' | 'source_label'>
 
 interface HomeWorkspaceProps {
   activeItemId: string | null
-  report: WorkspaceReport | null
+  report: DisplayStyleReport | null
   isExtracting: boolean
   isUrlExtracting: boolean
   isImageExtracting: boolean
-  extractions: WorkspaceExtraction[]
+  extractions: HomeHistoryRecord[]
   reportLang: 'zh' | 'en'
   setReportLang: Dispatch<SetStateAction<'zh' | 'en'>>
   setLightboxUrl: Dispatch<SetStateAction<string>>

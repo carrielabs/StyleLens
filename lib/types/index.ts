@@ -67,6 +67,31 @@ export interface StyleReport {
   createdAt: string
 }
 
+// ─── Home View Models ────────────────────────────────────────────────────────
+
+export type PinnedStyleReport = StyleReport & {
+  __pinned?: boolean
+}
+
+export type DisplayStyleReport = StyleReport & {
+  screenshotUrl?: string
+}
+
+export interface HomeHistoryRecord {
+  id: string
+  user_id: string | null
+  source_label: string
+  style_data: PinnedStyleReport
+  thumbnail_url: string | null
+  created_at: string
+}
+
+export interface HomeUndoItem {
+  id: string
+  label: string
+  record: HomeHistoryRecord
+}
+
 // ─── API Payloads ─────────────────────────────────────────────────────────────
 
 export interface ExtractRequest {

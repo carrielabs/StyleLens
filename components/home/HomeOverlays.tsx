@@ -4,49 +4,30 @@ import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { Search, X } from 'lucide-react'
 import AuthOverlay from '@/components/auth/AuthOverlay'
 import StyleReportView from '@/components/report/StyleReport'
-import type { StyleReport } from '@/lib/types'
+import type { DisplayStyleReport, HomeHistoryRecord, HomeUndoItem, StyleReport } from '@/lib/types'
 import { getTopColors } from './viewUtils'
 
-type OverlayReport = StyleReport & {
-  screenshotUrl?: string
-}
-
-type OverlayHistoryRecord = {
-  id: string
-  user_id: string | null
-  source_label: string
-  style_data: OverlayReport | null
-  thumbnail_url: string | null
-  created_at: string
-}
-
-type OverlayUndoItem = {
-  id: string
-  label: string
-  record: OverlayHistoryRecord
-}
-
 interface HomeOverlaysProps {
-  report: OverlayReport | null
+  report: DisplayStyleReport | null
   activeItemId: string | null
   isExtracting: boolean
-  extractions: OverlayHistoryRecord[]
+  extractions: HomeHistoryRecord[]
   setActiveItemId: Dispatch<SetStateAction<string | null>>
-  setReport: Dispatch<SetStateAction<OverlayReport | null>>
+  setReport: Dispatch<SetStateAction<StyleReport | null>>
   reportLang: 'zh' | 'en'
   setReportLang: Dispatch<SetStateAction<'zh' | 'en'>>
   isSearchOpen: boolean
   setIsSearchOpen: Dispatch<SetStateAction<boolean>>
   modalSearchQuery: string
   setModalSearchQuery: Dispatch<SetStateAction<string>>
-  modalFiltered: OverlayHistoryRecord[]
+  modalFiltered: HomeHistoryRecord[]
   setError: Dispatch<SetStateAction<string | null>>
   searchInputRef: RefObject<HTMLInputElement | null>
   isLightboxOpen: boolean
   setIsLightboxOpen: Dispatch<SetStateAction<boolean>>
   setLightboxUrl: Dispatch<SetStateAction<string>>
   lightboxUrl: string
-  undoItem: OverlayUndoItem | null
+  undoItem: HomeUndoItem | null
   undoDelete: () => void
   isAuthVisible: boolean
   setIsAuthVisible: Dispatch<SetStateAction<boolean>>

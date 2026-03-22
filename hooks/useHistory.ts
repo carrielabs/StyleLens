@@ -12,23 +12,13 @@ import {
   getGuestMigrationSnapshot,
   saveGuestHistory,
 } from '@/lib/storage/guestStore'
-import type { StyleReport } from '@/lib/types'
+import type { HomeHistoryRecord, HomeUndoItem, PinnedStyleReport, StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
 const GUEST_TRIAL_KEY = 'stylelens_trial_used'
 
 type BrowserSupabaseClient = ReturnType<typeof createClient>
-type HistoryStyleData = StyleReport & { __pinned?: boolean }
-type HistoryRecord = {
-  id: string
-  user_id: string | null
-  source_label: string
-  style_data: HistoryStyleData
-  thumbnail_url: string | null
-  created_at: string
-}
-type GuestCacheRecordInput = Omit<GuestHistoryRecord, 'id'> & { style_data: HistoryStyleData }
-type UndoItem = { id: string; label: string; record: HistoryRecord }
+type GuestCacheRecordInput = Omit<GuestHistoryRecord, 'id'> & { style_data: PinnedStyleReport }
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message
@@ -56,8 +46,8 @@ interface UseHistoryParams {
 }
 
 interface UseHistoryResult {
-  extractions: HistoryRecord[]
-  setExtractions: Dispatch<SetStateAction<HistoryRecord[]>>
+  extractions: HomeHistoryRecord[]
+  setExtractions: Dispatch<SetStateAction<HomeHistoryRecord[]>>
   isLoadingHistory: boolean
   setIsLoadingHistory: Dispatch<SetStateAction<boolean>>
   searchQuery: string
@@ -72,14 +62,14 @@ interface UseHistoryResult {
   setRenamingId: Dispatch<SetStateAction<string | null>>
   renameValue: string
   setRenameValue: Dispatch<SetStateAction<string>>
-  undoItem: UndoItem | null
+  undoItem: HomeUndoItem | null
   pinnedCollapsed: boolean
   setPinnedCollapsed: Dispatch<SetStateAction<boolean>>
   historyCollapsed: boolean
   setHistoryCollapsed: Dispatch<SetStateAction<boolean>>
-  modalFiltered: HistoryRecord[]
-  pinnedList: HistoryRecord[]
-  recentList: HistoryRecord[]
+  modalFiltered: HomeHistoryRecord[]
+  pinnedList: HomeHistoryRecord[]
+  recentList: HomeHistoryRecord[]
   loadHistory: (userId: string) => Promise<void>
   saveExtraction: (nextReport: StyleReport, thumb?: string) => Promise<void>
   migrateGuestHistoryToAccount: (userId: string) => Promise<void>
@@ -101,7 +91,7 @@ export function useHistory({
   setGuestTrialUsed,
   setIsAuthVisible,
 }: UseHistoryParams): UseHistoryResult {
-  const [extractions, setExtractions] = useState<HistoryRecord[]>([])
+  const [extractions, setExtractions] = useState<HomeHistoryRecord[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [modalSearchQuery, setModalSearchQuery] = useState('')
@@ -109,7 +99,7 @@ export function useHistory({
   const [contextMenuId, setContextMenuId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
-  const [undoItem, setUndoItem] = useState<UndoItem | null>(null)
+  const [undoItem, setUndoItem] = useState<HomeUndoItem | null>(null)
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false)
   const [historyCollapsed, setHistoryCollapsed] = useState(false)
 
@@ -137,7 +127,7 @@ export function useHistory({
         })
 
         if (guestRecord) {
-          setExtractions([guestRecord as HistoryRecord])
+          setExtractions([guestRecord as HomeHistoryRecord])
         } else {
           setExtractions([])
         }
@@ -152,7 +142,7 @@ export function useHistory({
         .limit(50)
 
       if (error) throw error
-      setExtractions((data as HistoryRecord[]) || [])
+      setExtractions((data as HomeHistoryRecord[]) || [])
     } catch (err: unknown) {
       console.error('Failed to load history:', getErrorMessage(err))
     } finally {
@@ -229,7 +219,7 @@ export function useHistory({
     }
 
     if (!user) {
-      const guestRecord: HistoryRecord = { ...record, id: 'guest_1' }
+      const guestRecord: HomeHistoryRecord = { ...record, id: 'guest_1' }
       const guestCacheRecord = buildGuestCacheRecord(record)
 
       setExtractions([guestRecord])
