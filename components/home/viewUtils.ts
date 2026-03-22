@@ -1,6 +1,8 @@
+import type { ColorToken } from '@/lib/types'
+
 const COLOR_ROLE_ORDER = ['background', 'primary', 'accent', 'secondary', 'text', 'other']
 
-export function getTopColors(colors: any[]): any[] {
+export function getTopColors(colors: ColorToken[]): ColorToken[] {
   if (!colors || !Array.isArray(colors)) return []
 
   const sorted = [...colors].sort((a, b) => {
