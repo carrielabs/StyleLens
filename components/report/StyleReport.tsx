@@ -114,7 +114,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
       {/* 5. 细节解析 */}
       <section>
          <SectionLabel>{t.details}</SectionLabel>
-         <DesignDetails data={report.designDetails} lang={lang} />
+         <DesignDetails data={report.designDetails} lang={lang} fullWidth={fullWidth} />
       </section>
 
       {/* 6. 导出面板 */}
