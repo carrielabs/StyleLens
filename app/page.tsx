@@ -41,6 +41,7 @@ export default function Home() {
   const [extractions, setExtractions] = useState<any[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [modalSearchQuery, setModalSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isNewSelected, setIsNewSelected] = useState(false)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
@@ -435,6 +436,9 @@ export default function Home() {
   const allFiltered = extractions.filter(item =>
     !searchQuery || (item.source_label || '').toLowerCase().includes(searchQuery.toLowerCase())
   )
+  const modalFiltered = extractions.filter(item =>
+    !modalSearchQuery || (item.source_label || '').toLowerCase().includes(modalSearchQuery.toLowerCase())
+  )
   const pinnedList = allFiltered.filter(item => item.style_data?.__pinned === true)
   const recentList = allFiltered.filter(item => !item.style_data?.__pinned)
 
@@ -554,6 +558,7 @@ export default function Home() {
             onClick={() => {
               setIsSearchOpen(true)
               setIsNewSelected(false)
+              setModalSearchQuery('') // Reset modal search on open
               setTimeout(() => searchInputRef.current?.focus(), 100)
             }}
           />
@@ -1116,45 +1121,53 @@ export default function Home() {
         {isSearchOpen && (
           <div style={{
             position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.06)', zIndex: 100,
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '14vh',
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
+            paddingTop: '12vh', paddingLeft: '290px',
             backdropFilter: 'none', animation: 'overlayFade 0.2s ease-out'
-          }} onClick={() => { setIsSearchOpen(false); setSearchQuery('') }}>
+          }} onClick={() => { setIsSearchOpen(false); setModalSearchQuery('') }}>
             <div style={{
-              width: '100%', maxWidth: '600px', height: '440px', backgroundColor: '#FFFFFF', borderRadius: '16px',
+              width: '100%', maxWidth: '600px', height: '540px', backgroundColor: '#FFFFFF', borderRadius: '16px',
               boxShadow: '0 20px 70px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)',
               display: 'flex', flexDirection: 'column', overflow: 'hidden',
               animation: 'searchModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
               margin: '0 20px'
             }} onClick={e => e.stopPropagation()}>
-              <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                <Search size={18} strokeWidth={1.8} style={{ color: '#8E8E93', marginRight: '14px' }} />
-                <input
-                  ref={searchInputRef}
-                  autoFocus
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="搜索历史记录..."
-                  style={{
-                    flex: 1, border: 'none', outline: 'none', fontSize: '16px', color: '#1D1D1F',
-                    backgroundColor: 'transparent', fontFamily: 'var(--font-sans)', padding: '4px 0',
-                    fontWeight: 400
-                  }}
-                />
-                <button onClick={() => { setIsSearchOpen(false); setSearchQuery('') }} style={{
-                  background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', color: '#8E8E93',
-                  borderRadius: '6px', transition: 'background 0.1s'
-                }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                  <X size={16} />
-                </button>
+              <div style={{ padding: '12px 14px' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', padding: '10px 18px',
+                  backgroundColor: '#F5F5F7', borderRadius: '12px',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
+                  transition: 'background 0.2s'
+                }}>
+                  <Search size={18} strokeWidth={1.8} style={{ color: '#8E8E93', marginRight: '14px' }} />
+                  <input
+                    ref={searchInputRef}
+                    autoFocus
+                    type="text"
+                    value={modalSearchQuery}
+                    onChange={e => setModalSearchQuery(e.target.value)}
+                    placeholder="搜索历史记录..."
+                    style={{
+                      flex: 1, border: 'none', outline: 'none', fontSize: '16px', color: '#1D1D1F',
+                      backgroundColor: 'transparent', fontFamily: 'var(--font-sans)', padding: '4px 0',
+                      fontWeight: 400
+                    }}
+                  />
+                  <button onClick={() => { setIsSearchOpen(false); setModalSearchQuery('') }} style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', color: '#8E8E93',
+                    borderRadius: '6px', transition: 'background 0.1s'
+                  }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
               <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '8px 0', display: 'flex', flexDirection: 'column' }}>
-                {allFiltered.length === 0 ? (
+                {modalFiltered.length === 0 ? (
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A1A1A6', fontSize: '14px', opacity: 0.6 }}>
-                    {searchQuery ? '未找到匹配记录' : '暂无历史记录'}
+                    {modalSearchQuery ? '未找到匹配记录' : '暂无历史记录'}
                   </div>
                 ) : (
-                  allFiltered.map(item => (
+                  modalFiltered.map(item => (
                     <div
                       key={item.id}
                       onClick={() => {
@@ -1162,7 +1175,7 @@ export default function Home() {
                         setReport(item.style_data)
                         setError(null)
                         setIsSearchOpen(false)
-                        setSearchQuery('')
+                        setModalSearchQuery('')
                       }}
                       style={{
                         padding: '8px 20px', display: 'flex', alignItems: 'center', gap: '14px',
@@ -1192,12 +1205,9 @@ export default function Home() {
                           </span>
                         </div>
                       </div>
-                      <span style={{ fontSize: '12px', color: '#A1A1A6', fontWeight: 400 }}>
+                      <span style={{ fontSize: '12px', color: '#A1A1A6', fontWeight: 400, flexShrink: 0 }}>
                         {new Date(item.created_at).toLocaleDateString()}
                       </span>
-                      <div style={{ color: '#C7C7CC' }}>
-                        <ChevronLeft size={16} style={{ transform: 'rotate(180deg)' }} />
-                      </div>
                     </div>
                   ))
                 )}
