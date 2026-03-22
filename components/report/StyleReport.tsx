@@ -172,23 +172,24 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             style={{ 
-              background: '#FFFFFF', borderRadius: '16px', 
-              padding: '24px 28px', position: 'relative',
-              border: '1px solid rgba(0,0,0,0.06)',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02)',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              background: '#1E1E1E', borderRadius: '16px', 
+              padding: '0', position: 'relative',
+              border: '1px solid rgba(0,0,0,0.1)',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              overflow: 'hidden'
             }}
           >
             <button 
               onClick={handleCopy}
               style={{
                 position: 'absolute', top: '16px', right: '16px',
-                background: copied ? '#E8F5E9' : '#FFFFFF', 
-                border: copied ? '1px solid #C8E6C9' : '1px solid rgba(0,0,0,0.1)', 
+                background: copied ? '#E8F5E9' : 'rgba(255,255,255,0.05)', 
+                border: copied ? '1px solid #C8E6C9' : '1px solid rgba(255,255,255,0.1)', 
                 width: '32px', height: '32px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 borderRadius: '50%',
-                color: copied ? '#2E7D32' : '#1D1D1F', 
+                color: copied ? '#2E7D32' : '#FFFFFF', 
                 cursor: 'pointer', 
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
@@ -201,34 +202,29 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
             >
               {copied ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
             </button>
-            <div className="no-scrollbar" style={{ 
-              borderRadius: '12px', overflow: 'hidden', padding: '0',
-              border: '1px solid rgba(0,0,0,0.05)', background: '#1E1E1E'
-            }}>
-              <SyntaxHighlighter
-                language={(activeCode === 'markdown' || activeCode === 'prompt') ? 'markdown' : 'css'}
-                style={vscDarkPlus}
-                showLineNumbers={true}
-                lineNumberStyle={{ minWidth: '3.25em', paddingRight: '1em', color: '#858585', textAlign: 'right', fontSize: '11px', userSelect: 'none' }}
-                customStyle={{
-                  margin: 0,
-                  padding: '24px 16px',
-                  fontSize: '12.5px',
-                  fontFamily: 'var(--font-mono)',
-                  lineHeight: '1.7',
-                  backgroundColor: '#1E1E1E',
-                  border: 'none',
-                  maxHeight: '480px',
-                }}
-                codeTagProps={{
-                  style: {
-                    fontFamily: 'inherit',
-                  }
-                }}
-              >
-                {contentMap[activeCode]}
-              </SyntaxHighlighter>
-            </div>
+            <SyntaxHighlighter
+              language={(activeCode === 'markdown' || activeCode === 'prompt') ? 'markdown' : 'css'}
+              style={vscDarkPlus}
+              showLineNumbers={true}
+              lineNumberStyle={{ minWidth: '3.25em', paddingRight: '1em', color: '#555555', textAlign: 'right', fontSize: '11px', userSelect: 'none' }}
+              customStyle={{
+                margin: 0,
+                padding: '28px 16px',
+                fontSize: '12.5px',
+                fontFamily: 'var(--font-mono)',
+                lineHeight: '1.7',
+                backgroundColor: 'transparent',
+                border: 'none',
+                maxHeight: '480px',
+              }}
+              codeTagProps={{
+                style: {
+                  fontFamily: 'inherit',
+                }
+              }}
+            >
+              {contentMap[activeCode]}
+            </SyntaxHighlighter>
           </div>
         </div>
       </section>
