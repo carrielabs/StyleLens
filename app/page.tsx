@@ -412,7 +412,12 @@ export default function Home() {
   // ── Actually extract the pending file ──
   const handleExtractFile = async () => {
     if (!pendingFile) return
-    if (!user) { setIsAuthVisible(true); return }
+
+    // Trial Auth Interception (Allow 1st try)
+    if (!user && guestTrialUsed) {
+      setIsAuthVisible(true)
+      return
+    }
 
     const abort = new AbortController()
     extractAbortRef.current = abort
