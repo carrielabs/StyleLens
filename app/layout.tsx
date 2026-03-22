@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Figtree } from 'next/font/google'
+import { Figtree, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
 const figtree = Figtree({ 
@@ -7,6 +7,12 @@ const figtree = Figtree({
   variable: '--font-sans',
   display: 'swap',
   weight: ['300', '400', '500', '600', '700', '800', '900']
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -20,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-CN" className={`${figtree.variable}`}>
+    <html lang="zh-CN" className={`${figtree.variable} ${jetbrainsMono.variable}`}>
       <body style={{ 
         fontFamily: 'var(--font-sans)', 
         backgroundColor: 'var(--bg-base)',

@@ -9,6 +9,8 @@ import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateMarkdown } from '@/lib/exporters/markdownExporter'
 import { Copy, Check } from 'lucide-react'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 const i18n = {
   zh: {
@@ -199,13 +201,32 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
             >
               {copied ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
             </button>
-            <pre className="no-scrollbar" style={{ 
-              margin: 0, fontSize: '13px', fontFamily: 'var(--font-mono)', lineHeight: 1.6, 
-              color: 'rgba(29, 29, 31, 0.75)', maxHeight: '420px', overflowY: 'auto',
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word', paddingTop: '8px'
+            <div className="no-scrollbar" style={{ 
+              borderRadius: '8px', overflow: 'hidden', padding: '0',
+              border: 'none', background: '#FAFAFA'
             }}>
-              {contentMap[activeCode]}
-            </pre>
+              <SyntaxHighlighter
+                language={activeCode === 'markdown' ? 'markdown' : activeCode === 'css' ? 'css' : 'text'}
+                style={oneLight}
+                customStyle={{
+                  margin: 0,
+                  padding: '24px',
+                  fontSize: '13px',
+                  fontFamily: 'var(--font-mono)',
+                  lineHeight: '1.6',
+                  backgroundColor: '#FAFAFA',
+                  border: 'none',
+                  maxHeight: '420px',
+                }}
+                codeTagProps={{
+                  style: {
+                    fontFamily: 'inherit',
+                  }
+                }}
+              >
+                {contentMap[activeCode]}
+              </SyntaxHighlighter>
+            </div>
           </div>
         </div>
       </section>
