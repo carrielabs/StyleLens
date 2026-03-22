@@ -146,7 +146,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
                   cursor: 'pointer', 
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   position: 'relative',
-                  fontFamily: 'var(--font-outfit)'
+                  fontFamily: 'var(--font-sans)'
                 }}
               >
                 {t[`tab_${type}` as keyof typeof t]}

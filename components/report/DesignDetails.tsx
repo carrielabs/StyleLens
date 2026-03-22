@@ -95,7 +95,9 @@ export default function DesignDetails({ data, lang, fullWidth = false }: { data:
                 <div style={{ height: '120px', background: '#F9F9F9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ width: '60px', height: '45px', background: '#FFFFFF', borderRadius: '8px', boxShadow: s, position: 'relative' }}>
                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '3px', height: '3px', background: '#FF3B30', borderRadius: '50%' }} />
-                     <div style={{ position: 'absolute', top: '-10px', right: '-12px', fontSize: '9px', fontWeight: 800, color: '#FF3B30' }}>LEVEL {i+1}</div>
+                     <div style={{ position: 'absolute', top: '-10px', right: '-12px', fontSize: '9px', fontWeight: 800, color: '#FF3B30', whiteSpace: 'nowrap' }}>
+                       {lang === 'zh' ? `阴影层级 ${i+1}` : `Shadow ${i+1}`}
+                     </div>
                   </div>
                 </div>
                 <code style={{ fontSize: '10px', color: '#AEAEB2', fontFamily: 'var(--font-mono)', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.substring(0, 30)}...</code>
