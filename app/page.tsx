@@ -1115,19 +1115,19 @@ export default function Home() {
         ════════════════════════════════════════ */}
         {isSearchOpen && (
           <div style={{
-            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 100,
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '12vh',
-            backdropFilter: 'blur(2px)', animation: 'overlayFade 0.15s ease-out'
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.06)', zIndex: 100,
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '14vh',
+            backdropFilter: 'none', animation: 'overlayFade 0.2s ease-out'
           }} onClick={() => { setIsSearchOpen(false); setSearchQuery('') }}>
             <div style={{
-              width: '100%', maxWidth: '640px', backgroundColor: '#FFFFFF', borderRadius: '12px',
-              boxShadow: '0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
+              width: '100%', maxWidth: '600px', backgroundColor: '#FFFFFF', borderRadius: '16px',
+              boxShadow: '0 20px 70px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)',
               display: 'flex', flexDirection: 'column', overflow: 'hidden',
-              animation: 'searchModalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both',
+              animation: 'searchModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
               margin: '0 20px'
             }} onClick={e => e.stopPropagation()}>
-              <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                <Search size={18} strokeWidth={1.5} style={{ color: '#8E8E93', marginRight: '12px' }} />
+              <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                <Search size={18} strokeWidth={1.8} style={{ color: '#8E8E93', marginRight: '14px' }} />
                 <input
                   ref={searchInputRef}
                   autoFocus
@@ -1136,8 +1136,9 @@ export default function Home() {
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="搜索历史记录..."
                   style={{
-                    flex: 1, border: 'none', outline: 'none', fontSize: '15px', color: '#1D1D1F',
-                    backgroundColor: 'transparent', fontFamily: 'var(--font-sans)', padding: '6px 0'
+                    flex: 1, border: 'none', outline: 'none', fontSize: '16px', color: '#1D1D1F',
+                    backgroundColor: 'transparent', fontFamily: 'var(--font-sans)', padding: '4px 0',
+                    fontWeight: 400
                   }}
                 />
                 <button onClick={() => { setIsSearchOpen(false); setSearchQuery('') }} style={{
@@ -1164,25 +1165,36 @@ export default function Home() {
                         setSearchQuery('')
                       }}
                       style={{
-                        padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px',
-                        cursor: 'pointer', transition: 'background 0.1s'
+                        padding: '8px 20px', display: 'flex', alignItems: 'center', gap: '14px',
+                        cursor: 'pointer', transition: 'background 0.1s',
+                        justifyContent: 'space-between'
                       }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)'}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <div style={{ width: '30px', height: '40px', borderRadius: '5px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0 }}>
-                        {item.thumbnail_url ? (
-                          <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{
-                            width: '100%', height: '100%',
-                            background: (() => {
-                              const tc = getTopColors(item.style_data?.colors || [])
-                              return tc.length >= 2 ? `linear-gradient(135deg, ${tc[0]?.hex || '#F0F0F0'}, ${tc[1]?.hex || '#E0E0E0'})` : '#F0F0F0'
-                            })()
-                          }} />
-                        )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
+                        <div style={{ width: '28px', height: '36px', borderRadius: '4px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(0,0,0,0.03)' }}>
+                          {item.thumbnail_url ? (
+                            <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{
+                              width: '100%', height: '100%',
+                              background: (() => {
+                                const tc = getTopColors(item.style_data?.colors || [])
+                                return tc.length >= 2 ? `linear-gradient(135deg, ${tc[0]?.hex || '#F0F0F0'}, ${tc[1]?.hex || '#E0E0E0'})` : '#F0F0F0'
+                              })()
+                            }} />
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+                          <span style={{ fontSize: '14.5px', color: '#1D1D1F', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {item.source_label}
+                          </span>
+                        </div>
                       </div>
+                      <span style={{ fontSize: '12px', color: '#A1A1A6', fontWeight: 400 }}>
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '14px', fontWeight: 500, color: '#1D1D1F', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.source_label || '未命名分析'}</div>
                         <div style={{ fontSize: '11px', color: '#8E8E93', marginTop: '1px' }}>{new Date(item.created_at).toLocaleDateString()}</div>
