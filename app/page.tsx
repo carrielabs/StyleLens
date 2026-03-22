@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin, ChevronDown, SidebarClose, SidebarOpen } from 'lucide-react'
+import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin, ChevronDown, SidebarClose, SidebarOpen, ArrowUp } from 'lucide-react'
 import StyleReportView from '@/components/report/StyleReport'
 import AuthOverlay from '@/components/auth/AuthOverlay'
 import { createClient } from '@/lib/storage/supabaseClient'
@@ -36,6 +36,7 @@ export default function Home() {
   const [isAuthVisible, setIsAuthVisible] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [guestTrialUsed, setGuestTrialUsed] = useState(false)
 
   // ── Sidebar state ──
   const [extractions, setExtractions] = useState<any[]>([])
@@ -93,9 +94,22 @@ export default function Home() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      if (session && !historyLoadedRef.current) {
-        historyLoadedRef.current = true
-        loadHistory(session.user.id)
+      if (session) {
+        // Migrate guest history if exists
+        const guestHistory = localStorage.getItem('stylelens_guest_history')
+        if (guestHistory) {
+          localStorage.removeItem('stylelens_guest_history')
+          localStorage.removeItem('stylelens_trial_used')
+          setGuestTrialUsed(false)
+        }
+        if (!historyLoadedRef.current) {
+          historyLoadedRef.current = true
+          loadHistory(session.user.id)
+        }
+      } else {
+        const trialValue = localStorage.getItem('stylelens_trial_used') === 'true'
+        setGuestTrialUsed(trialValue)
+        loadHistory('') // Load guest history if any
       }
     })
 
@@ -175,6 +189,17 @@ export default function Home() {
   const loadHistory = async (userId: string) => {
     setIsLoadingHistory(true)
     try {
+      if (!userId) {
+        // Load guest record if any
+        const guestJson = localStorage.getItem('stylelens_guest_history')
+        if (guestJson) {
+          setExtractions([JSON.parse(guestJson)])
+        } else {
+          setExtractions([])
+        }
+        return
+      }
+
       const { data, error } = await supabase
         .from('style_records')
         .select('*')
@@ -315,9 +340,14 @@ export default function Home() {
   })
 
   const handleUrlSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault()
+    if (e) e.preventDefault()
     if (!url.trim() || isExtracting) return
-    if (!user) { setIsAuthVisible(true); return }
+
+    // Trial Auth Interception (Allow 1st try)
+    if (!user && guestTrialUsed) {
+      setIsAuthVisible(true)
+      return
+    }
 
     const abort = new AbortController()
     extractAbortRef.current = abort
@@ -688,7 +718,7 @@ export default function Home() {
             <UserIcon size={14} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
             {sidebarOpen && (
               <span style={{ fontSize: '14px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--font-sans)' }}>
-                {user ? (user.email?.split('@')[0] || 'User') : '登录 / 注册'}
+                {user ? (user.email?.split('@')[0] || 'User') : 'Log in'}
               </span>
             )}
           </div>
