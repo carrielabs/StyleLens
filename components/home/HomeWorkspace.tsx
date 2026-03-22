@@ -1,17 +1,25 @@
 'use client'
 
 import type { ClipboardEvent, Dispatch, DragEvent, FormEvent, RefObject, SetStateAction } from 'react'
+import type { User } from '@supabase/supabase-js'
 import { ArrowUp, HelpCircle, Link2, Upload, X } from 'lucide-react'
 import StyleReportView from '@/components/report/StyleReport'
-import type { StyleReport } from '@/lib/types'
+import type { LibraryRecord, StyleReport } from '@/lib/types'
+import type { UploadState } from '@/hooks/useExtraction'
+
+type WorkspaceReport = StyleReport & {
+  screenshotUrl?: string
+}
+
+type WorkspaceExtraction = Pick<LibraryRecord, 'id' | 'source_label'>
 
 interface HomeWorkspaceProps {
   activeItemId: string | null
-  report: StyleReport | null
+  report: WorkspaceReport | null
   isExtracting: boolean
   isUrlExtracting: boolean
   isImageExtracting: boolean
-  extractions: any[]
+  extractions: WorkspaceExtraction[]
   reportLang: 'zh' | 'en'
   setReportLang: Dispatch<SetStateAction<'zh' | 'en'>>
   setLightboxUrl: Dispatch<SetStateAction<string>>
@@ -25,12 +33,12 @@ interface HomeWorkspaceProps {
   setUrl: Dispatch<SetStateAction<string>>
   pendingFile: File | null
   pendingPreviewUrl: string | null
-  uploadState: string
+  uploadState: UploadState
   isDragging: boolean
   setIsDragging: Dispatch<SetStateAction<boolean>>
   setUploadZoneHovered: Dispatch<SetStateAction<boolean>>
   handleDrop: (e: DragEvent) => void
-  user: any
+  user: User | null
   guestTrialUsed: boolean
   fileInputRef: RefObject<HTMLInputElement | null>
   setIsAuthVisible: Dispatch<SetStateAction<boolean>>
@@ -94,7 +102,7 @@ export default function HomeWorkspace({
             <div className="scroll-mask-top" />
             <div style={{ height: '100%', overflowY: 'auto', padding: '64px 40px 40px', overscrollBehavior: 'contain' }} className="no-scrollbar">
               <div
-                onClick={() => { setLightboxUrl((report as any).screenshotUrl || (report as any).thumbnailUrl); setIsLightboxOpen(true) }}
+                onClick={() => { setLightboxUrl(report.screenshotUrl || report.thumbnailUrl || ''); setIsLightboxOpen(true) }}
                 style={{
                   cursor: 'zoom-in', borderRadius: '16px', overflow: 'hidden',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.06)', transition: 'transform 0.2s'
@@ -103,7 +111,7 @@ export default function HomeWorkspace({
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
                 <img
-                  src={(report as any).screenshotUrl || (report as any).thumbnailUrl}
+                  src={report.screenshotUrl || report.thumbnailUrl}
                   alt="Source"
                   style={{ width: '100%', display: 'block' }}
                 />

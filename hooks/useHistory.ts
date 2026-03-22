@@ -1,10 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { deleteFromLibrary, renameInLibrary } from '@/lib/storage/libraryStore'
+import { createClient } from '@/lib/storage/supabaseClient'
 import {
   clearGuestHistory,
   clearGuestMigrationSnapshot,
+  type GuestHistoryRecord,
   getGuestHistory,
   getGuestMigrationSnapshot,
   saveGuestHistory,
@@ -14,13 +17,26 @@ import type { User } from '@supabase/supabase-js'
 
 const GUEST_TRIAL_KEY = 'stylelens_trial_used'
 
-function buildGuestCacheRecord(record: {
+type BrowserSupabaseClient = ReturnType<typeof createClient>
+type HistoryStyleData = StyleReport & { __pinned?: boolean }
+type HistoryRecord = {
+  id: string
   user_id: string | null
   source_label: string
-  style_data: StyleReport
+  style_data: HistoryStyleData
   thumbnail_url: string | null
   created_at: string
-}) {
+}
+type GuestCacheRecordInput = Omit<GuestHistoryRecord, 'id'> & { style_data: HistoryStyleData }
+type UndoItem = { id: string; label: string; record: HistoryRecord }
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  return 'Unknown error'
+}
+
+function buildGuestCacheRecord(record: GuestCacheRecordInput): GuestHistoryRecord {
   return {
     ...record,
     id: 'guest_1',
@@ -31,12 +47,49 @@ function buildGuestCacheRecord(record: {
 
 interface UseHistoryParams {
   user: User | null
-  supabase: any
+  supabase: BrowserSupabaseClient
   report: StyleReport | null
   setReport: (report: StyleReport | null) => void
   setError: (error: string | null) => void
   setGuestTrialUsed: (used: boolean) => void
   setIsAuthVisible: (visible: boolean) => void
+}
+
+interface UseHistoryResult {
+  extractions: HistoryRecord[]
+  setExtractions: Dispatch<SetStateAction<HistoryRecord[]>>
+  isLoadingHistory: boolean
+  setIsLoadingHistory: Dispatch<SetStateAction<boolean>>
+  searchQuery: string
+  setSearchQuery: Dispatch<SetStateAction<string>>
+  modalSearchQuery: string
+  setModalSearchQuery: Dispatch<SetStateAction<string>>
+  activeItemId: string | null
+  setActiveItemId: Dispatch<SetStateAction<string | null>>
+  contextMenuId: string | null
+  setContextMenuId: Dispatch<SetStateAction<string | null>>
+  renamingId: string | null
+  setRenamingId: Dispatch<SetStateAction<string | null>>
+  renameValue: string
+  setRenameValue: Dispatch<SetStateAction<string>>
+  undoItem: UndoItem | null
+  pinnedCollapsed: boolean
+  setPinnedCollapsed: Dispatch<SetStateAction<boolean>>
+  historyCollapsed: boolean
+  setHistoryCollapsed: Dispatch<SetStateAction<boolean>>
+  modalFiltered: HistoryRecord[]
+  pinnedList: HistoryRecord[]
+  recentList: HistoryRecord[]
+  loadHistory: (userId: string) => Promise<void>
+  saveExtraction: (nextReport: StyleReport, thumb?: string) => Promise<void>
+  migrateGuestHistoryToAccount: (userId: string) => Promise<void>
+  syncHistoryForSession: (session: { user: User } | null) => Promise<void>
+  togglePin: (itemId: string) => Promise<void>
+  deleteItem: (id: string) => void
+  undoDelete: () => void
+  startRename: (id: string, currentLabel: string) => void
+  submitRename: (id: string) => Promise<void>
+  cancelRename: () => void
 }
 
 export function useHistory({
@@ -47,8 +100,8 @@ export function useHistory({
   setError,
   setGuestTrialUsed,
   setIsAuthVisible,
-}: UseHistoryParams) {
-  const [extractions, setExtractions] = useState<any[]>([])
+}: UseHistoryParams): UseHistoryResult {
+  const [extractions, setExtractions] = useState<HistoryRecord[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [modalSearchQuery, setModalSearchQuery] = useState('')
@@ -56,7 +109,7 @@ export function useHistory({
   const [contextMenuId, setContextMenuId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
-  const [undoItem, setUndoItem] = useState<{ id: string; label: string; record: any } | null>(null)
+  const [undoItem, setUndoItem] = useState<UndoItem | null>(null)
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false)
   const [historyCollapsed, setHistoryCollapsed] = useState(false)
 
@@ -65,7 +118,7 @@ export function useHistory({
   const hasLoadedExtractionsRef = useRef(false)
   const guestMigrationInFlightRef = useRef<Promise<void> | null>(null)
   const lastGuestMigrationKeyRef = useRef<string | null>(null)
-  const deleteTimerRef = useRef<{ [key: string]: any }>({})
+  const deleteTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   useEffect(() => {
     hasLoadedExtractionsRef.current = extractions.length > 0
@@ -84,7 +137,7 @@ export function useHistory({
         })
 
         if (guestRecord) {
-          setExtractions([guestRecord])
+          setExtractions([guestRecord as HistoryRecord])
         } else {
           setExtractions([])
         }
@@ -99,9 +152,9 @@ export function useHistory({
         .limit(50)
 
       if (error) throw error
-      setExtractions(data || [])
-    } catch (err: any) {
-      console.error('Failed to load history:', err.message || err)
+      setExtractions((data as HistoryRecord[]) || [])
+    } catch (err: unknown) {
+      console.error('Failed to load history:', getErrorMessage(err))
     } finally {
       setIsLoadingHistory(false)
     }
@@ -155,8 +208,8 @@ export function useHistory({
 
         clearGuestMigrationSnapshot()
         lastGuestMigrationKeyRef.current = migrationKey
-      } catch (err: any) {
-        console.error('Failed to migrate guest history:', err?.message || err)
+      } catch (err: unknown) {
+        console.error('Failed to migrate guest history:', getErrorMessage(err))
       } finally {
         guestMigrationInFlightRef.current = null
       }
@@ -176,7 +229,7 @@ export function useHistory({
     }
 
     if (!user) {
-      const guestRecord = { ...record, id: 'guest_1' }
+      const guestRecord: HistoryRecord = { ...record, id: 'guest_1' }
       const guestCacheRecord = buildGuestCacheRecord(record)
 
       setExtractions([guestRecord])
@@ -201,8 +254,8 @@ export function useHistory({
         .insert([record])
       if (error) throw error
       await loadHistory(user.id)
-    } catch (err: any) {
-      console.error('Failed to save extraction:', err.message || err)
+    } catch (err: unknown) {
+      console.error('Failed to save extraction:', getErrorMessage(err))
     }
   }
 

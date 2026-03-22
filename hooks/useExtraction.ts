@@ -1,7 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import type { ClipboardEvent as ReactClipboardEvent, DragEvent, FormEvent } from 'react'
+import type {
+  ClipboardEvent as ReactClipboardEvent,
+  Dispatch,
+  DragEvent,
+  FormEvent,
+  RefObject,
+  SetStateAction,
+} from 'react'
 import type { StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
@@ -16,6 +23,32 @@ interface UseExtractionParams {
   saveExtraction: (report: StyleReport, thumb?: string) => Promise<void>
 }
 
+export type UploadState = 'idle' | 'hover' | 'dragover' | 'selected' | 'extracting'
+
+interface UseExtractionResult {
+  url: string
+  setUrl: Dispatch<SetStateAction<string>>
+  isDragging: boolean
+  setIsDragging: Dispatch<SetStateAction<boolean>>
+  isExtracting: boolean
+  isUrlExtracting: boolean
+  isImageExtracting: boolean
+  pendingFile: File | null
+  pendingPreviewUrl: string | null
+  uploadZoneHovered: boolean
+  setUploadZoneHovered: Dispatch<SetStateAction<boolean>>
+  uploadState: UploadState
+  fileInputRef: RefObject<HTMLInputElement | null>
+  urlInputRef: RefObject<HTMLInputElement | null>
+  handleUrlSubmit: (e?: FormEvent) => Promise<void>
+  handleFilePreview: (file: File) => void
+  handleExtractFile: () => Promise<void>
+  clearPendingFile: () => void
+  handleDrop: (e: DragEvent) => void
+  handlePaste: (e: ReactClipboardEvent) => Promise<void>
+  cancelExtraction: () => void
+}
+
 export function useExtraction({
   user,
   guestTrialUsed,
@@ -25,7 +58,7 @@ export function useExtraction({
   setActiveItemId,
   setIsSearchOpen,
   saveExtraction,
-}: UseExtractionParams) {
+}: UseExtractionParams): UseExtractionResult {
   const [url, setUrl] = useState('')
   const [isDragging, setIsDragging] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
@@ -248,7 +281,7 @@ export function useExtraction({
   const isUrlExtracting = isExtracting && activeExtractionMode === 'url'
   const isImageExtracting = isExtracting && activeExtractionMode === 'image'
   const isImageExtraction = Boolean(pendingFile || pendingPreviewUrl)
-  const uploadState = isImageExtraction && isImageExtracting
+  const uploadState: UploadState = isImageExtraction && isImageExtracting
     ? 'extracting'
     : pendingFile
       ? 'selected'

@@ -16,7 +16,19 @@ import {
   UserIcon,
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
+import { createClient } from '@/lib/storage/supabaseClient'
+import type { ColorToken, StyleReport } from '@/lib/types'
 import { getTopColors } from './viewUtils'
+
+type SidebarRecord = {
+  id: string
+  user_id: string | null
+  source_label: string
+  style_data: (StyleReport & { __pinned?: boolean }) | null
+  thumbnail_url: string | null
+  created_at: string
+}
+type BrowserSupabaseClient = ReturnType<typeof createClient>
 
 interface HomeSidebarProps {
   sidebarOpen: boolean
@@ -26,8 +38,8 @@ interface HomeSidebarProps {
   setPinnedCollapsed: Dispatch<SetStateAction<boolean>>
   historyCollapsed: boolean
   setHistoryCollapsed: Dispatch<SetStateAction<boolean>>
-  pinnedList: any[]
-  recentList: any[]
+  pinnedList: SidebarRecord[]
+  recentList: SidebarRecord[]
   activeItemId: string | null
   contextMenuId: string | null
   setContextMenuId: Dispatch<SetStateAction<string | null>>
@@ -43,7 +55,7 @@ interface HomeSidebarProps {
   setIsSearchOpen: Dispatch<SetStateAction<boolean>>
   setModalSearchQuery: Dispatch<SetStateAction<string>>
   setActiveItemId: Dispatch<SetStateAction<string | null>>
-  setReport: Dispatch<SetStateAction<any>>
+  setReport: Dispatch<SetStateAction<StyleReport | null>>
   setError: Dispatch<SetStateAction<string | null>>
   setUrl: Dispatch<SetStateAction<string>>
   clearPendingFile: () => void
@@ -54,7 +66,7 @@ interface HomeSidebarProps {
   startRename: (id: string, currentLabel: string) => void
   submitRename: (id: string) => Promise<void>
   cancelRename: () => void
-  supabase: any
+  supabase: BrowserSupabaseClient
   setIsAuthVisible: Dispatch<SetStateAction<boolean>>
 }
 
@@ -398,7 +410,7 @@ function HistoryItem({
   id: string
   label: string
   thumbnailUrl?: string | null
-  colors: any[]
+  colors: ColorToken[]
   isActive: boolean
   isPinned: boolean
   contextMenuOpen: boolean
