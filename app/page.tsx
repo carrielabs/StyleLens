@@ -759,8 +759,8 @@ export default function Home() {
         {/* ── 2. Home Content (Idle/Initial/Extracting) ── */}
         {(!activeItemId || !report || isExtracting) && (
           <div style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '48px', gap: '0', position: 'relative', animation: 'fadeIn 0.4s ease-out'
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
+            padding: '48px', paddingTop: '18vh', gap: '0', position: 'relative', animation: 'fadeIn 0.4s ease-out'
           }}>
 
             {/* Error toast */}
@@ -778,11 +778,11 @@ export default function Home() {
               </div>
             )}
 
-            <div style={{ width: '100%', maxWidth: '700px' }}>
+            <div style={{ width: '100%', maxWidth: '640px' }}>
 
               {/* Heading — Dynamic Greeting (Simplified) */}
               <div style={{
-                textAlign: 'left', marginBottom: '40px', display: 'flex', flexDirection: 'column',
+                textAlign: 'left', marginBottom: '56px', display: 'flex', flexDirection: 'column',
                 alignItems: 'flex-start', gap: '0', animation: 'fadeIn 0.6s ease-out'
               }}>
                 <h1 style={{
@@ -800,20 +800,20 @@ export default function Home() {
               <form onSubmit={handleUrlSubmit} style={{ position: 'relative', marginBottom: '28px' }}>
                 <div style={{
                   display: 'flex', alignItems: 'center',
-                  backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.10)',
-                  borderRadius: '12px', height: '52px', overflow: 'hidden',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                  transition: 'border-color 0.2s, box-shadow 0.2s'
+                  backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)',
+                  borderRadius: '12px', height: '54px', overflow: 'hidden',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02)',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
                 onFocusCapture={e => {
                   const el = e.currentTarget as HTMLElement
-                  el.style.borderColor = 'rgba(0,0,0,0.22)'
-                  el.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.06)'
+                  el.style.borderColor = 'rgba(0,0,0,0.12)'
+                  el.style.boxShadow = '0 0 0 4px rgba(0,0,0,0.03), 0 8px 30px rgba(0,0,0,0.04)'
                 }}
                 onBlurCapture={e => {
                   const el = e.currentTarget as HTMLElement
-                  el.style.borderColor = 'rgba(0,0,0,0.10)'
-                  el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'
+                  el.style.borderColor = 'rgba(0,0,0,0.06)'
+                  el.style.boxShadow = '0 8px 30px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02)'
                 }}
                 >
                   <div style={{ paddingLeft: '18px', paddingRight: '10px', color: '#8E8E93', flexShrink: 0 }}>
@@ -855,31 +855,38 @@ export default function Home() {
               </form>
 
               {/* OR divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '4px 0 20px' }}>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.04)' }} />
-                <span style={{ fontSize: '10px', color: '#AEAEB2', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' }}>或</span>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.04)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '4px 0 24px' }}>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
+                <span style={{
+                  fontSize: '9px', color: '#BDBDBD', fontWeight: 500,
+                  letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-outfit)'
+                }}>或</span>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
               </div>
 
               {/* Drop zone — 6 states */}
               <div
                 style={{
-                  width: '100%', height: '220px', borderRadius: '14px',
+                  width: '100%', height: '200px', borderRadius: '14px',
                   border: uploadState === 'dragover'
-                    ? '1.5px solid rgba(0,0,0,0.28)'
+                    ? '1.5px solid rgba(0,0,0,0.22)'
                     : uploadState === 'hover'
-                    ? '1px solid rgba(0,0,0,0.18)'
+                    ? '1px solid rgba(0,0,0,0.12)'
                     : uploadState === 'selected' || uploadState === 'extracting'
                     ? 'none'
                     : '1px dashed rgba(0,0,0,0.10)',
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
                   justifyContent: 'center', gap: '12px', cursor: 'pointer',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   backgroundColor: uploadState === 'dragover'
-                    ? 'rgba(0,0,0,0.02)'
+                    ? 'rgba(0,0,0,0.015)'
                     : uploadState === 'hover'
-                    ? 'rgba(0,0,0,0.012)'
-                    : '#FFFFFF',
+                    ? 'rgba(255,255,255,0.6)'
+                    : 'transparent',
+                  boxShadow: uploadState === 'selected' || uploadState === 'extracting'
+                    ? 'none'
+                    : 'inset 0 1px 4px rgba(0,0,0,0.01)',
+                  transform: uploadState === 'hover' ? 'scale(1.002)' : 'scale(1)',
                   opacity: uploadState === 'extracting' ? 0.85 : 1,
                   pointerEvents: uploadState === 'extracting' ? 'none' : 'auto',
                   overflow: 'hidden', position: 'relative'
