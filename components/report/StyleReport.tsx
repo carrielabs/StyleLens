@@ -170,7 +170,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             style={{ 
-              background: '#FFFFFF', borderRadius: '12px', 
+              background: '#FFFFFF', borderRadius: '16px', 
               padding: '24px 28px', position: 'relative',
               border: '1px solid rgba(0,0,0,0.06)',
               boxShadow: '0 20px 50px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02)',

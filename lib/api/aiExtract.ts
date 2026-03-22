@@ -133,7 +133,7 @@ Rules:
 - Extract at minimum 6 colors, maximum 12
 - Provide accurate dual-language translations
 - layoutEn, layoutZh, spacingEn, spacingZh, motionEn, motionZh: If multiple patterns are detected (e.g. Bento + Flex), return them separated by '|'. (e.g. 'Bento Grid | Sidebar Layout'). KEEP THEM ULTRA-SHORT BADGES.
-- cssRadius and cssShadow MUST be exact valid CSS values only. extracted all unique variations found on the page, separated by '|'.
+- cssRadius and cssShadow MUST be exact valid CSS values only. extracted all unique variations found on the page, separated by '|'. DO NOT BE LAZY: analyze the whole page for secondary/tertiary styles (e.g. Notion often has 4px, 8px, and 12px radii; extract them all).
 - If no gradients detected, return empty array []`
 
 export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleReport> {
