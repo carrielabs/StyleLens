@@ -66,7 +66,7 @@ export default function AuthPage() {
       }}>
         
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-          <Link href="/" style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', fontStyle: 'italic', textDecoration: 'none' }}>
+          <Link href="/" style={{ fontFamily: 'var(--font-sans)', fontSize: '28px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', fontStyle: 'italic', textDecoration: 'none' }}>
             StyleLens Design Office
           </Link>
           <div style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginTop: '12px', letterSpacing: '0.02em' }}>
@@ -87,7 +87,7 @@ export default function AuthPage() {
         <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           <div>
-            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Email Address</label>
+            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'none', letterSpacing: '0.02em', fontWeight: 600, fontFamily: 'var(--font-sans)' }}>Email Address</label>
             <input
               type="email"
               required
@@ -100,7 +100,7 @@ export default function AuthPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Password</label>
+            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'none', letterSpacing: '0.02em', fontWeight: 600, fontFamily: 'var(--font-sans)' }}>Password</label>
             <input
               type="password"
               required
@@ -132,7 +132,7 @@ export default function AuthPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '32px 0' }}>
           <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-          <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>OR</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', letterSpacing: '0.02em', fontWeight: 600 }}>或</span>
           <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
         </div>
 

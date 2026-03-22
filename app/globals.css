@@ -1,5 +1,5 @@
 @theme {
-  --font-sans: "Jakarta", "-apple-system", "BlinkMacSystemFont", "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-sans: "Figtree", "Inter", "-apple-system", "BlinkMacSystemFont", "SF Pro Text", "Helvetica Neue", sans-serif;
 }
 
 :root {
@@ -38,6 +38,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
+}
+
+/* Force inheritance for form elements */
+button, input, textarea, select {
+  font-family: inherit;
+  color: inherit;
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }

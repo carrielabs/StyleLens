@@ -24,7 +24,7 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
 
   const styles = [
     {
-      label: lang === 'zh' ? '主标题' : 'HEADING',
+      label: lang === 'zh' ? '主标题' : 'Heading',
       size: '48px',
       weight: data.headingWeight || 700,
       lh: 1.1,
@@ -32,7 +32,7 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
       isBody: false
     },
     {
-      label: lang === 'zh' ? '副标题' : 'SUBHEADER',
+      label: lang === 'zh' ? '副标题' : 'Subheader',
       size: '24px',
       weight: data.headingWeight ? Math.max(400, Number(data.headingWeight) - 200) : 500,
       lh: 1.3,
@@ -40,7 +40,7 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
       isBody: false
     },
     {
-      label: lang === 'zh' ? '正文' : 'BODY',
+      label: lang === 'zh' ? '正文' : 'Body',
       size: '16px',
       weight: data.bodyWeight || 400,
       lh: data.lineHeight || 1.6,
@@ -50,7 +50,7 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
       isBody: true
     },
     {
-      label: lang === 'zh' ? '辅助说明' : 'CAPTION',
+      label: lang === 'zh' ? '辅助说明' : 'Caption',
       size: '13px',
       weight: 400,
       lh: 1.4,

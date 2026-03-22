@@ -1,18 +1,12 @@
 import type { Metadata } from 'next'
-import { Inter, Noto_Serif_SC } from 'next/font/google'
+import { Figtree } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({ 
+const figtree = Figtree({ 
   subsets: ['latin'],
   variable: '--font-sans',
   display: 'swap',
-})
-
-const notoSerif = Noto_Serif_SC({
-  subsets: ['latin'], // SC version includes Latin subsets
-  weight: ['400', '500', '600'],
-  variable: '--font-serif',
-  display: 'swap',
+  weight: ['300', '400', '500', '600', '700', '800', '900']
 })
 
 export const metadata: Metadata = {
@@ -26,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-CN" className={`${inter.variable} ${notoSerif.variable}`}>
+    <html lang="zh-CN" className={`${figtree.variable}`}>
       <body style={{ 
         fontFamily: 'var(--font-sans)', 
         backgroundColor: 'var(--bg-base)',

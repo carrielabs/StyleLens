@@ -552,7 +552,7 @@ export default function Home() {
         {/* Pinned section — hidden when icon-strip mode */}
         {sidebarOpen && pinnedList.length > 0 && (
           <>
-            <SectionHeader label="PINNED" collapsed={pinnedCollapsed} onToggle={() => setPinnedCollapsed(v => !v)} />
+            <SectionHeader label="Pinned" collapsed={pinnedCollapsed} onToggle={() => setPinnedCollapsed(v => !v)} />
             {!pinnedCollapsed && (
               <div className="no-scrollbar" style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
                 {pinnedList.map(item => (
@@ -583,7 +583,7 @@ export default function Home() {
         )}
 
         {/* History section — hidden when icon-strip mode */}
-        {sidebarOpen && <SectionHeader label="HISTORY" collapsed={historyCollapsed} onToggle={() => setHistoryCollapsed(v => !v)} />}
+        {sidebarOpen && <SectionHeader label="History" collapsed={historyCollapsed} onToggle={() => setHistoryCollapsed(v => !v)} />}
 
         <div className="no-scrollbar" style={{ flex: 1, overflowY: sidebarOpen ? 'auto' : 'hidden', padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
           {!sidebarOpen ? null : historyCollapsed ? null : !user ? (
@@ -672,7 +672,7 @@ export default function Home() {
           >
             <UserIcon size={14} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
             {sidebarOpen && (
-              <span style={{ fontSize: '13px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--font-sans)' }}>
                 {user ? (user.email?.split('@')[0] || 'User') : '登录 / 注册'}
               </span>
             )}
@@ -786,9 +786,9 @@ export default function Home() {
               }}>
                 <h1 style={{
                   fontSize: '52px', color: '#1D1D1F', fontWeight: 300,
-                  fontFamily: 'var(--font-outfit)', letterSpacing: '-0.05em',
+                  fontFamily: 'var(--font-sans)', letterSpacing: '-0.04em',
                   margin: 0, transition: 'all 0.3s ease',
-                  lineHeight: '1.0', display: 'flex', alignItems: 'baseline', gap: '0.2em'
+                  lineHeight: '1.1', display: 'flex', alignItems: 'baseline', gap: '0.2em'
                 }}>
                   <span>{greeting?.prefix}</span>
                   <span style={{ opacity: 1.0 }}>{greeting?.name}</span>
@@ -825,7 +825,7 @@ export default function Home() {
                     style={{
                       flex: 1, border: 'none', outline: 'none', fontSize: '15px',
                       color: '#1D1D1F', fontWeight: 450, backgroundColor: 'transparent',
-                      fontFamily: 'var(--font-outfit)', height: '100%'
+                      fontFamily: 'var(--font-sans)', height: '100%'
                     }}
                     value={url}
                     onChange={e => setUrl(e.target.value)}
@@ -857,8 +857,8 @@ export default function Home() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '4px 0 24px' }}>
                 <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
                 <span style={{
-                  fontSize: '9px', color: '#BDBDBD', fontWeight: 500,
-                  letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-outfit)'
+                  fontSize: '9px', color: '#BDBDBD', fontWeight: 600,
+                  letterSpacing: '0.02em', textTransform: 'none', fontFamily: 'var(--font-sans)'
                 }}>或</span>
                 <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
               </div>
@@ -1504,7 +1504,7 @@ function SectionHeader({ label, collapsed, onToggle }: {
         cursor: 'pointer', fontFamily: 'var(--font-sans)'
       }}
     >
-      <span style={{ fontSize: '10px', fontWeight: 600, color: hovered ? '#8E8E93' : '#AEAEB2', letterSpacing: '0.08em', textTransform: 'uppercase', transition: 'color 0.15s' }}>
+      <span style={{ fontSize: '10px', fontWeight: 700, color: hovered ? '#8E8E93' : '#AEAEB2', letterSpacing: '0.02em', textTransform: 'none', transition: 'color 0.15s' }}>
         {label}
       </span>
       <ChevronDown

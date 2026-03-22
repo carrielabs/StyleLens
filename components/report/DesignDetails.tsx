@@ -9,11 +9,11 @@ export default function DesignDetails({ data, lang, fullWidth = false }: { data:
   const [activeTab, setActiveTab] = useState<TabKey>('radius')
 
   const t = {
-    radius: lang === 'zh' ? '边框圆角' : 'Border Radius',
-    shadow: lang === 'zh' ? '阴影层级' : 'Drop Shadows',
-    layout: lang === 'zh' ? '布局网格' : 'Layout Structure',
-    spacing: lang === 'zh' ? '空间配比' : 'Spacing System',
-    motion: lang === 'zh' ? '动效偏好' : 'Motion Rhythm'
+    radius: lang === 'zh' ? '边框圆角' : 'Border radius',
+    shadow: lang === 'zh' ? '阴影层级' : 'Shadows',
+    layout: lang === 'zh' ? '布局网格' : 'Layout',
+    spacing: lang === 'zh' ? '空间配比' : 'Spacing',
+    motion: lang === 'zh' ? '动效偏好' : 'Motion'
   }
 
   const tabs: { key: TabKey, label: string }[] = [
@@ -49,7 +49,7 @@ export default function DesignDetails({ data, lang, fullWidth = false }: { data:
             style={{
               padding: '12px 0', border: 'none', cursor: 'pointer',
               fontSize: '11px', fontWeight: activeTab === tab.key ? 600 : 400,
-              textTransform: 'uppercase', letterSpacing: '0.12em',
+              textTransform: 'none', letterSpacing: '0',
               background: 'none',
               color: activeTab === tab.key ? '#1D1D1F' : '#AEAEB2',
               transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',

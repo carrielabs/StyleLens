@@ -8,7 +8,7 @@ interface AuthOverlayProps {
   onClose: () => void
 }
 
-const systemFont = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif';
+const systemFont = 'var(--font-sans)';
 
 export default function AuthOverlay({ onClose }: AuthOverlayProps) {
   useEffect(() => {
@@ -170,8 +170,8 @@ export default function AuthOverlay({ onClose }: AuthOverlayProps) {
           </div>
         </div>
 
-        <div style={{ fontSize: '11px', color: '#C7C7CC', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
-          AUTHENTICATION ENGINE V1.0.4
+        <div style={{ fontSize: '11px', color: '#C7C7CC', fontWeight: 500, letterSpacing: '0.01em' }}>
+          Authentication engine v1.0.4
         </div>
       </div>
 
@@ -234,7 +234,7 @@ export default function AuthOverlay({ onClose }: AuthOverlayProps) {
               margin: '32px 0'
             }}>
               <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.06)' }} />
-              <span style={{ fontSize: '11px', color: '#8E8E93', fontWeight: 600, letterSpacing: '0.05em' }}>OR</span>
+              <span style={{ fontSize: '11px', color: '#8E8E93', fontWeight: 600, letterSpacing: '0.02em' }}>或</span>
               <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.06)' }} />
             </div>
 

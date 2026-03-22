@@ -39,9 +39,9 @@ const i18n = {
     prompt_desc: 'Direct prompt for v0 or Cursor to generate UI',
     copy: 'Copy',
     copied: 'Copied',
-    tab_markdown: 'Markdown Doc',
-    tab_css: 'CSS Variables',
-    tab_prompt: 'AI Prompt'
+    tab_markdown: 'Markdown doc',
+    tab_css: 'CSS variables',
+    tab_prompt: 'AI prompt'
   }
 }
 
@@ -138,8 +138,8 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
                   padding: '8px 0 12px 0', 
                   fontSize: '11px', 
                   fontWeight: activeCode === type ? 600 : 400,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.12em',
+                  textTransform: 'none',
+                  letterSpacing: '0',
                   background: 'none', 
                   border: 'none',
                   color: activeCode === type ? '#1D1D1F' : '#AEAEB2',
