@@ -1,13 +1,25 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, Star } from 'lucide-react'
+import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin } from 'lucide-react'
 import StyleReportView from '@/components/report/StyleReport'
-import ColorHighlighter from '@/components/report/ColorHighlighter'
 import AuthOverlay from '@/components/auth/AuthOverlay'
 import { createClient } from '@/lib/storage/supabaseClient'
+import { deleteFromLibrary, renameInLibrary } from '@/lib/storage/libraryStore'
 import type { StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
+
+// ── Color role priority for sidebar dots ──
+const COLOR_ROLE_ORDER = ['background', 'primary', 'accent', 'secondary', 'text', 'other']
+function getTopColors(colors: any[]): any[] {
+  if (!colors || !Array.isArray(colors)) return []
+  const sorted = [...colors].sort((a, b) => {
+    const ai = COLOR_ROLE_ORDER.indexOf((a.role || 'other').toLowerCase())
+    const bi = COLOR_ROLE_ORDER.indexOf((b.role || 'other').toLowerCase())
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+  })
+  return sorted.slice(0, 3)
+}
 
 export default function Home() {
   // ── Core state ──
@@ -17,7 +29,6 @@ export default function Home() {
   const [report, setReport] = useState<StyleReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reportLang, setReportLang] = useState<'zh' | 'en'>('zh')
-  const [hoveredHex, setHoveredHex] = useState<string | null>(null)
   const [extractionProgress, setExtractionProgress] = useState(0)
 
   // ── Auth state ──
@@ -31,11 +42,24 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
-  const [sidebarTab, setSidebarTab] = useState<'recent' | 'pinned'>('recent')
-  const [isModalImageLoading, setIsModalImageLoading] = useState(true)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState('')
 
+  // ── Upload preview state ──
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null)
+  const [uploadZoneHovered, setUploadZoneHovered] = useState(false)
+
+  // ── Sidebar context menu / rename state ──
+  const [contextMenuId, setContextMenuId] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+
+  // ── Undo delete toast ──
+  const [undoItem, setUndoItem] = useState<{ id: string; label: string; record: any } | null>(null)
+  const deleteTimerRef = useRef<{ [key: string]: any }>({})
+
+  const historyLoadedRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -51,34 +75,48 @@ export default function Home() {
     return () => { document.body.style.overflow = 'auto' }
   }, [isExtracting, report, activeItemId, isLightboxOpen])
 
-  // ── Keyboard & global events ──
+  // ── Auth listener (stable, empty deps) ──
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      if (session) loadHistory(session.user.id)
+      if (session && !historyLoadedRef.current) {
+        historyLoadedRef.current = true
+        loadHistory(session.user.id)
+      }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session) {
         setIsAuthVisible(false)
-        loadHistory(session.user.id)
+        if (!historyLoadedRef.current) {
+          historyLoadedRef.current = true
+          loadHistory(session.user.id)
+        }
       } else {
         setExtractions([])
+        historyLoadedRef.current = false
       }
     })
 
-    const handleColorHover = (e: CustomEvent<string>) => setHoveredHex(e.detail)
-    window.addEventListener('color-hover', handleColorHover as EventListener)
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Keyboard & click-outside handler ──
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (!target.closest('.user-menu-trigger')) setShowUserMenu(false)
+      if (!target.closest('.context-menu-anchor')) setContextMenuId(null)
     }
     window.addEventListener('click', handleClickOutside)
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (contextMenuId) { setContextMenuId(null); return }
+        if (renamingId) { setRenamingId(null); setRenameValue(''); return }
         if (report) { setReport(null); setActiveItemId(null); return }
         if (isSearchOpen) { setIsSearchOpen(false); setSearchQuery(''); return }
         setShowUserMenu(false)
@@ -87,15 +125,13 @@ export default function Home() {
     window.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      subscription.unsubscribe()
-      window.removeEventListener('color-hover', handleColorHover as EventListener)
       window.removeEventListener('click', handleClickOutside)
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [report, isSearchOpen])
+  }, [report, isSearchOpen, contextMenuId, renamingId])
 
   useEffect(() => {
-    if (report) setIsModalImageLoading(true)
+    if (report) {}
   }, [report])
 
   // ── Extraction Progress Timer ──
@@ -104,11 +140,7 @@ export default function Home() {
     if (isExtracting && !report) {
       setExtractionProgress(0)
       interval = setInterval(() => {
-        setExtractionProgress(prev => {
-          if (prev >= 95) return 95
-          // Linear progress for 15s (approx 6.6% per sec, but we'll do 1% per 150ms for smoothness)
-          return prev + 1
-        })
+        setExtractionProgress(prev => prev >= 95 ? 95 : prev + 1)
       }, 150)
     } else {
       setExtractionProgress(0)
@@ -126,7 +158,7 @@ export default function Home() {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(30)
+        .limit(50)
       if (error) throw error
       setExtractions(data || [])
     } catch (err: any) {
@@ -148,7 +180,6 @@ export default function Home() {
           style_data: report
         })
       if (error) throw error
-      // Refresh to get the new item with DB-generated id
       await loadHistory(user.id)
     } catch (err) {
       console.error('Failed to save extraction:', err)
@@ -159,12 +190,8 @@ export default function Home() {
     setExtractions(prev => prev.map(item => {
       if (item.id !== itemId) return item
       const isPinned = item.style_data?.__pinned === true
-      return {
-        ...item,
-        style_data: { ...item.style_data, __pinned: !isPinned }
-      }
+      return { ...item, style_data: { ...item.style_data, __pinned: !isPinned } }
     }))
-    // Persist: update tags in supabase
     const item = extractions.find(e => e.id === itemId)
     if (item) {
       const isPinned = item.style_data?.__pinned === true
@@ -175,6 +202,62 @@ export default function Home() {
     }
   }
 
+  // ── Delete with undo ──
+  const deleteItem = (id: string) => {
+    const record = extractions.find(e => e.id === id)
+    if (!record) return
+    const label = record.source_label || '未命名分析'
+
+    // Optimistic remove
+    setExtractions(prev => prev.filter(e => e.id !== id))
+    if (activeItemId === id) { setActiveItemId(null); setReport(null) }
+    setContextMenuId(null)
+
+    // Show undo toast
+    setUndoItem({ id, label, record })
+
+    // 5s timer to actually delete
+    deleteTimerRef.current[id] = setTimeout(async () => {
+      await deleteFromLibrary(id, supabase)
+      setUndoItem(prev => (prev?.id === id ? null : prev))
+    }, 5000)
+  }
+
+  const undoDelete = () => {
+    if (!undoItem) return
+    clearTimeout(deleteTimerRef.current[undoItem.id])
+    delete deleteTimerRef.current[undoItem.id]
+    setExtractions(prev => {
+      const exists = prev.find(e => e.id === undoItem.id)
+      if (exists) return prev
+      return [undoItem.record, ...prev].sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+    })
+    setUndoItem(null)
+  }
+
+  // ── Rename ──
+  const startRename = (id: string, currentLabel: string) => {
+    setRenamingId(id)
+    setRenameValue(currentLabel)
+    setContextMenuId(null)
+  }
+
+  const submitRename = async (id: string) => {
+    const trimmed = renameValue.trim()
+    if (!trimmed) { cancelRename(); return }
+    setExtractions(prev => prev.map(e => e.id === id ? { ...e, source_label: trimmed } : e))
+    setRenamingId(null)
+    setRenameValue('')
+    await renameInLibrary(id, trimmed, supabase)
+  }
+
+  const cancelRename = () => {
+    setRenamingId(null)
+    setRenameValue('')
+  }
+
   // ── Extraction ──
   const callExtractAPI = async (payload: { screenshotUrl?: string; imageBase64?: string; sourceLabel?: string }) => {
     const res = await fetch('/api/extract', {
@@ -183,10 +266,7 @@ export default function Home() {
       body: JSON.stringify(payload),
     })
     const data = await res.json()
-    if (!data.success) {
-      console.error('Extraction API Failure Details:', data)
-      throw new Error(data.error || '提取失败，请重试')
-    }
+    if (!data.success) throw new Error(data.error || '提取失败，请重试')
     return data.report as StyleReport
   }
 
@@ -207,7 +287,6 @@ export default function Home() {
     setActiveItemId(null)
     setError(null)
     try {
-      // 1. Screenshot
       const ssRes = await fetch('/api/screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -215,19 +294,14 @@ export default function Home() {
       })
       const ssData = await ssRes.json()
       if (!ssData.success) throw new Error(ssData.error || '截图失败')
-      
-      // 2. Extract
-      const labelStr = url.trim()
-      let label = labelStr
-      try { label = new URL(labelStr).hostname.replace(/^www\./, '') } catch(e){}
-      
+
+      let label = url.trim()
+      try { label = new URL(url.trim()).hostname.replace(/^www\./, '') } catch (e) {}
+
       const result = await callExtractAPI({ screenshotUrl: ssData.screenshotUrl, sourceLabel: label })
       result.thumbnailUrl = ssData.screenshotUrl
-      
-      // 3. Save
+
       await saveExtraction(result, ssData.screenshotUrl)
-      
-      // 4. Show portal
       setReport(result)
       setIsExtracting(false)
       setUrl('')
@@ -240,36 +314,58 @@ export default function Home() {
     }
   }
 
-  const handleFileSelect = async (file: File) => {
+  // ── File preview (without extracting) ──
+  const handleFilePreview = (file: File) => {
     if (!file.type.startsWith('image/')) { setError('请上传图片文件'); return }
     if (file.size > 20 * 1024 * 1024) { setError('图片过大，请上传 20MB 以内的图片'); return }
+    const objectUrl = URL.createObjectURL(file)
+    setPendingFile(file)
+    setPendingPreviewUrl(objectUrl)
+    setError(null)
+  }
+
+  // ── Actually extract the pending file ──
+  const handleExtractFile = async () => {
+    if (!pendingFile) return
     if (!user) { setIsAuthVisible(true); return }
 
     setIsExtracting(true)
     setReport(null)
     setActiveItemId(null)
     setError(null)
+    const file = pendingFile
+    const previewUrl = pendingPreviewUrl
+    setPendingFile(null)
+    // Keep previewUrl for the scan overlay
+
     try {
       const base64 = await toBase64(file)
       const result = await callExtractAPI({ imageBase64: base64, sourceLabel: file.name })
       result.thumbnailUrl = base64
-      
+
       await saveExtraction(result, base64)
-      
       setReport(result)
       setIsExtracting(false)
     } catch (err: any) {
       setError(err.message || '上传分析失败')
     } finally {
       setIsExtracting(false)
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      setPendingPreviewUrl(null)
     }
+  }
+
+  const clearPendingFile = () => {
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
+    setPendingFile(null)
+    setPendingPreviewUrl(null)
   }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
     const file = e.dataTransfer.files[0]
-    if (file) handleFileSelect(file)
+    if (file) handleFilePreview(file)
   }
 
   const handlePaste = async (e: React.ClipboardEvent) => {
@@ -277,13 +373,13 @@ export default function Home() {
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf('image') !== -1) {
         const file = items[i].getAsFile()
-        if (file) handleFileSelect(file)
+        if (file) handleFilePreview(file)
         break
       }
     }
   }
 
-  // ── Avatar helpers ──
+  // ── Helpers ──
   const getInitials = (email: string) => email.charAt(0).toUpperCase()
   const getAvatarColor = (email: string) => {
     const colors = ['#FF9500', '#FF2D55', '#5856D6', '#34C759', '#007AFF', '#AF52DE']
@@ -292,14 +388,22 @@ export default function Home() {
     return colors[Math.abs(hash) % colors.length]
   }
 
-  // ── Filtered lists ──
   const allFiltered = extractions.filter(item =>
     !searchQuery || (item.source_label || '').toLowerCase().includes(searchQuery.toLowerCase())
   )
   const pinnedList = allFiltered.filter(item => item.style_data?.__pinned === true)
   const recentList = allFiltered.filter(item => !item.style_data?.__pinned)
 
-  const displayList = sidebarTab === 'pinned' ? pinnedList : recentList
+  // ── Upload zone state derivation ──
+  const uploadState = isExtracting
+    ? 'extracting'
+    : pendingFile
+    ? 'selected'
+    : isDragging
+    ? 'dragover'
+    : uploadZoneHovered
+    ? 'hover'
+    : 'idle'
 
   return (
     <>
@@ -327,11 +431,14 @@ export default function Home() {
           pointer-events: none;
           z-index: 20;
         }
+        .upload-icon-float:hover svg {
+          animation: uploadIconFloat 0.6s ease-in-out;
+        }
       `}</style>
       <div style={{
         height: '100vh', width: '100vw', display: 'flex', flexDirection: 'row',
         fontFamily: 'var(--font-sans)', WebkitFontSmoothing: 'antialiased' as any,
-        userSelect: 'none', overflow: 'hidden', backgroundColor: '#FFFFFF'
+        userSelect: 'none', overflow: 'hidden', backgroundColor: '#FAFAFA'
       }}>
 
       {/* ══════════════════════════════════════════
@@ -339,17 +446,17 @@ export default function Home() {
       ══════════════════════════════════════════ */}
       <aside style={{
         width: '240px', flexShrink: 0, display: 'flex', flexDirection: 'column',
-        backgroundColor: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.03)'
+        backgroundColor: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.06)'
       }}>
-        {/* Top: Brand wordmark */}
-        <div style={{ padding: '24px 24px 16px', display: 'flex', alignItems: 'center' }}>
-          <span style={{ fontSize: '18px', fontWeight: 600, color: '#1D1D1F', fontFamily: 'var(--font-sans)', letterSpacing: '-0.02em', WebkitFontSmoothing: 'auto' }}>StyleLens</span>
+        {/* Brand wordmark */}
+        <div style={{ padding: '22px 20px 14px', display: 'flex', alignItems: 'center' }}>
+          <span style={{ fontSize: '17px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.02em' }}>StyleLens</span>
         </div>
 
         {/* Top Actions */}
-        <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
           <SidebarBtn
-            icon={<Plus size={16} strokeWidth={2} />}
+            icon={<Plus size={15} strokeWidth={2} />}
             label="New Extraction"
             active={!activeItemId && !report && !isExtracting}
             onClick={() => {
@@ -357,11 +464,12 @@ export default function Home() {
               setActiveItemId(null)
               setError(null)
               setUrl('')
+              clearPendingFile()
               setTimeout(() => urlInputRef.current?.focus(), 50)
             }}
           />
           <SidebarBtn
-            icon={<Search size={16} strokeWidth={2} />}
+            icon={<Search size={15} strokeWidth={2} />}
             label="Search"
             active={isSearchOpen}
             onClick={() => {
@@ -371,83 +479,105 @@ export default function Home() {
           />
         </div>
 
-        {/* Tab switcher: Recent / Pinned -> Changed to static headers on the list */}
-        <div style={{ padding: '24px 24px 8px', display: 'flex', gap: '0' }}>
-           <span style={{ fontSize: '11px', fontWeight: 600, color: '#8E8E93', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-             PINNED
-           </span>
+        {/* Pinned section */}
+        {pinnedList.length > 0 && (
+          <>
+            <div style={{ padding: '20px 20px 6px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 600, color: '#AEAEB2', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                PINNED
+              </span>
+            </div>
+            <div className="no-scrollbar" style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+              {pinnedList.map(item => (
+                <HistoryItem
+                  key={item.id}
+                  id={item.id}
+                  label={item.source_label || 'Untitled'}
+                  thumbnailUrl={item.thumbnail_url}
+                  colors={item.style_data?.colors || []}
+                  isActive={activeItemId === item.id}
+                  isPinned={true}
+                  contextMenuOpen={contextMenuId === item.id}
+                  renamingId={renamingId}
+                  renameValue={renameValue}
+                  onRenameChange={setRenameValue}
+                  onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null) }}
+                  onContextMenu={(e) => { e.stopPropagation(); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
+                  onPin={() => togglePin(item.id)}
+                  onDelete={() => deleteItem(item.id)}
+                  onStartRename={() => startRename(item.id, item.source_label || 'Untitled')}
+                  onRenameSubmit={() => submitRename(item.id)}
+                  onRenameCancel={cancelRename}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* History section */}
+        <div style={{ padding: '20px 20px 6px' }}>
+          <span style={{ fontSize: '10px', fontWeight: 600, color: '#AEAEB2', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            HISTORY
+          </span>
         </div>
 
-        {/* Pinned List */}
-        <div className="no-scrollbar" style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {pinnedList.map(item => (
-            <HistoryItem
-              key={item.id} label={item.source_label || 'Untitled'}
-              isActive={activeItemId === item.id} isPinned={true}
-              onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null) }}
-              onPin={() => togglePin(item.id)}
-            />
-          ))}
-          {pinnedList.length === 0 && <div style={{ padding: '8px 12px', fontSize: '13px', color: '#C7C7CC', textAlign: 'left' }}>No pinned items</div>}
-        </div>
-
-        <div style={{ padding: '24px 24px 8px', display: 'flex', gap: '0' }}>
-           <span style={{ fontSize: '11px', fontWeight: 600, color: '#8E8E93', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-             HISTORY
-           </span>
-        </div>
-
-        {/* History list */}
-        <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
           {!user ? (
-            <EmptyState>Sign in to view history</EmptyState>
+            <EmptyState>登录后查看历史记录</EmptyState>
           ) : isLoadingHistory ? (
-            <div style={{ padding: '16px 8px' }}>
-              {[1, 2, 3].map(i => (
+            <div style={{ padding: '8px 4px' }}>
+              {[1, 2, 3, 4].map(i => (
                 <div key={i} style={{
-                  height: '32px', borderRadius: '6px', marginBottom: '4px',
+                  height: '58px', borderRadius: '8px', marginBottom: '2px',
                   backgroundColor: 'rgba(0,0,0,0.04)', animation: 'pulse 1.5s infinite'
                 }} />
               ))}
             </div>
-          ) : displayList.length === 0 ? (
+          ) : recentList.length === 0 ? (
             <EmptyState>
-              {searchQuery ? 'No matched records' : sidebarTab === 'pinned' ? 'No pinned items' : 'No history yet'}
+              {searchQuery ? '未找到匹配记录' : '暂无历史记录'}
             </EmptyState>
           ) : (
             recentList.map(item => (
               <HistoryItem
                 key={item.id}
+                id={item.id}
                 label={item.source_label || '未命名分析'}
+                thumbnailUrl={item.thumbnail_url}
+                colors={item.style_data?.colors || []}
                 isActive={activeItemId === item.id}
-                isPinned={item.style_data?.__pinned === true}
-                onClick={() => {
-                  setActiveItemId(item.id)
-                  setReport(item.style_data)
-                  setError(null)
-                  setIsModalImageLoading(true)
-                }}
+                isPinned={false}
+                contextMenuOpen={contextMenuId === item.id}
+                renamingId={renamingId}
+                renameValue={renameValue}
+                onRenameChange={setRenameValue}
+                onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null) }}
+                onContextMenu={(e) => { e.stopPropagation(); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
                 onPin={() => togglePin(item.id)}
+                onDelete={() => deleteItem(item.id)}
+                onStartRename={() => startRename(item.id, item.source_label || '未命名分析')}
+                onRenameSubmit={() => submitRename(item.id)}
+                onRenameCancel={cancelRename}
               />
             ))
           )}
         </div>
 
         {/* User footer */}
-        <div style={{ padding: '16px', borderTop: '1px solid rgba(0,0,0,0.03)', position: 'relative' }}>
+        <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(0,0,0,0.06)', position: 'relative' }}>
           {showUserMenu && user && (
             <div style={{
-              position: 'absolute', bottom: '100%', left: '16px', right: '16px', marginBottom: '8px',
-              backgroundColor: '#FFFFFF', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-              border: '1px solid rgba(0,0,0,0.04)', padding: '6px', zIndex: 50, animation: 'slideUp 0.15s ease-out'
+              position: 'absolute', bottom: '100%', left: '10px', right: '10px', marginBottom: '6px',
+              backgroundColor: '#FFFFFF', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
+              border: '1px solid rgba(0,0,0,0.06)', padding: '6px', zIndex: 50, animation: 'slideUp 0.15s ease-out'
             }}>
-              <div style={{ padding: '8px 12px 6px', fontSize: '12px', color: '#8E8E93', borderBottom: '1px solid rgba(0,0,0,0.03)', marginBottom: '4px' }}>
+              <div style={{ padding: '8px 12px 6px', fontSize: '11px', color: '#8E8E93', borderBottom: '1px solid rgba(0,0,0,0.04)', marginBottom: '4px' }}>
                 {user.email}
               </div>
               <button
                 onClick={async () => { await supabase.auth.signOut(); setShowUserMenu(false) }}
                 style={{
-                  width: '100%', padding: '8px 12px', textAlign: 'left', border: 'none',
+                  width: '100%', padding: '7px 12px', textAlign: 'left', border: 'none',
                   backgroundColor: 'transparent', color: '#FF3B30', fontSize: '13px', fontWeight: 500,
                   cursor: 'pointer', borderRadius: '8px', fontFamily: 'var(--font-sans)', transition: 'background 0.1s'
                 }}
@@ -467,19 +597,14 @@ export default function Home() {
               else setShowUserMenu(!showUserMenu)
             }}
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px',
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px',
               borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s',
-              backgroundColor: showUserMenu ? 'rgba(0,0,0,0.03)' : 'transparent',
-              border: '1px solid transparent'
+              backgroundColor: showUserMenu ? 'rgba(0,0,0,0.04)' : 'transparent',
             }}
-            onMouseEnter={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)')}
+            onMouseEnter={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)')}
             onMouseLeave={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'transparent')}
           >
-            {user ? (
-               <UserIcon size={14} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
-            ) : (
-               <UserIcon size={14} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
-            )}
+            <UserIcon size={14} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
             <span style={{ fontSize: '13px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {user ? (user.email?.split('@')[0] || 'User') : '登录 / 注册'}
             </span>
@@ -490,7 +615,7 @@ export default function Home() {
       {/* ══════════════════════════════════════════
           MAIN WORKSPACE
       ══════════════════════════════════════════ */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FFFFFF', overflow: 'hidden' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FAFAFA', overflow: 'hidden' }}>
 
         {/* Help icon */}
         <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
@@ -503,61 +628,57 @@ export default function Home() {
         {/* ── 1. History Page View (Active) ── */}
         {activeItemId && report && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
-            
-            {/* Left: Image Panel (Independent Scroll) */}
-            <div className="no-scrollbar" style={{ 
-              width: '48%', height: '100%', backgroundColor: '#FFFFFF', 
-              position: 'relative'
+
+            {/* Left: Image Panel */}
+            <div className="no-scrollbar" style={{
+              width: '48%', height: '100%', backgroundColor: '#FFFFFF',
+              position: 'relative', borderRight: '1px solid rgba(0,0,0,0.04)'
             }}>
               <div className="scroll-mask-top" />
               <div style={{ height: '100%', overflowY: 'auto', padding: '40px', overscrollBehavior: 'contain' }} className="no-scrollbar">
-                <div 
+                <div
                   onClick={() => { setLightboxUrl((report as any).screenshotUrl || (report as any).thumbnailUrl); setIsLightboxOpen(true) }}
-                  style={{ 
-                    cursor: 'zoom-in', borderRadius: '16px', overflow: 'hidden', 
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.06)', transition: 'transform 0.2s' 
+                  style={{
+                    cursor: 'zoom-in', borderRadius: '16px', overflow: 'hidden',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.06)', transition: 'transform 0.2s'
                   }}
                   onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <img 
-                    src={(report as any).screenshotUrl || (report as any).thumbnailUrl} 
-                    alt="Source" 
-                    style={{ width: '100%', display: 'block' }} 
+                  <img
+                    src={(report as any).screenshotUrl || (report as any).thumbnailUrl}
+                    alt="Source"
+                    style={{ width: '100%', display: 'block' }}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Right: Content Panel (Independent Scroll) */}
+            {/* Right: Content Panel */}
             <div className="no-scrollbar" style={{ flex: 1, height: '100%', overflowY: 'auto', backgroundColor: '#FFFFFF', position: 'relative' }}>
               <div className="scroll-mask-top" />
-              
-              {/* Sticky Header inside the scrollable area for report context */}
-              <div style={{ 
-                position: 'sticky', top: 0, backgroundColor: 'rgba(255,255,255,0.9)', 
+              <div style={{
+                position: 'sticky', top: 0, backgroundColor: 'rgba(255,255,255,0.9)',
                 backdropFilter: 'blur(8px)', zIndex: 10, padding: '24px 48px 16px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                   {(['zh', 'en'] as const).map(l => (
-                     <button key={l} onClick={() => setReportLang(l)} style={{
-                       fontSize: '11px', fontWeight: reportLang === l ? 700 : 500,
-                       border: 'none', background: 'none', cursor: 'pointer',
-                       color: reportLang === l ? '#1D1D1F' : '#A1A1A6',
-                       padding: '2px 6px', transition: 'color 0.2s'
-                     }}>
-                       {l === 'zh' ? '中文' : 'EN'}
-                     </button>
-                   ))}
+                  {(['zh', 'en'] as const).map(l => (
+                    <button key={l} onClick={() => setReportLang(l)} style={{
+                      fontSize: '11px', fontWeight: reportLang === l ? 700 : 500,
+                      border: 'none', background: 'none', cursor: 'pointer',
+                      color: reportLang === l ? '#1D1D1F' : '#A1A1A6',
+                      padding: '2px 6px', transition: 'color 0.2s'
+                    }}>
+                      {l === 'zh' ? '中文' : 'EN'}
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              {/* Report Body */}
               <div style={{ padding: '0 48px 80px' }}>
-                <h1 style={{ 
-                  fontSize: '32px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 40px 0', 
-                  lineHeight: 1.1, letterSpacing: '-0.03em' 
+                <h1 style={{
+                  fontSize: '32px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 40px 0',
+                  lineHeight: 1.1, letterSpacing: '-0.03em'
                 }}>
                   {report.sourceLabel}
                 </h1>
@@ -592,31 +713,41 @@ export default function Home() {
             <div style={{ width: '100%', maxWidth: '500px' }}>
 
               {/* Heading */}
-              <div style={{ textAlign: 'center', marginBottom: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                <div style={{ width: '48%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1D1D1F' }}>
-                  <Sparkles size={24} strokeWidth={1.5} />
-                </div>
-                <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.02em', margin: 0 }}>开始解析设计</h1>
+              <div style={{ textAlign: 'center', marginBottom: '36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+                <Sparkles size={20} strokeWidth={1.5} style={{ color: '#1D1D1F' }} />
+                <h1 style={{ fontSize: '22px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.03em', margin: 0 }}>开始解析设计</h1>
               </div>
 
               {/* URL input */}
-              <form onSubmit={handleUrlSubmit} style={{ position: 'relative', marginBottom: '32px' }}>
+              <form onSubmit={handleUrlSubmit} style={{ position: 'relative', marginBottom: '28px' }}>
                 <div style={{
                   display: 'flex', alignItems: 'center',
-                  backgroundColor: '#FFFFFF', border: `1px solid ${isExtracting ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.08)'}`,
-                  borderRadius: '16px', height: '64px', overflow: 'hidden', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                  boxShadow: isExtracting ? '0 8px 32px rgba(0,0,0,0.08)' : '0 4px 16px rgba(0,0,0,0.04)'
-                }}>
-                  <div style={{ paddingLeft: '24px', paddingRight: '12px', color: '#8E8E93', flexShrink: 0 }}>
-                    <Link2 size={22} strokeWidth={2} />
+                  backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.10)',
+                  borderRadius: '12px', height: '52px', overflow: 'hidden',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  transition: 'border-color 0.2s, box-shadow 0.2s'
+                }}
+                onFocusCapture={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.borderColor = 'rgba(0,0,0,0.22)'
+                  el.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.06)'
+                }}
+                onBlurCapture={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.borderColor = 'rgba(0,0,0,0.10)'
+                  el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'
+                }}
+                >
+                  <div style={{ paddingLeft: '18px', paddingRight: '10px', color: '#8E8E93', flexShrink: 0 }}>
+                    <Link2 size={18} strokeWidth={1.8} />
                   </div>
                   <input
                     ref={urlInputRef}
                     type="text"
                     placeholder="粘贴网页链接，如 https://linear.app"
                     style={{
-                      flex: 1, border: 'none', outline: 'none', fontSize: '16px',
-                      color: '#1D1D1F', fontWeight: 500, backgroundColor: 'transparent',
+                      flex: 1, border: 'none', outline: 'none', fontSize: '15px',
+                      color: '#1D1D1F', fontWeight: 450, backgroundColor: 'transparent',
                       fontFamily: 'var(--font-sans)', height: '100%'
                     }}
                     value={url}
@@ -627,17 +758,18 @@ export default function Home() {
                     type="submit"
                     disabled={isExtracting || !url.trim()}
                     style={{
-                      margin: '8px 10px', padding: '0 24px', height: '44px',
-                      borderRadius: '10px', border: 'none',
-                      backgroundColor: isExtracting ? '#8E8E93' : '#1D1D1F', color: '#FFFFFF', 
-                      fontSize: '14px', fontWeight: 600, cursor: (isExtracting || !url.trim()) ? 'default' : 'pointer',
+                      margin: '8px 8px', padding: '0 20px', height: '36px',
+                      borderRadius: '8px', border: 'none',
+                      background: (isExtracting || !url.trim()) ? 'rgba(0,0,0,0.12)' : 'linear-gradient(180deg, #2C2C2E 0%, #1D1D1F 100%)',
+                      color: '#FFFFFF',
+                      fontSize: '13px', fontWeight: 600,
+                      cursor: (isExtracting || !url.trim()) ? 'default' : 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      opacity: (!isExtracting && !url.trim()) ? 0.3 : 1,
-                      transition: 'all 0.2s', flexShrink: 0,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                      transition: 'all 0.15s', flexShrink: 0,
+                      letterSpacing: '-0.01em'
                     }}
-                    onMouseEnter={e => { if(!isExtracting && !!url.trim()) e.currentTarget.style.backgroundColor = '#333333' }}
-                    onMouseLeave={e => { if(!isExtracting && !!url.trim()) e.currentTarget.style.backgroundColor = '#1D1D1F' }}
+                    onMouseEnter={e => { if (!isExtracting && !!url.trim()) e.currentTarget.style.background = 'linear-gradient(180deg, #3A3A3C 0%, #2C2C2E 100%)' }}
+                    onMouseLeave={e => { if (!isExtracting && !!url.trim()) e.currentTarget.style.background = 'linear-gradient(180deg, #2C2C2E 0%, #1D1D1F 100%)' }}
                   >
                     {isExtracting ? '解析中' : '立即解析'}
                   </button>
@@ -645,62 +777,168 @@ export default function Home() {
               </form>
 
               {/* OR divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '6px 0 24px' }}>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
-                <span style={{ fontSize: '10px', color: '#8E8E93', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' }}>或</span>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '4px 0 20px' }}>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.04)' }} />
+                <span style={{ fontSize: '10px', color: '#AEAEB2', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' }}>或</span>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.04)' }} />
               </div>
 
-              {/* Drop zone */}
+              {/* Drop zone — 6 states */}
               <div
                 style={{
-                  width: '100%', height: '180px', borderRadius: '12px',
-                  border: `1px solid ${isDragging ? '#1D1D1F' : 'rgba(0,0,0,0.06)'}`,
+                  width: '100%', height: '180px', borderRadius: '14px',
+                  border: uploadState === 'dragover'
+                    ? '1.5px solid rgba(0,0,0,0.28)'
+                    : uploadState === 'hover'
+                    ? '1px solid rgba(0,0,0,0.18)'
+                    : uploadState === 'selected' || uploadState === 'extracting'
+                    ? 'none'
+                    : '1px dashed rgba(0,0,0,0.10)',
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
                   justifyContent: 'center', gap: '12px', cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  backgroundColor: isDragging ? 'rgba(0,0,0,0.01)' : '#FFFFFF',
-                  opacity: isExtracting ? 0.45 : 1,
-                  pointerEvents: isExtracting ? 'none' : 'auto',
-                  borderStyle: 'dashed'
+                  transition: 'all 0.2s ease',
+                  backgroundColor: uploadState === 'dragover'
+                    ? 'rgba(0,0,0,0.02)'
+                    : uploadState === 'hover'
+                    ? 'rgba(0,0,0,0.012)'
+                    : '#FFFFFF',
+                  opacity: uploadState === 'extracting' ? 0.85 : 1,
+                  pointerEvents: uploadState === 'extracting' ? 'none' : 'auto',
+                  overflow: 'hidden', position: 'relative'
                 }}
-                onMouseEnter={e => !isDragging && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.01)')}
-                onMouseLeave={e => !isDragging && (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+                onMouseEnter={() => !isDragging && !pendingFile && setUploadZoneHovered(true)}
+                onMouseLeave={() => setUploadZoneHovered(false)}
                 onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
                 onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
                 onDrop={handleDrop}
                 onDragOver={e => e.preventDefault()}
-                onClick={() => user ? fileInputRef.current?.click() : setIsAuthVisible(true)}
+                onClick={() => {
+                  if (pendingFile) return
+                  user ? fileInputRef.current?.click() : setIsAuthVisible(true)
+                }}
                 onPaste={handlePaste}
                 tabIndex={0}
               >
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '50%',
-                  backgroundColor: '#F5F5F7', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', color: '#1D1D1F'
-                }}>
-                  <Plus size={16} strokeWidth={1.5} />
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#1D1D1F', marginBottom: '8px' }}>
-                    {isDragging ? '释放以上传' : '拖拽设计图至此处'}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#8E8E93', fontWeight: 400 }}>支持 JPG、PNG、WebP，最大 20MB</div>
-                </div>
+                {/* State: file selected — image preview */}
+                {(uploadState === 'selected' || uploadState === 'extracting') && pendingPreviewUrl && (
+                  <>
+                    <img
+                      src={pendingPreviewUrl}
+                      alt="Preview"
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    {/* Gradient overlay */}
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.55) 100%)'
+                    }} />
+                    {/* Scan overlay during extracting */}
+                    {uploadState === 'extracting' && (
+                      <div className="animate-scan" style={{
+                        position: 'absolute', top: 0, width: '60%', height: '100%',
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                        pointerEvents: 'none'
+                      }} />
+                    )}
+                    {/* Bottom bar: filename + actions */}
+                    {uploadState === 'selected' && (
+                      <div style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                        padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#FFFFFF', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                            {pendingFile?.name}
+                          </span>
+                          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>
+                            {pendingFile ? (pendingFile.size / 1024 / 1024).toFixed(1) + ' MB' : ''}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <button
+                            onClick={e => { e.stopPropagation(); clearPendingFile() }}
+                            style={{
+                              width: '28px', height: '28px', borderRadius: '50%',
+                              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', color: '#FFFFFF', transition: 'background 0.15s'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                          >
+                            <X size={13} strokeWidth={2} />
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); handleExtractFile() }}
+                            style={{
+                              height: '28px', padding: '0 14px', borderRadius: '14px',
+                              background: 'rgba(255,255,255,0.95)', border: 'none',
+                              fontSize: '12px', fontWeight: 600, color: '#1D1D1F',
+                              cursor: 'pointer', transition: 'background 0.15s'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#FFFFFF'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.95)'}
+                          >
+                            立即解析 →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {/* Top-right X to clear when selected */}
+                    {uploadState === 'selected' && (
+                      <button
+                        onClick={e => { e.stopPropagation(); clearPendingFile() }}
+                        style={{
+                          position: 'absolute', top: '10px', right: '10px',
+                          width: '26px', height: '26px', borderRadius: '50%',
+                          background: 'rgba(0,0,0,0.4)', border: 'none',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', color: '#FFFFFF', transition: 'background 0.15s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.4)'}
+                      >
+                        <X size={12} strokeWidth={2} />
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {/* State: idle / hover / dragover */}
+                {uploadState !== 'selected' && uploadState !== 'extracting' && (
+                  <>
+                    <div className="upload-icon-float" style={{
+                      width: '36px', height: '36px', borderRadius: '10px',
+                      backgroundColor: 'rgba(0,0,0,0.04)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#3C3C3E',
+                      transform: uploadState === 'hover' ? 'translateY(-2px)' : 'translateY(0)',
+                      transition: 'transform 0.2s ease'
+                    }}>
+                      <Upload size={16} strokeWidth={1.8} />
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1F', marginBottom: '5px', letterSpacing: '-0.01em' }}>
+                        {uploadState === 'dragover' ? '释放以解析' : '拖拽设计图 / 点击上传'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>支持 JPG、PNG、WebP，最大 20MB</div>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {/* Progress UI - Scanner Style (Below Drop Zone) */}
-              {isExtracting && (
+              {/* Progress UI — Below Drop Zone (URL mode or extracting without preview) */}
+              {isExtracting && !pendingPreviewUrl && (
                 <div style={{ marginTop: '48px', animation: 'fadeIn 0.3s ease-out' }}>
-                  <div style={{ fontSize: '12px', color: '#1D1D1F', marginBottom: '12px', opacity: 0.6, fontWeight: 500 }}>
-                    正在解析网页链路，重构设计树 (约需 15 秒) ...
+                  <div style={{ fontSize: '12px', color: '#1D1D1F', marginBottom: '12px', opacity: 0.5, fontWeight: 500 }}>
+                    正在解析设计，重构色彩与字体树 (约需 15 秒) ...
                   </div>
-                  <div style={{ 
-                    width: '100%', height: '1px', backgroundColor: '#F5F5F7', 
-                    borderRadius: '1px', overflow: 'hidden', position: 'relative' 
+                  <div style={{
+                    width: '100%', height: '1px', backgroundColor: '#F0F0F0',
+                    borderRadius: '1px', overflow: 'hidden', position: 'relative'
                   }}>
-                    <div className="animate-scan" style={{ 
-                      position: 'absolute', top: 0, width: '40%', height: '100%', 
+                    <div className="animate-scan" style={{
+                      position: 'absolute', top: 0, width: '40%', height: '100%',
                       backgroundColor: '#1D1D1F', opacity: 0.8
                     }} />
                   </div>
@@ -708,12 +946,12 @@ export default function Home() {
               )}
 
               <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-                onChange={e => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0]) }} />
+                onChange={e => { if (e.target.files?.[0]) handleFilePreview(e.target.files[0]) }} />
             </div>
           </div>
         )}
 
-        {/* ── 3. Extraction Result Modal (Vercel Production Style) ── */}
+        {/* ── 3. Extraction Result Modal ── */}
         {report && !activeItemId && !isExtracting && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 100,
@@ -722,27 +960,21 @@ export default function Home() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '40px',
             animation: 'fadeIn 0.4s ease'
-          }} onClick={() => { 
-            const latest = extractions[0];
-            if (latest) {
-              setActiveItemId(latest.id);
-              setReport(latest.style_data);
-            } else {
-              setReport(null);
-            }
+          }} onClick={() => {
+            const latest = extractions[0]
+            if (latest) { setActiveItemId(latest.id); setReport(latest.style_data) }
+            else setReport(null)
           }}>
             <div style={{
               background: '#FFFFFF',
               width: '100%', maxWidth: '1440px', height: '100%', maxHeight: '900px',
               borderRadius: '20px',
               boxShadow: '0 24px 64px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04)',
-              display: 'flex', flexDirection: 'column',
-              overflow: 'hidden',
-              position: 'relative',
-              border: '1px solid #F0F0F0'
+              display: 'flex', flexDirection: 'column', overflow: 'hidden',
+              position: 'relative', border: '1px solid #F0F0F0'
             }} onClick={e => e.stopPropagation()}>
-              
-              {/* Floating Controls (No SOURCE text) */}
+
+              {/* Controls */}
               <div style={{ position: 'absolute', top: '24px', right: '32px', zIndex: 10, display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '2px', background: '#F5F5F5', padding: '4px', borderRadius: '100px' }}>
                   <button onClick={() => setReportLang('zh')} style={{ padding: '5px 14px', borderRadius: '100px', border: 'none', background: reportLang === 'zh' ? '#fff' : 'transparent', fontSize: '11px', fontWeight: reportLang === 'zh' ? 600 : 400, color: reportLang === 'zh' ? '#1D1D1F' : '#999', cursor: 'pointer', transition: 'all 0.2s', boxShadow: reportLang === 'zh' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>中文</button>
@@ -750,15 +982,11 @@ export default function Home() {
                 </div>
                 <button
                   onClick={() => {
-                    const latest = extractions[0];
-                    if (latest) {
-                      setActiveItemId(latest.id);
-                      setReport(latest.style_data);
-                    } else {
-                      setReport(null);
-                    }
+                    const latest = extractions[0]
+                    if (latest) { setActiveItemId(latest.id); setReport(latest.style_data) }
+                    else setReport(null)
                   }}
-                  style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5F5F5', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#1A1A1A', cursor: 'pointer', transition: 'all 0.2s' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5F5F5', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1A1A1A', cursor: 'pointer', transition: 'all 0.2s' }}
                   onMouseEnter={e => { e.currentTarget.style.background = '#EBEBEB' }}
                   onMouseLeave={e => { e.currentTarget.style.background = '#F5F5F5' }}
                 >
@@ -768,7 +996,6 @@ export default function Home() {
 
               {/* Split View */}
               <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* Left: Component View (44%) */}
                 <div className="no-scrollbar" style={{ width: '44%', background: '#FFFFFF', padding: '64px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
                   <div style={{ position: 'relative', width: '100%', maxWidth: '480px' }}>
                     <img
@@ -779,8 +1006,6 @@ export default function Home() {
                     />
                   </div>
                 </div>
-
-                {/* Right: Analysis View (56%) */}
                 <div className="no-scrollbar" style={{ width: '56%', padding: '64px', overflowY: 'auto', background: '#FFFFFF' }}>
                   <StyleReportView report={report!} lang={reportLang} />
                 </div>
@@ -796,13 +1021,14 @@ export default function Home() {
           <div style={{
             position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 100,
             display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '12vh',
-            backdropFilter: 'blur(2px)', animation: 'overlayFade 0.2s ease-out'
-          }} onClick={() => setIsSearchOpen(false)}>
+            backdropFilter: 'blur(2px)', animation: 'overlayFade 0.15s ease-out'
+          }} onClick={() => { setIsSearchOpen(false); setSearchQuery('') }}>
             <div style={{
               width: '100%', maxWidth: '640px', backgroundColor: '#FFFFFF', borderRadius: '12px',
               boxShadow: '0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
               display: 'flex', flexDirection: 'column', overflow: 'hidden',
-              animation: 'tooltipPop 0.2s cubic-bezier(0.16, 1, 0.3, 1)', margin: '0 20px'
+              animation: 'searchModalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both',
+              margin: '0 20px'
             }} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
                 <Search size={18} strokeWidth={1.5} style={{ color: '#8E8E93', marginRight: '12px' }} />
@@ -812,13 +1038,13 @@ export default function Home() {
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search extractions and history..."
+                  placeholder="搜索历史记录..."
                   style={{
                     flex: 1, border: 'none', outline: 'none', fontSize: '15px', color: '#1D1D1F',
                     backgroundColor: 'transparent', fontFamily: 'var(--font-sans)', padding: '6px 0'
                   }}
                 />
-                <button onClick={() => setIsSearchOpen(false)} style={{
+                <button onClick={() => { setIsSearchOpen(false); setSearchQuery('') }} style={{
                   background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', color: '#8E8E93',
                   borderRadius: '6px', transition: 'background 0.1s'
                 }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
@@ -828,7 +1054,7 @@ export default function Home() {
               <div className="no-scrollbar" style={{ maxHeight: '50vh', overflowY: 'auto', padding: '8px 0' }}>
                 {allFiltered.length === 0 ? (
                   <div style={{ padding: '32px', textAlign: 'center', color: '#A1A1A6', fontSize: '14px' }}>
-                    未找到包含该关键词的记录
+                    {searchQuery ? '未找到匹配记录' : '暂无历史记录'}
                   </div>
                 ) : (
                   allFiltered.map(item => (
@@ -839,27 +1065,31 @@ export default function Home() {
                         setReport(item.style_data)
                         setError(null)
                         setIsSearchOpen(false)
-                        setIsModalImageLoading(true)
+                        setSearchQuery('')
                       }}
                       style={{
-                        padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px',
-                        cursor: 'pointer', transition: 'background 0.1s', borderBottom: '1px solid rgba(0,0,0,0.02)'
+                        padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px',
+                        cursor: 'pointer', transition: 'background 0.1s'
                       }}
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <div style={{ width: '32px', height: '32px', borderRadius: '6px', backgroundColor: '#F5F5F7', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                        {(item.style_data as any)?.__pinned ? (
-                          <Star size={14} fill="#FF9500" strokeWidth={0} />
-                        ) : (item.thumbnail_url?.startsWith('http') ? (
-                          <img src={`https://www.google.com/s2/favicons?domain=${new URL(item.thumbnail_url).hostname}&sz=32`} alt="" style={{ width: '16px', height: '16px' }} onError={e => e.currentTarget.style.display = 'none'} />
+                      <div style={{ width: '40px', height: '30px', borderRadius: '5px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0 }}>
+                        {item.thumbnail_url ? (
+                          <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <Sparkles size={14} strokeWidth={1.5} color="#8E8E93" />
-                        ))}
+                          <div style={{
+                            width: '100%', height: '100%',
+                            background: (() => {
+                              const tc = getTopColors(item.style_data?.colors || [])
+                              return tc.length >= 2 ? `linear-gradient(135deg, ${tc[0]?.hex || '#F0F0F0'}, ${tc[1]?.hex || '#E0E0E0'})` : '#F0F0F0'
+                            })()
+                          }} />
+                        )}
                       </div>
-                      <div style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <div style={{ fontSize: '14px', fontWeight: 500, color: '#1D1D1F' }}>{item.source_label || '未命名分析'}</div>
-                        <div style={{ fontSize: '12px', color: '#8E8E93', marginTop: '2px' }}>{new Date(item.created_at).toLocaleDateString()}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '14px', fontWeight: 500, color: '#1D1D1F', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.source_label || '未命名分析'}</div>
+                        <div style={{ fontSize: '11px', color: '#8E8E93', marginTop: '1px' }}>{new Date(item.created_at).toLocaleDateString()}</div>
                       </div>
                       <div style={{ color: '#C7C7CC' }}>
                         <ChevronLeft size={16} style={{ transform: 'rotate(180deg)' }} />
@@ -874,9 +1104,9 @@ export default function Home() {
 
       </main>
 
-      {/* Lightbox full-screen viewer */}
+      {/* Lightbox */}
       {isLightboxOpen && (
-        <div 
+        <div
           onClick={() => setIsLightboxOpen(false)}
           style={{
             position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 1000,
@@ -884,10 +1114,10 @@ export default function Home() {
             animation: 'fadeIn 0.2s ease-out', cursor: 'zoom-out'
           }}
         >
-          <button 
-            onClick={(e) => { e.stopPropagation(); setIsLightboxOpen(false); }}
+          <button
+            onClick={e => { e.stopPropagation(); setIsLightboxOpen(false) }}
             style={{
-              position: 'absolute', top: '30px', right: '30px', 
+              position: 'absolute', top: '30px', right: '30px',
               background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
               width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: 'white', cursor: 'pointer', transition: 'background 0.2s'
@@ -897,16 +1127,44 @@ export default function Home() {
           >
             <X size={24} />
           </button>
-          <img 
-            src={lightboxUrl} 
-            alt="Full view" 
-            style={{ 
-              maxWidth: '95%', maxHeight: '95vh', objectFit: 'contain', 
+          <img
+            src={lightboxUrl}
+            alt="Full view"
+            style={{
+              maxWidth: '95%', maxHeight: '95vh', objectFit: 'contain',
               boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
-              animation: 'tooltipPop 0.3s cubic-bezier(0.16, 1, 0.3, 1)' 
-            }} 
+              animation: 'tooltipPop 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
             onClick={e => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Undo delete toast */}
+      {undoItem && (
+        <div style={{
+          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+          backgroundColor: '#1D1D1F', color: '#FFFFFF', borderRadius: '12px',
+          padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2)', zIndex: 200,
+          animation: 'toastIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both',
+          whiteSpace: 'nowrap'
+        }}>
+          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>
+            已删除「<span style={{ color: '#FFFFFF', fontWeight: 500 }}>{undoItem.label}</span>」
+          </span>
+          <button
+            onClick={undoDelete}
+            style={{
+              background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '6px',
+              padding: '4px 10px', color: '#FFFFFF', fontSize: '12px', fontWeight: 600,
+              cursor: 'pointer', transition: 'background 0.15s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+          >
+            撤销
+          </button>
         </div>
       )}
 
@@ -923,74 +1181,225 @@ function SidebarBtn({ icon, label, onClick, active = false }: {
   icon: React.ReactNode, label: string, onClick: () => void, active?: boolean
 }) {
   return (
-      <button
-        onClick={onClick}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-          padding: '8px 12px', borderRadius: '8px', border: 'none',
-          backgroundColor: active ? '#F5F5F7' : 'transparent',
-          color: active ? '#1D1D1F' : '#1D1D1F', cursor: 'pointer', textAlign: 'left',
-          fontSize: '14px', fontWeight: 500, fontFamily: 'var(--font-sans)',
-          transition: 'background 0.1s'
-        }}
-        onMouseEnter={e => !active && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)')}
-        onMouseLeave={e => !active && (e.currentTarget.style.backgroundColor = 'transparent')}
-      >
-        <span style={{ opacity: 0.8, display: 'flex', width: '20px', justifyContent: 'flex-start' }}>{icon}</span>
+    <button
+      onClick={onClick}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: '9px',
+        padding: '7px 10px', borderRadius: '8px', border: 'none',
+        backgroundColor: active ? 'rgba(0,0,0,0.05)' : 'transparent',
+        color: '#1D1D1F', cursor: 'pointer', textAlign: 'left',
+        fontSize: '13px', fontWeight: 500, fontFamily: 'var(--font-sans)',
+        transition: 'background 0.1s'
+      }}
+      onMouseEnter={e => !active && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)')}
+      onMouseLeave={e => !active && (e.currentTarget.style.backgroundColor = 'transparent')}
+    >
+      <span style={{ opacity: 0.6, display: 'flex', width: '18px', justifyContent: 'flex-start' }}>{icon}</span>
       {label}
     </button>
   )
 }
 
-function HistoryItem({ label, isActive, isPinned, onClick, onPin }: {
-  label: string, isActive: boolean, isPinned: boolean,
-  onClick: () => void, onPin: () => void
+function HistoryItem({
+  id, label, thumbnailUrl, colors, isActive, isPinned,
+  contextMenuOpen, renamingId, renameValue, onRenameChange,
+  onClick, onContextMenu, onPin, onDelete, onStartRename,
+  onRenameSubmit, onRenameCancel
+}: {
+  id: string
+  label: string
+  thumbnailUrl?: string | null
+  colors: any[]
+  isActive: boolean
+  isPinned: boolean
+  contextMenuOpen: boolean
+  renamingId: string | null
+  renameValue: string
+  onRenameChange: (v: string) => void
+  onClick: () => void
+  onContextMenu: (e: React.MouseEvent) => void
+  onPin: () => void
+  onDelete: () => void
+  onStartRename: () => void
+  onRenameSubmit: () => void
+  onRenameCancel: () => void
 }) {
   const [hovered, setHovered] = useState(false)
+  const isRenaming = renamingId === id
+  const topColors = getTopColors(colors)
+
+  const thumbnailContent = thumbnailUrl ? (
+    <img src={thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+  ) : topColors.length > 0 ? (
+    <div style={{
+      width: '100%', height: '100%',
+      background: topColors.length >= 2
+        ? `linear-gradient(135deg, ${topColors[0]?.hex || '#F0F0F0'}, ${topColors[1]?.hex || '#E0E0E0'})`
+        : topColors[0]?.hex || '#F0F0F0'
+    }} />
+  ) : (
+    <div style={{ width: '100%', height: '100%', backgroundColor: '#F0F0F0' }} />
+  )
+
   return (
     <div
-      style={{ position: 'relative', borderRadius: '8px', marginBottom: '1px' }}
+      className="context-menu-anchor"
+      style={{ position: 'relative', borderRadius: '8px' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <button
-        onClick={onClick}
+        onClick={isRenaming ? undefined : onClick}
         style={{
-          width: '100%', padding: '10px 28px 10px 12px', borderRadius: '8px',
-          fontSize: '14px', fontWeight: isActive ? 500 : 400,
-          color: isActive ? '#1D1D1F' : '#8E8E93',
-          backgroundColor: isActive ? '#F5F5F7' : (hovered ? 'rgba(0,0,0,0.02)' : 'transparent'),
-          border: 'none', cursor: 'pointer', textAlign: 'left',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          fontFamily: 'var(--font-sans)', display: 'block', transition: 'all 0.1s'
+          width: '100%', padding: '8px 10px', borderRadius: '8px',
+          backgroundColor: isActive ? 'rgba(0,0,0,0.05)' : (hovered ? 'rgba(0,0,0,0.025)' : 'transparent'),
+          border: 'none', cursor: isRenaming ? 'default' : 'pointer', textAlign: 'left',
+          fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: '10px',
+          transition: 'background 0.1s'
         }}
       >
-        {label}
+        {/* Thumbnail */}
+        <div style={{
+          width: '52px', height: '42px', borderRadius: '5px', overflow: 'hidden',
+          flexShrink: 0, backgroundColor: '#F0F0F0'
+        }}>
+          {thumbnailContent}
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {/* Label / rename input */}
+          {isRenaming ? (
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={e => onRenameChange(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); onRenameSubmit() }
+                if (e.key === 'Escape') { e.preventDefault(); onRenameCancel() }
+              }}
+              onBlur={onRenameSubmit}
+              onClick={e => e.stopPropagation()}
+              style={{
+                fontSize: '13px', fontWeight: 500, color: '#1D1D1F',
+                border: '1px solid rgba(0,0,0,0.15)', borderRadius: '4px',
+                padding: '1px 5px', outline: 'none', background: '#FFFFFF',
+                fontFamily: 'var(--font-sans)', width: '100%'
+              }}
+            />
+          ) : (
+            <span style={{
+              fontSize: '13px', fontWeight: isActive ? 500 : 400,
+              color: isActive ? '#1D1D1F' : '#3C3C3E',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              display: 'block'
+            }}>
+              {label}
+            </span>
+          )}
+
+          {/* Color dots row */}
+          {!isRenaming && topColors.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {topColors.map((c, i) => (
+                  <div key={i} style={{
+                    width: '7px', height: '7px', borderRadius: '50%',
+                    backgroundColor: c.hex || '#CCCCCC',
+                    border: '1.5px solid #FFFFFF',
+                    boxShadow: '0 0 0 0.5px rgba(0,0,0,0.06)',
+                    marginLeft: i === 0 ? 0 : '-2px',
+                    flexShrink: 0
+                  }} />
+                ))}
+              </div>
+              {topColors.slice(0, 2).map((c, i) => (
+                <span key={i} style={{ fontSize: '10px', color: '#AEAEB2', marginLeft: i === 0 ? '4px' : '0', letterSpacing: '0.01em' }}>
+                  {c.hex || ''}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </button>
-      {/* Pin button appears on hover */}
-      {(hovered || isPinned) && (
+
+      {/* ⋯ context menu trigger */}
+      {(hovered || contextMenuOpen) && !isRenaming && (
         <button
-          onClick={e => { e.stopPropagation(); onPin() }}
-          title={isPinned ? '取消收藏' : '收藏'}
+          onClick={onContextMenu}
           style={{
             position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
-            width: '20px', height: '20px', border: 'none', background: 'none',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: isPinned ? '#FF9500' : '#C7C7CC', transition: 'color 0.15s', padding: 0
+            width: '22px', height: '22px', border: 'none',
+            background: contextMenuOpen ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.04)',
+            borderRadius: '5px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#3C3C3E', transition: 'background 0.1s', padding: 0
           }}
-          onMouseEnter={e => e.currentTarget.style.color = '#FF9500'}
-          onMouseLeave={e => e.currentTarget.style.color = isPinned ? '#FF9500' : '#C7C7CC'}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.08)'}
+          onMouseLeave={e => e.currentTarget.style.background = contextMenuOpen ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.04)'}
         >
-          <Star size={13} strokeWidth={isPinned ? 0 : 1.5} fill={isPinned ? '#FF9500' : 'none'} />
+          <MoreHorizontal size={13} strokeWidth={2} />
         </button>
+      )}
+
+      {/* Context menu dropdown */}
+      {contextMenuOpen && (
+        <div style={{
+          position: 'absolute', right: '6px', top: 'calc(100% + 4px)',
+          backgroundColor: '#FFFFFF', borderRadius: '10px', zIndex: 50,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)',
+          padding: '5px', minWidth: '160px',
+          animation: 'slideDown 0.15s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}>
+          <ContextMenuItem
+            label={isPinned ? '取消置顶' : '置顶'}
+            icon={<Pin size={13} strokeWidth={1.8} />}
+            onClick={e => { e.stopPropagation(); onPin() }}
+          />
+          <ContextMenuItem
+            label="重命名"
+            icon={<span style={{ fontSize: '13px', lineHeight: 1 }}>✎</span>}
+            onClick={e => { e.stopPropagation(); onStartRename() }}
+          />
+          <div style={{ height: '1px', backgroundColor: 'rgba(0,0,0,0.06)', margin: '4px 0' }} />
+          <ContextMenuItem
+            label="删除"
+            icon={<X size={13} strokeWidth={2} />}
+            danger
+            onClick={e => { e.stopPropagation(); onDelete() }}
+          />
+        </div>
       )}
     </div>
   )
 }
 
+function ContextMenuItem({ label, icon, onClick, danger = false }: {
+  label: string, icon: React.ReactNode, onClick: (e: React.MouseEvent) => void, danger?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: '100%', padding: '7px 10px', border: 'none', borderRadius: '6px',
+        background: 'transparent', cursor: 'pointer', textAlign: 'left',
+        display: 'flex', alignItems: 'center', gap: '8px',
+        fontSize: '13px', fontWeight: 500,
+        color: danger ? '#FF3B30' : '#1D1D1F',
+        fontFamily: 'var(--font-sans)', transition: 'background 0.1s'
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = danger ? 'rgba(255,59,48,0.06)' : 'rgba(0,0,0,0.04)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >
+      <span style={{ opacity: 0.7, display: 'flex', alignItems: 'center' }}>{icon}</span>
+      {label}
+    </button>
+  )
+}
+
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ padding: '12px 12px', textAlign: 'left', fontSize: '13px', color: '#8E8E93', lineHeight: 1.5 }}>
+    <div style={{ padding: '10px 12px', textAlign: 'left', fontSize: '12px', color: '#AEAEB2', lineHeight: 1.5 }}>
       {children}
     </div>
   )

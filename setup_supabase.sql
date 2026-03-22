@@ -31,3 +31,7 @@ WITH CHECK ( auth.uid() = user_id );
 CREATE POLICY "Users can delete their own records"
 ON public.style_records FOR DELETE
 USING ( auth.uid() = user_id );
+
+-- 性能索引：加速按用户查询和时间排序
+CREATE INDEX IF NOT EXISTS idx_style_records_user_id ON public.style_records (user_id);
+CREATE INDEX IF NOT EXISTS idx_style_records_user_created ON public.style_records (user_id, created_at DESC);

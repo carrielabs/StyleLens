@@ -16,6 +16,15 @@ export async function POST(req: Request) {
       )
     }
 
+    // Guard against oversized uploads (20MB base64 ≈ ~15MB raw image)
+    const MAX_BASE64_BYTES = 20 * 1024 * 1024
+    if (body.imageBase64 && Buffer.byteLength(body.imageBase64, 'utf8') > MAX_BASE64_BYTES) {
+      return NextResponse.json(
+        { success: false, error: '图片文件过大，请上传 20MB 以内的图片' },
+        { status: 413 }
+      )
+    }
+
     const report = await extractStyleWithAI(body)
 
     // Attempt to save to library (will only persist if user is logged in)
@@ -32,15 +41,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error('Final Extraction Error Interface:', error)
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || 'Failed to extract style',
-        debug: {
-          message: error.message,
-          stack: error.stack,
-          name: error.name
-        }
-      },
+      { success: false, error: error.message || '提取失败，请重试' },
       { status: 500 }
     )
   }

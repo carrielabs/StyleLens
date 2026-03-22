@@ -8,14 +8,14 @@
   --bg-surface: #FBFBFD;
   --bg-elevated: #F2F2F7;
   --bg-hover: rgba(0, 0, 0, 0.04);
-  
+
   /* Text Tokens */
   --text-primary: #1D1D1F;
   --text-secondary: #86868B;
   --text-tertiary: #A1A1A6;
   --text-error: #FF3B30;
   --text-success: #34C759;
-  
+
   /* Accent & Others */
   --brand-primary: #1D1D1F;
   --brand-blue: #007AFF;
@@ -43,7 +43,8 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Global Animations */
+/* ── Global Animations ───────────────────────────────────── */
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -60,21 +61,54 @@ body {
 }
 
 @keyframes overlayFade {
-  from { opacity: 0; backdrop-filter: blur(0px); }
-  to { opacity: 1; backdrop-filter: blur(20px); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes tooltipPop { 
-  0% { opacity: 0; transform: translateX(-50%) translateY(10px); } 
-  100% { opacity: 1; transform: translateX(-50%) translateY(0); } 
+/* Search modal dialog — slides in from slightly above */
+@keyframes searchModalIn {
+  0%  { opacity: 0; transform: scale(0.97) translateY(-6px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+/* Generic modal pop (used by lightbox etc.) — no translateX, just scale+fade */
+@keyframes tooltipPop {
+  0%   { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0); }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Upload icon floats up on hover */
+@keyframes uploadIconFloat {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+
+/* Scanning light sweep — used over image preview during extraction */
+@keyframes scanOverlay {
+  0%   { left: -60%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { left: 110%; opacity: 0; }
+}
+
+/* Undo toast slides up from bottom */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }

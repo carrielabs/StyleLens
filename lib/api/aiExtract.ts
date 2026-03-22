@@ -153,10 +153,18 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
 
   if (req.imageBase64) {
     console.log('[aiExtract] Using provided imageBase64')
-    base64Data = req.imageBase64
-    mimeType = req.imageBase64.startsWith('/9j/') || req.imageBase64.includes('jpeg')
-      ? 'image/jpeg'
-      : req.imageBase64.startsWith('iVBOR') ? 'image/png' : 'image/jpeg'
+    if (req.imageBase64.startsWith('data:')) {
+      // Strip data URL prefix: "data:image/jpeg;base64,/9j/..." → pure base64
+      const [header, b64] = req.imageBase64.split(',')
+      const mimeMatch = header.match(/data:([^;]+)/)
+      mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg'
+      base64Data = b64
+    } else {
+      base64Data = req.imageBase64
+      mimeType = req.imageBase64.startsWith('/9j/') || req.imageBase64.includes('jpeg')
+        ? 'image/jpeg'
+        : req.imageBase64.startsWith('iVBOR') ? 'image/png' : 'image/jpeg'
+    }
   } else if (req.screenshotUrl) {
     console.log(`[aiExtract] Handling screenshotUrl: ${req.screenshotUrl.slice(0, 50)}`)
     const { data, mediaType } = await fetchImageAsBase64(req.screenshotUrl)
@@ -178,7 +186,7 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
   for (let i = 0; i < geminiKeys.length; i++) {
     const apiKey = geminiKeys[i]
     try {
-      console.log(`[Attempt ${i + 1}/${geminiKeys.length}] Style extraction with Gemini 1.5 Flash...`)
+      console.log(`[Attempt ${i + 1}/${geminiKeys.length}] Style extraction with Gemini 2.5 Flash...`)
       
       const genAI = new GoogleGenerativeAI(apiKey)
       const model = genAI.getGenerativeModel({

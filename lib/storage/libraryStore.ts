@@ -73,10 +73,40 @@ export async function fetchLibrary(sort: SortOrder = 'newest', supabaseIn?: any)
       .from('style_records')
       .select('*')
       .order('created_at', { ascending: sort === 'oldest' })
-    
+
     if (error) throw error
     return { data }
   } catch (err: any) {
     return { data: null, error: err.message }
+  }
+}
+
+export async function deleteFromLibrary(id: string, supabaseIn?: any): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = supabaseIn || createClient()
+    const { error } = await supabase
+      .from('style_records')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+    return { success: true }
+  } catch (err: any) {
+    console.error('Library delete error', err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function renameInLibrary(id: string, newLabel: string, supabaseIn?: any): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = supabaseIn || createClient()
+    const { error } = await supabase
+      .from('style_records')
+      .update({ source_label: newLabel })
+      .eq('id', id)
+    if (error) throw error
+    return { success: true }
+  } catch (err: any) {
+    console.error('Library rename error', err)
+    return { success: false, error: err.message }
   }
 }
