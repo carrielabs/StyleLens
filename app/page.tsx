@@ -1,25 +1,38 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin, PinOff, PencilLine, Trash2, ChevronDown, SidebarClose, SidebarOpen, ArrowUp } from 'lucide-react'
-import StyleReportView from '@/components/report/StyleReport'
-import AuthOverlay from '@/components/auth/AuthOverlay'
+import type { ClipboardEvent, DragEvent, FormEvent } from 'react'
+import HomeOverlays from '@/components/home/HomeOverlays'
+import HomeSidebar from '@/components/home/HomeSidebar'
+import HomeWorkspace from '@/components/home/HomeWorkspace'
+import {
+  clearGuestHistory,
+  clearGuestMigrationSnapshot,
+  getGuestHistory,
+  getGuestMigrationSnapshot,
+  saveGuestHistory,
+} from '@/lib/storage/guestStore'
 import { createClient } from '@/lib/storage/supabaseClient'
 import { deleteFromLibrary, renameInLibrary } from '@/lib/storage/libraryStore'
 import { getGreeting, GreetingData } from '@/lib/utils/greeting'
 import type { StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
-// ── Color role priority for sidebar dots ──
-const COLOR_ROLE_ORDER = ['background', 'primary', 'accent', 'secondary', 'text', 'other']
-function getTopColors(colors: any[]): any[] {
-  if (!colors || !Array.isArray(colors)) return []
-  const sorted = [...colors].sort((a, b) => {
-    const ai = COLOR_ROLE_ORDER.indexOf((a.role || 'other').toLowerCase())
-    const bi = COLOR_ROLE_ORDER.indexOf((b.role || 'other').toLowerCase())
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
-  })
-  return sorted.slice(0, 3)
+const GUEST_TRIAL_KEY = 'stylelens_trial_used'
+
+function buildGuestCacheRecord(record: {
+  user_id: string | null
+  source_label: string
+  style_data: StyleReport
+  thumbnail_url: string | null
+  created_at: string
+}) {
+  return {
+    ...record,
+    id: 'guest_1',
+    thumbnail_url: record.thumbnail_url,
+    style_data: record.style_data,
+  }
 }
 
 export default function Home() {
@@ -30,13 +43,13 @@ export default function Home() {
   const [report, setReport] = useState<StyleReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reportLang, setReportLang] = useState<'zh' | 'en'>('zh')
-  const [extractionProgress, setExtractionProgress] = useState(0)
 
   // ── Auth state ──
   const [isAuthVisible, setIsAuthVisible] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [guestTrialUsed, setGuestTrialUsed] = useState(false)
+  const [isAuthResolved, setIsAuthResolved] = useState(false)
 
   // ── Sidebar state ──
   const [extractions, setExtractions] = useState<any[]>([])
@@ -45,7 +58,6 @@ export default function Home() {
   const [modalSearchQuery, setModalSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
-  const isNewSelected = !activeItemId && !isSearchOpen
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState('')
 
@@ -74,11 +86,78 @@ export default function Home() {
   const [greeting, setGreeting] = useState<GreetingData | null>(null)
 
   const historyLoadedRef = useRef(false)
+  const currentHistoryUserIdRef = useRef<string | null>(null)
+  const hasLoadedExtractionsRef = useRef(false)
   const extractAbortRef = useRef<AbortController | null>(null)
+  const guestMigrationInFlightRef = useRef<Promise<void> | null>(null)
+  const lastGuestMigrationKeyRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+
+  const migrateGuestHistoryToAccount = async (userId: string) => {
+    const snapshotRecord = getGuestMigrationSnapshot()
+    const guestHistory = snapshotRecord ?? await getGuestHistory().catch(() => null)
+    if (!guestHistory) {
+      return
+    }
+
+    const migrationKey = [userId, guestHistory.source_label, guestHistory.created_at].join('::')
+
+    if (lastGuestMigrationKeyRef.current === migrationKey) {
+      return
+    }
+
+    if (guestMigrationInFlightRef.current) {
+      await guestMigrationInFlightRef.current
+      return
+    }
+
+    const payload = {
+      user_id: userId,
+      source_label: guestHistory.source_label,
+      style_data: guestHistory.style_data,
+      thumbnail_url: guestHistory.thumbnail_url,
+      created_at: guestHistory.created_at,
+    }
+
+    const migrationTask = (async () => {
+      try {
+        const { data: existingRecords, error: existingError } = await supabase
+          .from('style_records')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('source_label', payload.source_label)
+          .eq('created_at', payload.created_at)
+          .limit(1)
+
+        if (existingError) throw existingError
+
+        if (existingRecords && existingRecords.length > 0) {
+          clearGuestMigrationSnapshot()
+          lastGuestMigrationKeyRef.current = migrationKey
+          return
+        }
+
+        const { error } = await supabase
+          .from('style_records')
+          .insert([payload])
+
+        if (error) throw error
+
+        clearGuestMigrationSnapshot()
+        lastGuestMigrationKeyRef.current = migrationKey
+      } catch (err: any) {
+        console.error('Failed to migrate guest history:', err?.message || err)
+      } finally {
+        guestMigrationInFlightRef.current = null
+      }
+    })()
+
+    guestMigrationInFlightRef.current = migrationTask
+    await migrationTask
+  }
 
   // ── Modal Background Lock ──
   useEffect(() => {
@@ -92,39 +171,38 @@ export default function Home() {
 
   // ── Auth listener (stable, empty deps) ──
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session) {
-        // Migrate guest history if exists
-        const guestHistory = localStorage.getItem('stylelens_guest_history')
-        if (guestHistory) {
-          localStorage.removeItem('stylelens_guest_history')
-          localStorage.removeItem('stylelens_trial_used')
-          setGuestTrialUsed(false)
-        }
-        if (!historyLoadedRef.current) {
-          historyLoadedRef.current = true
-          loadHistory(session.user.id)
-        }
-      } else {
-        const trialValue = localStorage.getItem('stylelens_trial_used') === 'true'
-        setGuestTrialUsed(trialValue)
-        loadHistory('') // Load guest history if any
-      }
-    })
+    const syncSession = async (session: { user: User } | null) => {
+      try {
+        setUser(session?.user ?? null)
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session) {
-        setIsAuthVisible(false)
-        if (!historyLoadedRef.current) {
+        if (session) {
+          const sameUser = currentHistoryUserIdRef.current === session.user.id
+          const shouldSkipRefresh = sameUser && historyLoadedRef.current && hasLoadedExtractionsRef.current
+          if (shouldSkipRefresh) return
+
+          setIsAuthVisible(false)
+          currentHistoryUserIdRef.current = session.user.id
+
+          await migrateGuestHistoryToAccount(session.user.id)
+          await loadHistory(session.user.id)
           historyLoadedRef.current = true
-          loadHistory(session.user.id)
+        } else {
+          const trialValue = localStorage.getItem(GUEST_TRIAL_KEY) === 'true'
+          setGuestTrialUsed(trialValue)
+          historyLoadedRef.current = false
+          currentHistoryUserIdRef.current = null
+          await loadHistory('')
         }
-      } else {
-        setExtractions([])
-        historyLoadedRef.current = false
+      } finally {
+        setIsAuthResolved(true)
       }
+    }
+
+    void supabase.auth.getSession().then(({ data: { session } }) => syncSession(session))
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') return
+      void syncSession(session)
     })
 
     return () => {
@@ -151,9 +229,9 @@ export default function Home() {
           if (file) files.push(file);
         }
       }
-      
+
       if (files.length > 0) {
-        if (!user) {
+        if (!user && guestTrialUsed) {
           setIsAuthVisible(true);
           return;
         }
@@ -168,7 +246,7 @@ export default function Home() {
 
     window.addEventListener('paste', handleGlobalPaste);
     return () => window.removeEventListener('paste', handleGlobalPaste);
-  }, [user]);
+  }, [guestTrialUsed, user]);
 
   // ── Update Greeting when user changes ──
   useEffect(() => {
@@ -177,6 +255,10 @@ export default function Home() {
     const timer = setInterval(() => setGreeting(getGreeting(user?.email)), 60000)
     return () => clearInterval(timer)
   }, [user])
+
+  useEffect(() => {
+    hasLoadedExtractionsRef.current = extractions.length > 0
+  }, [extractions.length])
 
   // ── Keyboard & click-outside handler ──
   useEffect(() => {
@@ -204,34 +286,21 @@ export default function Home() {
     }
   }, [report, isSearchOpen, contextMenuId, renamingId])
 
-  useEffect(() => {
-    if (report) {}
-  }, [report])
-
-  // ── Extraction Progress Timer ──
-  useEffect(() => {
-    let interval: any
-    if (isExtracting && !report) {
-      setExtractionProgress(0)
-      interval = setInterval(() => {
-        setExtractionProgress(prev => prev >= 95 ? 95 : prev + 1)
-      }, 150)
-    } else {
-      setExtractionProgress(0)
-      if (interval) clearInterval(interval)
-    }
-    return () => { if (interval) clearInterval(interval) }
-  }, [isExtracting, report])
-
   // ── Data loading ──
   const loadHistory = async (userId: string) => {
-    setIsLoadingHistory(true)
+    if (!hasLoadedExtractionsRef.current) {
+      setIsLoadingHistory(true)
+    }
     try {
       if (!userId) {
         // Load guest record if any
-        const guestJson = localStorage.getItem('stylelens_guest_history')
-        if (guestJson) {
-          setExtractions([JSON.parse(guestJson)])
+        const guestRecord = await getGuestHistory().catch(err => {
+          console.warn('Failed to read guest history from IndexedDB:', err)
+          return null
+        })
+
+        if (guestRecord) {
+          setExtractions([guestRecord])
         } else {
           setExtractions([])
         }
@@ -256,20 +325,30 @@ export default function Home() {
   const saveExtraction = async (report: StyleReport, thumb?: string) => {
     const record = {
       user_id: user?.id || null,
-      source_url: url.trim(),
       source_label: report.sourceLabel || url.trim().replace(/^https?:\/\//, '').replace(/\/$/, ''),
       style_data: report,
       thumbnail_url: thumb || report.thumbnailUrl || null,
-      is_pinned: false,
       created_at: new Date().toISOString()
     }
 
     if (!user) {
-      // Guest Save
-      localStorage.setItem('stylelens_trial_used', 'true')
-      localStorage.setItem('stylelens_guest_history', JSON.stringify({ ...record, id: 'guest_1' }))
-      setGuestTrialUsed(true)
-      loadHistory('') // Refresh guest list locally
+      const guestRecord = { ...record, id: 'guest_1' }
+      const guestCacheRecord = buildGuestCacheRecord(record)
+
+      // Keep the current session fully usable even if localStorage needs a lighter payload.
+      setExtractions([guestRecord])
+
+      try {
+        await saveGuestHistory(guestCacheRecord)
+        localStorage.setItem(GUEST_TRIAL_KEY, 'true')
+        setGuestTrialUsed(true)
+      } catch (err) {
+        console.warn('Failed to persist guest history to IndexedDB:', err)
+        await clearGuestHistory().catch(() => undefined)
+        localStorage.removeItem(GUEST_TRIAL_KEY)
+        setGuestTrialUsed(false)
+      }
+
       return
     }
 
@@ -355,7 +434,26 @@ export default function Home() {
 
     setRenamingId(null)
     setRenameValue('')
-    await renameInLibrary(id, trimmed, supabase)
+
+    if (!user) {
+      const renamedRecord = extractions.find(e => e.id === id)
+      if (renamedRecord) {
+        await saveGuestHistory({
+          ...renamedRecord,
+          id,
+          source_label: trimmed,
+        }).catch((err) => {
+          console.error('Guest rename error', err)
+          setError('游客历史重命名失败')
+        })
+      }
+      return
+    }
+
+    const result = await renameInLibrary(id, trimmed, supabase)
+    if (!result.success) {
+      setError(result.error || '重命名失败')
+    }
   }
 
   const cancelRename = () => {
@@ -391,7 +489,7 @@ export default function Home() {
     reader.onerror = error => reject(error)
   })
 
-  const handleUrlSubmit = async (e?: React.FormEvent) => {
+  const handleUrlSubmit = async (e?: FormEvent) => {
     if (e) e.preventDefault()
     if (!url.trim() || isExtracting) return
 
@@ -419,7 +517,7 @@ export default function Home() {
       if (!ssData.success) throw new Error(ssData.error || '截图失败')
 
       let label = url.trim()
-      try { label = new URL(url.trim()).hostname.replace(/^www\./, '') } catch (e) {}
+      try { label = new URL(url.trim()).hostname.replace(/^www\./, '') } catch {}
 
       const result = await callExtractAPI({ screenshotUrl: ssData.screenshotUrl, sourceLabel: label }, abort.signal)
       result.thumbnailUrl = ssData.screenshotUrl
@@ -493,14 +591,14 @@ export default function Home() {
     setPendingPreviewUrl(null)
   }
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
     const file = e.dataTransfer.files[0]
     if (file) handleFilePreview(file)
   }
 
-  const handlePaste = async (e: React.ClipboardEvent) => {
+  const handlePaste = async (e: ClipboardEvent) => {
     const items = e.clipboardData.items
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf('image') !== -1) {
@@ -509,15 +607,6 @@ export default function Home() {
         break
       }
     }
-  }
-
-  // ── Helpers ──
-  const getInitials = (email: string) => email.charAt(0).toUpperCase()
-  const getAvatarColor = (email: string) => {
-    const colors = ['#FF9500', '#FF2D55', '#5856D6', '#34C759', '#007AFF', '#AF52DE']
-    let hash = 0
-    for (let i = 0; i < email.length; i++) hash = email.charCodeAt(i) + ((hash << 5) - hash)
-    return colors[Math.abs(hash) % colors.length]
   }
 
   const allFiltered = extractions.filter(item =>
@@ -530,7 +619,8 @@ export default function Home() {
   const recentList = allFiltered.filter(item => !item.style_data?.__pinned)
 
   // ── Upload zone state derivation ──
-  const uploadState = isExtracting
+  const isImageExtraction = Boolean(pendingFile || pendingPreviewUrl)
+  const uploadState = isImageExtraction && isExtracting
     ? 'extracting'
     : pendingFile
     ? 'selected'
@@ -546,6 +636,13 @@ export default function Home() {
         @keyframes scan {
           0% { left: -40%; }
           100% { left: 100%; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 0.8s linear infinite;
         }
         .animate-scan {
           animation: scan 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
@@ -582,1085 +679,106 @@ export default function Home() {
         fontFamily: 'var(--font-sans)', WebkitFontSmoothing: 'antialiased' as any,
         userSelect: 'none', overflow: 'hidden', backgroundColor: '#FFFFFF'
       }}>
+        <HomeSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          isSearchOpen={isSearchOpen}
+          pinnedCollapsed={pinnedCollapsed}
+          setPinnedCollapsed={setPinnedCollapsed}
+          historyCollapsed={historyCollapsed}
+          setHistoryCollapsed={setHistoryCollapsed}
+          pinnedList={pinnedList}
+          recentList={recentList}
+          activeItemId={activeItemId}
+          contextMenuId={contextMenuId}
+          setContextMenuId={setContextMenuId}
+          renamingId={renamingId}
+          renameValue={renameValue}
+          setRenameValue={setRenameValue}
+          showUserMenu={showUserMenu}
+          setShowUserMenu={setShowUserMenu}
+          user={user}
+          isLoadingHistory={isLoadingHistory}
+          isAuthResolved={isAuthResolved}
+          searchQuery={searchQuery}
+          setIsSearchOpen={setIsSearchOpen}
+          setModalSearchQuery={setModalSearchQuery}
+          setActiveItemId={setActiveItemId}
+          setReport={setReport}
+          setError={setError}
+          setUrl={setUrl}
+          clearPendingFile={clearPendingFile}
+          urlInputRef={urlInputRef}
+          searchInputRef={searchInputRef}
+          togglePin={togglePin}
+          deleteItem={deleteItem}
+          startRename={startRename}
+          submitRename={submitRename}
+          cancelRename={cancelRename}
+          supabase={supabase}
+          setIsAuthVisible={setIsAuthVisible}
+        />
 
-      {/* ══════════════════════════════════════════
-          SIDEBAR
-      ══════════════════════════════════════════ */}
-      <aside style={{
-        width: sidebarOpen ? '270px' : '48px', flexShrink: 0, display: 'flex', flexDirection: 'column',
-        backgroundColor: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.06)',
-        overflow: 'hidden', transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-      }}>
-        {/* Brand wordmark + sidebar toggle */}
-        <div style={{
-          padding: sidebarOpen ? '22px 16px 14px' : '18px 10px 14px',
-          display: 'flex', alignItems: 'center',
-          justifyContent: sidebarOpen ? 'space-between' : 'center',
-          flexShrink: 0, minWidth: sidebarOpen ? '270px' : '48px'
-        }}>
-          {sidebarOpen && (
-            <span
-              onClick={() => {
-                setActiveItemId(null);
-                setIsSearchOpen(false);
-                setReport(null);
-                setError(null);
-                setUrl('');
-                clearPendingFile();
-                setShowUserMenu(false);
-                setContextMenuId(null);
-                setTimeout(() => urlInputRef.current?.focus(), 50);
-              }}
-              style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', letterSpacing: '-0.025em', whiteSpace: 'nowrap', cursor: 'pointer' }}
-            >
-              StyleLens
-            </span>
-          )}
-          <button
-            onClick={() => setSidebarOpen(v => !v)}
-            title={sidebarOpen ? '收起侧边栏' : '展开侧边栏'}
-            style={{
-              width: '28px', height: '28px', border: 'none', background: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: '6px', color: 'rgba(0,0,0,0.5)', transition: 'all 0.15s', flexShrink: 0
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = 'rgba(0,0,0,0.75)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'rgba(0,0,0,0.5)' }}
-          >
-            {sidebarOpen
-              ? <SidebarClose size={16} strokeWidth={1.6} />
-              : <SidebarOpen size={16} strokeWidth={1.6} />
-            }
-          </button>
-        </div>
+        <HomeWorkspace
+          activeItemId={activeItemId}
+          report={report}
+          isExtracting={isExtracting}
+          extractions={extractions}
+          reportLang={reportLang}
+          setReportLang={setReportLang}
+          setLightboxUrl={setLightboxUrl}
+          setIsLightboxOpen={setIsLightboxOpen}
+          error={error}
+          setError={setError}
+          greeting={greeting}
+          handleUrlSubmit={handleUrlSubmit}
+          urlInputRef={urlInputRef}
+          url={url}
+          setUrl={setUrl}
+          pendingFile={pendingFile}
+          pendingPreviewUrl={pendingPreviewUrl}
+          uploadState={uploadState}
+          isDragging={isDragging}
+          setIsDragging={setIsDragging}
+          setUploadZoneHovered={setUploadZoneHovered}
+          handleDrop={handleDrop}
+          user={user}
+          guestTrialUsed={guestTrialUsed}
+          fileInputRef={fileInputRef}
+          setIsAuthVisible={setIsAuthVisible}
+          handlePaste={handlePaste}
+          handleExtractFile={handleExtractFile}
+          clearPendingFile={clearPendingFile}
+          cancelExtraction={cancelExtraction}
+          handleFilePreview={handleFilePreview}
+        />
 
-        {/* Top Actions */}
-        <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '48px' }}>
-          <SidebarBtn
-            icon={<Plus size={15} strokeWidth={2} />}
-            label="New Extraction"
-            collapsed={!sidebarOpen}
-            active={false}
-            onClick={() => {
-              setIsSearchOpen(false)
-              setReport(null)
-              setActiveItemId(null)
-              setError(null)
-              setUrl('')
-              clearPendingFile()
-              setShowUserMenu(false) // Close user menu on new extraction
-              setContextMenuId(null) // Close any open context menu
-              setTimeout(() => urlInputRef.current?.focus(), 50)
-            }}
-          />
-          <SidebarBtn
-            icon={<Search size={15} strokeWidth={2} />}
-            label="Search"
-            collapsed={!sidebarOpen}
-            active={isSearchOpen}
-            onClick={() => {
-              setIsSearchOpen(true)
-              setModalSearchQuery('') // Reset modal search on open
-              setTimeout(() => searchInputRef.current?.focus(), 100)
-            }}
-          />
-        </div>
-
-        {/* Pinned section — hidden when icon-strip mode */}
-        {sidebarOpen && pinnedList.length > 0 && (
-          <>
-            <SectionHeader label="Pinned" collapsed={pinnedCollapsed} onToggle={() => setPinnedCollapsed(v => !v)} />
-            {!pinnedCollapsed && (
-              <div className="no-scrollbar" style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                {pinnedList.map(item => (
-                  <HistoryItem
-                    key={item.id}
-                    id={item.id}
-                    label={item.source_label || 'Untitled'}
-                    thumbnailUrl={item.thumbnail_url}
-                    colors={item.style_data?.colors || []}
-                    isActive={activeItemId === item.id}
-                    isPinned={true}
-                    contextMenuOpen={contextMenuId === item.id}
-                    renamingId={renamingId}
-                    renameValue={renameValue}
-                    onRenameChange={setRenameValue}
-                    onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null); setShowUserMenu(false) }}
-                    onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
-                    onPin={() => togglePin(item.id)}
-                    onDelete={() => deleteItem(item.id)}
-                    onStartRename={() => startRename(item.id, item.source_label || 'Untitled')}
-                    onRenameSubmit={() => submitRename(item.id)}
-                    onRenameCancel={cancelRename}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* History section — hidden when icon-strip mode */}
-        {sidebarOpen && <SectionHeader label="History" collapsed={historyCollapsed} onToggle={() => setHistoryCollapsed(v => !v)} />}
-
-        <div className="no-scrollbar" style={{ flex: 1, overflowY: sidebarOpen ? 'auto' : 'hidden', padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-          {!sidebarOpen ? null : historyCollapsed ? null : !user ? (
-            <EmptyState>登录后查看历史记录</EmptyState>
-          ) : isLoadingHistory ? (
-            <div style={{ padding: '8px 4px' }}>
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} style={{
-                  height: '50px', borderRadius: '8px', marginBottom: '2px',
-                  backgroundColor: 'rgba(0,0,0,0.04)', animation: 'pulse 1.5s infinite'
-                }} />
-              ))}
-            </div>
-          ) : recentList.length === 0 ? (
-            <EmptyState>
-              {searchQuery ? '未找到匹配记录' : '暂无历史记录'}
-            </EmptyState>
-          ) : (
-            recentList.map(item => (
-              <HistoryItem
-                key={item.id}
-                id={item.id}
-                label={item.source_label || '未命名分析'}
-                thumbnailUrl={item.thumbnail_url}
-                colors={item.style_data?.colors || []}
-                isActive={activeItemId === item.id}
-                isPinned={false}
-                contextMenuOpen={contextMenuId === item.id}
-                renamingId={renamingId}
-                renameValue={renameValue}
-                onRenameChange={setRenameValue}
-                    onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null); setShowUserMenu(false) }}
-                    onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
-                onPin={() => togglePin(item.id)}
-                onDelete={() => deleteItem(item.id)}
-                onStartRename={() => startRename(item.id, item.source_label || '未命名分析')}
-                onRenameSubmit={() => submitRename(item.id)}
-                onRenameCancel={cancelRename}
-              />
-            ))
-          )}
-        </div>
-
-        {/* User footer */}
-        <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(0,0,0,0.06)', position: 'relative' }}>
-          {showUserMenu && user && (
-            <div style={{
-              position: 'absolute', bottom: '100%', left: '10px', right: '10px', marginBottom: '6px',
-              backgroundColor: '#FFFFFF', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
-              border: '1px solid rgba(0,0,0,0.06)', padding: '6px', zIndex: 50, animation: 'slideUp 0.15s ease-out'
-            }}>
-              <div style={{ padding: '8px 12px 6px', fontSize: '11px', color: '#8E8E93', borderBottom: '1px solid rgba(0,0,0,0.04)', marginBottom: '4px' }}>
-                {user.email}
-              </div>
-              <button
-                onClick={async () => { await supabase.auth.signOut(); setShowUserMenu(false) }}
-                style={{
-                  width: '100%', padding: '7px 12px', textAlign: 'left', border: 'none',
-                  backgroundColor: 'transparent', color: '#1D1D1F', fontSize: '13px', fontWeight: 400,
-                  cursor: 'pointer', borderRadius: '8px', fontFamily: 'var(--font-sans)', transition: 'background 0.1s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,59,48,0.05)'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                退出登录
-              </button>
-            </div>
-          )}
-
-          <div
-            className="user-menu-trigger"
-            onClick={e => {
-              e.stopPropagation()
-              setContextMenuId(null)
-              if (!user) setIsAuthVisible(true)
-              else setShowUserMenu(!showUserMenu)
-            }}
-            title={!sidebarOpen ? (user ? (user.email?.split('@')[0] || 'User') : '登录 / 注册') : undefined}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'flex-start' : 'center',
-              gap: '8px', padding: sidebarOpen ? '6px 10px' : '8px 0',
-              borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s',
-              backgroundColor: showUserMenu ? 'rgba(0,0,0,0.04)' : 'transparent',
-            }}
-            onMouseEnter={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)')}
-            onMouseLeave={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'transparent')}
-          >
-            {user ? (
-              <img
-                src={user.user_metadata?.avatar_url || user.user_metadata?.picture || `https://ui-avatars.com/api/?name=${user.email}&background=f4f4f5&color=1d1d1f&size=64`}
-                style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, border: '1px solid rgba(0,0,0,0.05)' }}
-                alt="avatar"
-              />
-            ) : (
-              <UserIcon size={16} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
-            )}
-            {sidebarOpen && (
-              <span style={{ fontSize: '14px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--font-sans)', marginLeft: '4px' }}>
-                {user ? (user.email?.split('@')[0] || 'User') : 'Log in'}
-              </span>
-            )}
-          </div>
-        </div>
-      </aside>
-
-      {/* ══════════════════════════════════════════
-          MAIN WORKSPACE
-      ══════════════════════════════════════════ */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FFFFFF', overflow: 'hidden', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-
-        {/* Help icon */}
-        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
-          <HelpCircle size={18} strokeWidth={1} style={{ color: '#C7C7CC', cursor: 'pointer', transition: 'color 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#8E8E93'}
-            onMouseLeave={e => e.currentTarget.style.color = '#C7C7CC'}
-          />
-        </div>
-
-        {/* ── 1. History Page View (Active) ── */}
-        {activeItemId && report && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
-
-            <div className="no-scrollbar" style={{
-              width: '40%', height: '100%', backgroundColor: '#FFFFFF',
-              position: 'relative'
-            }}>
-              <div className="scroll-mask-top" />
-              <div style={{ height: '100%', overflowY: 'auto', padding: '64px 40px 40px', overscrollBehavior: 'contain' }} className="no-scrollbar">
-                <div
-                  onClick={() => { setLightboxUrl((report as any).screenshotUrl || (report as any).thumbnailUrl); setIsLightboxOpen(true) }}
-                  style={{
-                    cursor: 'zoom-in', borderRadius: '16px', overflow: 'hidden',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.06)', transition: 'transform 0.2s'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <img
-                    src={(report as any).screenshotUrl || (report as any).thumbnailUrl}
-                    alt="Source"
-                    style={{ width: '100%', display: 'block' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Content Panel */}
-            <div className="no-scrollbar" style={{ flex: 1, height: '100%', overflowY: 'auto', backgroundColor: '#FFFFFF', position: 'relative' }}>
-              <div className="scroll-mask-top" />
-              <div style={{
-                position: 'sticky', top: 0, backgroundColor: 'rgba(255,255,255,0.9)',
-                backdropFilter: 'blur(8px)', zIndex: 10, padding: '24px 48px 16px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {(['zh', 'en'] as const).map(l => (
-                    <button key={l} onClick={() => setReportLang(l)} style={{
-                      fontSize: '11px', fontWeight: reportLang === l ? 700 : 500,
-                      border: 'none', background: 'none', cursor: 'pointer',
-                      color: reportLang === l ? '#1D1D1F' : '#A1A1A6',
-                      padding: '2px 6px', transition: 'color 0.2s'
-                    }}>
-                      {l === 'zh' ? '中文' : 'EN'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ padding: '0 48px 80px' }}>
-                <h1 style={{
-                  fontSize: '32px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 40px 0',
-                  lineHeight: 1.1, letterSpacing: '-0.03em'
-                }}>
-                  {extractions.find(e => e.id === activeItemId)?.source_label || report.sourceLabel}
-                </h1>
-                <StyleReportView report={report} lang={reportLang} fullWidth={true} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── 2. Home Content (Idle/Initial/Extracting) ── */}
-        {(!activeItemId || !report || isExtracting) && (
-          <div style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
-            padding: '48px', paddingTop: '18vh', gap: '0', position: 'relative', animation: 'fadeIn 0.4s ease-out'
-          }}>
-
-            {/* Error toast */}
-            {error && (
-              <div style={{
-                position: 'absolute', top: '24px', left: '50%', transform: 'translateX(-50%)',
-                width: '100%', maxWidth: '500px', padding: '14px 18px', borderRadius: '12px',
-                backgroundColor: '#FFF2F1', border: '1px solid rgba(255,59,48,0.12)',
-                display: 'flex', alignItems: 'center', gap: '10px', animation: 'slideUp 0.25s ease-out',
-                boxShadow: '0 4px 16px rgba(255,59,48,0.08)', zIndex: 100
-              }}>
-                <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#FF3B30', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>!</div>
-                <span style={{ flex: 1, fontSize: '13px', color: '#C0392B', fontWeight: 500 }}>{error}</span>
-                <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C0392B', opacity: 0.5, display: 'flex', padding: 0 }}><X size={14} /></button>
-              </div>
-            )}
-
-            <div style={{ width: '100%', maxWidth: '640px' }}>
-
-              {/* Heading — Dynamic Greeting (Simplified) */}
-              <div style={{
-                textAlign: 'left', marginBottom: '56px', display: 'flex', flexDirection: 'column',
-                alignItems: 'flex-start', gap: '0', animation: 'fadeIn 0.6s ease-out'
-              }}>
-                <h1 style={{
-                  fontSize: '52px', color: '#4B4B4B', fontWeight: 300,
-                  fontFamily: 'var(--font-sans)', letterSpacing: '-0.04em',
-                  margin: 0, transition: 'all 0.3s ease',
-                  lineHeight: '1.1', display: 'flex', alignItems: 'baseline', gap: '0.2em'
-                }}>
-                  <span>{greeting?.prefix}</span>
-                  <span style={{ opacity: 1.0 }}>{greeting?.name}</span>
-                </h1>
-              </div>
-
-              {/* URL input */}
-              <form onSubmit={handleUrlSubmit} style={{ position: 'relative', marginBottom: '28px' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center',
-                  backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)',
-                  borderRadius: '99px', height: '54px', overflow: 'hidden',
-                  boxShadow: '0 8px 30px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02)',
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-                onFocusCapture={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.borderColor = 'rgba(0,0,0,0.12)'
-                  el.style.boxShadow = '0 10px 40px rgba(0,0,0,0.08)'
-                }}
-                onBlurCapture={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.borderColor = 'rgba(0,0,0,0.06)'
-                  el.style.boxShadow = '0 8px 30px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02)'
-                }}
-                >
-                  <div style={{ paddingLeft: '18px', paddingRight: '10px', color: '#8E8E93', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                    <Link2 size={18} strokeWidth={1.8} />
-                  </div>
-                  <input
-                    ref={urlInputRef}
-                    type="text"
-                    placeholder="粘贴网页链接，如 https://linear.app"
-                    className="url-input-placeholder"
-                    style={{
-                      flex: 1, border: 'none', outline: 'none', fontSize: '15px',
-                      color: '#1D1D1F', fontWeight: 450, backgroundColor: 'transparent',
-                      fontFamily: 'var(--font-sans)', height: '100%'
-                    }}
-                    value={url}
-                    onChange={e => setUrl(e.target.value)}
-                    disabled={isExtracting}
-                  />
-                  <style>{`
-                    .url-input-placeholder::placeholder {
-                      color: #989999 !important;
-                      opacity: 1;
-                    }
-                  `}</style>
-                  <button
-                    type="submit"
-                    disabled={isExtracting}
-                    style={{
-                      height: '34px', width: '34px', margin: '0 10px',
-                      backgroundColor: url.trim() ? '#1D1D1F' : 'transparent',
-                      color: url.trim() ? '#FFFFFF' : '#C7C7CC',
-                      border: 'none', borderRadius: '50%',
-                      cursor: url.trim() ? 'pointer' : 'default',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      opacity: url.trim() ? 1 : 0,
-                      transform: url.trim() ? 'scale(1)' : 'scale(0.8)',
-                      transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                      flexShrink: 0
-                    }}
-                  >
-                    {isExtracting ? (
-                      <div className="animate-spin" style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', borderRadius: '50%' }} />
-                    ) : (
-                      <ArrowUp size={18} strokeWidth={2.5} />
-                    )}
-                  </button>
-                </div>
-              </form>
-
-              {/* OR divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '4px 0 24px' }}>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
-                <span style={{
-                  fontSize: '9px', color: '#BDBDBD', fontWeight: 600,
-                  letterSpacing: '0.02em', textTransform: 'none', fontFamily: 'var(--font-sans)'
-                }}>或</span>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
-              </div>
-
-              {/* Drop zone — 6 states */}
-              <div
-                style={{
-                  width: '100%', height: '200px', borderRadius: '24px',
-                  border: uploadState === 'dragover'
-                    ? '1.5px solid rgba(0,0,0,0.22)'
-                    : uploadState === 'hover'
-                    ? '1px solid rgba(0,0,0,0.12)'
-                    : uploadState === 'selected' || uploadState === 'extracting'
-                    ? 'none'
-                    : '1px dashed rgba(0,0,0,0.10)',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  justifyContent: 'center', gap: '12px', cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  backgroundColor: uploadState === 'dragover'
-                    ? 'rgba(0,0,0,0.015)'
-                    : uploadState === 'hover'
-                    ? 'rgba(255,255,255,0.6)'
-                    : 'transparent',
-                  boxShadow: uploadState === 'selected' || uploadState === 'extracting'
-                    ? 'none'
-                    : 'inset 0 1px 4px rgba(0,0,0,0.01)',
-                  transform: uploadState === 'hover' ? 'scale(1.002)' : 'scale(1)',
-                  opacity: uploadState === 'extracting' ? 0.85 : 1,
-                  pointerEvents: uploadState === 'extracting' ? 'none' : 'auto',
-                  overflow: 'hidden', position: 'relative'
-                }}
-                onMouseEnter={() => !isDragging && !pendingFile && setUploadZoneHovered(true)}
-                onMouseLeave={() => setUploadZoneHovered(false)}
-                onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
-                onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
-                onDrop={handleDrop}
-                onDragOver={e => e.preventDefault()}
-                onClick={() => {
-                  if (pendingFile) return
-                  user ? fileInputRef.current?.click() : setIsAuthVisible(true)
-                }}
-                onPaste={handlePaste}
-                tabIndex={0}
-              >
-                {/* State: file selected — image preview */}
-                {(uploadState === 'selected' || uploadState === 'extracting') && pendingPreviewUrl && (
-                  <>
-                    <img
-                      src={pendingPreviewUrl}
-                      alt="Preview"
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    {/* Gradient overlay */}
-                    <div style={{
-                      position: 'absolute', inset: 0,
-                      background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.55) 100%)'
-                    }} />
-                    {/* Scan overlay during extracting */}
-                    {uploadState === 'extracting' && (
-                      <div className="animate-scan" style={{
-                        position: 'absolute', top: 0, width: '60%', height: '100%',
-                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                        pointerEvents: 'none'
-                      }} />
-                    )}
-                    {/* Bottom bar: filename + 立即解析 (no X here, only top-right X) */}
-                    {uploadState === 'selected' && (
-                      <div style={{
-                        position: 'absolute', bottom: 0, left: 0, right: 0,
-                        padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                      }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#FFFFFF', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                            {pendingFile?.name}
-                          </span>
-                          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>
-                            {pendingFile ? (pendingFile.size / 1024 / 1024).toFixed(1) + ' MB' : ''}
-                          </span>
-                        </div>
-                        <button
-                          onClick={e => { e.stopPropagation(); handleExtractFile() }}
-                          style={{
-                            height: '28px', padding: '0 14px', borderRadius: '14px',
-                            background: 'rgba(255,255,255,0.95)', border: 'none',
-                            fontSize: '12px', fontWeight: 600, color: '#1D1D1F',
-                            cursor: 'pointer', transition: 'background 0.15s'
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#FFFFFF'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.95)'}
-                        >
-                          立即解析 →
-                        </button>
-                      </div>
-                    )}
-                    {/* Top-right X — only clear button */}
-                    {uploadState === 'selected' && (
-                      <button
-                        onClick={e => { e.stopPropagation(); clearPendingFile() }}
-                        style={{
-                          position: 'absolute', top: '10px', right: '10px',
-                          width: '26px', height: '26px', borderRadius: '50%',
-                          background: 'rgba(0,0,0,0.4)', border: 'none',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          cursor: 'pointer', color: '#FFFFFF', transition: 'background 0.15s'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.4)'}
-                      >
-                        <X size={12} strokeWidth={2} />
-                      </button>
-                    )}
-                  </>
-                )}
-
-                {/* State: idle / hover / dragover */}
-                {uploadState !== 'selected' && uploadState !== 'extracting' && (
-                  <>
-                    <div className="upload-icon-float" style={{
-                      width: '36px', height: '36px', borderRadius: '10px',
-                      backgroundColor: 'rgba(0,0,0,0.04)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#3C3C3E',
-                      transform: uploadState === 'hover' ? 'translateY(-2px)' : 'translateY(0)',
-                      transition: 'transform 0.2s ease'
-                    }}>
-                      <Upload size={16} strokeWidth={1.8} />
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1F', marginBottom: '5px', letterSpacing: '-0.01em' }}>
-                        {uploadState === 'dragover' ? '释放以解析' : '点击上传 / 将图片拖拽至此 / 直接粘贴图片'}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>支持 JPG、PNG、WebP，最大 20MB</div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Progress UI — absolute bottom, won't shift layout */}
-              {isExtracting && !pendingPreviewUrl && (
-                <div style={{
-                  position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
-                  width: '100%', maxWidth: '500px', animation: 'fadeIn 0.3s ease-out'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '12px', color: '#1D1D1F', opacity: 0.5, fontWeight: 500 }}>
-                      正在解析设计，约需 15 秒 ...
-                    </span>
-                    <button
-                      onClick={cancelExtraction}
-                      style={{
-                        background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: '6px',
-                        padding: '3px 10px', fontSize: '11px', fontWeight: 500, color: '#8E8E93',
-                        cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'var(--font-sans)'
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.22)'; e.currentTarget.style.color = '#3C3C3E' }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; e.currentTarget.style.color = '#8E8E93' }}
-                    >
-                      取消
-                    </button>
-                  </div>
-                  <div style={{
-                    width: '100%', height: '1px', backgroundColor: '#F0F0F0',
-                    borderRadius: '1px', overflow: 'hidden', position: 'relative'
-                  }}>
-                    <div className="animate-scan" style={{
-                      position: 'absolute', top: 0, width: '40%', height: '100%',
-                      backgroundColor: '#1D1D1F', opacity: 0.8
-                    }} />
-                  </div>
-                </div>
-              )}
-
-              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-                onChange={e => { if (e.target.files?.[0]) handleFilePreview(e.target.files[0]) }} />
-            </div>
-          </div>
-        )}
-
-        {/* ── 3. Extraction Result Modal ── */}
-        {report && !activeItemId && !isExtracting && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 100,
-            background: 'rgba(255,255,255,0.88)',
-            backdropFilter: 'blur(20px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '40px',
-            animation: 'fadeIn 0.4s ease'
-          }} onClick={() => {
-            const latest = extractions[0]
-            if (latest) { setActiveItemId(latest.id); setReport(latest.style_data) }
-            else setReport(null)
-          }}>
-            <div style={{
-              background: '#FFFFFF',
-              width: '100%', maxWidth: '1440px', height: '100%', maxHeight: '900px',
-              borderRadius: '20px',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04)',
-              display: 'flex', flexDirection: 'column', overflow: 'hidden',
-              position: 'relative', border: '1px solid #F0F0F0'
-            }} onClick={e => e.stopPropagation()}>
-
-              {/* Controls */}
-              <div style={{ position: 'absolute', top: '24px', right: '32px', zIndex: 10, display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '2px', background: '#F5F5F5', padding: '4px', borderRadius: '100px' }}>
-                  <button onClick={() => setReportLang('zh')} style={{ padding: '5px 14px', borderRadius: '100px', border: 'none', background: reportLang === 'zh' ? '#fff' : 'transparent', fontSize: '11px', fontWeight: reportLang === 'zh' ? 600 : 400, color: reportLang === 'zh' ? '#1D1D1F' : '#999', cursor: 'pointer', transition: 'all 0.2s', boxShadow: reportLang === 'zh' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>中文</button>
-                  <button onClick={() => setReportLang('en')} style={{ padding: '5px 14px', borderRadius: '100px', border: 'none', background: reportLang === 'en' ? '#fff' : 'transparent', fontSize: '12px', fontWeight: reportLang === 'en' ? 600 : 400, color: reportLang === 'en' ? '#1D1D1F' : '#999', cursor: 'pointer', transition: 'all 0.2s', boxShadow: reportLang === 'en' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>EN</button>
-                </div>
-                <button
-                  onClick={() => {
-                    const latest = extractions[0]
-                    if (latest) { setActiveItemId(latest.id); setReport(latest.style_data) }
-                    else setReport(null)
-                  }}
-                  style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5F5F5', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1A1A1A', cursor: 'pointer', transition: 'all 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#EBEBEB' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#F5F5F5' }}
-                >
-                  <X size={18} strokeWidth={2} />
-                </button>
-              </div>
-
-              {/* Split View */}
-              <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                <div className="no-scrollbar" style={{ width: '44%', background: '#FFFFFF', padding: '64px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
-                  <div style={{ position: 'relative', width: '100%', maxWidth: '480px' }}>
-                    <img
-                      src={(report as any).screenshotUrl || (report as any).thumbnailUrl}
-                      alt="Source"
-                      style={{ width: '100%', display: 'block', objectFit: 'contain', cursor: 'zoom-in', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}
-                      onClick={() => { setLightboxUrl((report as any).screenshotUrl || (report as any).thumbnailUrl); setIsLightboxOpen(true) }}
-                    />
-                  </div>
-                </div>
-                <div className="no-scrollbar" style={{ width: '56%', padding: '64px', overflowY: 'auto', background: '#FFFFFF' }}>
-                  <StyleReportView report={report!} lang={reportLang} />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════
-            SEARCH OVERLAY MODAL
-        ════════════════════════════════════════ */}
-        {isSearchOpen && (
-          <div style={{
-            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.06)', zIndex: 100,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backdropFilter: 'none', animation: 'overlayFade 0.2s ease-out'
-          }} onClick={() => { setIsSearchOpen(false); setModalSearchQuery('') }}>
-            <div style={{
-              width: '100%', maxWidth: '600px', height: '510px', backgroundColor: '#FFFFFF', borderRadius: '16px',
-              boxShadow: '0 20px 70px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)',
-              display: 'flex', flexDirection: 'column', overflow: 'hidden',
-              animation: 'searchModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
-              margin: '0 20px'
-            }} onClick={e => e.stopPropagation()}>
-              <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                <Search size={18} strokeWidth={1.8} style={{ color: '#8E8E93', marginRight: '14px' }} />
-                <input
-                  ref={searchInputRef}
-                  autoFocus
-                  type="text"
-                  value={modalSearchQuery}
-                  onChange={e => setModalSearchQuery(e.target.value)}
-                  placeholder="搜索历史记录..."
-                  style={{
-                    flex: 1, border: 'none', outline: 'none', fontSize: '14px', color: '#1D1D1F',
-                    backgroundColor: 'transparent', fontFamily: 'var(--font-sans)', padding: '4px 0',
-                    fontWeight: 400
-                  }}
-                />
-                <button onClick={() => { setIsSearchOpen(false); setModalSearchQuery('') }} style={{
-                  background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', color: '#8E8E93',
-                  borderRadius: '6px', transition: 'background 0.1s'
-                }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                  <X size={16} />
-                </button>
-              </div>
-              <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '8px 0', display: 'flex', flexDirection: 'column' }}>
-                {modalFiltered.length === 0 ? (
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A1A1A6', fontSize: '14px', opacity: 0.6 }}>
-                    {modalSearchQuery ? '未找到匹配记录' : '暂无历史记录'}
-                  </div>
-                ) : (
-                  modalFiltered.map(item => (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        setActiveItemId(item.id)
-                        setReport(item.style_data)
-                        setError(null)
-                        setIsSearchOpen(false)
-                        setModalSearchQuery('')
-                      }}
-                      style={{
-                        padding: '8px 20px', display: 'flex', alignItems: 'center', gap: '14px',
-                        cursor: 'pointer', transition: 'background 0.1s',
-                        justifyContent: 'space-between'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
-                        <div style={{ width: '32px', height: '34px', borderRadius: '4px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(0,0,0,0.03)' }}>
-                          {item.thumbnail_url ? (
-                            <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <div style={{
-                              width: '100%', height: '100%',
-                              background: (() => {
-                                const tc = getTopColors(item.style_data?.colors || [])
-                                return tc.length >= 2 ? `linear-gradient(135deg, ${tc[0]?.hex || '#F0F0F0'}, ${tc[1]?.hex || '#E0E0E0'})` : '#F0F0F0'
-                              })()
-                            }} />
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
-                          <span style={{ fontSize: '14px', color: '#1D1D1F', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {item.source_label}
-                          </span>
-                        </div>
-                      </div>
-                      <span style={{ fontSize: '12px', color: '#A1A1A6', fontWeight: 400, flexShrink: 0 }}>
-                        {new Date(item.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-      </main>
-
-      {/* Lightbox */}
-      {isLightboxOpen && (
-        <div
-          onClick={() => setIsLightboxOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 1000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
-            animation: 'fadeIn 0.2s ease-out', cursor: 'zoom-out'
-          }}
-        >
-          <button
-            onClick={e => { e.stopPropagation(); setIsLightboxOpen(false) }}
-            style={{
-              position: 'absolute', top: '30px', right: '30px',
-              background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
-              width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', cursor: 'pointer', transition: 'background 0.2s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-          >
-            <X size={24} />
-          </button>
-          <img
-            src={lightboxUrl}
-            alt="Full view"
-            style={{
-              maxWidth: '95%', maxHeight: '95vh', objectFit: 'contain',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
-              animation: 'tooltipPop 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-            }}
-            onClick={e => e.stopPropagation()}
-          />
-        </div>
-      )}
-
-      {/* Undo delete toast */}
-      {undoItem && (
-        <div style={{
-          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-          backgroundColor: '#1D1D1F', color: '#FFFFFF', borderRadius: '12px',
-          padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.2)', zIndex: 200,
-          animation: 'toastIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both',
-          whiteSpace: 'nowrap'
-        }}>
-          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>
-            已删除「<span style={{ color: '#FFFFFF', fontWeight: 500 }}>{undoItem.label}</span>」
-          </span>
-          <button
-            onClick={undoDelete}
-            style={{
-              background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '6px',
-              padding: '4px 10px', color: '#FFFFFF', fontSize: '12px', fontWeight: 600,
-              cursor: 'pointer', transition: 'background 0.15s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-          >
-            撤销
-          </button>
-        </div>
-      )}
-
-      {/* Auth overlay */}
-      {isAuthVisible && <AuthOverlay onClose={() => setIsAuthVisible(false)} />}
-    </div>
+        <HomeOverlays
+          report={report}
+          activeItemId={activeItemId}
+          isExtracting={isExtracting}
+          extractions={extractions}
+          setActiveItemId={setActiveItemId}
+          setReport={setReport}
+          reportLang={reportLang}
+          setReportLang={setReportLang}
+          isSearchOpen={isSearchOpen}
+          setIsSearchOpen={setIsSearchOpen}
+          modalSearchQuery={modalSearchQuery}
+          setModalSearchQuery={setModalSearchQuery}
+          modalFiltered={modalFiltered}
+          setError={setError}
+          searchInputRef={searchInputRef}
+          isLightboxOpen={isLightboxOpen}
+          setIsLightboxOpen={setIsLightboxOpen}
+          setLightboxUrl={setLightboxUrl}
+          lightboxUrl={lightboxUrl}
+          undoItem={undoItem}
+          undoDelete={undoDelete}
+          isAuthVisible={isAuthVisible}
+          setIsAuthVisible={setIsAuthVisible}
+        />
+      </div>
     </>
-  )
-}
-
-// ── Sub-components ──────────────────────────────────────────────────
-
-function SidebarBtn({ icon, label, onClick, active = false, collapsed = false }: {
-  icon: React.ReactNode, label: string, onClick: () => void, active?: boolean, collapsed?: boolean
-}) {
-  return (
-    <button
-      onClick={onClick}
-      title={collapsed ? label : undefined}
-      style={{
-        width: '100%', display: 'flex', alignItems: 'center',
-        justifyContent: collapsed ? 'center' : 'flex-start',
-        gap: collapsed ? 0 : '9px',
-        padding: collapsed ? '8px 0' : '7px 10px', borderRadius: '8px', border: 'none',
-        backgroundColor: active ? 'rgba(0,0,0,0.05)' : 'transparent',
-        color: '#1D1D1F', cursor: 'pointer', textAlign: 'left',
-        fontSize: '14px', fontWeight: 500, fontFamily: 'var(--font-sans)',
-        transition: 'background 0.1s'
-      }}
-      onMouseEnter={e => !active && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)')}
-      onMouseLeave={e => !active && (e.currentTarget.style.backgroundColor = 'transparent')}
-    >
-      <span style={{ opacity: 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
-      {!collapsed && <span>{label}</span>}
-    </button>
-  )
-}
-
-function HistoryItem({
-  id, label, thumbnailUrl, colors, isActive, isPinned,
-  contextMenuOpen, renamingId, renameValue, onRenameChange,
-  onClick, onContextMenu, onPin, onDelete, onStartRename,
-  onRenameSubmit, onRenameCancel
-}: {
-  id: string
-  label: string
-  thumbnailUrl?: string | null
-  colors: any[]
-  isActive: boolean
-  isPinned: boolean
-  contextMenuOpen: boolean
-  renamingId: string | null
-  renameValue: string
-  onRenameChange: (v: string) => void
-  onClick: () => void
-  onContextMenu: (e: React.MouseEvent) => void
-  onPin: () => void
-  onDelete: () => void
-  onStartRename: () => void
-  onRenameSubmit: () => void
-  onRenameCancel: () => void
-}) {
-  const [hovered, setHovered] = useState(false)
-  const isRenaming = renamingId === id
-  const topColors = getTopColors(colors)
-
-  const thumbnailContent = thumbnailUrl ? (
-    <img src={thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-  ) : topColors.length > 0 ? (
-    <div style={{
-      width: '100%', height: '100%',
-      background: topColors.length >= 2
-        ? `linear-gradient(135deg, ${topColors[0]?.hex || '#F0F0F0'}, ${topColors[1]?.hex || '#E0E0E0'})`
-        : topColors[0]?.hex || '#F0F0F0'
-    }} />
-  ) : (
-    <div style={{ width: '100%', height: '100%', backgroundColor: '#F0F0F0' }} />
-  )
-
-  return (
-    <div
-      className="context-menu-anchor"
-      style={{ position: 'relative', borderRadius: '8px' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <button
-        onClick={isRenaming ? undefined : onClick}
-        style={{
-          width: '100%', padding: '8px 10px', paddingRight: (hovered || contextMenuOpen) && !isRenaming ? '32px' : '10px',
-          borderRadius: '8px',
-          backgroundColor: isActive ? 'rgba(0,0,0,0.05)' : (hovered ? 'rgba(0,0,0,0.025)' : 'transparent'),
-          border: 'none', cursor: isRenaming ? 'default' : 'pointer', textAlign: 'left',
-          fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: '10px',
-          transition: 'background 0.1s'
-        }}
-      >
-        {/* Thumbnail — portrait 3:4 */}
-        <div style={{
-          width: '40px', height: '42px', borderRadius: '5px', overflow: 'hidden',
-          flexShrink: 0, backgroundColor: '#F0F0F0'
-        }}>
-          {thumbnailContent}
-        </div>
-
-        {/* Content */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          {/* Label / rename input */}
-          {isRenaming ? (
-            <input
-              autoFocus
-              value={renameValue}
-              onChange={e => onRenameChange(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); onRenameSubmit() }
-                if (e.key === 'Escape') { e.preventDefault(); onRenameCancel() }
-              }}
-              onBlur={onRenameSubmit}
-              onClick={e => e.stopPropagation()}
-              style={{
-                fontSize: '13px', fontWeight: 500, color: '#1D1D1F',
-                border: '1px solid rgba(0,0,0,0.15)', borderRadius: '4px',
-                padding: '1px 5px', outline: 'none', background: '#FFFFFF',
-                fontFamily: 'var(--font-sans)', width: '100%'
-              }}
-            />
-          ) : (
-            <span style={{
-              fontSize: '14px', fontWeight: isActive ? 500 : 400,
-              color: isActive ? '#1D1D1F' : '#3C3C3E',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip',
-              display: 'block', lineHeight: 1.3
-            }}>
-              {label}
-            </span>
-          )}
-
-          {/* Color dots only — no hex labels */}
-          {!isRenaming && topColors.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              {topColors.map((c, i) => (
-                <div key={i} style={{
-                  width: '15px', height: '15px', borderRadius: '50%',
-                  backgroundColor: c.hex || '#CCCCCC',
-                  boxShadow: i === 0
-                    ? '0 0 0 1px rgba(0,0,0,0.08)'
-                    : '0 0 0 1.5px #FFFFFF, 0 0 0 2px rgba(0,0,0,0.08)',
-                  marginLeft: i === 0 ? 0 : '-5px',
-                  flexShrink: 0
-                }} />
-              ))}
-            </div>
-          )}
-        </div>
-      </button>
-
-      {/* ⋯ context menu trigger */}
-      {(hovered || contextMenuOpen) && !isRenaming && (
-        <button
-          onClick={onContextMenu}
-          style={{
-            position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
-            width: '22px', height: '22px', border: 'none',
-            background: contextMenuOpen ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.04)',
-            borderRadius: '5px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#3C3C3E', transition: 'background 0.1s', padding: 0
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.08)'}
-          onMouseLeave={e => e.currentTarget.style.background = contextMenuOpen ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.04)'}
-        >
-          <MoreHorizontal size={13} strokeWidth={2} />
-        </button>
-      )}
-
-      {/* Context menu dropdown */}
-      {contextMenuOpen && (
-        <div style={{
-          position: 'absolute', right: '6px', top: 'calc(100% + 4px)',
-          backgroundColor: 'rgba(255, 255, 255, 0.85)',
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          borderRadius: '14px', zIndex: 100,
-          boxShadow: '0 10px 40px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
-          padding: '6px', minWidth: '185px',
-          animation: 'slideDown 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
-          pointerEvents: 'auto'
-        }}>
-          <ContextMenuItem
-            label={isPinned ? 'Unpin' : 'Pin'}
-            icon={isPinned ? <PinOff size={14} strokeWidth={1.8} /> : <Pin size={14} strokeWidth={1.8} />}
-            onClick={e => { e.stopPropagation(); onPin() }}
-          />
-          <ContextMenuItem
-            label="Rename"
-            icon={<PencilLine size={14} strokeWidth={1.8} />}
-            onClick={e => { e.stopPropagation(); onStartRename() }}
-          />
-          <div style={{ height: '0.5px', backgroundColor: 'rgba(0,0,0,0.06)', margin: '4px 8px' }} />
-          <ContextMenuItem
-            label="Delete"
-            icon={<Trash2 size={14} strokeWidth={1.8} />}
-            danger
-            onClick={e => { e.stopPropagation(); onDelete() }}
-          />
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ContextMenuItem({ label, icon, onClick, danger = false }: {
-  label: string, icon: React.ReactNode, onClick: (e: React.MouseEvent) => void, danger?: boolean
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        width: '100%', padding: '10px 12px', border: 'none', borderRadius: '10px',
-        background: 'transparent', cursor: 'pointer', textAlign: 'left',
-        display: 'flex', alignItems: 'center', gap: '12px',
-        fontSize: '14px', fontWeight: 500,
-        color: danger ? '#FF453A' : '#1D1D1F',
-        fontFamily: 'var(--font-sans)', transition: 'all 0.15s'
-      }}
-      onMouseEnter={e => e.currentTarget.style.background = danger ? 'rgba(255,69,58,0.1)' : 'rgba(0,0,0,0.05)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-    >
-      <span style={{ opacity: 0.7, display: 'flex', alignItems: 'center' }}>{icon}</span>
-      {label}
-    </button>
-  )
-}
-
-function EmptyState({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ padding: '10px 12px', textAlign: 'left', fontSize: '12px', color: '#AEAEB2', lineHeight: 1.5 }}>
-      {children}
-    </div>
-  )
-}
-
-function SectionHeader({ label, collapsed, onToggle }: {
-  label: string, collapsed: boolean, onToggle: () => void
-}) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <button
-      onClick={onToggle}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '18px 20px 6px', width: '100%', border: 'none', background: 'none',
-        cursor: 'pointer', fontFamily: 'var(--font-sans)'
-      }}
-    >
-      <span style={{ fontSize: '12px', fontWeight: 500, color: hovered ? '#8E8E93' : '#AEAEB2', letterSpacing: '0.01em', textTransform: 'none', transition: 'color 0.15s' }}>
-        {label}
-      </span>
-      <ChevronDown
-        size={12}
-        strokeWidth={2}
-        style={{
-          color: hovered ? '#8E8E93' : '#C7C7CC',
-          transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
-          transition: 'transform 0.2s ease, color 0.15s'
-        }}
-      />
-    </button>
   )
 }

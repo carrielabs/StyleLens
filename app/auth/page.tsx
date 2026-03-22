@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { snapshotGuestHistoryForLogin } from '@/lib/storage/guestStore'
 import { createClient } from '@/lib/storage/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -20,6 +21,7 @@ export default function AuthPage() {
     setError(null)
 
     try {
+      await snapshotGuestHistoryForLogin()
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
@@ -44,6 +46,7 @@ export default function AuthPage() {
     setLoading(true)
     setError(null)
     try {
+      await snapshotGuestHistoryForLogin()
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

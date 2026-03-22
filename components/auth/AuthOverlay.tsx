@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { snapshotGuestHistoryForLogin } from '@/lib/storage/guestStore'
 import { createClient } from '@/lib/storage/supabaseClient'
 import { ChevronLeft } from 'lucide-react'
 
@@ -31,6 +32,7 @@ export default function AuthOverlay({ onClose }: AuthOverlayProps) {
     setLoading(true)
     setMessage(null)
     try {
+      await snapshotGuestHistoryForLogin()
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -54,6 +56,7 @@ export default function AuthOverlay({ onClose }: AuthOverlayProps) {
     setLoading(true)
     setMessage(null)
     try {
+      await snapshotGuestHistoryForLogin()
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -93,6 +96,7 @@ export default function AuthOverlay({ onClose }: AuthOverlayProps) {
     setLoading(true)
     setMessage(null)
     try {
+      await snapshotGuestHistoryForLogin()
       const { error } = await supabase.auth.verifyOtp({
         email,
         token: otp,
@@ -100,7 +104,7 @@ export default function AuthOverlay({ onClose }: AuthOverlayProps) {
       })
       if (error) throw error
       onClose()
-    } catch (err: any) {
+    } catch {
       setMessage({ type: 'error', text: '验证码错误或已失效' })
     } finally {
       setLoading(false)

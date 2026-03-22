@@ -3,6 +3,16 @@
 import type { Typography as TypoType } from '@/lib/types'
 
 export default function Typography({ data, lang, fullWidth = false }: { data: TypoType, lang: 'zh' | 'en', fullWidth?: boolean }) {
+  const normalizeWeight = (value: unknown, fallback: number) => {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
+
+  const normalizeLineHeight = (value: unknown, fallback: number) => {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
+
   const fontNames = data.fontFamily.split(',').map(f => {
     let clean = f.replace(/['"]/g, '').replace(/e\.g\.,/gi, '').trim()
     if (clean.includes(':')) clean = clean.split(':')[1]?.trim() || clean
@@ -26,7 +36,7 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
     {
       label: lang === 'zh' ? '主标题' : 'Heading',
       size: '48px',
-      weight: data.headingWeight || 700,
+      weight: normalizeWeight(data.headingWeight, 700),
       lh: 1.1,
       text: lang === 'zh' ? '探索设计的内在秩序。' : 'Discover the internal order of design.',
       isBody: false
@@ -34,7 +44,7 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
     {
       label: lang === 'zh' ? '副标题' : 'Subheader',
       size: '24px',
-      weight: data.headingWeight ? Math.max(400, Number(data.headingWeight) - 200) : 500,
+      weight: Math.max(400, normalizeWeight(data.headingWeight, 700) - 200),
       lh: 1.3,
       text: lang === 'zh' ? '去掉非必要元素，纯粹即是力量。' : 'Less, but better. Purity is power.',
       isBody: false
@@ -42,8 +52,8 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
     {
       label: lang === 'zh' ? '正文' : 'Body',
       size: '16px',
-      weight: data.bodyWeight || 400,
-      lh: data.lineHeight || 1.6,
+      weight: normalizeWeight(data.bodyWeight, 400),
+      lh: normalizeLineHeight(data.lineHeight, 1.6),
       text: lang === 'zh' 
         ? '优秀的设计是尽可能少的设计。它专注于最本质的方面，使得产品不被非必要元素所拖累。抛弃繁芜，回归本真。当界面变得隐形时，内容才能真正与用户产生共鸣与连接。' 
         : 'Good design is as little design as possible. It concentrates on the essential aspects, not burdening the product with non-essentials. When the interface becomes invisible, content truly connects.',
@@ -120,7 +130,7 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
 
               {/* 4. WEIGHT */}
               <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                {style.weight}
+                {String(style.weight)}
               </div>
 
               {/* 5. SPACING */}
@@ -130,7 +140,7 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
 
               {/* 6. LINE HEIGHT */}
               <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                {style.lh}
+                {String(style.lh)}
               </div>
 
             </div>
@@ -141,5 +151,4 @@ export default function Typography({ data, lang, fullWidth = false }: { data: Ty
     </div>
   )
 }
-
 
