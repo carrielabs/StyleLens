@@ -8,12 +8,12 @@ import { useExtraction } from '@/hooks/useExtraction'
 import { useHistory } from '@/hooks/useHistory'
 import { createClient } from '@/lib/storage/supabaseClient'
 import { getGreeting, GreetingData } from '@/lib/utils/greeting'
-import type { StyleReport } from '@/lib/types'
+import type { DisplayStyleReport } from '@/lib/types'
 import type { Session, User } from '@supabase/supabase-js'
 
 export default function Home() {
   // ── Core state ──
-  const [report, setReport] = useState<StyleReport | null>(null)
+  const [report, setReport] = useState<DisplayStyleReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reportLang, setReportLang] = useState<'zh' | 'en'>('zh')
 

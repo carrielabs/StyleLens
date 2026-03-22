@@ -12,7 +12,7 @@ import {
   getGuestMigrationSnapshot,
   saveGuestHistory,
 } from '@/lib/storage/guestStore'
-import type { HomeHistoryRecord, HomeUndoItem, PinnedStyleReport, StyleReport } from '@/lib/types'
+import type { DisplayStyleReport, HomeHistoryRecord, HomeUndoItem, PinnedStyleReport, StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
 const GUEST_TRIAL_KEY = 'stylelens_trial_used'
@@ -38,8 +38,8 @@ function buildGuestCacheRecord(record: GuestCacheRecordInput): GuestHistoryRecor
 interface UseHistoryParams {
   user: User | null
   supabase: BrowserSupabaseClient
-  report: StyleReport | null
-  setReport: (report: StyleReport | null) => void
+  report: DisplayStyleReport | null
+  setReport: (report: DisplayStyleReport | null) => void
   setError: (error: string | null) => void
   setGuestTrialUsed: (used: boolean) => void
   setIsAuthVisible: (visible: boolean) => void

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/storage/supabaseClient'
-import type { ColorToken, StyleReport } from '@/lib/types'
+import type { ColorToken, DisplayStyleReport, StyleReport } from '@/lib/types'
 import { getTopColors } from './viewUtils'
 
 type SidebarRecord = {
@@ -55,7 +55,7 @@ interface HomeSidebarProps {
   setIsSearchOpen: Dispatch<SetStateAction<boolean>>
   setModalSearchQuery: Dispatch<SetStateAction<string>>
   setActiveItemId: Dispatch<SetStateAction<string | null>>
-  setReport: Dispatch<SetStateAction<StyleReport | null>>
+  setReport: Dispatch<SetStateAction<DisplayStyleReport | null>>
   setError: Dispatch<SetStateAction<string | null>>
   setUrl: Dispatch<SetStateAction<string>>
   clearPendingFile: () => void

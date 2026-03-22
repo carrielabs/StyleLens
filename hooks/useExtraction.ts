@@ -9,14 +9,14 @@ import type {
   RefObject,
   SetStateAction,
 } from 'react'
-import type { StyleReport } from '@/lib/types'
+import type { DisplayStyleReport, StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
 interface UseExtractionParams {
   user: User | null
   guestTrialUsed: boolean
   setIsAuthVisible: (visible: boolean) => void
-  setReport: (report: StyleReport | null) => void
+  setReport: (report: DisplayStyleReport | null) => void
   setError: (error: string | null) => void
   setActiveItemId: (id: string | null) => void
   setIsSearchOpen: (open: boolean) => void
@@ -116,7 +116,7 @@ export function useExtraction({
   const callExtractAPI = async (
     payload: { screenshotUrl?: string; imageBase64?: string; sourceLabel?: string },
     signal?: AbortSignal
-  ) => {
+  ): Promise<DisplayStyleReport> => {
     const res = await fetch('/api/extract', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -125,7 +125,7 @@ export function useExtraction({
     })
     const data = await res.json()
     if (!data.success) throw new Error(data.error || '提取失败，请重试')
-    return data.report as StyleReport
+    return data.report as DisplayStyleReport
   }
 
   const cancelExtraction = () => {
