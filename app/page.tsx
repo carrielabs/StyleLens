@@ -216,20 +216,33 @@ export default function Home() {
   }
 
   const saveExtraction = async (report: StyleReport, thumb?: string) => {
-    if (!user) return
+    const record = {
+      user_id: user?.id || null,
+      source_url: url.trim(),
+      source_label: report.sourceLabel || url.trim().replace(/^https?:\/\//, '').replace(/\/$/, ''),
+      style_data: report,
+      thumbnail_url: thumb || report.thumbnailUrl || null,
+      is_pinned: false,
+      created_at: new Date().toISOString()
+    }
+
+    if (!user) {
+      // Guest Save
+      localStorage.setItem('stylelens_trial_used', 'true')
+      localStorage.setItem('stylelens_guest_history', JSON.stringify({ ...record, id: 'guest_1' }))
+      setGuestTrialUsed(true)
+      loadHistory('') // Refresh guest list locally
+      return
+    }
+
     try {
       const { error } = await supabase
         .from('style_records')
-        .insert({
-          user_id: user.id,
-          source_label: report.sourceLabel,
-          thumbnail_url: thumb || report.thumbnailUrl || null,
-          style_data: report
-        })
+        .insert([record])
       if (error) throw error
       await loadHistory(user.id)
-    } catch (err) {
-      console.error('Failed to save extraction:', err)
+    } catch (err: any) {
+      console.error('Failed to save extraction:', err.message || err)
     }
   }
 
@@ -878,22 +891,25 @@ export default function Home() {
                   />
                   <button
                     type="submit"
-                    disabled={isExtracting || !url.trim()}
+                    disabled={isExtracting}
                     style={{
-                      margin: '8px 8px', padding: '0 20px', height: '36px',
-                      borderRadius: '8px', border: 'none',
-                      background: (isExtracting || !url.trim()) ? 'rgba(0,0,0,0.12)' : 'linear-gradient(180deg, #2C2C2E 0%, #1D1D1F 100%)',
-                      color: '#FFFFFF',
-                      fontSize: '13px', fontWeight: 600,
-                      cursor: (isExtracting || !url.trim()) ? 'default' : 'pointer',
+                      height: '34px', width: '34px', margin: '0 10px',
+                      backgroundColor: url.trim() ? '#1D1D1F' : 'transparent',
+                      color: url.trim() ? '#FFFFFF' : '#C7C7CC',
+                      border: 'none', borderRadius: '50%',
+                      cursor: url.trim() ? 'pointer' : 'default',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.15s', flexShrink: 0,
-                      letterSpacing: '-0.01em'
+                      opacity: url.trim() ? 1 : 0,
+                      transform: url.trim() ? 'scale(1)' : 'scale(0.8)',
+                      transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      flexShrink: 0
                     }}
-                    onMouseEnter={e => { if (!isExtracting && !!url.trim()) e.currentTarget.style.background = 'linear-gradient(180deg, #3A3A3C 0%, #2C2C2E 100%)' }}
-                    onMouseLeave={e => { if (!isExtracting && !!url.trim()) e.currentTarget.style.background = 'linear-gradient(180deg, #2C2C2E 0%, #1D1D1F 100%)' }}
                   >
-                    {isExtracting ? '解析中' : '立即解析'}
+                    {isExtracting ? (
+                      <div className="animate-spin" style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', borderRadius: '50%' }} />
+                    ) : (
+                      <ArrowUp size={18} strokeWidth={2.5} />
+                    )}
                   </button>
                 </div>
               </form>
