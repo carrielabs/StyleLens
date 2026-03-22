@@ -7,27 +7,46 @@ import StyleReportView from '@/components/report/StyleReport'
 import type { StyleReport } from '@/lib/types'
 import { getTopColors } from './viewUtils'
 
+type OverlayReport = StyleReport & {
+  screenshotUrl?: string
+}
+
+type OverlayHistoryRecord = {
+  id: string
+  user_id: string | null
+  source_label: string
+  style_data: OverlayReport | null
+  thumbnail_url: string | null
+  created_at: string
+}
+
+type OverlayUndoItem = {
+  id: string
+  label: string
+  record: OverlayHistoryRecord
+}
+
 interface HomeOverlaysProps {
-  report: StyleReport | null
+  report: OverlayReport | null
   activeItemId: string | null
   isExtracting: boolean
-  extractions: any[]
+  extractions: OverlayHistoryRecord[]
   setActiveItemId: Dispatch<SetStateAction<string | null>>
-  setReport: Dispatch<SetStateAction<StyleReport | null>>
+  setReport: Dispatch<SetStateAction<OverlayReport | null>>
   reportLang: 'zh' | 'en'
   setReportLang: Dispatch<SetStateAction<'zh' | 'en'>>
   isSearchOpen: boolean
   setIsSearchOpen: Dispatch<SetStateAction<boolean>>
   modalSearchQuery: string
   setModalSearchQuery: Dispatch<SetStateAction<string>>
-  modalFiltered: any[]
+  modalFiltered: OverlayHistoryRecord[]
   setError: Dispatch<SetStateAction<string | null>>
   searchInputRef: RefObject<HTMLInputElement | null>
   isLightboxOpen: boolean
   setIsLightboxOpen: Dispatch<SetStateAction<boolean>>
   setLightboxUrl: Dispatch<SetStateAction<string>>
   lightboxUrl: string
-  undoItem: { id: string; label: string; record: any } | null
+  undoItem: OverlayUndoItem | null
   undoDelete: () => void
   isAuthVisible: boolean
   setIsAuthVisible: Dispatch<SetStateAction<boolean>>
@@ -104,10 +123,10 @@ export default function HomeOverlays({
               <div className="no-scrollbar" style={{ width: '44%', background: '#F5F4F1', padding: '64px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
                 <div style={{ position: 'relative', width: '100%', maxWidth: '480px' }}>
                   <img
-                    src={(report as any).screenshotUrl || (report as any).thumbnailUrl}
+                    src={report.screenshotUrl || report.thumbnailUrl}
                     alt="Source"
                     style={{ width: '100%', display: 'block', objectFit: 'contain', cursor: 'zoom-in', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}
-                    onClick={() => { setLightboxUrl((report as any).screenshotUrl || (report as any).thumbnailUrl); setIsLightboxOpen(true) }}
+                    onClick={() => { setLightboxUrl(report.screenshotUrl || report.thumbnailUrl || ''); setIsLightboxOpen(true) }}
                   />
                 </div>
               </div>
