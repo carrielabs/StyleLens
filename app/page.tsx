@@ -470,16 +470,23 @@ export default function Home() {
           SIDEBAR
       ══════════════════════════════════════════ */}
       <aside style={{
-        width: sidebarOpen ? '260px' : '0px', flexShrink: 0, display: 'flex', flexDirection: 'column',
-        backgroundColor: '#FFFFFF', borderRight: sidebarOpen ? '1px solid rgba(0,0,0,0.06)' : 'none',
+        width: sidebarOpen ? '260px' : '48px', flexShrink: 0, display: 'flex', flexDirection: 'column',
+        backgroundColor: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.06)',
         overflow: 'hidden', transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
         {/* Brand wordmark + sidebar toggle */}
-        <div style={{ padding: '22px 16px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <span style={{ fontSize: '17px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>StyleLens</span>
+        <div style={{
+          padding: sidebarOpen ? '22px 16px 14px' : '18px 10px 14px',
+          display: 'flex', alignItems: 'center',
+          justifyContent: sidebarOpen ? 'space-between' : 'center',
+          flexShrink: 0, minWidth: sidebarOpen ? '260px' : '48px'
+        }}>
+          {sidebarOpen && (
+            <span style={{ fontSize: '17px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>StyleLens</span>
+          )}
           <button
-            onClick={() => setSidebarOpen(false)}
-            title="收起侧边栏"
+            onClick={() => setSidebarOpen(v => !v)}
+            title={sidebarOpen ? '收起侧边栏' : '展开侧边栏'}
             style={{
               width: '28px', height: '28px', border: 'none', background: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -488,15 +495,16 @@ export default function Home() {
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#8E8E93' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#C7C7CC' }}
           >
-            <PanelLeft size={16} strokeWidth={1.8} />
+            <PanelLeft size={16} strokeWidth={1.8} style={{ transform: sidebarOpen ? 'none' : 'rotate(180deg)', transition: 'transform 0.25s' }} />
           </button>
         </div>
 
         {/* Top Actions */}
-        <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px', minWidth: '48px' }}>
           <SidebarBtn
             icon={<Plus size={15} strokeWidth={2} />}
             label="New Extraction"
+            collapsed={!sidebarOpen}
             active={!activeItemId && !report && !isExtracting}
             onClick={() => {
               setReport(null)
@@ -510,6 +518,7 @@ export default function Home() {
           <SidebarBtn
             icon={<Search size={15} strokeWidth={2} />}
             label="Search"
+            collapsed={!sidebarOpen}
             active={isSearchOpen}
             onClick={() => {
               setIsSearchOpen(true)
@@ -518,8 +527,8 @@ export default function Home() {
           />
         </div>
 
-        {/* Pinned section */}
-        {pinnedList.length > 0 && (
+        {/* Pinned section — hidden when icon-strip mode */}
+        {sidebarOpen && pinnedList.length > 0 && (
           <>
             <SectionHeader label="PINNED" collapsed={pinnedCollapsed} onToggle={() => setPinnedCollapsed(v => !v)} />
             {!pinnedCollapsed && (
@@ -551,11 +560,11 @@ export default function Home() {
           </>
         )}
 
-        {/* History section */}
-        <SectionHeader label="HISTORY" collapsed={historyCollapsed} onToggle={() => setHistoryCollapsed(v => !v)} />
+        {/* History section — hidden when icon-strip mode */}
+        {sidebarOpen && <SectionHeader label="HISTORY" collapsed={historyCollapsed} onToggle={() => setHistoryCollapsed(v => !v)} />}
 
-        <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-          {historyCollapsed ? null : !user ? (
+        <div className="no-scrollbar" style={{ flex: 1, overflowY: sidebarOpen ? 'auto' : 'hidden', padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+          {!sidebarOpen ? null : historyCollapsed ? null : !user ? (
             <EmptyState>登录后查看历史记录</EmptyState>
           ) : isLoadingHistory ? (
             <div style={{ padding: '8px 4px' }}>
@@ -629,8 +638,10 @@ export default function Home() {
               if (!user) setIsAuthVisible(true)
               else setShowUserMenu(!showUserMenu)
             }}
+            title={!sidebarOpen ? (user ? (user.email?.split('@')[0] || 'User') : '登录 / 注册') : undefined}
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px',
+              display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'flex-start' : 'center',
+              gap: '8px', padding: sidebarOpen ? '6px 10px' : '8px 0',
               borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s',
               backgroundColor: showUserMenu ? 'rgba(0,0,0,0.04)' : 'transparent',
             }}
@@ -638,9 +649,11 @@ export default function Home() {
             onMouseLeave={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             <UserIcon size={14} style={{ color: '#8E8E93', flexShrink: 0 }} strokeWidth={2} />
-            <span style={{ fontSize: '13px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {user ? (user.email?.split('@')[0] || 'User') : '登录 / 注册'}
-            </span>
+            {sidebarOpen && (
+              <span style={{ fontSize: '13px', fontWeight: 500, color: '#1D1D1F', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user ? (user.email?.split('@')[0] || 'User') : '登录 / 注册'}
+              </span>
+            )}
           </div>
         </div>
       </aside>
@@ -649,25 +662,6 @@ export default function Home() {
           MAIN WORKSPACE
       ══════════════════════════════════════════ */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FFFFFF', overflow: 'hidden', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-
-        {/* Top-left: sidebar expand button (only when collapsed) */}
-        {!sidebarOpen && (
-          <button
-            onClick={() => setSidebarOpen(true)}
-            title="展开侧边栏"
-            style={{
-              position: 'absolute', top: '18px', left: '16px', zIndex: 10,
-              width: '28px', height: '28px', border: 'none', background: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: '6px', color: '#C7C7CC', transition: 'all 0.15s',
-              animation: 'fadeIn 0.2s ease-out'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#8E8E93' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#C7C7CC' }}
-          >
-            <PanelLeft size={16} strokeWidth={1.8} />
-          </button>
-        )}
 
         {/* Help icon */}
         <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
@@ -1231,15 +1225,18 @@ export default function Home() {
 
 // ── Sub-components ──────────────────────────────────────────────────
 
-function SidebarBtn({ icon, label, onClick, active = false }: {
-  icon: React.ReactNode, label: string, onClick: () => void, active?: boolean
+function SidebarBtn({ icon, label, onClick, active = false, collapsed = false }: {
+  icon: React.ReactNode, label: string, onClick: () => void, active?: boolean, collapsed?: boolean
 }) {
   return (
     <button
       onClick={onClick}
+      title={collapsed ? label : undefined}
       style={{
-        width: '100%', display: 'flex', alignItems: 'center', gap: '9px',
-        padding: '7px 10px', borderRadius: '8px', border: 'none',
+        width: '100%', display: 'flex', alignItems: 'center',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        gap: collapsed ? 0 : '9px',
+        padding: collapsed ? '8px 0' : '7px 10px', borderRadius: '8px', border: 'none',
         backgroundColor: active ? 'rgba(0,0,0,0.05)' : 'transparent',
         color: '#1D1D1F', cursor: 'pointer', textAlign: 'left',
         fontSize: '13px', fontWeight: 500, fontFamily: 'var(--font-sans)',
@@ -1248,8 +1245,8 @@ function SidebarBtn({ icon, label, onClick, active = false }: {
       onMouseEnter={e => !active && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)')}
       onMouseLeave={e => !active && (e.currentTarget.style.backgroundColor = 'transparent')}
     >
-      <span style={{ opacity: 0.6, display: 'flex', width: '18px', justifyContent: 'flex-start' }}>{icon}</span>
-      {label}
+      <span style={{ opacity: 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
+      {!collapsed && <span>{label}</span>}
     </button>
   )
 }
