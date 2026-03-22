@@ -132,8 +132,8 @@ const USER_PROMPT_TEMPLATE = `Analyze this design and return a complete style re
 Rules:
 - Extract at minimum 6 colors, maximum 12
 - Provide accurate dual-language translations
-- layoutEn, layoutZh, spacingEn, spacingZh, motionEn, motionZh MUST be extremely short UI badges (2-4 words max). Do NOT write paragraphs for these.
-- cssRadius and cssShadow MUST be exact valid CSS values only (e.g. '0px', '12px', '0 2px 4px rgba(...)'). Do not output text descriptions in these exact CSS fields.
+- layoutEn, layoutZh, spacingEn, spacingZh, motionEn, motionZh: If multiple patterns are detected (e.g. Bento + Flex), return them separated by '|'. (e.g. 'Bento Grid | Sidebar Layout'). KEEP THEM ULTRA-SHORT BADGES.
+- cssRadius and cssShadow MUST be exact valid CSS values only. extracted all unique variations found on the page, separated by '|'.
 - If no gradients detected, return empty array []`
 
 export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleReport> {
