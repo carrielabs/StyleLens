@@ -1120,7 +1120,7 @@ export default function Home() {
             backdropFilter: 'none', animation: 'overlayFade 0.2s ease-out'
           }} onClick={() => { setIsSearchOpen(false); setSearchQuery('') }}>
             <div style={{
-              width: '100%', maxWidth: '600px', backgroundColor: '#FFFFFF', borderRadius: '16px',
+              width: '100%', maxWidth: '600px', height: '440px', backgroundColor: '#FFFFFF', borderRadius: '16px',
               boxShadow: '0 20px 70px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)',
               display: 'flex', flexDirection: 'column', overflow: 'hidden',
               animation: 'searchModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
@@ -1148,9 +1148,9 @@ export default function Home() {
                   <X size={16} />
                 </button>
               </div>
-              <div className="no-scrollbar" style={{ maxHeight: '50vh', overflowY: 'auto', padding: '8px 0' }}>
+              <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '8px 0', display: 'flex', flexDirection: 'column' }}>
                 {allFiltered.length === 0 ? (
-                  <div style={{ padding: '32px', textAlign: 'center', color: '#A1A1A6', fontSize: '14px' }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A1A1A6', fontSize: '14px', opacity: 0.6 }}>
                     {searchQuery ? '未找到匹配记录' : '暂无历史记录'}
                   </div>
                 ) : (
@@ -1173,7 +1173,7 @@ export default function Home() {
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
-                        <div style={{ width: '28px', height: '36px', borderRadius: '4px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(0,0,0,0.03)' }}>
+                        <div style={{ width: '32px', height: '34px', borderRadius: '4px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(0,0,0,0.03)' }}>
                           {item.thumbnail_url ? (
                             <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
@@ -1195,10 +1195,6 @@ export default function Home() {
                       <span style={{ fontSize: '12px', color: '#A1A1A6', fontWeight: 400 }}>
                         {new Date(item.created_at).toLocaleDateString()}
                       </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '14px', fontWeight: 500, color: '#1D1D1F', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.source_label || '未命名分析'}</div>
-                        <div style={{ fontSize: '11px', color: '#8E8E93', marginTop: '1px' }}>{new Date(item.created_at).toLocaleDateString()}</div>
-                      </div>
                       <div style={{ color: '#C7C7CC' }}>
                         <ChevronLeft size={16} style={{ transform: 'rotate(180deg)' }} />
                       </div>
