@@ -490,10 +490,10 @@ export default function Home() {
             style={{
               width: '28px', height: '28px', border: 'none', background: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: '6px', color: '#C7C7CC', transition: 'all 0.15s', flexShrink: 0
+              borderRadius: '6px', color: 'rgba(0,0,0,0.5)', transition: 'all 0.15s', flexShrink: 0
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#8E8E93' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#C7C7CC' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = 'rgba(0,0,0,0.75)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'rgba(0,0,0,0.5)' }}
           >
             {sidebarOpen
               ? <SidebarClose size={16} strokeWidth={1.6} />
@@ -1346,7 +1346,7 @@ function HistoryItem({
             <span style={{
               fontSize: '13px', fontWeight: isActive ? 500 : 400,
               color: isActive ? '#1D1D1F' : '#3C3C3E',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip',
               display: 'block', lineHeight: 1.3
             }}>
               {label}
