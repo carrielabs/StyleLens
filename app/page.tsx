@@ -1141,7 +1141,7 @@ export default function Home() {
                   onChange={e => setModalSearchQuery(e.target.value)}
                   placeholder="搜索历史记录..."
                   style={{
-                    flex: 1, border: 'none', outline: 'none', fontSize: '16px', color: '#1D1D1F',
+                    flex: 1, border: 'none', outline: 'none', fontSize: '14px', color: '#1D1D1F',
                     backgroundColor: 'transparent', fontFamily: 'var(--font-sans)', padding: '4px 0',
                     fontWeight: 400
                   }}
