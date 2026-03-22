@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin } from 'lucide-react'
+import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin, ChevronDown } from 'lucide-react'
 import StyleReportView from '@/components/report/StyleReport'
 import AuthOverlay from '@/components/auth/AuthOverlay'
 import { createClient } from '@/lib/storage/supabaseClient'
@@ -59,7 +59,12 @@ export default function Home() {
   const [undoItem, setUndoItem] = useState<{ id: string; label: string; record: any } | null>(null)
   const deleteTimerRef = useRef<{ [key: string]: any }>({})
 
+  // ── Sidebar section collapse ──
+  const [pinnedCollapsed, setPinnedCollapsed] = useState(false)
+  const [historyCollapsed, setHistoryCollapsed] = useState(false)
+
   const historyLoadedRef = useRef(false)
+  const extractAbortRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -259,15 +264,24 @@ export default function Home() {
   }
 
   // ── Extraction ──
-  const callExtractAPI = async (payload: { screenshotUrl?: string; imageBase64?: string; sourceLabel?: string }) => {
+  const callExtractAPI = async (payload: { screenshotUrl?: string; imageBase64?: string; sourceLabel?: string }, signal?: AbortSignal) => {
     const res = await fetch('/api/extract', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal,
     })
     const data = await res.json()
     if (!data.success) throw new Error(data.error || '提取失败，请重试')
     return data.report as StyleReport
+  }
+
+  const cancelExtraction = () => {
+    extractAbortRef.current?.abort()
+    extractAbortRef.current = null
+    setIsExtracting(false)
+    setError(null)
+    if (pendingPreviewUrl) { URL.revokeObjectURL(pendingPreviewUrl); setPendingPreviewUrl(null) }
   }
 
   const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
@@ -282,6 +296,9 @@ export default function Home() {
     if (!url.trim() || isExtracting) return
     if (!user) { setIsAuthVisible(true); return }
 
+    const abort = new AbortController()
+    extractAbortRef.current = abort
+
     setIsExtracting(true)
     setReport(null)
     setActiveItemId(null)
@@ -291,6 +308,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() }),
+        signal: abort.signal,
       })
       const ssData = await ssRes.json()
       if (!ssData.success) throw new Error(ssData.error || '截图失败')
@@ -298,19 +316,20 @@ export default function Home() {
       let label = url.trim()
       try { label = new URL(url.trim()).hostname.replace(/^www\./, '') } catch (e) {}
 
-      const result = await callExtractAPI({ screenshotUrl: ssData.screenshotUrl, sourceLabel: label })
+      const result = await callExtractAPI({ screenshotUrl: ssData.screenshotUrl, sourceLabel: label }, abort.signal)
       result.thumbnailUrl = ssData.screenshotUrl
 
       await saveExtraction(result, ssData.screenshotUrl)
       setReport(result)
-      setIsExtracting(false)
       setUrl('')
     } catch (err: unknown) {
+      if ((err as any)?.name === 'AbortError') return
       let msg = err instanceof Error ? err.message : '未知错误'
       if (msg.includes('Failed to fetch')) msg = '网络连接失败，请检查网络后重试'
       setError(msg)
     } finally {
       setIsExtracting(false)
+      extractAbortRef.current = null
     }
   }
 
@@ -329,6 +348,9 @@ export default function Home() {
     if (!pendingFile) return
     if (!user) { setIsAuthVisible(true); return }
 
+    const abort = new AbortController()
+    extractAbortRef.current = abort
+
     setIsExtracting(true)
     setReport(null)
     setActiveItemId(null)
@@ -336,20 +358,20 @@ export default function Home() {
     const file = pendingFile
     const previewUrl = pendingPreviewUrl
     setPendingFile(null)
-    // Keep previewUrl for the scan overlay
 
     try {
       const base64 = await toBase64(file)
-      const result = await callExtractAPI({ imageBase64: base64, sourceLabel: file.name })
+      const result = await callExtractAPI({ imageBase64: base64, sourceLabel: file.name }, abort.signal)
       result.thumbnailUrl = base64
 
       await saveExtraction(result, base64)
       setReport(result)
-      setIsExtracting(false)
     } catch (err: any) {
+      if (err?.name === 'AbortError') return
       setError(err.message || '上传分析失败')
     } finally {
       setIsExtracting(false)
+      extractAbortRef.current = null
       if (previewUrl) URL.revokeObjectURL(previewUrl)
       setPendingPreviewUrl(null)
     }
@@ -482,53 +504,47 @@ export default function Home() {
         {/* Pinned section */}
         {pinnedList.length > 0 && (
           <>
-            <div style={{ padding: '20px 20px 6px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 600, color: '#AEAEB2', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                PINNED
-              </span>
-            </div>
-            <div className="no-scrollbar" style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-              {pinnedList.map(item => (
-                <HistoryItem
-                  key={item.id}
-                  id={item.id}
-                  label={item.source_label || 'Untitled'}
-                  thumbnailUrl={item.thumbnail_url}
-                  colors={item.style_data?.colors || []}
-                  isActive={activeItemId === item.id}
-                  isPinned={true}
-                  contextMenuOpen={contextMenuId === item.id}
-                  renamingId={renamingId}
-                  renameValue={renameValue}
-                  onRenameChange={setRenameValue}
-                  onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null) }}
-                  onContextMenu={(e) => { e.stopPropagation(); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
-                  onPin={() => togglePin(item.id)}
-                  onDelete={() => deleteItem(item.id)}
-                  onStartRename={() => startRename(item.id, item.source_label || 'Untitled')}
-                  onRenameSubmit={() => submitRename(item.id)}
-                  onRenameCancel={cancelRename}
-                />
-              ))}
-            </div>
+            <SectionHeader label="PINNED" collapsed={pinnedCollapsed} onToggle={() => setPinnedCollapsed(v => !v)} />
+            {!pinnedCollapsed && (
+              <div className="no-scrollbar" style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                {pinnedList.map(item => (
+                  <HistoryItem
+                    key={item.id}
+                    id={item.id}
+                    label={item.source_label || 'Untitled'}
+                    thumbnailUrl={item.thumbnail_url}
+                    colors={item.style_data?.colors || []}
+                    isActive={activeItemId === item.id}
+                    isPinned={true}
+                    contextMenuOpen={contextMenuId === item.id}
+                    renamingId={renamingId}
+                    renameValue={renameValue}
+                    onRenameChange={setRenameValue}
+                    onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null) }}
+                    onContextMenu={(e) => { e.stopPropagation(); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
+                    onPin={() => togglePin(item.id)}
+                    onDelete={() => deleteItem(item.id)}
+                    onStartRename={() => startRename(item.id, item.source_label || 'Untitled')}
+                    onRenameSubmit={() => submitRename(item.id)}
+                    onRenameCancel={cancelRename}
+                  />
+                ))}
+              </div>
+            )}
           </>
         )}
 
         {/* History section */}
-        <div style={{ padding: '20px 20px 6px' }}>
-          <span style={{ fontSize: '10px', fontWeight: 600, color: '#AEAEB2', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            HISTORY
-          </span>
-        </div>
+        <SectionHeader label="HISTORY" collapsed={historyCollapsed} onToggle={() => setHistoryCollapsed(v => !v)} />
 
         <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-          {!user ? (
+          {historyCollapsed ? null : !user ? (
             <EmptyState>登录后查看历史记录</EmptyState>
           ) : isLoadingHistory ? (
             <div style={{ padding: '8px 4px' }}>
               {[1, 2, 3, 4].map(i => (
                 <div key={i} style={{
-                  height: '58px', borderRadius: '8px', marginBottom: '2px',
+                  height: '50px', borderRadius: '8px', marginBottom: '2px',
                   backgroundColor: 'rgba(0,0,0,0.04)', animation: 'pulse 1.5s infinite'
                 }} />
               ))}
@@ -840,7 +856,7 @@ export default function Home() {
                         pointerEvents: 'none'
                       }} />
                     )}
-                    {/* Bottom bar: filename + actions */}
+                    {/* Bottom bar: filename + 立即解析 (no X here, only top-right X) */}
                     {uploadState === 'selected' && (
                       <div style={{
                         position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -854,37 +870,22 @@ export default function Home() {
                             {pendingFile ? (pendingFile.size / 1024 / 1024).toFixed(1) + ' MB' : ''}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <button
-                            onClick={e => { e.stopPropagation(); clearPendingFile() }}
-                            style={{
-                              width: '28px', height: '28px', borderRadius: '50%',
-                              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              cursor: 'pointer', color: '#FFFFFF', transition: 'background 0.15s'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-                          >
-                            <X size={13} strokeWidth={2} />
-                          </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); handleExtractFile() }}
-                            style={{
-                              height: '28px', padding: '0 14px', borderRadius: '14px',
-                              background: 'rgba(255,255,255,0.95)', border: 'none',
-                              fontSize: '12px', fontWeight: 600, color: '#1D1D1F',
-                              cursor: 'pointer', transition: 'background 0.15s'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#FFFFFF'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.95)'}
-                          >
-                            立即解析 →
-                          </button>
-                        </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); handleExtractFile() }}
+                          style={{
+                            height: '28px', padding: '0 14px', borderRadius: '14px',
+                            background: 'rgba(255,255,255,0.95)', border: 'none',
+                            fontSize: '12px', fontWeight: 600, color: '#1D1D1F',
+                            cursor: 'pointer', transition: 'background 0.15s'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#FFFFFF'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.95)'}
+                        >
+                          立即解析 →
+                        </button>
                       </div>
                     )}
-                    {/* Top-right X to clear when selected */}
+                    {/* Top-right X — only clear button */}
                     {uploadState === 'selected' && (
                       <button
                         onClick={e => { e.stopPropagation(); clearPendingFile() }}
@@ -927,11 +928,28 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Progress UI — Below Drop Zone (URL mode or extracting without preview) */}
+              {/* Progress UI — absolute bottom, won't shift layout */}
               {isExtracting && !pendingPreviewUrl && (
-                <div style={{ marginTop: '48px', animation: 'fadeIn 0.3s ease-out' }}>
-                  <div style={{ fontSize: '12px', color: '#1D1D1F', marginBottom: '12px', opacity: 0.5, fontWeight: 500 }}>
-                    正在解析设计，重构色彩与字体树 (约需 15 秒) ...
+                <div style={{
+                  position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
+                  width: '100%', maxWidth: '500px', animation: 'fadeIn 0.3s ease-out'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '12px', color: '#1D1D1F', opacity: 0.5, fontWeight: 500 }}>
+                      正在解析设计，约需 15 秒 ...
+                    </span>
+                    <button
+                      onClick={cancelExtraction}
+                      style={{
+                        background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: '6px',
+                        padding: '3px 10px', fontSize: '11px', fontWeight: 500, color: '#8E8E93',
+                        cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'var(--font-sans)'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.22)'; e.currentTarget.style.color = '#3C3C3E' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; e.currentTarget.style.color = '#8E8E93' }}
+                    >
+                      取消
+                    </button>
                   </div>
                   <div style={{
                     width: '100%', height: '1px', backgroundColor: '#F0F0F0',
@@ -1260,14 +1278,14 @@ function HistoryItem({
       >
         {/* Thumbnail */}
         <div style={{
-          width: '52px', height: '42px', borderRadius: '5px', overflow: 'hidden',
+          width: '44px', height: '34px', borderRadius: '5px', overflow: 'hidden',
           flexShrink: 0, backgroundColor: '#F0F0F0'
         }}>
           {thumbnailContent}
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '5px' }}>
           {/* Label / rename input */}
           {isRenaming ? (
             <input
@@ -1292,31 +1310,24 @@ function HistoryItem({
               fontSize: '13px', fontWeight: isActive ? 500 : 400,
               color: isActive ? '#1D1D1F' : '#3C3C3E',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              display: 'block'
+              display: 'block', lineHeight: 1.3
             }}>
               {label}
             </span>
           )}
 
-          {/* Color dots row */}
+          {/* Color dots only — no hex labels */}
           {!isRenaming && topColors.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                {topColors.map((c, i) => (
-                  <div key={i} style={{
-                    width: '7px', height: '7px', borderRadius: '50%',
-                    backgroundColor: c.hex || '#CCCCCC',
-                    border: '1.5px solid #FFFFFF',
-                    boxShadow: '0 0 0 0.5px rgba(0,0,0,0.06)',
-                    marginLeft: i === 0 ? 0 : '-2px',
-                    flexShrink: 0
-                  }} />
-                ))}
-              </div>
-              {topColors.slice(0, 2).map((c, i) => (
-                <span key={i} style={{ fontSize: '10px', color: '#AEAEB2', marginLeft: i === 0 ? '4px' : '0', letterSpacing: '0.01em' }}>
-                  {c.hex || ''}
-                </span>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {topColors.map((c, i) => (
+                <div key={i} style={{
+                  width: '9px', height: '9px', borderRadius: '50%',
+                  backgroundColor: c.hex || '#CCCCCC',
+                  border: '1.5px solid #FFFFFF',
+                  boxShadow: '0 0 0 0.5px rgba(0,0,0,0.08)',
+                  marginLeft: i === 0 ? 0 : '-3px',
+                  flexShrink: 0
+                }} />
               ))}
             </div>
           )}
@@ -1402,5 +1413,36 @@ function EmptyState({ children }: { children: React.ReactNode }) {
     <div style={{ padding: '10px 12px', textAlign: 'left', fontSize: '12px', color: '#AEAEB2', lineHeight: 1.5 }}>
       {children}
     </div>
+  )
+}
+
+function SectionHeader({ label, collapsed, onToggle }: {
+  label: string, collapsed: boolean, onToggle: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onToggle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '18px 20px 6px', width: '100%', border: 'none', background: 'none',
+        cursor: 'pointer', fontFamily: 'var(--font-sans)'
+      }}
+    >
+      <span style={{ fontSize: '10px', fontWeight: 600, color: hovered ? '#8E8E93' : '#AEAEB2', letterSpacing: '0.08em', textTransform: 'uppercase', transition: 'color 0.15s' }}>
+        {label}
+      </span>
+      <ChevronDown
+        size={12}
+        strokeWidth={2}
+        style={{
+          color: hovered ? '#8E8E93' : '#C7C7CC',
+          transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s ease, color 0.15s'
+        }}
+      />
+    </button>
   )
 }
