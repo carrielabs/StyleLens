@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin, ChevronDown } from 'lucide-react'
+import { Plus, Search, Link2, HelpCircle, UserIcon, Sparkles, X, ChevronLeft, MoreHorizontal, Upload, Pin, ChevronDown, PanelLeft } from 'lucide-react'
 import StyleReportView from '@/components/report/StyleReport'
 import AuthOverlay from '@/components/auth/AuthOverlay'
 import { createClient } from '@/lib/storage/supabaseClient'
@@ -62,6 +62,9 @@ export default function Home() {
   // ── Sidebar section collapse ──
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false)
   const [historyCollapsed, setHistoryCollapsed] = useState(false)
+
+  // ── Sidebar panel toggle ──
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const historyLoadedRef = useRef(false)
   const extractAbortRef = useRef<AbortController | null>(null)
@@ -460,19 +463,33 @@ export default function Home() {
       <div style={{
         height: '100vh', width: '100vw', display: 'flex', flexDirection: 'row',
         fontFamily: 'var(--font-sans)', WebkitFontSmoothing: 'antialiased' as any,
-        userSelect: 'none', overflow: 'hidden', backgroundColor: '#FAFAFA'
+        userSelect: 'none', overflow: 'hidden', backgroundColor: '#FFFFFF'
       }}>
 
       {/* ══════════════════════════════════════════
           SIDEBAR
       ══════════════════════════════════════════ */}
       <aside style={{
-        width: '240px', flexShrink: 0, display: 'flex', flexDirection: 'column',
-        backgroundColor: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.06)'
+        width: sidebarOpen ? '260px' : '0px', flexShrink: 0, display: 'flex', flexDirection: 'column',
+        backgroundColor: '#FFFFFF', borderRight: sidebarOpen ? '1px solid rgba(0,0,0,0.06)' : 'none',
+        overflow: 'hidden', transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
-        {/* Brand wordmark */}
-        <div style={{ padding: '22px 20px 14px', display: 'flex', alignItems: 'center' }}>
-          <span style={{ fontSize: '17px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.02em' }}>StyleLens</span>
+        {/* Brand wordmark + sidebar toggle */}
+        <div style={{ padding: '22px 16px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <span style={{ fontSize: '17px', fontWeight: 600, color: '#1D1D1F', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>StyleLens</span>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            title="收起侧边栏"
+            style={{
+              width: '28px', height: '28px', border: 'none', background: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: '6px', color: '#C7C7CC', transition: 'all 0.15s', flexShrink: 0
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#8E8E93' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#C7C7CC' }}
+          >
+            <PanelLeft size={16} strokeWidth={1.8} />
+          </button>
         </div>
 
         {/* Top Actions */}
@@ -631,7 +648,26 @@ export default function Home() {
       {/* ══════════════════════════════════════════
           MAIN WORKSPACE
       ══════════════════════════════════════════ */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FAFAFA', overflow: 'hidden' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FFFFFF', overflow: 'hidden', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+
+        {/* Top-left: sidebar expand button (only when collapsed) */}
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            title="展开侧边栏"
+            style={{
+              position: 'absolute', top: '18px', left: '16px', zIndex: 10,
+              width: '28px', height: '28px', border: 'none', background: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: '6px', color: '#C7C7CC', transition: 'all 0.15s',
+              animation: 'fadeIn 0.2s ease-out'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#8E8E93' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#C7C7CC' }}
+          >
+            <PanelLeft size={16} strokeWidth={1.8} />
+          </button>
+        )}
 
         {/* Help icon */}
         <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
@@ -1092,7 +1128,7 @@ export default function Home() {
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <div style={{ width: '40px', height: '30px', borderRadius: '5px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0 }}>
+                      <div style={{ width: '30px', height: '40px', borderRadius: '5px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0 }}>
                         {item.thumbnail_url ? (
                           <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
@@ -1276,9 +1312,9 @@ function HistoryItem({
           transition: 'background 0.1s'
         }}
       >
-        {/* Thumbnail */}
+        {/* Thumbnail — portrait 3:4 */}
         <div style={{
-          width: '44px', height: '34px', borderRadius: '5px', overflow: 'hidden',
+          width: '34px', height: '46px', borderRadius: '5px', overflow: 'hidden',
           flexShrink: 0, backgroundColor: '#F0F0F0'
         }}>
           {thumbnailContent}
@@ -1321,11 +1357,11 @@ function HistoryItem({
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {topColors.map((c, i) => (
                 <div key={i} style={{
-                  width: '9px', height: '9px', borderRadius: '50%',
+                  width: '12px', height: '12px', borderRadius: '50%',
                   backgroundColor: c.hex || '#CCCCCC',
-                  border: '1.5px solid #FFFFFF',
-                  boxShadow: '0 0 0 0.5px rgba(0,0,0,0.08)',
-                  marginLeft: i === 0 ? 0 : '-3px',
+                  border: '2px solid #FFFFFF',
+                  boxShadow: '0 0 0 0.5px rgba(0,0,0,0.1)',
+                  marginLeft: i === 0 ? 0 : '-4px',
                   flexShrink: 0
                 }} />
               ))}
