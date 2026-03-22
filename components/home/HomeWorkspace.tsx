@@ -9,6 +9,8 @@ interface HomeWorkspaceProps {
   activeItemId: string | null
   report: StyleReport | null
   isExtracting: boolean
+  isUrlExtracting: boolean
+  isImageExtracting: boolean
   extractions: any[]
   reportLang: 'zh' | 'en'
   setReportLang: Dispatch<SetStateAction<'zh' | 'en'>>
@@ -43,6 +45,8 @@ export default function HomeWorkspace({
   activeItemId,
   report,
   isExtracting,
+  isUrlExtracting,
+  isImageExtracting,
   extractions,
   reportLang,
   setReportLang,
@@ -233,7 +237,7 @@ export default function HomeWorkspace({
                     flexShrink: 0
                   }}
                 >
-                  {isExtracting ? (
+                  {isUrlExtracting ? (
                     <div className="animate-spin" style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', borderRadius: '50%' }} />
                   ) : (
                     <ArrowUp size={18} strokeWidth={2.5} />
@@ -303,7 +307,7 @@ export default function HomeWorkspace({
                     position: 'absolute', inset: 0,
                     background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.55) 100%)'
                   }} />
-                  {uploadState === 'extracting' && (
+                  {isImageExtracting && (
                     <div className="animate-scan" style={{
                       position: 'absolute', top: 0, width: '60%', height: '100%',
                       background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',

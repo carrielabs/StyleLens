@@ -5,6 +5,22 @@ import type { ExtractRequest } from '@/lib/types'
 
 export const maxDuration = 60 // Allow up to 60s for Vercel Hobby tier function execution
 
+function toUserFacingExtractError(message: string): string {
+  const normalized = message.toLowerCase()
+
+  if (normalized.includes('location is not supported for the api use')
+    || normalized.includes('user location is not supported')
+    || normalized.includes('当前 ai 解析服务在此网络环境下暂不可用')) {
+    return '当前网络环境暂时无法使用 AI 解析，请切换网络环境后重试。'
+  }
+
+  if (normalized.includes('all gemini keys failed')) {
+    return 'AI 解析暂时不可用，请稍后再试。'
+  }
+
+  return message || '提取失败，请重试'
+}
+
 export async function POST(req: Request) {
   try {
     const body: ExtractRequest = await req.json()
@@ -38,10 +54,11 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, report })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Final Extraction Error Interface:', error)
+    const message = error instanceof Error ? error.message : '提取失败，请重试'
     return NextResponse.json(
-      { success: false, error: error.message || '提取失败，请重试' },
+      { success: false, error: toUserFacingExtractError(message) },
       { status: 500 }
     )
   }

@@ -3,6 +3,18 @@ import type { ExtractRequest, StyleReport } from '@/lib/types'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import fetchNode from 'node-fetch'
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  return 'Unknown error'
+}
+
+function isUnsupportedLocationError(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return normalized.includes('user location is not supported')
+    || normalized.includes('location is not supported for the api use')
+}
+
 // We patch globalThis.fetch specifically for Gemini, as the SDK removed clean proxy overrides.
 const setupProxy = () => {
   const proxyUrl = process.env.STYLELENS_HTTP_PROXY || process.env.https_proxy || process.env.HTTPS_PROXY || process.env.http_proxy || process.env.HTTP_PROXY
@@ -180,7 +192,7 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
     promptText += `\n\nAdditional context — extracted CSS from the page:\n\`\`\`css\n${req.extractedCss.slice(0, 3000)}\n\`\`\``
   }
 
-  let lastError = null
+  let lastError: unknown = null
   
   // ── Multi-Key Rotation Strategy ────────────────────────────────────
   for (let i = 0; i < geminiKeys.length; i++) {
@@ -204,10 +216,14 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
       const rawText = response.text().trim()
       
       return parseAndFormatResponse(rawText, req, mimeType, base64Data)
-    } catch (err: any) {
+    } catch (err: unknown) {
       lastError = err
-      const isQuotaError = err.message?.includes('429') || err.message?.toLowerCase().includes('quota')
-      console.warn(`Gemini Key ${i + 1} failed:`, err.message)
+      const message = getErrorMessage(err)
+      console.warn(`Gemini Key ${i + 1} failed:`, message)
+
+      if (isUnsupportedLocationError(message)) {
+        throw new Error('当前 AI 解析服务在此网络环境下暂不可用，请切换网络环境后重试。')
+      }
       
       if (i < geminiKeys.length - 1) {
         console.log('Switching to backup Gemini key...')
@@ -217,7 +233,7 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
   }
 
   // If we reach here, all Gemini keys failed
-  throw new Error(`[All Gemini Keys Failed] Last error: ${lastError?.message || 'Unknown error'}`)
+  throw new Error(`[All Gemini Keys Failed] Last error: ${getErrorMessage(lastError)}`)
 }
 
 /**
