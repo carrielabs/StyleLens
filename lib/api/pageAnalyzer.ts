@@ -168,13 +168,62 @@ export function isLikelyAuthAnalysis(analysis: Pick<PageStyleAnalysis, 'typograp
   return score >= 4
 }
 
+function isAuthArtifactText(value: string): boolean {
+  const normalized = value.toLowerCase()
+  return /\blog in with\b|\bsign in with\b|\bcontinue with\b|\byour ai workspace\b|\blog in to your\b|\buse an organization email\b|\bforgot password\b|\bpasskey\b|\bsso\b|\boauth\b|\bpassword-reset\b|\breset password\b|\bcreate account\b|\bauth\b|\bsession\b/.test(normalized)
+}
+
+function stripAuthArtifacts(analysis: PageStyleAnalysis): PageStyleAnalysis {
+  const typographyCandidates = analysis.typographyCandidates.filter(candidate =>
+    !isAuthArtifactText(`${candidate.sampleText || ''} ${candidate.fontFamily || ''}`)
+  )
+
+  const colorCandidates = analysis.colorCandidates.filter(candidate =>
+    !isAuthArtifactText(`${candidate.selectorHint || ''} ${candidate.property}`)
+  )
+
+  const layoutEvidence = analysis.layoutEvidence.filter(item =>
+    !isAuthArtifactText(`${item.label} ${item.kind} ${(item.componentKinds || []).join(' ')}`)
+  )
+
+  const layoutHints = analysis.layoutHints.filter(hint => !isAuthArtifactText(hint))
+
+  return {
+    ...analysis,
+    colorCandidates,
+    typographyCandidates,
+    typographyTokens: toTypographyTokens(typographyCandidates),
+    layoutHints,
+    layoutEvidence,
+  }
+}
+
+function hasRetainedMeasuredSignals(analysis: PageStyleAnalysis): boolean {
+  return Boolean(
+    analysis.colorCandidates.length ||
+    analysis.typographyCandidates.length ||
+    analysis.radiusTokens.length ||
+    analysis.shadowTokens.length ||
+    analysis.spacingTokens.length ||
+    analysis.layoutEvidence.length ||
+    Object.values(analysis.stateTokens || {}).some(values => (values || []).length > 0)
+  )
+}
+
 export function sanitizePageAnalysis(
   analysis: PageStyleAnalysis | undefined
 ): PageStyleAnalysis | undefined {
   if (!analysis) return analysis
   if (!isLikelyAuthAnalysis(analysis)) return analysis
 
-  return createEmptyPageAnalysis(analysis.sourceCount)
+  const stripped = stripAuthArtifacts(analysis)
+  const retainedSignals = hasRetainedMeasuredSignals(stripped)
+
+  if (!retainedSignals) {
+    return createEmptyPageAnalysis(analysis.sourceCount)
+  }
+
+  return stripped
 }
 
 function normalizeHex(value: string): string | null {
@@ -1979,6 +2028,12 @@ export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAna
   }
 
   if (isLikelyAuthAnalysis(analysis)) {
+    const stripped = stripAuthArtifacts(analysis)
+    if (hasRetainedMeasuredSignals(stripped)) {
+      console.warn('[pageAnalyzer] Auth-like measured analysis detected after merge, retaining stripped non-auth signals for:', targetUrl)
+      return stripped
+    }
+
     console.warn('[pageAnalyzer] Auth-like measured analysis detected after merge, discarding pageAnalysis for:', targetUrl)
     return createEmptyPageAnalysis({
       inlineStyleBlocks: inlineBlocks.length,
