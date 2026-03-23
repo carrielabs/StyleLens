@@ -1,15 +1,15 @@
 import type { StyleReport } from '@/lib/types'
 
 export function generateCssVariables(report: StyleReport): string {
-  const { colors, typography, designDetails } = report
+  const { colors, colorSystem, typography, designDetails } = report
 
   // Filter colors by roles to generate meaningful semantic variables
-  const bg = colors.find(c => c.role === 'background')?.hex || '#ffffff'
-  const surface = colors.find(c => c.role === 'surface')?.hex || '#f5f5f5'
-  const primary = colors.find(c => c.role === 'primary')?.hex || '#000000'
-  const accent = colors.find(c => c.role === 'accent')?.hex || '#3b82f6'
-  const textMain = colors.find(c => c.role === 'text')?.hex || '#1a1a1a'
-  const border = colors.find(c => c.role === 'border')?.hex || '#e5e5e5'
+  const bg = colorSystem?.pageBackground?.hex || colorSystem?.heroBackground?.hex || colors.find(c => c.role === 'background')?.hex || '#ffffff'
+  const surface = colorSystem?.surface?.hex || colors.find(c => c.role === 'surface')?.hex || '#f5f5f5'
+  const primary = colorSystem?.primaryAction?.hex || colors.find(c => c.role === 'primary')?.hex || '#000000'
+  const accent = colorSystem?.secondaryAction?.hex || colorSystem?.contentColors?.[0]?.hex || colors.find(c => c.role === 'accent')?.hex || '#3b82f6'
+  const textMain = colorSystem?.textPrimary?.hex || colors.find(c => c.role === 'text')?.hex || '#1a1a1a'
+  const border = colorSystem?.border?.hex || colors.find(c => c.role === 'border')?.hex || '#e5e5e5'
 
   // Guess rounded corners based on the design details description
   let radius = '8px'

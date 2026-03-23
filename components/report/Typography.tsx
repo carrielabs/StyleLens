@@ -44,10 +44,13 @@ export default function Typography({
     displayFonts.push(displayFonts[0])
   }
 
+  const baseSize = 16
+  const scale = parseFloat(data.fontSizeScale || '1.25')
+  
   const styles = [
     {
       label: lang === 'zh' ? '主标题' : 'Heading',
-      size: '48px',
+      size: `${Math.round(baseSize * scale * scale)}px`,
       weight: normalizeWeight(data.headingWeight, 700),
       lh: 1.1,
       text: lang === 'zh' ? '探索设计的内在秩序。' : 'Discover the internal order of design.',
@@ -55,15 +58,15 @@ export default function Typography({
     },
     {
       label: lang === 'zh' ? '副标题' : 'Subheader',
-      size: '24px',
-      weight: Math.max(400, normalizeWeight(data.headingWeight, 700) - 200),
+      size: `${Math.round(baseSize * scale)}px`,
+      weight: Math.max(400, normalizeWeight(data.headingWeight, 700) - 100),
       lh: 1.3,
       text: lang === 'zh' ? '去掉非必要元素，纯粹即是力量。' : 'Less, but better. Purity is power.',
       isBody: false
     },
     {
       label: lang === 'zh' ? '正文' : 'Body',
-      size: '16px',
+      size: `${baseSize}px`,
       weight: normalizeWeight(data.bodyWeight, 400),
       lh: normalizeLineHeight(data.lineHeight, 1.6),
       text: lang === 'zh' 
@@ -73,7 +76,7 @@ export default function Typography({
     },
     {
       label: lang === 'zh' ? '辅助说明' : 'Caption',
-      size: '13px',
+      size: `${Math.round(baseSize / scale)}px`,
       weight: 400,
       lh: 1.4,
       text: lang === 'zh' ? '细节决定成败。' : 'Details make the design.',
@@ -84,7 +87,7 @@ export default function Typography({
   let parsedSpacing = String(data.letterSpacing || 'normal')
   if (parsedSpacing.length > 15) parsedSpacing = 'normal' // hard truncate AI paragraph bleed
 
-  const measuredTypography = sourceType === 'url' ? (analysis?.typographyCandidates || []).slice(0, 8) : []
+  const measuredTypography = sourceType === 'url' ? (analysis?.typographyTokens || []).slice(0, 8) : []
   const hasMeasuredTypography = measuredTypography.length > 0
 
   return (
@@ -127,8 +130,8 @@ export default function Typography({
               <div style={{ flex: '0 0 16%', textAlign: 'right' }}>{lang === 'zh' ? '频次' : 'Count'}</div>
             </div>
 
-            {measuredTypography.map((candidate, idx) => (
-              <div key={`${candidate.fontFamily}-${candidate.fontSize}-${idx}`} style={{
+            {measuredTypography.map((token, idx) => (
+              <div key={`${token.id}-${idx}`} style={{
                 display: 'flex',
                 alignItems: 'baseline',
                 padding: '20px 0',
@@ -136,32 +139,32 @@ export default function Typography({
               }}>
                 <div style={{
                   flex: '0 0 28%',
-                  fontSize: `clamp(14px, ${candidate.fontSize || '18px'}, 32px)`,
-                  fontWeight: normalizeWeight(candidate.fontWeight, 500),
+                  fontSize: `clamp(14px, ${token.fontSize || '18px'}, 32px)`,
+                  fontWeight: normalizeWeight(token.fontWeight, 500),
                   color: 'var(--text-primary)',
-                  fontFamily: candidate.fontFamily || `"${displayFonts[0]}", var(--font-sans), sans-serif`,
+                  fontFamily: token.fontFamily || `"${displayFonts[0]}", var(--font-sans), sans-serif`,
                   lineHeight: 1.2,
                   paddingRight: '16px',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
-                }} title={candidate.fontFamily}>
-                  {candidate.fontFamily}
+                }} title={token.fontFamily}>
+                  {token.fontFamily}
                 </div>
                 <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {candidate.fontSize || '—'}
+                  {token.fontSize || '—'}
                 </div>
                 <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {candidate.fontWeight || '—'}
+                  {token.fontWeight || '—'}
                 </div>
                 <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {candidate.letterSpacing || 'normal'}
+                  {token.letterSpacing || 'normal'}
                 </div>
                 <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {candidate.lineHeight || '—'}
+                  {token.lineHeight || '—'}
                 </div>
                 <div style={{ flex: '0 0 16%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {candidate.count}
+                  {token.sampleCount}
                 </div>
               </div>
             ))}

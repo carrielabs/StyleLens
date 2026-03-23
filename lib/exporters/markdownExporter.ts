@@ -1,7 +1,7 @@
 import type { StyleReport } from '@/lib/types'
 
 export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'): string {
-  const { colors, typography, designDetails, tags, tagsEn, tagsZh, summaryEn, summaryZh, summary } = report
+  const { colors, colorSystem, typography, designDetails, tags, tagsEn, tagsZh, summaryEn, summaryZh, summary } = report
   const isEn = lang === 'en'
 
   let md = isEn ? `## Style Analysis Report\n\n` : `## 风格分析报告\n\n`
@@ -32,7 +32,21 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
     border: '边框色', other: '其他'
   }
 
-  colors.forEach(c => {
+  const displayColors = colorSystem
+    ? [
+        colorSystem.heroBackground,
+        colorSystem.pageBackground,
+        colorSystem.surface,
+        colorSystem.textPrimary,
+        colorSystem.textSecondary,
+        colorSystem.border,
+        colorSystem.primaryAction,
+        colorSystem.secondaryAction,
+        ...(colorSystem.contentColors || []),
+      ].filter((color): color is NonNullable<typeof color> => Boolean(color))
+    : colors
+
+  displayColors.forEach(c => {
     const roleLabel = roleMap[c.role] || c.role
     md += `| ${roleLabel} | \`${c.hex.toUpperCase()}\` | ${c.name} |\n`
   })

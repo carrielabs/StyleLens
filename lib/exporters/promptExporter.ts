@@ -1,12 +1,18 @@
 import type { StyleReport } from '@/lib/types'
 
 export function generatePrompt(report: StyleReport, language: 'en' | 'zh' = 'en'): string {
-  const { colors, typography, designDetails } = report
+  const { colors, colorSystem, typography, designDetails } = report
 
   // Filter colors by role
-  const bgColors = colors.filter(c => c.role === 'background' || c.role === 'surface')
-  const primaryColors = colors.filter(c => c.role === 'primary')
-  const borderColors = colors.filter(c => c.role === 'border')
+  const bgColors = colorSystem
+    ? [colorSystem.heroBackground, colorSystem.pageBackground, colorSystem.surface].filter(Boolean) as typeof colors
+    : colors.filter(c => c.role === 'background' || c.role === 'surface')
+  const primaryColors = colorSystem
+    ? [colorSystem.primaryAction, colorSystem.secondaryAction].filter(Boolean) as typeof colors
+    : colors.filter(c => c.role === 'primary' || c.role === 'secondary' || c.role === 'accent')
+  const borderColors = colorSystem
+    ? [colorSystem.border].filter(Boolean) as typeof colors
+    : colors.filter(c => c.role === 'border')
 
   const getHexList = (list: typeof colors) => list.map(c => c.hex.toUpperCase()).join(', ') || 'None'
 

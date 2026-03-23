@@ -1,15 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import type { ColorToken, PageStyleAnalysis } from '@/lib/types'
+import type { ColorToken, LayeredColorSystem, PageStyleAnalysis } from '@/lib/types'
 
 export default function ColorSystem({
   colors,
+  colorSystem,
   analysis,
   sourceType,
   lang
 }: {
   colors: ColorToken[]
+  colorSystem?: LayeredColorSystem
   analysis?: PageStyleAnalysis
   sourceType: 'image' | 'url'
   lang: 'zh' | 'en'
@@ -38,7 +40,12 @@ export default function ColorSystem({
   const measuredCandidates = new Map(
     (analysis?.colorCandidates || []).map(candidate => [candidate.hex.toUpperCase(), candidate])
   )
+  type DisplayColor = ColorToken & { roleLabelOverride?: string }
   const contentColors = sourceType === 'url'
+    ? (colorSystem?.contentColors || [])
+    : []
+
+  const measuredContentCandidates = sourceType === 'url'
     ? (analysis?.colorCandidates || [])
         .filter(candidate =>
           candidate.layerHints.includes('content') &&
@@ -47,6 +54,19 @@ export default function ColorSystem({
         )
         .slice(0, 6)
     : []
+
+  const systemPalette: DisplayColor[] = sourceType === 'url' && colorSystem
+    ? [
+        colorSystem.heroBackground && { ...colorSystem.heroBackground, roleLabelOverride: lang === 'zh' ? 'Hero 背景' : 'Hero background' },
+        colorSystem.pageBackground && { ...colorSystem.pageBackground, roleLabelOverride: lang === 'zh' ? '页面背景' : 'Page background' },
+        colorSystem.surface && { ...colorSystem.surface, roleLabelOverride: lang === 'zh' ? '面板色' : 'Surface' },
+        colorSystem.textPrimary && { ...colorSystem.textPrimary, roleLabelOverride: lang === 'zh' ? '主文字' : 'Text primary' },
+        colorSystem.textSecondary && { ...colorSystem.textSecondary, roleLabelOverride: lang === 'zh' ? '辅助文字' : 'Text secondary' },
+        colorSystem.border && { ...colorSystem.border, roleLabelOverride: lang === 'zh' ? '边框线' : 'Border' },
+        colorSystem.primaryAction && { ...colorSystem.primaryAction, roleLabelOverride: lang === 'zh' ? '主动作色' : 'Primary action' },
+        colorSystem.secondaryAction && { ...colorSystem.secondaryAction, roleLabelOverride: lang === 'zh' ? '次动作色' : 'Secondary action' },
+      ].filter(Boolean) as DisplayColor[]
+    : colors.map(color => ({ ...color }))
 
   const getEvidenceLabel = (color: ColorToken) => {
     const candidate = measuredCandidates.get(color.hex.toUpperCase())
@@ -89,7 +109,7 @@ export default function ColorSystem({
         gridTemplateColumns: 'repeat(8, 1fr)', 
         gap: '12px' 
       }}>
-      {colors.map((c, i) => {
+      {systemPalette.map((c, i) => {
         const evidenceLabel = getEvidenceLabel(c)
         const isLowPriorityOther = sourceType === 'url' && c.role === 'other' && !evidenceLabel
         return (
@@ -118,7 +138,7 @@ export default function ColorSystem({
           {/* Strict Label Stack */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {getRoleLabel(c.role)}
+              {c.roleLabelOverride || getRoleLabel(c.role)}
             </div>
             {evidenceLabel && (
               <div style={{
@@ -145,13 +165,38 @@ export default function ColorSystem({
       )})}
       </div>
 
-      {contentColors.length > 0 && (
+      {(contentColors.length > 0 || measuredContentCandidates.length > 0) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
             {lang === 'zh' ? '内容区辅助色' : 'Content module colors'}
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {contentColors.map(candidate => (
+              <div
+                key={`${candidate.hex}-layered`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  borderRadius: '999px',
+                  background: '#F6F6F6',
+                  border: '1px solid rgba(0,0,0,0.05)'
+                }}
+                >
+                <span style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '999px',
+                  background: candidate.hex,
+                  boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)'
+                }} />
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                  {candidate.hex.toUpperCase()}
+                </span>
+              </div>
+            ))}
+            {contentColors.length === 0 && measuredContentCandidates.map(candidate => (
               <div
                 key={`${candidate.hex}-${candidate.property}`}
                 style={{

@@ -37,16 +37,16 @@ export default function DesignDetails({
   ]
 
   const parse = (val?: string) => val ? val.split('|').map(s => s.trim()).filter(Boolean) : []
-  const measuredRadius = sourceType === 'url' ? analysis?.radiusCandidates || [] : []
-  const measuredShadow = sourceType === 'url' ? analysis?.shadowCandidates || [] : []
-  const measuredSpacing = sourceType === 'url' ? analysis?.spacingCandidates || [] : []
-  const measuredLayout = sourceType === 'url' ? analysis?.layoutHints || [] : []
+  const measuredRadius = sourceType === 'url' ? analysis?.radiusTokens || [] : []
+  const measuredShadow = sourceType === 'url' ? analysis?.shadowTokens || [] : []
+  const measuredSpacing = sourceType === 'url' ? analysis?.spacingTokens || [] : []
+  const measuredLayout = sourceType === 'url' ? analysis?.layoutEvidence || [] : []
   
   const items = {
-    radius: measuredRadius.length ? measuredRadius : parse(data.cssRadius),
-    shadow: measuredShadow.length ? measuredShadow : parse(data.cssShadow),
-    layout: measuredLayout.length ? measuredLayout : (lang === 'zh' ? parse(data.layoutZh || data.layoutEn) : parse(data.layoutEn || data.layoutZh)),
-    spacing: measuredSpacing.length ? measuredSpacing : (lang === 'zh' ? parse(data.spacingZh || data.spacingEn) : parse(data.spacingEn || data.spacingZh)),
+    radius: measuredRadius.length ? measuredRadius.map(token => token.value) : parse(data.cssRadius),
+    shadow: measuredShadow.length ? measuredShadow.map(token => token.value) : parse(data.cssShadow),
+    layout: measuredLayout.length ? measuredLayout.map(item => item.label) : (lang === 'zh' ? parse(data.layoutZh || data.layoutEn) : parse(data.layoutEn || data.layoutZh)),
+    spacing: measuredSpacing.length ? measuredSpacing.map(token => token.value) : (lang === 'zh' ? parse(data.spacingZh || data.spacingEn) : parse(data.spacingEn || data.spacingZh)),
     motion: lang === 'zh' ? parse(data.motionZh || data.motionEn) : parse(data.motionEn || data.motionZh)
   }
 

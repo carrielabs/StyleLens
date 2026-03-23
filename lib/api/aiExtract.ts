@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import type { ColorToken, ExtractRequest, PageColorCandidate, PageStyleAnalysis, StyleReport, Typography, DesignDetails } from '@/lib/types'
+import type { ColorToken, ExtractRequest, LayeredColorSystem, PageColorCandidate, PageStyleAnalysis, StyleReport, Typography, DesignDetails } from '@/lib/types'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import fetchNode from 'node-fetch'
 import sharp from 'sharp'
@@ -161,21 +161,29 @@ function formatPageAnalysis(pageAnalysis?: PageStyleAnalysis): string {
     .map(candidate => `${candidate.hex} | ${candidate.property} | layer=${candidate.layerHints.join('/') || 'none'} | hints=${candidate.roleHints.join('/') || 'none'} | count=${candidate.count}`)
     .join('\n')
 
-  const typography = pageAnalysis.typographyCandidates
-    .map(candidate => `${candidate.fontFamily} | size=${candidate.fontSize || 'unknown'} | weight=${candidate.fontWeight || 'unknown'} | lineHeight=${candidate.lineHeight || 'unknown'} | count=${candidate.count}`)
+  const typography = pageAnalysis.typographyTokens
+    .map(token => `${token.label} | family=${token.fontFamily} | size=${token.fontSize} | weight=${token.fontWeight} | lineHeight=${token.lineHeight} | letterSpacing=${token.letterSpacing} | score=${token.evidenceScore}`)
     .join('\n')
+
+  const semanticSlots = pageAnalysis.semanticColorSystem
+    ? Object.entries(pageAnalysis.semanticColorSystem)
+        .filter(([, value]) => value && !Array.isArray(value))
+        .map(([slot, value]) => `${slot}=${(value as ColorToken).hex}`)
+        .join(' | ')
+    : 'none'
 
   return `
 
 Measured page style signals (prefer these over screenshot-only guesses):
+- Semantic color slots: ${semanticSlots}
 - Color candidates:
 ${colors || 'none'}
-- Typography candidates:
+- Typography tokens:
 ${typography || 'none'}
-- Radius candidates: ${pageAnalysis.radiusCandidates.join(' | ') || 'none'}
-- Shadow candidates: ${pageAnalysis.shadowCandidates.join(' | ') || 'none'}
-- Spacing candidates: ${pageAnalysis.spacingCandidates.join(' | ') || 'none'}
-- Layout hints: ${pageAnalysis.layoutHints.join(' | ') || 'none'}
+- Radius tokens: ${pageAnalysis.radiusTokens.map(token => token.value).join(' | ') || 'none'}
+- Shadow tokens: ${pageAnalysis.shadowTokens.map(token => token.value).join(' | ') || 'none'}
+- Spacing tokens: ${pageAnalysis.spacingTokens.map(token => token.value).join(' | ') || 'none'}
+- Layout evidence: ${pageAnalysis.layoutEvidence.map(item => item.label).join(' | ') || 'none'}
 `
 }
 
@@ -240,6 +248,24 @@ function fallbackColorName(role: ColorToken['role']): string {
   return map[role]
 }
 
+function buildColorTokenFromCandidate(
+  candidate: PageColorCandidate,
+  aiByHex: Map<string, ColorToken>,
+  forcedRole?: ColorToken['role']
+): ColorToken {
+  const hex = candidate.hex.toUpperCase()
+  const matched = aiByHex.get(hex)
+  const role = forcedRole || matched?.role || inferRoleFromHints(candidate.roleHints)
+  return {
+    role,
+    hex,
+    rgb: matched?.rgb || hexToRgb(hex),
+    hsl: matched?.hsl || hexToHsl(hex),
+    name: matched?.name || fallbackColorName(role),
+    description: matched?.description || `Measured from ${candidate.property}${candidate.selectorHint ? ` on ${candidate.selectorHint}` : ''}`,
+  }
+}
+
 function debugColorCandidates(label: string, candidates: PageColorCandidate[]) {
   console.log(`[color-debug] ${label}`)
   candidates.slice(0, 12).forEach((candidate, index) => {
@@ -266,6 +292,15 @@ function rgbToHex(r: number, g: number, b: number): string {
   return `#${[r, g, b].map(channel => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`
 }
 
+function hexToRgbParts(hex: string): [number, number, number] {
+  const clean = hex.replace('#', '')
+  return [
+    Number.parseInt(clean.slice(0, 2), 16),
+    Number.parseInt(clean.slice(2, 4), 16),
+    Number.parseInt(clean.slice(4, 6), 16),
+  ]
+}
+
 function isNearNeutral(r: number, g: number, b: number): boolean {
   return Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b)) < 18
 }
@@ -273,6 +308,21 @@ function isNearNeutral(r: number, g: number, b: number): boolean {
 function isExtremeMonochrome(r: number, g: number, b: number): boolean {
   const avg = (r + g + b) / 3
   return avg < 18 || avg > 246
+}
+
+function getColorChroma(hex: string): number {
+  const [r, g, b] = hexToRgbParts(hex)
+  return Math.max(r, g, b) - Math.min(r, g, b)
+}
+
+function getColorBrightness(hex: string): number {
+  const [r, g, b] = hexToRgbParts(hex)
+  return (r + g + b) / 3
+}
+
+function isChromaticDark(hex: string): boolean {
+  const [r, g, b] = hexToRgbParts(hex)
+  return getColorBrightness(hex) < 90 && !isNearNeutral(r, g, b) && getColorChroma(hex) >= 28
 }
 
 async function extractDominantRegionColors(
@@ -318,7 +368,17 @@ async function extractHeroEdgeColors(
   width: number,
   height: number
 ): Promise<string[]> {
-  const heroHeight = Math.max(60, Math.floor(height * 0.38))
+  // Full-page screenshots can be extremely tall, so deriving hero height from total
+  // page height pulls in large sections of body content. Clamp hero sampling to a
+  // viewport-like top region instead of the full document height.
+  const heroHeight = Math.max(
+    320,
+    Math.min(
+      Math.floor(height * 0.18),
+      Math.floor(width * 0.55),
+      1800
+    )
+  )
   const sideWidth = Math.max(36, Math.floor(width * 0.16))
   const topBandHeight = Math.max(28, Math.floor(heroHeight * 0.22))
   const lowerBandTop = Math.max(0, Math.floor(heroHeight * 0.58))
@@ -464,14 +524,41 @@ function pickMeasuredColors(pageAnalysis: PageStyleAnalysis, aiColors: ColorToke
   const seenRoles = new Set<ColorToken['role']>()
   const requiredRoles: Array<ColorToken['role']> = ['background', 'surface', 'text', 'border', 'primary', 'accent']
 
+  const heroBackground = [...scored]
+    .filter(({ candidate }) =>
+      candidate.roleHints.includes('hero') &&
+      !candidate.layerHints.includes('content')
+    )
+    .sort((a, b) => {
+      const aChromatic = isChromaticDark(a.candidate.hex) ? 1 : 0
+      const bChromatic = isChromaticDark(b.candidate.hex) ? 1 : 0
+      if (aChromatic !== bChromatic) return bChromatic - aChromatic
+
+      const aChroma = getColorChroma(a.candidate.hex)
+      const bChroma = getColorChroma(b.candidate.hex)
+      if (aChroma !== bChroma) return bChroma - aChroma
+
+      const aBrightness = getColorBrightness(a.candidate.hex)
+      const bBrightness = getColorBrightness(b.candidate.hex)
+      if (aBrightness !== bBrightness) return aBrightness - bBrightness
+
+      return b.priority - a.priority
+    })[0]
+
+  if (heroBackground) {
+    selected.unshift(heroBackground.candidate)
+    seenHex.add(heroBackground.candidate.hex.toUpperCase())
+    seenRoles.add('background')
+  }
+
   for (const role of requiredRoles) {
+    if (seenRoles.has(role)) continue
     const hit = scored.find(({ candidate }) => {
       const inferredRole = inferRoleFromHints(candidate.roleHints)
       if (candidate.layerHints.includes('content') && !candidate.layerHints.includes('hero')) return false
-      if (role === 'background') {
-        return inferredRole === role && !seenHex.has(candidate.hex.toUpperCase())
-      }
-      return inferredRole === role && !seenHex.has(candidate.hex.toUpperCase())
+      if (seenHex.has(candidate.hex.toUpperCase())) return false
+      if (seenRoles.has(inferredRole) && inferredRole !== 'other') return false
+      return inferredRole === role
     })
     if (hit) {
       selected.push(hit.candidate)
@@ -480,40 +567,25 @@ function pickMeasuredColors(pageAnalysis: PageStyleAnalysis, aiColors: ColorToke
     }
   }
 
-  const heroBackground = scored.find(({ candidate }) =>
-    candidate.roleHints.includes('hero') &&
-    !candidate.layerHints.includes('content') &&
-    !seenHex.has(candidate.hex.toUpperCase())
-  )
-  if (heroBackground) {
-    selected.unshift(heroBackground.candidate)
-    seenHex.add(heroBackground.candidate.hex.toUpperCase())
-  }
-
   for (const { candidate } of scored) {
     if (selected.length >= 8) break
     const hex = candidate.hex.toUpperCase()
     if (seenHex.has(hex)) continue
     if (candidate.layerHints.includes('content') && !candidate.layerHints.includes('hero')) continue
+    const inferredRole = inferRoleFromHints(candidate.roleHints)
+    if (seenRoles.has(inferredRole) && inferredRole !== 'other') continue
     selected.push(candidate)
     seenHex.add(hex)
+    if (inferredRole !== 'other') seenRoles.add(inferredRole)
   }
 
-  const colors = selected.map(candidate => {
-    const hex = candidate.hex.toUpperCase()
-    const matched = aiByHex.get(hex)
-    let role = matched?.role || inferRoleFromHints(candidate.roleHints)
-    if (candidate.roleHints.includes('hero')) role = 'background'
-
-    return {
-      role,
-      hex,
-      rgb: matched?.rgb || hexToRgb(hex),
-      hsl: matched?.hsl || hexToHsl(hex),
-      name: matched?.name || fallbackColorName(role),
-      description: matched?.description || `Measured from ${candidate.property}${candidate.selectorHint ? ` on ${candidate.selectorHint}` : ''}`,
-    } satisfies ColorToken
-  })
+  const colors = selected.map(candidate =>
+    buildColorTokenFromCandidate(
+      candidate,
+      aiByHex,
+      candidate.roleHints.includes('hero') ? 'background' : undefined
+    )
+  )
 
   const unique = new Map<string, ColorToken>()
   for (const color of colors) {
@@ -532,35 +604,162 @@ function pickMeasuredColors(pageAnalysis: PageStyleAnalysis, aiColors: ColorToke
   return finalPalette
 }
 
+function buildLayeredColorSystem(pageAnalysis: PageStyleAnalysis, aiColors: ColorToken[]): LayeredColorSystem {
+  if (pageAnalysis.semanticColorSystem) {
+    const aiByHex = new Map(aiColors.map(color => [color.hex.toUpperCase(), color]))
+    const hydrate = (color?: ColorToken) => {
+      if (!color) return undefined
+      const matched = aiByHex.get(color.hex.toUpperCase())
+      return {
+        ...color,
+        rgb: matched?.rgb || color.rgb || hexToRgb(color.hex),
+        hsl: matched?.hsl || color.hsl || hexToHsl(color.hex),
+        name: matched?.name || color.name,
+        description: matched?.description || color.description,
+      }
+    }
+
+    return {
+      heroBackground: hydrate(pageAnalysis.semanticColorSystem.heroBackground),
+      pageBackground: hydrate(pageAnalysis.semanticColorSystem.pageBackground),
+      surface: hydrate(pageAnalysis.semanticColorSystem.surface),
+      textPrimary: hydrate(pageAnalysis.semanticColorSystem.textPrimary),
+      textSecondary: hydrate(pageAnalysis.semanticColorSystem.textSecondary),
+      border: hydrate(pageAnalysis.semanticColorSystem.border),
+      primaryAction: hydrate(pageAnalysis.semanticColorSystem.primaryAction),
+      secondaryAction: hydrate(pageAnalysis.semanticColorSystem.secondaryAction),
+      contentColors: (pageAnalysis.semanticColorSystem.contentColors || []).map(color => hydrate(color)!).filter(Boolean),
+    }
+  }
+
+  const measured = pageAnalysis.colorCandidates.filter(candidate => candidate.count >= 1)
+  const aiByHex = new Map(aiColors.map(color => [color.hex.toUpperCase(), color]))
+
+  const nonContent = measured.filter(candidate => !candidate.layerHints.includes('content') || candidate.layerHints.includes('hero'))
+  const heroCandidates = nonContent
+    .filter(candidate =>
+      candidate.layerHints.includes('hero') &&
+      (
+        candidate.property === 'background-color' ||
+        candidate.property === 'background-image' ||
+        candidate.property === 'screenshot-hero'
+      )
+    )
+    .sort((a, b) => {
+      const aScreenshotHero = a.property === 'screenshot-hero' ? 1 : 0
+      const bScreenshotHero = b.property === 'screenshot-hero' ? 1 : 0
+      if (aScreenshotHero !== bScreenshotHero) return bScreenshotHero - aScreenshotHero
+
+      const aBackgroundVisual = (a.property === 'background-image' || a.property === 'background-color') ? 1 : 0
+      const bBackgroundVisual = (b.property === 'background-image' || b.property === 'background-color') ? 1 : 0
+      if (aBackgroundVisual !== bBackgroundVisual) return bBackgroundVisual - aBackgroundVisual
+
+      const aChromatic = isChromaticDark(a.hex) ? 1 : 0
+      const bChromatic = isChromaticDark(b.hex) ? 1 : 0
+      if (aChromatic !== bChromatic) return bChromatic - aChromatic
+
+      const aNeutralPenalty = getColorChroma(a.hex) < 20 ? 1 : 0
+      const bNeutralPenalty = getColorChroma(b.hex) < 20 ? 1 : 0
+      if (aNeutralPenalty !== bNeutralPenalty) return aNeutralPenalty - bNeutralPenalty
+
+      return b.count - a.count
+    })
+
+  const lightGlobal = nonContent
+    .filter(candidate => candidate.layerHints.includes('global'))
+    .sort((a, b) => {
+      const brightnessDiff = getColorBrightness(b.hex) - getColorBrightness(a.hex)
+      if (brightnessDiff !== 0) return brightnessDiff
+      return b.count - a.count
+    })
+
+  const darkTextCandidates = nonContent
+    .filter(candidate => candidate.roleHints.includes('text') || candidate.property === 'color')
+    .sort((a, b) => {
+      const brightnessDiff = getColorBrightness(a.hex) - getColorBrightness(b.hex)
+      if (brightnessDiff !== 0) return brightnessDiff
+      return b.count - a.count
+    })
+
+  const borderCandidates = nonContent
+    .filter(candidate => candidate.roleHints.includes('border') || candidate.property === 'border-color')
+    .sort((a, b) => b.count - a.count)
+
+  const actionCandidates = nonContent
+    .filter(candidate => candidate.roleHints.includes('primary') || candidate.roleHints.includes('accent'))
+    .sort((a, b) => {
+      const aChroma = getColorChroma(a.hex)
+      const bChroma = getColorChroma(b.hex)
+      if (aChroma !== bChroma) return bChroma - aChroma
+      return b.count - a.count
+    })
+
+  const contentColors = measured
+    .filter(candidate => candidate.layerHints.includes('content') && !candidate.layerHints.includes('hero'))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6)
+    .map(candidate => buildColorTokenFromCandidate(candidate, aiByHex, 'accent'))
+
+  const heroBackground = heroCandidates[0]
+  const pageBackground = lightGlobal.find(candidate => candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase())
+  const surface = lightGlobal.find(candidate =>
+    candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase() &&
+    candidate.hex.toUpperCase() !== pageBackground?.hex.toUpperCase()
+  )
+  const textPrimary = darkTextCandidates.find(candidate => candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase())
+  const border = borderCandidates.find(candidate => candidate.hex.toUpperCase() !== textPrimary?.hex.toUpperCase())
+  const primary = actionCandidates.find(candidate => candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase())
+  const secondary = actionCandidates.find(candidate =>
+    candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase() &&
+    candidate.hex.toUpperCase() !== primary?.hex.toUpperCase()
+  )
+  const textSecondary = darkTextCandidates.find(candidate =>
+    candidate.hex.toUpperCase() !== textPrimary?.hex.toUpperCase() &&
+    candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase()
+  )
+
+  return {
+    heroBackground: heroBackground ? buildColorTokenFromCandidate(heroBackground, aiByHex, 'background') : undefined,
+    pageBackground: pageBackground ? buildColorTokenFromCandidate(pageBackground, aiByHex, 'background') : undefined,
+    surface: surface ? buildColorTokenFromCandidate(surface, aiByHex, 'surface') : undefined,
+    textPrimary: textPrimary ? buildColorTokenFromCandidate(textPrimary, aiByHex, 'text') : undefined,
+    textSecondary: textSecondary ? buildColorTokenFromCandidate(textSecondary, aiByHex, 'text') : undefined,
+    border: border ? buildColorTokenFromCandidate(border, aiByHex, 'border') : undefined,
+    primaryAction: primary ? buildColorTokenFromCandidate(primary, aiByHex, 'primary') : undefined,
+    secondaryAction: secondary ? buildColorTokenFromCandidate(secondary, aiByHex, 'secondary') : undefined,
+    contentColors,
+  }
+}
+
 function summarizeSpacing(pageAnalysis: PageStyleAnalysis, fallback?: string) {
-  if (!pageAnalysis.spacingCandidates.length) return fallback || 'Measured spacing not available'
-  const top = pageAnalysis.spacingCandidates.slice(0, 4).join(' | ')
+  if (!pageAnalysis.spacingTokens.length) return fallback || 'Measured spacing not available'
+  const top = pageAnalysis.spacingTokens.slice(0, 4).map(token => token.value).join(' | ')
   return `Measured spacing scale: ${top}`
 }
 
 function summarizeLayout(pageAnalysis: PageStyleAnalysis, fallback?: string) {
-  if (!pageAnalysis.layoutHints.length) return fallback || 'Measured layout not available'
-  return pageAnalysis.layoutHints.slice(0, 3).join(' | ')
+  if (!pageAnalysis.layoutEvidence.length) return fallback || 'Measured layout not available'
+  return pageAnalysis.layoutEvidence.slice(0, 3).map(item => item.label).join(' | ')
 }
 
 function pickMeasuredTypography(pageAnalysis: PageStyleAnalysis, aiTypography: Typography): Typography {
-  if (!pageAnalysis.typographyCandidates.length) return aiTypography
+  if (!pageAnalysis.typographyTokens.length) return aiTypography
 
-  const candidates = pageAnalysis.typographyCandidates
-  const distinctFamilies = [...new Set(candidates.map(candidate => candidate.fontFamily).filter(Boolean))]
+  const tokens = pageAnalysis.typographyTokens
+  const distinctFamilies = [...new Set(tokens.map(token => token.fontFamily).filter(Boolean))]
   const primaryFamily = distinctFamilies.slice(0, 3).join(', ') || aiTypography.fontFamily
 
-  const numericWeights = candidates
-    .map(candidate => Number(candidate.fontWeight))
+  const numericWeights = tokens
+    .map(token => Number(token.fontWeight))
     .filter(weight => Number.isFinite(weight))
 
-  const numericSizes = candidates
-    .map(candidate => Number.parseFloat(candidate.fontSize || ''))
+  const numericSizes = tokens
+    .map(token => Number.parseFloat(token.fontSize || ''))
     .filter(size => Number.isFinite(size))
     .sort((a, b) => b - a)
 
-  const lineHeight = candidates.find(candidate => candidate.lineHeight)?.lineHeight || aiTypography.lineHeight
-  const letterSpacing = candidates.find(candidate => candidate.letterSpacing)?.letterSpacing || aiTypography.letterSpacing
+  const lineHeight = tokens.find(token => token.lineHeight)?.lineHeight || aiTypography.lineHeight
+  const letterSpacing = tokens.find(token => token.letterSpacing)?.letterSpacing || aiTypography.letterSpacing
 
   return {
     ...aiTypography,
@@ -579,22 +778,22 @@ function pickMeasuredTypography(pageAnalysis: PageStyleAnalysis, aiTypography: T
 function pickMeasuredDesignDetails(pageAnalysis: PageStyleAnalysis, aiDetails: DesignDetails): DesignDetails {
   return {
     ...aiDetails,
-    borderRadius: pageAnalysis.radiusCandidates.length
-      ? `Measured radius variants: ${pageAnalysis.radiusCandidates.slice(0, 4).join(' | ')}`
+    borderRadius: pageAnalysis.radiusTokens.length
+      ? `Measured radius variants: ${pageAnalysis.radiusTokens.slice(0, 4).map(token => token.value).join(' | ')}`
       : aiDetails.borderRadius,
-    shadowStyle: pageAnalysis.shadowCandidates.length
-      ? `Measured shadow variants: ${pageAnalysis.shadowCandidates.slice(0, 3).join(' | ')}`
+    shadowStyle: pageAnalysis.shadowTokens.length
+      ? `Measured shadow variants: ${pageAnalysis.shadowTokens.slice(0, 3).map(token => token.value).join(' | ')}`
       : aiDetails.shadowStyle,
     spacingSystem: summarizeSpacing(pageAnalysis, aiDetails.spacingSystem),
     layoutStructure: summarizeLayout(pageAnalysis, aiDetails.layoutStructure),
-    cssRadius: pageAnalysis.radiusCandidates.length
-      ? pageAnalysis.radiusCandidates.slice(0, 5).join(' | ')
+    cssRadius: pageAnalysis.radiusTokens.length
+      ? pageAnalysis.radiusTokens.slice(0, 5).map(token => token.value).join(' | ')
       : aiDetails.cssRadius,
-    cssShadow: pageAnalysis.shadowCandidates.length
-      ? pageAnalysis.shadowCandidates.slice(0, 4).join(' | ')
+    cssShadow: pageAnalysis.shadowTokens.length
+      ? pageAnalysis.shadowTokens.slice(0, 4).map(token => token.value).join(' | ')
       : aiDetails.cssShadow,
-    layoutEn: pageAnalysis.layoutHints.length ? pageAnalysis.layoutHints.slice(0, 3).join(' | ') : aiDetails.layoutEn,
-    spacingEn: pageAnalysis.spacingCandidates.length ? pageAnalysis.spacingCandidates.slice(0, 4).join(' | ') : aiDetails.spacingEn,
+    layoutEn: pageAnalysis.layoutEvidence.length ? pageAnalysis.layoutEvidence.slice(0, 3).map(item => item.label).join(' | ') : aiDetails.layoutEn,
+    spacingEn: pageAnalysis.spacingTokens.length ? pageAnalysis.spacingTokens.slice(0, 4).map(token => token.value).join(' | ') : aiDetails.spacingEn,
   }
 }
 
@@ -604,10 +803,26 @@ function applyMeasuredUrlSignals(
 ) {
   if (!pageAnalysis) return parsed
 
+  const layeredColorSystem = pageAnalysis.colorCandidates.length
+    ? buildLayeredColorSystem(pageAnalysis, parsed.colors || [])
+    : undefined
+  const compatibilityColors = layeredColorSystem
+    ? [
+        layeredColorSystem.heroBackground,
+        layeredColorSystem.pageBackground,
+        layeredColorSystem.surface,
+        layeredColorSystem.textPrimary,
+        layeredColorSystem.border,
+        layeredColorSystem.primaryAction,
+        layeredColorSystem.secondaryAction,
+      ].filter(Boolean) as ColorToken[]
+    : parsed.colors
+
   return {
     ...parsed,
-    colors: pageAnalysis.colorCandidates.length ? pickMeasuredColors(pageAnalysis, parsed.colors || []) : parsed.colors,
-    typography: pageAnalysis.typographyCandidates.length ? pickMeasuredTypography(pageAnalysis, parsed.typography) : parsed.typography,
+    colors: pageAnalysis.colorCandidates.length ? compatibilityColors : parsed.colors,
+    colorSystem: layeredColorSystem,
+    typography: pageAnalysis.typographyTokens.length ? pickMeasuredTypography(pageAnalysis, parsed.typography) : parsed.typography,
     designDetails: pickMeasuredDesignDetails(pageAnalysis, parsed.designDetails),
   }
 }
@@ -748,6 +963,7 @@ function parseAndFormatResponse(
     tagsEn: parsed.tagsEn || parsed.tags,
     tagsZh: parsed.tagsZh || parsed.tags,
     colors: parsed.colors,
+    colorSystem: parsed.colorSystem,
     gradients: parsed.gradients || [],
     typography: parsed.typography,
     designDetails: parsed.designDetails,

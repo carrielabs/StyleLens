@@ -7,6 +7,7 @@ import Typography from './Typography'
 import DesignDetails from './DesignDetails'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
+import { generateJsonToken } from '@/lib/exporters/jsonExporter'
 import { generateMarkdown } from '@/lib/exporters/markdownExporter'
 import { Copy, Check } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -22,11 +23,13 @@ const i18n = {
     export: '代码输出',
     markdown_desc: '用于设计交接的标准 Markdown 文档',
     css_desc: '前端可直接复制的 :root 变量映射',
+    json_desc: '更接近 Design Tokens Community Group 格式的结构化 token JSON',
     prompt_desc: '一键复制，直接发送给 v0 或 Cursor 生成前端代码',
     copy: '复制',
     copied: '已复制',
     tab_markdown: 'Markdown 文档',
     tab_css: 'CSS 变量',
+    tab_json: 'Token JSON',
     tab_prompt: 'AI 提示词'
   },
   en: {
@@ -38,17 +41,19 @@ const i18n = {
     export: 'Export Assets',
     markdown_desc: 'Standard Markdown documentation for handoff',
     css_desc: ':root CSS variables ready for your stylesheet',
+    json_desc: 'Structured token JSON closer to the Design Tokens Community Group format',
     prompt_desc: 'Direct prompt for v0 or Cursor to generate UI',
     copy: 'Copy',
     copied: 'Copied',
     tab_markdown: 'Markdown doc',
     tab_css: 'CSS variables',
+    tab_json: 'Token JSON',
     tab_prompt: 'AI prompt'
   }
 }
 
 export default function StyleReport({ report, lang = 'zh', fullWidth = false }: { report: ReportType, lang?: 'zh' | 'en', fullWidth?: boolean }) {
-  const [activeCode, setActiveCode] = useState<'markdown' | 'css' | 'prompt'>('markdown')
+  const [activeCode, setActiveCode] = useState<'markdown' | 'css' | 'json' | 'prompt'>('markdown')
   const [copied, setCopied] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
@@ -57,6 +62,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
   const contentMap = {
     markdown: generateMarkdown(report, lang),
     css: generateCssVariables(report),
+    json: generateJsonToken(report),
     prompt: generatePrompt(report, lang)
   }
 
@@ -104,7 +110,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
       {/* 3. 色彩体系 */}
       <section>
         <SectionLabel>{t.colors}</SectionLabel>
-        <ColorSystem colors={report.colors} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} />
+        <ColorSystem colors={report.colors} colorSystem={report.colorSystem} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} />
       </section>
 
       {/* 4. 字体排版 */}
@@ -132,7 +138,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
             paddingBottom: '0',
             alignItems: 'baseline'
           }}>
-            {(['markdown', 'css', 'prompt'] as const).map(type => (
+            {(['markdown', 'css', 'json', 'prompt'] as const).map(type => (
               <button 
                 key={type}
                 onClick={() => setActiveCode(type)}
@@ -203,7 +209,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
               {copied ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
             </button>
             <SyntaxHighlighter
-              language={(activeCode === 'markdown' || activeCode === 'prompt') ? 'markdown' : 'css'}
+              language={activeCode === 'css' ? 'css' : activeCode === 'json' ? 'json' : 'markdown'}
               style={vscDarkPlus}
               showLineNumbers={true}
               lineNumberStyle={{ minWidth: '3.25em', paddingRight: '1em', color: '#555555', textAlign: 'right', fontSize: '11px', userSelect: 'none' }}
