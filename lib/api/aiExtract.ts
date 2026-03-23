@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import type { ColorToken, ExtractRequest, PageColorCandidate, PageStyleAnalysis, SemanticColorSystem, StyleReport, Typography, DesignDetails } from '@/lib/types'
+import type { ColorToken, ExtractRequest, LayeredColorSystem, PageColorCandidate, PageStyleAnalysis, SemanticColorSystem, StyleReport, Typography, DesignDetails } from '@/lib/types'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import fetchNode from 'node-fetch'
 import sharp from 'sharp'
@@ -412,6 +412,84 @@ function hydrateSemanticColorSystem(
   }
 }
 
+function selectAiFallbackColor(
+  colors: ColorToken[],
+  predicate: (color: ColorToken) => boolean,
+  sort?: (a: ColorToken, b: ColorToken) => number
+) {
+  const filtered = colors.filter(predicate)
+  if (!filtered.length) return undefined
+  if (sort) filtered.sort(sort)
+  return filtered[0]
+}
+
+function deriveScreenshotShellFallback(
+  pageAnalysis: PageStyleAnalysis,
+  aiColors: ColorToken[]
+): Partial<LayeredColorSystem> {
+  const screenshotShell = (pageAnalysis.colorCandidates || [])
+    .filter(candidate => candidate.property === 'screenshot-content')
+    .map(candidate => ({
+      ...candidate,
+      brightness: parseInt(candidate.hex.slice(1, 3), 16) + parseInt(candidate.hex.slice(3, 5), 16) + parseInt(candidate.hex.slice(5, 7), 16),
+      chroma: Math.max(
+        parseInt(candidate.hex.slice(1, 3), 16),
+        parseInt(candidate.hex.slice(3, 5), 16),
+        parseInt(candidate.hex.slice(5, 7), 16)
+      ) - Math.min(
+        parseInt(candidate.hex.slice(1, 3), 16),
+        parseInt(candidate.hex.slice(3, 5), 16),
+        parseInt(candidate.hex.slice(5, 7), 16)
+      )
+    }))
+
+  const lightNeutrals = screenshotShell
+    .filter(candidate => candidate.brightness >= 600 && candidate.chroma <= 48)
+    .sort((a, b) => b.brightness - a.brightness)
+
+  const pageBackground = lightNeutrals[0]
+    ? {
+        role: 'background' as const,
+        hex: lightNeutrals[0].hex,
+        rgb: hexToRgb(lightNeutrals[0].hex),
+        hsl: hexToHsl(lightNeutrals[0].hex),
+        name: 'Page Background',
+        description: 'Recovered from screenshot shell region',
+      }
+    : undefined
+
+  const surfaceCandidate = lightNeutrals.find(candidate => candidate.hex !== pageBackground?.hex)
+  const surface = surfaceCandidate
+    ? {
+        role: 'surface' as const,
+        hex: surfaceCandidate.hex,
+        rgb: hexToRgb(surfaceCandidate.hex),
+        hsl: hexToHsl(surfaceCandidate.hex),
+        name: 'Surface',
+        description: 'Recovered from screenshot shell region',
+      }
+    : undefined
+
+  const textPrimaryFallback = selectAiFallbackColor(
+    aiColors,
+    color => color.role === 'text',
+    (a, b) => hexDistance(a.hex, '#000000') - hexDistance(b.hex, '#000000')
+  )
+
+  const textSecondaryFallback = selectAiFallbackColor(
+    aiColors,
+    color => color.role === 'text' && color.hex.toUpperCase() !== textPrimaryFallback?.hex.toUpperCase(),
+    (a, b) => hexDistance(a.hex, '#666666') - hexDistance(b.hex, '#666666')
+  )
+
+  return {
+    pageBackground,
+    surface,
+    textPrimary: textPrimaryFallback,
+    textSecondary: textSecondaryFallback,
+  }
+}
+
 function summarizeSpacing(pageAnalysis: PageStyleAnalysis, fallback?: string) {
   if (!pageAnalysis.spacingTokens.length) return fallback || 'Measured spacing not available'
   const top = pageAnalysis.spacingTokens.slice(0, 4).map(token => token.value).join(' | ')
@@ -484,9 +562,17 @@ function applyMeasuredUrlSignals(
 ) {
   if (!pageAnalysis) return parsed
 
-  const colorSystem = normalizeSemanticColorSystem(
+  const hydratedColorSystem = normalizeSemanticColorSystem(
     hydrateSemanticColorSystem(pageAnalysis.semanticColorSystem, parsed.colors || [])
   )
+  const screenshotShellFallback = deriveScreenshotShellFallback(pageAnalysis, parsed.colors || [])
+  const colorSystem = normalizeSemanticColorSystem({
+    ...hydratedColorSystem,
+    pageBackground: hydratedColorSystem?.pageBackground || screenshotShellFallback.pageBackground,
+    surface: hydratedColorSystem?.surface || screenshotShellFallback.surface,
+    textPrimary: hydratedColorSystem?.textPrimary || screenshotShellFallback.textPrimary,
+    textSecondary: hydratedColorSystem?.textSecondary || screenshotShellFallback.textSecondary,
+  })
   const compatibilityColors = colorSystem
     ? dedupeColorTokens([
         colorSystem.heroBackground,

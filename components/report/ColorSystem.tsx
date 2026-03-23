@@ -58,22 +58,9 @@ export default function ColorSystem({
     return map[role]?.[lang] || (lang === 'zh' ? '其他' : 'Other')
   }
 
-  const measuredCandidates = new Map(
-    (analysis?.colorCandidates || []).map(candidate => [candidate.hex.toUpperCase(), candidate])
-  )
   type DisplayColor = ColorToken & { roleLabelOverride?: string }
   const contentColors = sourceType === 'url'
     ? (colorSystem?.contentColors || [])
-    : []
-
-  const measuredContentCandidates = sourceType === 'url'
-    ? (analysis?.colorCandidates || [])
-        .filter(candidate =>
-          candidate.layerHints.includes('content') &&
-          !candidate.layerHints.includes('hero') &&
-          !colors.some(color => color.hex.toUpperCase() === candidate.hex.toUpperCase())
-        )
-        .slice(0, 6)
     : []
 
   const systemPalette: DisplayColor[] = sourceType === 'url' && colorSystem
@@ -109,41 +96,29 @@ export default function ColorSystem({
 
   const accentPalette: DisplayColor[] = sourceType === 'url' && colorSystem
     ? [
-        ...(colorSystem.heroAccentColors || []).map(color => ({ ...color, roleLabelOverride: lang === 'zh' ? 'Hero 点缀色' : 'Hero accent' })),
-        ...contentColors.map(color => ({ ...color, roleLabelOverride: lang === 'zh' ? '内容点缀色' : 'Content accent' })),
+        ...(colorSystem.heroAccentColors || []).map(color => ({ ...color, roleLabelOverride: lang === 'zh' ? '辅助色' : 'Accent' })),
+        ...contentColors.map(color => ({ ...color, roleLabelOverride: lang === 'zh' ? '辅助色' : 'Accent' })),
       ].filter((color, index, list) =>
         !isExtremeNoiseColor(color.hex) &&
         list.findIndex(item => item.hex.toUpperCase() === color.hex.toUpperCase()) === index
       )
     : []
 
+  const paletteItems: DisplayColor[] = [
+    ...dedupedSystemPalette,
+    ...accentPalette.filter(accent =>
+      !dedupedSystemPalette.some(color => color.hex.toUpperCase() === accent.hex.toUpperCase())
+    )
+  ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      {sourceType === 'url' && analysis && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            {lang === 'zh'
-              ? 'URL 模式下，颜色优先基于页面样式测量结果；插图、截图和媒体内容中的装饰色会被降权。'
-              : 'For URL analysis, colors prioritize measured page style signals; decorative colors from illustrations, screenshots, and media are deprioritized.'}
-          </p>
-          <span style={{
-            fontSize: '11px',
-            color: 'var(--text-secondary)',
-            padding: '3px 8px',
-            borderRadius: '999px',
-            border: '1px solid rgba(0,0,0,0.08)'
-          }}>
-            {lang === 'zh' ? '系统色优先' : 'System colors prioritized'}
-          </span>
-        </div>
-      )}
-
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(8, 1fr)', 
         gap: '12px' 
       }}>
-      {dedupedSystemPalette.map((c, i) => {
+      {paletteItems.map((c, i) => {
         const isLowPriorityOther = sourceType === 'url' && c.role === 'other'
         return (
         <div 
@@ -186,68 +161,6 @@ export default function ColorSystem({
       )})}
       </div>
 
-      {(accentPalette.length > 0 || measuredContentCandidates.length > 0) && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-            {lang === 'zh' ? '辅助点缀色' : 'Secondary accents'}
-          </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {accentPalette.map(candidate => (
-              <div
-                key={`${candidate.hex}-layered`}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 10px',
-                  borderRadius: '999px',
-                  background: '#F6F6F6',
-                  border: '1px solid rgba(0,0,0,0.05)'
-                }}
-                >
-                <span style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '999px',
-                  background: candidate.hex,
-                  boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)'
-                }} />
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                  {candidate.hex.toUpperCase()}
-                </span>
-                <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                  {candidate.roleLabelOverride || getRoleLabel(candidate.role)}
-                </span>
-              </div>
-            ))}
-            {accentPalette.length === 0 && measuredContentCandidates.map(candidate => (
-              <div
-                key={`${candidate.hex}-${candidate.property}`}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 10px',
-                  borderRadius: '999px',
-                  background: '#F6F6F6',
-                  border: '1px solid rgba(0,0,0,0.05)'
-                }}
-              >
-                <span style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '999px',
-                  background: candidate.hex,
-                  boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)'
-                }} />
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                  {candidate.hex.toUpperCase()}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

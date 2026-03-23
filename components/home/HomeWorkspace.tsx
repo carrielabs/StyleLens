@@ -139,7 +139,7 @@ export default function HomeWorkspace({
               {!(report.id === 'preset_linear_v2' || report.id === 'preset_linear_v3') && (
                 <h1 style={{
                   fontSize: '32px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 40px 0',
-                  lineHeight: 1.1, letterSpacing: '-0.03em', paddingLeft: '48px'
+                  lineHeight: 1.1, letterSpacing: '-0.03em'
                 }}>
                   {extractions.find(e => e.id === activeItemId)?.source_label || report.sourceLabel}
                 </h1>
