@@ -26,6 +26,7 @@ const i18n = {
     colors: '色彩体系',
     typo: '字体排版',
     details: '细节解析',
+    sandbox: '样式预览',
     export: '代码输出',
     markdown_desc: '完整设计规范文档，可直接发给设计师或 PM',
     css_desc: '直接可用的 CSS 变量，粘贴进 :root 零修改',
@@ -46,6 +47,7 @@ const i18n = {
     colors: 'Color System',
     typo: 'Typography',
     details: 'Design Details',
+    sandbox: 'Style Preview',
     export: 'Export Assets',
     markdown_desc: 'Full design spec — share directly with designers or PMs',
     css_desc: 'Ready-to-use CSS variables — paste into :root, zero edits needed',
@@ -158,13 +160,13 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
             {report.id === 'preset_linear' ? (
               <>
                 <DesignDetailsElite data={report.designDetails} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
-                <AtomicSandbox lang={lang} />
+                <AtomicSandbox report={report} lang={lang} />
               </>
             ) : isV2 ? (
               <>
                 <DesignDetailsEliteV2 data={report.designDetails} lang={lang} />
                 <div style={{ padding: '0 48px', marginTop: '48px' }}>
-                  <AtomicSandbox lang={lang} />
+                  <AtomicSandbox report={report} lang={lang} />
                 </div>
               </>
             ) : isV3 ? (
@@ -172,6 +174,14 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
             ) : (
               <DesignDetails data={report.designDetails} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
             )}
+        </section>
+      )}
+
+      {/* 5.5 样式预览 */}
+      {!isElite && (
+        <section>
+          <SectionLabel>{t.sandbox}</SectionLabel>
+          <AtomicSandbox report={report} lang={lang} />
         </section>
       )}
 
