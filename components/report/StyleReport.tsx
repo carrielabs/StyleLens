@@ -10,6 +10,7 @@ import DesignDetailsEliteV2 from './DesignDetailsEliteV2'
 import DesignDetailsEliteV3 from './DesignDetailsEliteV3'
 import AtomicSandbox from './AtomicSandbox'
 import StyleInspector from './StyleInspector'
+import DesignInspector from './DesignInspector'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateJsonToken } from '@/lib/exporters/jsonExporter'
@@ -28,6 +29,7 @@ const i18n = {
     typo: '字体排版',
     details: '细节解析',
     sandbox: '样式预览',
+    inspector: '样式解析',
     export: '代码输出',
     markdown_desc: '完整设计规范文档，可直接发给设计师或 PM',
     css_desc: '直接可用的 CSS 变量，粘贴进 :root 零修改',
@@ -49,6 +51,7 @@ const i18n = {
     typo: 'Typography',
     details: 'Design Details',
     sandbox: 'Style Preview',
+    inspector: 'Style Analysis',
     export: 'Export Assets',
     markdown_desc: 'Full design spec — share directly with designers or PMs',
     css_desc: 'Ready-to-use CSS variables — paste into :root, zero edits needed',
@@ -154,35 +157,32 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
         </>
       )}
 
-      {/* 5. 细节解析 / V2 Spec Audit / V3 Unified Audit */}
-      {FLAGS.ENABLE_DESIGN_AUDITS && (
+      {/* 5. Elite 专属细节模块 (preset_linear / V2 / V3) */}
+      {FLAGS.ENABLE_DESIGN_AUDITS && isElite && (
         <section>
-            {!isElite && <SectionLabel>{t.details}</SectionLabel>}
-            {report.id === 'preset_linear' ? (
-              <>
-                <DesignDetailsElite data={report.designDetails} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
+          {report.id === 'preset_linear' ? (
+            <>
+              <DesignDetailsElite data={report.designDetails} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
+              <AtomicSandbox report={report} lang={lang} />
+            </>
+          ) : isV2 ? (
+            <>
+              <DesignDetailsEliteV2 data={report.designDetails} lang={lang} />
+              <div style={{ padding: '0 48px', marginTop: '48px' }}>
                 <AtomicSandbox report={report} lang={lang} />
-              </>
-            ) : isV2 ? (
-              <>
-                <DesignDetailsEliteV2 data={report.designDetails} lang={lang} />
-                <div style={{ padding: '0 48px', marginTop: '48px' }}>
-                  <AtomicSandbox report={report} lang={lang} />
-                </div>
-              </>
-            ) : isV3 ? (
-              <DesignDetailsEliteV3 data={report.designDetails} lang={lang} report={report} />
-            ) : (
-              <DesignDetails data={report.designDetails} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
-            )}
+              </div>
+            </>
+          ) : (
+            <DesignDetailsEliteV3 data={report.designDetails} lang={lang} report={report} />
+          )}
         </section>
       )}
 
-      {/* 5.5 样式预览 */}
+      {/* 5. 样式解析 (普通报告：组件 + 形态 + 空间 + 交互，合并展示) */}
       {!isElite && (
         <section>
-          <SectionLabel>{t.sandbox}</SectionLabel>
-          <StyleInspector report={report} lang={lang} />
+          <SectionLabel>{t.inspector}</SectionLabel>
+          <DesignInspector report={report} lang={lang} />
         </section>
       )}
 
