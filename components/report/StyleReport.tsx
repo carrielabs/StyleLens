@@ -13,7 +13,8 @@ import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateJsonToken } from '@/lib/exporters/jsonExporter'
 import { generateMarkdown } from '@/lib/exporters/markdownExporter'
-import { Copy, Check } from 'lucide-react'
+import { generateTailwindConfig } from '@/lib/exporters/tailwindExporter'
+import { Copy, Check, Download } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { FLAGS } from '@/lib/flags'
@@ -26,16 +27,18 @@ const i18n = {
     typo: '字体排版',
     details: '细节解析',
     export: '代码输出',
-    markdown_desc: '用于设计交接的标准 Markdown 文档',
-    css_desc: '前端可直接复制的 :root 变量映射',
-    json_desc: '更接近 Design Tokens Community Group 格式的结构化 token JSON',
-    prompt_desc: '一键复制，直接发送给 v0 或 Cursor 生成前端代码',
+    markdown_desc: '完整设计规范文档，可直接发给设计师或 PM',
+    css_desc: '直接可用的 CSS 变量，粘贴进 :root 零修改',
+    json_desc: '标准设计 Token，可导入 Figma 变量库或 Style Dictionary',
+    prompt_desc: '发给 AI 的设计契约，约束 AI 不乱发挥',
+    tailwind_desc: '粘进 tailwind.config.js 即可，颜色字体圆角一步到位',
     copy: '复制',
     copied: '已复制',
-    tab_markdown: 'Markdown 文档',
-    tab_css: 'CSS 变量',
-    tab_json: 'Token JSON',
-    tab_prompt: 'AI 提示词'
+    tab_markdown: 'Markdown',
+    tab_css: 'CSS',
+    tab_json: 'Tokens',
+    tab_prompt: 'Prompt',
+    tab_tailwind: 'Tailwind'
   },
   en: {
     vibe: 'Style Vibe',
@@ -44,21 +47,23 @@ const i18n = {
     typo: 'Typography',
     details: 'Design Details',
     export: 'Export Assets',
-    markdown_desc: 'Standard Markdown documentation for handoff',
-    css_desc: ':root CSS variables ready for your stylesheet',
-    json_desc: 'Structured token JSON closer to the Design Tokens Community Group format',
-    prompt_desc: 'Direct prompt for v0 or Cursor to generate UI',
+    markdown_desc: 'Full design spec — share directly with designers or PMs',
+    css_desc: 'Ready-to-use CSS variables — paste into :root, zero edits needed',
+    json_desc: 'Standard design tokens — import into Figma variables or Style Dictionary',
+    prompt_desc: 'Design contract for AI — keeps Cursor / v0 from going off-script',
+    tailwind_desc: 'Paste into tailwind.config.js — colors, fonts, and radii all set',
     copy: 'Copy',
     copied: 'Copied',
-    tab_markdown: 'Markdown doc',
-    tab_css: 'CSS variables',
-    tab_json: 'Token JSON',
-    tab_prompt: 'AI prompt'
+    tab_markdown: 'Markdown',
+    tab_css: 'CSS',
+    tab_json: 'Tokens',
+    tab_prompt: 'Prompt',
+    tab_tailwind: 'Tailwind'
   }
 }
 
 export default function StyleReport({ report, lang = 'zh', fullWidth = false }: { report: ReportType, lang?: 'zh' | 'en', fullWidth?: boolean }) {
-  const [activeCode, setActiveCode] = useState<'markdown' | 'css' | 'json' | 'prompt'>('markdown')
+  const [activeCode, setActiveCode] = useState<'markdown' | 'css' | 'json' | 'prompt' | 'tailwind'>('markdown')
   const [copied, setCopied] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
@@ -71,13 +76,29 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
     markdown: generateMarkdown(report, lang),
     css: generateCssVariables(report),
     json: generateJsonToken(report),
-    prompt: generatePrompt(report, lang)
+    prompt: generatePrompt(report, lang),
+    tailwind: generateTailwindConfig(report)
+  }
+
+  const fileExtMap: Record<typeof activeCode, string> = {
+    markdown: 'md', css: 'css', json: 'json', prompt: 'md', tailwind: 'js'
   }
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentMap[activeCode])
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleDownload = () => {
+    const ext = fileExtMap[activeCode]
+    const blob = new Blob([contentMap[activeCode]], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `stylelens-${activeCode}.${ext}`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -170,7 +191,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
             paddingBottom: '0',
             alignItems: 'baseline'
           }}>
-            {(['markdown', 'css', 'json', 'prompt'] as const).map(type => (
+            {(['markdown', 'css', 'json', 'prompt', 'tailwind'] as const).map(type => (
               <button 
                 key={type}
                 onClick={() => setActiveCode(type)}
@@ -217,30 +238,56 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
               overflow: 'hidden'
             }}
           >
-            <button 
-              onClick={handleCopy}
-              style={{
-                position: 'absolute', top: '16px', right: '16px',
-                background: copied ? '#E8F5E9' : 'rgba(255,255,255,0.05)', 
-                border: copied ? '1px solid #C8E6C9' : '1px solid rgba(255,255,255,0.1)', 
-                width: '32px', height: '32px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '50%',
-                color: copied ? '#2E7D32' : '#FFFFFF', 
-                cursor: 'pointer', 
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                opacity: (isHovered || copied) ? 1 : 0,
-                transform: (isHovered || copied) ? 'translateY(0)' : 'translateY(4px)',
-                pointerEvents: (isHovered || copied) ? 'auto' : 'none',
-                zIndex: 10
-              }}
-              title={t.copy}
-            >
-              {copied ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
-            </button>
+            <div style={{
+              position: 'absolute', top: '16px', right: '16px',
+              display: 'flex', gap: '8px',
+              opacity: (isHovered || copied) ? 1 : 0,
+              transform: (isHovered || copied) ? 'translateY(0)' : 'translateY(4px)',
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              pointerEvents: (isHovered || copied) ? 'auto' : 'none',
+              zIndex: 10
+            }}>
+              <button
+                onClick={handleDownload}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.12)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)' }}
+                onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  width: '32px', height: '32px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: '50%', color: '#FFFFFF', cursor: 'pointer',
+                  transition: 'background 0.15s ease, transform 0.1s ease'
+                }}
+                title="下载"
+              >
+                <Download size={14} strokeWidth={2} />
+              </button>
+              <button
+                onClick={handleCopy}
+                onMouseEnter={e => { if (!copied) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.12)' }}
+                onMouseLeave={e => { if (!copied) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)' }}
+                onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
+                style={{
+                  background: copied ? '#E8F5E9' : 'rgba(255,255,255,0.05)',
+                  border: copied ? '1px solid #C8E6C9' : '1px solid rgba(255,255,255,0.1)',
+                  width: '32px', height: '32px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: '50%',
+                  color: copied ? '#2E7D32' : '#FFFFFF',
+                  cursor: 'pointer',
+                  transition: 'background 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s ease',
+                }}
+                title={t.copy}
+              >
+                {copied ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
+              </button>
+            </div>
             <SyntaxHighlighter
-              language={activeCode === 'css' ? 'css' : activeCode === 'json' ? 'json' : 'markdown'}
+              language={activeCode === 'css' ? 'css' : activeCode === 'json' ? 'json' : activeCode === 'tailwind' ? 'javascript' : 'markdown'}
               style={vscDarkPlus}
               showLineNumbers={true}
               lineNumberStyle={{ minWidth: '3.25em', paddingRight: '1em', color: '#555555', textAlign: 'right', fontSize: '11px', userSelect: 'none' }}
