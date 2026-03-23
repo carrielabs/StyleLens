@@ -236,6 +236,9 @@ function layerHintsFromSelector(selectorHint = ''): Array<'global' | 'hero' | 'c
 
 function scoreColor(candidate: ColorAccumulator) {
   let score = candidate.count + candidate.areaWeight + candidate.viewportWeight + candidate.repetitionWeight + candidate.evidenceScore
+  if (candidate.property === 'visual-hero') score += 28
+  if (candidate.property === 'visual-page') score += 18
+  if (candidate.property === 'visual-content') score += 8
   if (candidate.property === 'background-image') score += 10
   if (candidate.property === 'background-color') score += 8
   if (candidate.property === 'color') score += 5
@@ -270,6 +273,12 @@ function getColorChroma(hex: string): number {
   return Math.max(r, g, b) - Math.min(r, g, b)
 }
 
+function getColorDistance(hexA: string, hexB: string): number {
+  const [r1, g1, b1] = hexToRgbParts(hexA)
+  const [r2, g2, b2] = hexToRgbParts(hexB)
+  return Math.sqrt(((r1 - r2) ** 2) + ((g1 - g2) ** 2) + ((b1 - b2) ** 2))
+}
+
 function isLikelyTextCandidate(candidate: PageColorCandidate) {
   return candidate.property === 'color'
 }
@@ -279,10 +288,20 @@ function isLikelyBackgroundCandidate(candidate: PageColorCandidate) {
     || candidate.property === 'background-image'
     || candidate.property === 'screenshot-hero'
     || candidate.property === 'screenshot-content'
+    || candidate.property === 'visual-hero'
+    || candidate.property === 'visual-page'
+    || candidate.property === 'cta-background'
+    || (candidate.property === 'css-variable' && candidate.roleHints.includes('background'))
 }
 
 function isLikelySurfaceCandidate(candidate: PageColorCandidate) {
-  const usesBackgroundPaint = candidate.property === 'background-color' || candidate.property === 'background-image'
+  const usesBackgroundPaint =
+    candidate.property === 'background-color'
+    || candidate.property === 'background-image'
+    || candidate.property === 'visual-page'
+    || candidate.property === 'visual-content'
+    || candidate.property === 'cta-background'
+    || (candidate.property === 'css-variable' && (candidate.roleHints.includes('surface') || candidate.roleHints.includes('background')))
   if (!usesBackgroundPaint) return false
   return candidate.roleHints.includes('surface')
     || !!candidate.componentKinds?.includes('card')
@@ -303,6 +322,10 @@ function scoreActionCandidate(candidate: PageColorCandidate) {
   const kinds = candidate.componentKinds || []
   const selector = (candidate.selectorHint || '').toLowerCase()
 
+  if (candidate.property === 'cta-background') score += 36
+  if (candidate.property === 'cta-foreground') score += 10
+  if (candidate.property === 'cta-border') score += 16
+  if (candidate.property === 'css-variable') score += 18
   if (candidate.property === 'background-color') score += 22
   if (candidate.property === 'background-image') score += 18
   if (candidate.property === 'border-color') score += 6
@@ -315,11 +338,20 @@ function scoreActionCandidate(candidate: PageColorCandidate) {
   if (candidate.roleHints.includes('primary')) score += 12
   if (candidate.roleHints.includes('secondary')) score += 6
   if (candidate.roleHints.includes('accent')) score += 4
+  if (candidate.roleHints.includes('cta')) score += 24
 
   if (candidate.hex.toUpperCase() === '#0000EE') score -= 18
 
   score += Math.min(20, getColorChroma(candidate.hex))
   return score
+}
+
+function quantizeChannel(channel: number): number {
+  return Math.max(0, Math.min(255, Math.round(channel / 16) * 16))
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return `#${[r, g, b].map(channel => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`
 }
 
 function isContainerBackgroundCandidate(candidate: PageColorCandidate) {
@@ -810,7 +842,7 @@ function pickSlot(candidates: PageColorCandidate[], predicate: (candidate: PageC
   return candidates.find(candidate => !exclude.has(candidate.hex.toUpperCase()) && predicate(candidate))
 }
 
-function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticColorSystem | undefined {
+export function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticColorSystem | undefined {
   if (!candidates.length) return undefined
 
   const toToken = (candidate?: PageColorCandidate, forcedRole?: SemanticColorSystem[keyof SemanticColorSystem] extends infer T ? T extends { role: infer R } ? R : never : never) => {
@@ -858,6 +890,19 @@ function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticCol
     isLikelyTextCandidate(candidate) &&
     !candidate.layerHints.includes('content')
   )
+  const fallbackTextCandidates = ranked.filter(candidate =>
+    (candidate.property === 'css-variable' && candidate.roleHints.includes('text'))
+      || candidate.property === 'cta-foreground'
+  )
+  const heroTextCandidates = ranked.filter(candidate =>
+    isLikelyTextCandidate(candidate) &&
+    candidate.layerHints.includes('hero')
+  )
+  const heroActionCandidates = ranked.filter(candidate =>
+    isLikelyActionCandidate(candidate) &&
+    candidate.layerHints.includes('hero') &&
+    getColorChroma(candidate.hex) >= 18
+  )
 
   const heroBackground = [...ranked]
     .filter(candidate =>
@@ -866,6 +911,10 @@ function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticCol
       isContainerBackgroundCandidate(candidate)
     )
     .sort((a, b) => {
+      const aVisualBoost = a.property === 'visual-hero' ? 3 : a.property === 'background-image' ? 2 : a.property === 'background-color' ? 1 : 0
+      const bVisualBoost = b.property === 'visual-hero' ? 3 : b.property === 'background-image' ? 2 : b.property === 'background-color' ? 1 : 0
+      if (aVisualBoost !== bVisualBoost) return bVisualBoost - aVisualBoost
+
       const aHeroBoost = a.property === 'background-image' ? 2 : a.property === 'background-color' ? 1 : 0
       const bHeroBoost = b.property === 'background-image' ? 2 : b.property === 'background-color' ? 1 : 0
       if (aHeroBoost !== bHeroBoost) return bHeroBoost - aHeroBoost
@@ -886,12 +935,33 @@ function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticCol
   const pageBackground = [...ranked]
     .filter(candidate =>
       candidate.layerHints.includes('global') &&
+      !candidate.layerHints.includes('content') &&
       isLikelyBackgroundCandidate(candidate) &&
       isContainerBackgroundCandidate(candidate) &&
       !isLikelyTextCandidate(candidate) &&
+      candidate.property !== 'screenshot-content' &&
+      candidate.property !== 'visual-content' &&
+      candidate.property !== 'cta-background' &&
+      !candidate.roleHints.includes('accent') &&
       !used.has(candidate.hex.toUpperCase())
     )
     .sort((a, b) => {
+      const pageWeight = (candidate: PageColorCandidate) => {
+        if (candidate.property === 'css-variable') return 4
+        if (candidate.property === 'background-color') return 3
+        if (candidate.property === 'background-image') return 2
+        if (candidate.property === 'visual-page') return 1
+        return 0
+      }
+      const aVisualBoost = pageWeight(a)
+      const bVisualBoost = pageWeight(b)
+      if (aVisualBoost !== bVisualBoost) return bVisualBoost - aVisualBoost
+
+      const aChroma = getColorChroma(a.hex)
+      const bChroma = getColorChroma(b.hex)
+      if (backgroundMode === 'light' && aChroma !== bChroma) return aChroma - bChroma
+      if (backgroundMode === 'dark' && aChroma !== bChroma) return aChroma - bChroma
+
       const aBrightness = getColorBrightness(a.hex)
       const bBrightness = getColorBrightness(b.hex)
       if (backgroundMode === 'light' && aBrightness !== bBrightness) return bBrightness - aBrightness
@@ -903,13 +973,22 @@ function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticCol
   const surface = [...ranked]
     .filter(candidate =>
       isLikelySurfaceCandidate(candidate) &&
+      candidate.property !== 'cta-background' &&
       candidate.hex.toUpperCase() !== pageBackground?.hex.toUpperCase() &&
       !used.has(candidate.hex.toUpperCase())
     )
     .sort((a, b) => {
-      const aLayerBoost = a.layerHints.includes('content') ? 1 : 0
-      const bLayerBoost = b.layerHints.includes('content') ? 1 : 0
+      const aLayerBoost = (a.layerHints.includes('content') ? 2 : 0) + (a.property === 'screenshot-content' || a.property === 'visual-content' ? 2 : 0)
+      const bLayerBoost = (b.layerHints.includes('content') ? 2 : 0) + (b.property === 'screenshot-content' || b.property === 'visual-content' ? 2 : 0)
       if (aLayerBoost !== bLayerBoost) return bLayerBoost - aLayerBoost
+
+      if (pageBackground) {
+        const pageBrightness = getColorBrightness(pageBackground.hex)
+        const aDistance = Math.abs(getColorBrightness(a.hex) - pageBrightness)
+        const bDistance = Math.abs(getColorBrightness(b.hex) - pageBrightness)
+        if (aDistance !== bDistance) return aDistance - bDistance
+      }
+
       return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
     })[0]
   if (surface) used.add(surface.hex.toUpperCase())
@@ -922,8 +1001,20 @@ function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticCol
       if (prefersDarkText && aBrightness !== bBrightness) return aBrightness - bBrightness
       if (!prefersDarkText && aBrightness !== bBrightness) return bBrightness - aBrightness
       return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
-    })[0]
+    })[0] || fallbackTextCandidates
+      .filter(candidate => !used.has(candidate.hex.toUpperCase()))
+      .sort((a, b) => (b.evidenceScore || b.count) - (a.evidenceScore || a.count))[0]
   if (textPrimary) used.add(textPrimary.hex.toUpperCase())
+
+  const heroTextPrimary = heroTextCandidates
+    .filter(candidate => candidate.hex.toUpperCase() !== textPrimary?.hex.toUpperCase())
+    .sort((a, b) => {
+      const aBrightness = getColorBrightness(a.hex)
+      const bBrightness = getColorBrightness(b.hex)
+      if (backgroundMode === 'dark' && aBrightness !== bBrightness) return bBrightness - aBrightness
+      if (backgroundMode === 'light' && aBrightness !== bBrightness) return aBrightness - bBrightness
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
 
   const textSecondary = preferredTextCandidates
     .filter(candidate => !used.has(candidate.hex.toUpperCase()))
@@ -954,11 +1045,46 @@ function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticCol
 
   const primaryAction = [...actionCandidates]
     .sort((a, b) => {
+      const aCtaBoost = a.property === 'cta-background' ? 3 : a.property === 'cta-border' ? 2 : a.property === 'cta-foreground' ? 1 : 0
+      const bCtaBoost = b.property === 'cta-background' ? 3 : b.property === 'cta-border' ? 2 : b.property === 'cta-foreground' ? 1 : 0
+      if (aCtaBoost !== bCtaBoost) return bCtaBoost - aCtaBoost
+
       const scoreDiff = scoreActionCandidate(b) - scoreActionCandidate(a)
       if (scoreDiff !== 0) return scoreDiff
       return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
     })[0]
   if (primaryAction) used.add(primaryAction.hex.toUpperCase())
+
+  const heroPrimaryAction = [...heroActionCandidates]
+    .filter(candidate => {
+      if (!heroBackground) return true
+      const brightnessGap = Math.abs(getColorBrightness(candidate.hex) - getColorBrightness(heroBackground.hex))
+      const chromaGap = Math.abs(getColorChroma(candidate.hex) - getColorChroma(heroBackground.hex))
+      const distance = getColorDistance(candidate.hex, heroBackground.hex)
+      return brightnessGap >= 18 || chromaGap >= 12 || distance >= 42
+    })
+    .sort((a, b) => {
+      const aCtaBoost = a.property === 'cta-background' ? 3 : a.property === 'cta-border' ? 2 : a.property === 'cta-foreground' ? 1 : 0
+      const bCtaBoost = b.property === 'cta-background' ? 3 : b.property === 'cta-border' ? 2 : b.property === 'cta-foreground' ? 1 : 0
+      if (aCtaBoost !== bCtaBoost) return bCtaBoost - aCtaBoost
+
+      if (heroBackground) {
+        const heroBrightness = getColorBrightness(heroBackground.hex)
+        const aBrightness = getColorBrightness(a.hex)
+        const bBrightness = getColorBrightness(b.hex)
+        const aContrast = Math.abs(aBrightness - heroBrightness)
+        const bContrast = Math.abs(bBrightness - heroBrightness)
+        if (aContrast !== bContrast) return bContrast - aContrast
+
+        const aDistance = getColorDistance(a.hex, heroBackground.hex)
+        const bDistance = getColorDistance(b.hex, heroBackground.hex)
+        if (aDistance !== bDistance) return bDistance - aDistance
+      }
+
+      const scoreDiff = scoreActionCandidate(b) - scoreActionCandidate(a)
+      if (scoreDiff !== 0) return scoreDiff
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
 
   const secondaryAction = [...actionCandidates]
     .filter(candidate => candidate.hex.toUpperCase() !== primaryAction?.hex.toUpperCase())
@@ -973,6 +1099,39 @@ function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticCol
     })[0]
   if (secondaryAction) used.add(secondaryAction.hex.toUpperCase())
 
+  const heroSecondaryAction = [...heroActionCandidates]
+    .filter(candidate => candidate.hex.toUpperCase() !== heroPrimaryAction?.hex.toUpperCase())
+    .filter(candidate => {
+      if (!heroBackground) return true
+      const brightnessGap = Math.abs(getColorBrightness(candidate.hex) - getColorBrightness(heroBackground.hex))
+      const distance = getColorDistance(candidate.hex, heroBackground.hex)
+      return brightnessGap >= 14 || distance >= 36
+    })
+    .sort((a, b) => {
+      if (heroBackground) {
+        const heroBrightness = getColorBrightness(heroBackground.hex)
+        const aContrast = Math.abs(getColorBrightness(a.hex) - heroBrightness)
+        const bContrast = Math.abs(getColorBrightness(b.hex) - heroBrightness)
+        if (aContrast !== bContrast) return bContrast - aContrast
+      }
+
+      const scoreDiff = scoreActionCandidate(b) - scoreActionCandidate(a)
+      if (scoreDiff !== 0) return scoreDiff
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
+
+  const heroAccentColors = ranked
+    .filter(candidate =>
+      candidate.layerHints.includes('hero') &&
+      getColorChroma(candidate.hex) >= 24 &&
+      candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase() &&
+      candidate.hex.toUpperCase() !== heroPrimaryAction?.hex.toUpperCase() &&
+      candidate.hex.toUpperCase() !== heroSecondaryAction?.hex.toUpperCase()
+    )
+    .slice(0, 4)
+    .map(candidate => toToken(candidate, 'accent'))
+    .filter((value): value is NonNullable<typeof value> => Boolean(value))
+
   const contentColors = ranked
     .filter(candidate =>
       candidate.layerHints.includes('content') &&
@@ -985,6 +1144,10 @@ function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticCol
 
   return {
     heroBackground: toToken(heroBackground, 'background'),
+    heroTextPrimary: toToken(heroTextPrimary, 'text'),
+    heroPrimaryAction: toToken(heroPrimaryAction, 'primary'),
+    heroSecondaryAction: toToken(heroSecondaryAction, 'secondary'),
+    heroAccentColors: heroAccentColors.length ? heroAccentColors : undefined,
     pageBackground: toToken(pageBackground, 'background'),
     surface: toToken(surface, 'surface'),
     textPrimary: toToken(textPrimary, 'text'),
@@ -1287,6 +1450,42 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
         layoutValues.set(key, existing)
       }
 
+      const addExplicitColor = (
+        rawColor: string,
+        property: string,
+        selectorHint: string,
+        componentKinds: ComponentKind[],
+        roleHints: string[],
+        layerHints: Array<'global' | 'hero' | 'content'>,
+        evidence: number
+      ) => {
+        if (!rawColor || isTransparent(rawColor)) return
+        const hex = rgbToHex(rawColor) || (rawColor.startsWith('#') ? rawColor.toUpperCase().slice(0, 7) : null)
+        if (!hex) return
+
+        const key = `${hex}:${property}`
+        const existing = colorMap.get(key) || {
+          hex,
+          property,
+          selectorHint,
+          count: 0,
+          roleHints: [],
+          layerHints: [],
+          componentKinds: [],
+          areaWeight: 0,
+          viewportWeight: 0,
+          repetitionWeight: 0,
+          evidenceScore: 0,
+        }
+        existing.count += 1
+        existing.roleHints = [...new Set([...(existing.roleHints || []), ...roleHints])]
+        existing.layerHints = [...new Set([...(existing.layerHints || []), ...layerHints])]
+        existing.componentKinds = [...new Set([...(existing.componentKinds || []), ...componentKinds])]
+        existing.repetitionWeight += 1
+        existing.evidenceScore += evidence
+        colorMap.set(key, existing)
+      }
+
       const addColor = (value: string, property: string, el: HTMLElement, evidence: number, layerHints: Array<'global' | 'hero' | 'content'>) => {
         if (!value || isTransparent(value)) return
         const hexes = value.includes('gradient')
@@ -1334,12 +1533,127 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
         }
       }
 
+      const extractRootVariableEvidence = () => {
+        const semanticPattern = /(?:^|[-_])(background|surface|foreground|text|border|primary|secondary|accent|brand|page)(?:[-_]|$)/
+        const targets = [document.documentElement, document.body].filter(Boolean) as HTMLElement[]
+        for (const target of targets) {
+          const style = window.getComputedStyle(target)
+          for (let i = 0; i < style.length; i++) {
+            const prop = style[i]
+            if (!prop || !prop.startsWith('--')) continue
+            const lower = prop.toLowerCase()
+            if (!semanticPattern.test(lower)) continue
+
+            const value = style.getPropertyValue(prop).trim()
+            if (!value) continue
+
+            const roleHints: string[] = []
+            if (/(?:^|[-_])(background|page)(?:[-_]|$)/.test(lower)) roleHints.push('background')
+            if (/surface/.test(lower)) roleHints.push('surface')
+            if (/(?:^|[-_])(text|foreground)(?:[-_]|$)/.test(lower)) roleHints.push('text')
+            if (/border|stroke|divider|outline/.test(lower)) roleHints.push('border')
+            if (/primary|brand/.test(lower)) roleHints.push('primary')
+            if (/secondary/.test(lower)) roleHints.push('secondary')
+            if (/accent|highlight/.test(lower)) roleHints.push('accent')
+            if (!roleHints.length) continue
+
+            const evidence = 18
+              + (roleHints.includes('primary') ? 12 : 0)
+              + (roleHints.includes('background') ? 8 : 0)
+              + (roleHints.includes('text') ? 6 : 0)
+
+            addExplicitColor(
+              value,
+              'css-variable',
+              `:root(${prop})`,
+              ['section', 'surface'],
+              roleHints,
+              ['global'],
+              evidence
+            )
+          }
+        }
+      }
+
+      const extractCtaEvidence = () => {
+        const targets = Array.from(document.querySelectorAll<HTMLElement>('button, [role="button"], a[href], input[type="submit"], input[type="button"]'))
+        for (const el of targets) {
+          const style = window.getComputedStyle(el)
+          const rect = el.getBoundingClientRect()
+          if (
+            style.display === 'none' ||
+            style.visibility === 'hidden' ||
+            Number(style.opacity) === 0 ||
+            rect.width < 24 ||
+            rect.height < 20 ||
+            rect.bottom < 0 ||
+            rect.top > window.innerHeight * 1.2
+          ) {
+            continue
+          }
+
+          const text = `${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''}`.toLowerCase()
+          const selectorHint = selectorHintFor(el)
+          const isTopRegion = rect.top >= -8 && rect.top < window.innerHeight * 0.55
+          const hasPaintedBg = !isTransparent(style.backgroundColor)
+          const likelyCta = /\b(get|start|try|free|demo|request|sign|book|contact|download)\b/.test(text)
+            || /\b(cta|button|btn|primary)\b/.test(selectorHint.toLowerCase())
+
+          const roleHints = [
+            likelyCta ? 'primary' : 'accent',
+            'cta',
+          ]
+          const layerHints: Array<'global' | 'hero' | 'content'> = isTopRegion ? ['hero'] : ['global']
+          const baseEvidence = 22
+            + (likelyCta ? 18 : 0)
+            + (isTopRegion ? 10 : 0)
+            + (hasPaintedBg ? 14 : 0)
+
+          if (hasPaintedBg) {
+            addExplicitColor(
+              style.backgroundColor,
+              'cta-background',
+              selectorHint,
+              ['button'],
+              [...roleHints, 'background'],
+              layerHints,
+              baseEvidence
+            )
+          }
+
+          addExplicitColor(
+            style.color,
+            'cta-foreground',
+            selectorHint,
+            ['button'],
+            roleHints,
+            layerHints,
+            Math.max(10, baseEvidence - 8)
+          )
+
+          if (!isTransparent(style.borderColor)) {
+            addExplicitColor(
+              style.borderColor,
+              'cta-border',
+              selectorHint,
+              ['button'],
+              [...roleHints, 'border'],
+              layerHints,
+              Math.max(8, baseEvidence - 10)
+            )
+          }
+        }
+      }
+
       const body = document.body
       if (body) {
         const bodyStyle = window.getComputedStyle(body)
         if (bodyStyle.display === 'grid') addLayout('Grid', 'grid', ['section'], 2)
         if (bodyStyle.display === 'flex') addLayout('Flex', 'flex', ['section'], 2)
       }
+
+      extractRootVariableEvidence()
+      extractCtaEvidence()
 
       const visibleElements = Array.from(document.querySelectorAll<HTMLElement>('body *'))
         .filter(el => {
@@ -1492,7 +1806,9 @@ export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAna
 
   return {
     colorCandidates,
-    semanticColorSystem: buildSemanticColorSystem(colorCandidates),
+    // This preliminary stage only gathers raw shell evidence. Final semantic slots
+    // should be rebuilt later after Hero screenshot signals are merged in aiExtract.
+    semanticColorSystem: undefined,
     typographyCandidates,
     typographyTokens: toTypographyTokens(typographyCandidates),
     radiusCandidates: mergeUniqueValues(10, domSignals?.radiusCandidates || [], cssSignals.radiusCandidates),

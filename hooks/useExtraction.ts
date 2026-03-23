@@ -197,8 +197,8 @@ export function useExtraction({
       }, abort.signal)
       result.thumbnailUrl = ssData.screenshotUrl
 
-      await saveExtraction(result, ssData.screenshotUrl)
       setReport(result)
+      await saveExtraction(result, ssData.screenshotUrl)
       setUrl('')
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return
@@ -253,8 +253,8 @@ export function useExtraction({
       const result = await callExtractAPI({ imageBase64: base64, sourceLabel: file.name }, abort.signal)
       result.thumbnailUrl = base64
 
-      await saveExtraction(result, base64)
       setReport(result)
+      await saveExtraction(result, base64)
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return
       setError(err instanceof Error ? err.message : '上传分析失败')

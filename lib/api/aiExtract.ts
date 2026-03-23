@@ -3,6 +3,7 @@ import type { ColorToken, ExtractRequest, PageColorCandidate, PageStyleAnalysis,
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import fetchNode from 'node-fetch'
 import sharp from 'sharp'
+import { mergeScreenshotColorSignals } from '@/lib/api/heroVisualAnalyzer'
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message
@@ -255,194 +256,6 @@ function debugSelectedPalette(colors: ColorToken[]) {
   })
 }
 
-function quantizeChannel(channel: number): number {
-  return Math.max(0, Math.min(255, Math.round(channel / 16) * 16))
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  return `#${[r, g, b].map(channel => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`
-}
-
-function hexToRgbParts(hex: string): [number, number, number] {
-  const clean = hex.replace('#', '')
-  return [
-    Number.parseInt(clean.slice(0, 2), 16),
-    Number.parseInt(clean.slice(2, 4), 16),
-    Number.parseInt(clean.slice(4, 6), 16),
-  ]
-}
-
-function isNearNeutral(r: number, g: number, b: number): boolean {
-  return Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b)) < 18
-}
-
-function isExtremeMonochrome(r: number, g: number, b: number): boolean {
-  const avg = (r + g + b) / 3
-  return avg < 18 || avg > 246
-}
-
-async function extractDominantRegionColors(
-  imageBuffer: Buffer,
-  region: { left: number; top: number; width: number; height: number }
-): Promise<string[]> {
-  if (region.width <= 4 || region.height <= 4) return []
-
-  const { data, info } = await sharp(imageBuffer)
-    .extract(region)
-    .resize(96, 96, { fit: 'fill' })
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
-
-  const buckets = new Map<string, number>()
-  for (let i = 0; i < data.length; i += info.channels) {
-    const r = data[i]
-    const g = data[i + 1]
-    const b = data[i + 2]
-    const key = rgbToHex(quantizeChannel(r), quantizeChannel(g), quantizeChannel(b))
-    buckets.set(key, (buckets.get(key) || 0) + 1)
-  }
-
-  const ranked = [...buckets.entries()]
-    .map(([hex, count]) => {
-      const r = Number.parseInt(hex.slice(1, 3), 16)
-      const g = Number.parseInt(hex.slice(3, 5), 16)
-      const b = Number.parseInt(hex.slice(5, 7), 16)
-      let priority = count
-      if (!isNearNeutral(r, g, b)) priority += 60
-      if (!isExtremeMonochrome(r, g, b)) priority += 30
-      return { hex, priority, count }
-    })
-    .sort((a, b) => b.priority - a.priority)
-    .slice(0, 4)
-
-  return ranked.map(item => item.hex)
-}
-
-async function extractHeroEdgeColors(
-  imageBuffer: Buffer,
-  width: number,
-  height: number
-): Promise<string[]> {
-  // Full-page screenshots can be extremely tall, so deriving hero height from total
-  // page height pulls in large sections of body content. Clamp hero sampling to a
-  // viewport-like top region instead of the full document height.
-  const heroHeight = Math.max(
-    320,
-    Math.min(
-      Math.floor(height * 0.18),
-      Math.floor(width * 0.55),
-      1800
-    )
-  )
-  const sideWidth = Math.max(36, Math.floor(width * 0.16))
-  const topBandHeight = Math.max(28, Math.floor(heroHeight * 0.22))
-  const lowerBandTop = Math.max(0, Math.floor(heroHeight * 0.58))
-  const lowerBandHeight = Math.max(28, Math.floor(heroHeight * 0.18))
-
-  const regions = [
-    { left: 0, top: 0, width: sideWidth, height: heroHeight },
-    { left: width - sideWidth, top: 0, width: sideWidth, height: heroHeight },
-    { left: 0, top: 0, width, height: topBandHeight },
-    { left: 0, top: lowerBandTop, width: Math.max(36, Math.floor(width * 0.18)), height: lowerBandHeight },
-    { left: width - Math.max(36, Math.floor(width * 0.18)), top: lowerBandTop, width: Math.max(36, Math.floor(width * 0.18)), height: lowerBandHeight },
-  ]
-
-  const colors = new Map<string, number>()
-  for (const region of regions) {
-    const sampled = await extractDominantRegionColors(imageBuffer, region)
-    sampled.forEach((hex, index) => {
-      const weight = Math.max(1, 5 - index)
-      colors.set(hex, (colors.get(hex) || 0) + weight)
-    })
-  }
-
-  return [...colors.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([hex]) => hex)
-    .slice(0, 5)
-}
-
-async function mergeScreenshotColorSignals(
-  pageAnalysis: PageStyleAnalysis | undefined,
-  base64Data: string
-): Promise<PageStyleAnalysis | undefined> {
-  if (!pageAnalysis) return pageAnalysis
-
-  try {
-    const imageBuffer = Buffer.from(base64Data, 'base64')
-    const metadata = await sharp(imageBuffer).metadata()
-    const width = metadata.width || 0
-    const height = metadata.height || 0
-    if (width < 40 || height < 40) return pageAnalysis
-
-    const heroColors = await extractHeroEdgeColors(imageBuffer, width, height)
-
-    const contentColors = await extractDominantRegionColors(imageBuffer, {
-      left: 0,
-      top: Math.floor(height * 0.42),
-      width,
-      height: Math.max(40, Math.floor(height * 0.42)),
-    })
-
-    const augmentedCandidates = [...pageAnalysis.colorCandidates]
-    const existing = new Map(augmentedCandidates.map(candidate => [candidate.hex.toUpperCase(), candidate]))
-
-    for (const hex of heroColors) {
-      const current = existing.get(hex)
-    if (current) {
-      current.count += 18
-      current.roleHints = [...new Set([...current.roleHints, 'background', 'hero'])]
-      current.layerHints = [...new Set([...(current.layerHints || []), 'hero'])] as Array<'global' | 'hero' | 'content'>
-      if (current.property === 'color' || current.property === 'border-color') {
-        current.property = 'background-image'
-      }
-    } else {
-      const candidate: PageColorCandidate = {
-        hex,
-        property: 'screenshot-hero',
-        selectorHint: 'hero-region',
-          count: 18,
-          roleHints: ['background', 'hero'],
-          layerHints: ['hero'],
-        }
-        augmentedCandidates.push(candidate)
-        existing.set(hex, candidate)
-      }
-    }
-
-    for (const hex of contentColors) {
-      const current = existing.get(hex)
-      if (current) {
-        current.count += 8
-        current.roleHints = [...new Set([...current.roleHints, 'surface'])]
-        current.layerHints = [...new Set([...(current.layerHints || []), 'global'])] as Array<'global' | 'hero' | 'content'>
-      } else {
-        const candidate: PageColorCandidate = {
-          hex,
-          property: 'screenshot-content',
-          selectorHint: 'content-region',
-          count: 8,
-          roleHints: ['surface'],
-          layerHints: ['global'],
-        }
-        augmentedCandidates.push(candidate)
-        existing.set(hex, candidate)
-      }
-    }
-
-    const mergedAnalysis = {
-      ...pageAnalysis,
-      colorCandidates: augmentedCandidates,
-    }
-    debugColorCandidates('merged screenshot/page candidates', mergedAnalysis.colorCandidates)
-    return mergedAnalysis
-  } catch (error) {
-    console.warn('[aiExtract] Screenshot color analysis failed:', error)
-    return pageAnalysis
-  }
-}
-
 function inferRoleFromSemanticSlot(slot: keyof SemanticColorSystem): ColorToken['role'] {
   switch (slot) {
     case 'heroBackground':
@@ -489,6 +302,12 @@ function hydrateSemanticColorSystem(
 
   return {
     heroBackground: hydrate(semanticColorSystem.heroBackground, inferRoleFromSemanticSlot('heroBackground')),
+    heroTextPrimary: hydrate(semanticColorSystem.heroTextPrimary, inferRoleFromSemanticSlot('textPrimary')),
+    heroPrimaryAction: hydrate(semanticColorSystem.heroPrimaryAction, inferRoleFromSemanticSlot('primaryAction')),
+    heroSecondaryAction: hydrate(semanticColorSystem.heroSecondaryAction, inferRoleFromSemanticSlot('secondaryAction')),
+    heroAccentColors: (semanticColorSystem.heroAccentColors || [])
+      .map(color => hydrate(color, 'accent'))
+      .filter((value): value is ColorToken => Boolean(value)),
     pageBackground: hydrate(semanticColorSystem.pageBackground, inferRoleFromSemanticSlot('pageBackground')),
     surface: hydrate(semanticColorSystem.surface, inferRoleFromSemanticSlot('surface')),
     textPrimary: hydrate(semanticColorSystem.textPrimary, inferRoleFromSemanticSlot('textPrimary')),
@@ -578,6 +397,9 @@ function applyMeasuredUrlSignals(
   const compatibilityColors = colorSystem
     ? [
         colorSystem.heroBackground,
+        colorSystem.heroTextPrimary,
+        colorSystem.heroPrimaryAction,
+        colorSystem.heroSecondaryAction,
         colorSystem.pageBackground,
         colorSystem.surface,
         colorSystem.textPrimary,

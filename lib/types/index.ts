@@ -11,6 +11,10 @@ export interface ColorToken {
 
 export interface SemanticColorSystem {
   heroBackground?: ColorToken
+  heroTextPrimary?: ColorToken
+  heroPrimaryAction?: ColorToken
+  heroSecondaryAction?: ColorToken
+  heroAccentColors?: ColorToken[]
   pageBackground?: ColorToken
   surface?: ColorToken
   textPrimary?: ColorToken
@@ -130,6 +134,7 @@ export interface DesignDetails {
   // Exact CSS values
   cssRadius?: string 
   cssShadow?: string 
+  cssStroke?: string
   // Ultra-short bilingual tags replacing paragraphs
   layoutEn?: string
   layoutZh?: string
@@ -137,6 +142,10 @@ export interface DesignDetails {
   spacingZh?: string
   motionEn?: string
   motionZh?: string
+  iconEn?: string
+  iconZh?: string
+  signatureEn?: string
+  signatureZh?: string
 }
 
 export interface PageColorCandidate {

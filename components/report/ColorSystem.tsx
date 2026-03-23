@@ -58,6 +58,9 @@ export default function ColorSystem({
   const systemPalette: DisplayColor[] = sourceType === 'url' && colorSystem
     ? [
         colorSystem.heroBackground && { ...colorSystem.heroBackground, roleLabelOverride: lang === 'zh' ? 'Hero 背景' : 'Hero background' },
+        colorSystem.heroTextPrimary && { ...colorSystem.heroTextPrimary, roleLabelOverride: lang === 'zh' ? 'Hero 文字' : 'Hero text' },
+        colorSystem.heroPrimaryAction && { ...colorSystem.heroPrimaryAction, roleLabelOverride: lang === 'zh' ? 'Hero 主按钮' : 'Hero primary action' },
+        colorSystem.heroSecondaryAction && { ...colorSystem.heroSecondaryAction, roleLabelOverride: lang === 'zh' ? 'Hero 次按钮' : 'Hero secondary action' },
         colorSystem.pageBackground && { ...colorSystem.pageBackground, roleLabelOverride: lang === 'zh' ? '页面背景' : 'Page background' },
         colorSystem.surface && { ...colorSystem.surface, roleLabelOverride: lang === 'zh' ? '面板色' : 'Surface' },
         colorSystem.textPrimary && { ...colorSystem.textPrimary, roleLabelOverride: lang === 'zh' ? '主文字' : 'Text primary' },
@@ -65,6 +68,7 @@ export default function ColorSystem({
         colorSystem.border && { ...colorSystem.border, roleLabelOverride: lang === 'zh' ? '边框线' : 'Border' },
         colorSystem.primaryAction && { ...colorSystem.primaryAction, roleLabelOverride: lang === 'zh' ? '主动作色' : 'Primary action' },
         colorSystem.secondaryAction && { ...colorSystem.secondaryAction, roleLabelOverride: lang === 'zh' ? '次动作色' : 'Secondary action' },
+        ...(colorSystem.heroAccentColors || []).map(color => ({ ...color, roleLabelOverride: lang === 'zh' ? 'Hero 点缀色' : 'Hero accent' })),
       ].filter(Boolean) as DisplayColor[]
     : colors.map(color => ({ ...color }))
 

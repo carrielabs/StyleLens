@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import type { StyleReport } from '@/lib/types'
 
 interface UrlInputProps {
@@ -51,6 +51,7 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
         body: JSON.stringify({
           screenshotUrl: screenData.screenshotUrl,
           extractedCss: screenData.extractedCss,
+          pageAnalysis: screenData.pageAnalysis,
           sourceType: 'url',
           sourceLabel: new URL(targetUrl).hostname
         })
