@@ -28,6 +28,7 @@ export default function Home() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState('')
+  const [featuredCollapsed, setFeaturedCollapsed] = useState(false)
 
   // ── Sidebar panel toggle ──
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -229,6 +230,8 @@ export default function Home() {
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           isSearchOpen={isSearchOpen}
+          featuredCollapsed={featuredCollapsed}
+          setFeaturedCollapsed={setFeaturedCollapsed}
           pinnedCollapsed={pinnedCollapsed}
           setPinnedCollapsed={setPinnedCollapsed}
           historyCollapsed={historyCollapsed}

@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import type { ScreenshotResponse } from '@/lib/types'
+import { analyzePageStyles } from '@/lib/api/pageAnalyzer'
 
 // Persistent file-based cache to survive server restarts (HMR/Next.js Dev)
 const CACHE_FILE = path.resolve(process.cwd(), '.screenshot_cache.json')
@@ -30,6 +31,13 @@ const screenshotCache = getPersistentCache()
 
 export async function captureScreenshot(targetUrl: string): Promise<ScreenshotResponse> {
   const normalizedUrl = targetUrl.toLowerCase().trim()
+  let pageAnalysis = null
+
+  try {
+    pageAnalysis = await analyzePageStyles(targetUrl)
+  } catch (error) {
+    console.warn('[Screenshotter] Page analysis failed, falling back to screenshot-only mode:', error)
+  }
   
   // 1. Check local cache
   if (screenshotCache.has(normalizedUrl)) {
@@ -37,7 +45,8 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
     return {
       success: true,
       screenshotUrl: screenshotCache.get(normalizedUrl)!,
-      extractedCss: ''
+      extractedCss: pageAnalysis?.cssTextExcerpt || '',
+      pageAnalysis: pageAnalysis || undefined,
     }
   }
 
@@ -113,7 +122,8 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
       return {
         success: true,
         screenshotUrl: dataUrl,
-        extractedCss: ''
+        extractedCss: pageAnalysis?.cssTextExcerpt || '',
+        pageAnalysis: pageAnalysis || undefined,
       }
     } catch (err: any) {
       lastError = err.message

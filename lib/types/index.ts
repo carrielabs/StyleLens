@@ -49,11 +49,44 @@ export interface DesignDetails {
   motionZh?: string
 }
 
+export interface PageColorCandidate {
+  hex: string
+  property: string
+  selectorHint?: string
+  count: number
+  roleHints: string[]
+  layerHints: Array<'global' | 'hero' | 'content'>
+}
+
+export interface PageTypographyCandidate {
+  fontFamily: string
+  fontSize?: string
+  fontWeight?: string
+  lineHeight?: string
+  letterSpacing?: string
+  count: number
+}
+
+export interface PageStyleAnalysis {
+  colorCandidates: PageColorCandidate[]
+  typographyCandidates: PageTypographyCandidate[]
+  radiusCandidates: string[]
+  shadowCandidates: string[]
+  spacingCandidates: string[]
+  layoutHints: string[]
+  cssTextExcerpt?: string
+  sourceCount: {
+    inlineStyleBlocks: number
+    linkedStylesheets: number
+  }
+}
+
 export interface StyleReport {
   id?: string
   sourceType: 'image' | 'url'
   sourceLabel: string
   thumbnailUrl?: string
+  pageAnalysis?: PageStyleAnalysis
   summary: string
   summaryEn?: string
   summaryZh?: string
@@ -99,6 +132,7 @@ export interface ExtractRequest {
   imageUrl?: string
   screenshotUrl?: string
   extractedCss?: string
+  pageAnalysis?: PageStyleAnalysis
   sourceType: 'image' | 'url'
   sourceLabel: string
 }
@@ -117,6 +151,7 @@ export interface ScreenshotResponse {
   success: boolean
   screenshotUrl?: string
   extractedCss?: string
+  pageAnalysis?: PageStyleAnalysis
   error?: string
 }
 

@@ -1,11 +1,23 @@
 'use client'
 
 import React, { useState } from 'react'
-import type { DesignDetails as DetailsType } from '@/lib/types'
+import type { DesignDetails as DetailsType, PageStyleAnalysis } from '@/lib/types'
 
 type TabKey = 'radius' | 'shadow' | 'layout' | 'spacing' | 'motion'
 
-export default function DesignDetails({ data, lang, fullWidth = false }: { data: DetailsType, lang: 'zh' | 'en', fullWidth?: boolean }) {
+export default function DesignDetails({
+  data,
+  analysis,
+  sourceType,
+  lang,
+  fullWidth = false
+}: {
+  data: DetailsType
+  analysis?: PageStyleAnalysis
+  sourceType: 'image' | 'url'
+  lang: 'zh' | 'en'
+  fullWidth?: boolean
+}) {
   const [activeTab, setActiveTab] = useState<TabKey>('radius')
 
   const t = {
@@ -25,14 +37,20 @@ export default function DesignDetails({ data, lang, fullWidth = false }: { data:
   ]
 
   const parse = (val?: string) => val ? val.split('|').map(s => s.trim()).filter(Boolean) : []
+  const measuredRadius = sourceType === 'url' ? analysis?.radiusCandidates || [] : []
+  const measuredShadow = sourceType === 'url' ? analysis?.shadowCandidates || [] : []
+  const measuredSpacing = sourceType === 'url' ? analysis?.spacingCandidates || [] : []
+  const measuredLayout = sourceType === 'url' ? analysis?.layoutHints || [] : []
   
   const items = {
-    radius: parse(data.cssRadius),
-    shadow: parse(data.cssShadow),
-    layout: lang === 'zh' ? parse(data.layoutZh || data.layoutEn) : parse(data.layoutEn || data.layoutZh),
-    spacing: lang === 'zh' ? parse(data.spacingZh || data.spacingEn) : parse(data.spacingEn || data.spacingZh),
+    radius: measuredRadius.length ? measuredRadius : parse(data.cssRadius),
+    shadow: measuredShadow.length ? measuredShadow : parse(data.cssShadow),
+    layout: measuredLayout.length ? measuredLayout : (lang === 'zh' ? parse(data.layoutZh || data.layoutEn) : parse(data.layoutEn || data.layoutZh)),
+    spacing: measuredSpacing.length ? measuredSpacing : (lang === 'zh' ? parse(data.spacingZh || data.spacingEn) : parse(data.spacingEn || data.spacingZh)),
     motion: lang === 'zh' ? parse(data.motionZh || data.motionEn) : parse(data.motionEn || data.motionZh)
   }
+
+  const showMeasuredBadge = sourceType === 'url'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -71,6 +89,23 @@ export default function DesignDetails({ data, lang, fullWidth = false }: { data:
         border: '1px solid rgba(0,0,0,0.06)', padding: '24px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.01)'
       }}>
+        {showMeasuredBadge && activeTab !== 'motion' && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginBottom: '16px'
+          }}>
+            <span style={{
+              fontSize: '11px',
+              color: 'var(--text-secondary)',
+              padding: '3px 8px',
+              borderRadius: '999px',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }}>
+              {lang === 'zh' ? '基于页面测量' : 'Measured from page'}
+            </span>
+          </div>
+        )}
         {activeTab === 'radius' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
@@ -108,6 +143,13 @@ export default function DesignDetails({ data, lang, fullWidth = false }: { data:
 
         {activeTab === 'layout' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {sourceType === 'url' && measuredLayout.length > 0 && (
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                {lang === 'zh'
+                  ? '这些布局标签来自页面可见元素的真实布局模式采样。'
+                  : 'These layout tags are derived from measured visible page structure.'}
+              </p>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
               {items.layout.map((l, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -123,17 +165,20 @@ export default function DesignDetails({ data, lang, fullWidth = false }: { data:
 
         {activeTab === 'spacing' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-             <div style={{ height: '140px', background: '#FFFFFF', border: '1px dashed #E5E5EA', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                   <div style={{ width: '40px', height: '10px', background: 'rgba(0,0,0,0.03)', borderRadius: '2px' }} />
-                   <div style={{ width: '40px', height: '24px', borderTop: '1px solid #FF3B30', borderBottom: '1px solid #FF3B30', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ height: '100%', width: '1px', background: '#FF3B30' }} />
-                      <div style={{ position: 'absolute', background: '#FFF', padding: '0 4px', fontSize: '10px', color: '#FF3B30', fontWeight: 700, fontFamily: 'var(--font-mono)', left: '44px', whiteSpace: 'nowrap' }}>
-                         {items.spacing[0]?.match(/\d+px/)?.[0] || 'VAR'} GAP
-                      </div>
-                   </div>
-                   <div style={{ width: '40px', height: '10px', background: 'rgba(0,0,0,0.03)', borderRadius: '2px' }} />
-                </div>
+             <div style={{ height: '140px', background: '#FFFFFF', border: '1px dashed #E5E5EA', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '16px', flexWrap: 'wrap' }}>
+                {items.spacing.length > 0 ? items.spacing.slice(0, 6).map((space, i) => (
+                  <div key={i} style={{
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    background: '#F6F6F6',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#1D1D1F',
+                    fontFamily: 'var(--font-mono)'
+                  }}>
+                    {space}
+                  </div>
+                )) : <EmptyState lang={lang} />}
              </div>
              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                {items.spacing.map((s, i) => <TagBadge key={i} label={s} />)}
@@ -143,23 +188,20 @@ export default function DesignDetails({ data, lang, fullWidth = false }: { data:
 
         {activeTab === 'motion' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div style={{ height: '140px', background: '#F9F9F9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
-               <div className="motion-ball" style={{ width: '24px', height: '24px', background: '#1D1D1F', borderRadius: '50%' }} />
-               <style jsx>{`
-                 @keyframes travel {
-                   0%, 100% { transform: translateX(-80px) scale(0.9); opacity: 0.5; }
-                   50% { transform: translateX(80px) scale(1.1); opacity: 1; }
-                 }
-                 .motion-ball {
-                   animation: travel 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-                 }
-               `}</style>
+            <div style={{ height: '140px', background: '#F9F9F9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', padding: '24px' }}>
+               <div style={{ maxWidth: '520px', textAlign: 'center', fontSize: '13px', lineHeight: 1.7, color: '#6B6B73' }}>
+                 {lang === 'zh'
+                   ? '动效偏好目前仍主要来自 AI 对静态页面的推测。除非页面检测到明确的 CSS animation / transition 证据，否则不应把这里视为精确设计 token。'
+                   : 'Motion is still mostly inferred from static page analysis. Unless explicit CSS animation or transition evidence is detected, treat this section as interpretive rather than exact tokens.'}
+               </div>
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                {items.motion.map((m, i) => <TagBadge key={i} label={m} theme="dark" />)}
-               <code style={{ fontSize: '10px', color: '#AEAEB2', fontFamily: 'var(--font-mono)', marginLeft: '8px' }}>
-                 cubic-bezier(0.4, 0, 0.2, 1)
-               </code>
+               {sourceType === 'url' && (
+                 <code style={{ fontSize: '10px', color: '#AEAEB2', fontFamily: 'var(--font-mono)', marginLeft: '8px' }}>
+                   {lang === 'zh' ? '当前为推测值' : 'currently inferred'}
+                 </code>
+               )}
             </div>
           </div>
         )}
@@ -237,4 +279,3 @@ function EmptyState({ lang }: { lang: 'zh' | 'en' }) {
     </div>
   )
 }
-

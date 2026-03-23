@@ -104,19 +104,19 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
       {/* 3. 色彩体系 */}
       <section>
         <SectionLabel>{t.colors}</SectionLabel>
-        <ColorSystem colors={report.colors} lang={lang} />
+        <ColorSystem colors={report.colors} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} />
       </section>
 
       {/* 4. 字体排版 */}
       <section>
          <SectionLabel>{t.typo}</SectionLabel>
-         <Typography data={report.typography} lang={lang} fullWidth={fullWidth} />
+         <Typography data={report.typography} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
       </section>
 
       {/* 5. 细节解析 */}
       <section>
          <SectionLabel>{t.details}</SectionLabel>
-         <DesignDetails data={report.designDetails} lang={lang} fullWidth={fullWidth} />
+         <DesignDetails data={report.designDetails} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
       </section>
 
       {/* 6. 导出面板 */}

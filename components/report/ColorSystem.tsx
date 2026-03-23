@@ -1,9 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import type { ColorToken } from '@/lib/types'
+import type { ColorToken, PageStyleAnalysis } from '@/lib/types'
 
-export default function ColorSystem({ colors, lang }: { colors: ColorToken[], lang: 'zh' | 'en' }) {
+export default function ColorSystem({
+  colors,
+  analysis,
+  sourceType,
+  lang
+}: {
+  colors: ColorToken[]
+  analysis?: PageStyleAnalysis
+  sourceType: 'image' | 'url'
+  lang: 'zh' | 'en'
+}) {
   const [copiedHex, setCopiedHex] = useState<string | null>(null)
 
   const copyColor = (hex: string) => {
@@ -25,13 +35,64 @@ export default function ColorSystem({ colors, lang }: { colors: ColorToken[], la
     return map[role]?.[lang] || (lang === 'zh' ? '其他' : 'Other')
   }
 
+  const measuredCandidates = new Map(
+    (analysis?.colorCandidates || []).map(candidate => [candidate.hex.toUpperCase(), candidate])
+  )
+  const contentColors = sourceType === 'url'
+    ? (analysis?.colorCandidates || [])
+        .filter(candidate =>
+          candidate.layerHints.includes('content') &&
+          !candidate.layerHints.includes('hero') &&
+          !colors.some(color => color.hex.toUpperCase() === candidate.hex.toUpperCase())
+        )
+        .slice(0, 6)
+    : []
+
+  const getEvidenceLabel = (color: ColorToken) => {
+    const candidate = measuredCandidates.get(color.hex.toUpperCase())
+    if (!candidate) return null
+
+    const hints = candidate.roleHints
+    const isSystemSignal = hints.some(hint =>
+      ['background', 'surface', 'text', 'border', 'primary', 'accent'].includes(hint)
+    )
+
+    if (isSystemSignal) {
+      return lang === 'zh' ? '系统色证据' : 'System signal'
+    }
+    return lang === 'zh' ? '测量候选' : 'Measured'
+  }
+
   return (
-    <div style={{ 
-      display: 'grid', 
-      gridTemplateColumns: 'repeat(8, 1fr)', 
-      gap: '12px' 
-    }}>
-      {colors.map((c, i) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {sourceType === 'url' && analysis && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            {lang === 'zh'
+              ? 'URL 模式下，颜色优先基于页面样式测量结果；插图、截图和媒体内容中的装饰色会被降权。'
+              : 'For URL analysis, colors prioritize measured page style signals; decorative colors from illustrations, screenshots, and media are deprioritized.'}
+          </p>
+          <span style={{
+            fontSize: '11px',
+            color: 'var(--text-secondary)',
+            padding: '3px 8px',
+            borderRadius: '999px',
+            border: '1px solid rgba(0,0,0,0.08)'
+          }}>
+            {lang === 'zh' ? '系统色优先' : 'System colors prioritized'}
+          </span>
+        </div>
+      )}
+
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(8, 1fr)', 
+        gap: '12px' 
+      }}>
+      {colors.map((c, i) => {
+        const evidenceLabel = getEvidenceLabel(c)
+        const isLowPriorityOther = sourceType === 'url' && c.role === 'other' && !evidenceLabel
+        return (
         <div 
           key={i}
           onClick={() => copyColor(c.hex)}
@@ -40,7 +101,7 @@ export default function ColorSystem({ colors, lang }: { colors: ColorToken[], la
           style={{
             display: 'flex', flexDirection: 'column', gap: '8px',
             cursor: 'crosshair', transition: 'opacity 0.2s, transform 0.2s',
-            opacity: copiedHex && copiedHex !== c.hex ? 0.3 : 1
+            opacity: copiedHex && copiedHex !== c.hex ? 0.3 : isLowPriorityOther ? 0.7 : 1
           }}
           onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
           onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
@@ -59,6 +120,18 @@ export default function ColorSystem({ colors, lang }: { colors: ColorToken[], la
             <div style={{ fontSize: '11px', color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {getRoleLabel(c.role)}
             </div>
+            {evidenceLabel && (
+              <div style={{
+                fontSize: '10px',
+                color: 'var(--text-secondary)',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
+                {evidenceLabel}
+              </div>
+            )}
             <div style={{ 
               fontSize: '11px', 
               fontFamily: 'var(--font-mono)', 
@@ -69,7 +142,43 @@ export default function ColorSystem({ colors, lang }: { colors: ColorToken[], la
             </div>
           </div>
         </div>
-      ))}
+      )})}
+      </div>
+
+      {contentColors.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            {lang === 'zh' ? '内容区辅助色' : 'Content module colors'}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {contentColors.map(candidate => (
+              <div
+                key={`${candidate.hex}-${candidate.property}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  borderRadius: '999px',
+                  background: '#F6F6F6',
+                  border: '1px solid rgba(0,0,0,0.05)'
+                }}
+              >
+                <span style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '999px',
+                  background: candidate.hex,
+                  boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)'
+                }} />
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                  {candidate.hex.toUpperCase()}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

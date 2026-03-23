@@ -9,7 +9,7 @@ import type {
   RefObject,
   SetStateAction,
 } from 'react'
-import type { DisplayStyleReport, StyleReport } from '@/lib/types'
+import type { DisplayStyleReport, PageStyleAnalysis, StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
 interface UseExtractionParams {
@@ -24,6 +24,14 @@ interface UseExtractionParams {
 }
 
 export type UploadState = 'idle' | 'hover' | 'dragover' | 'selected' | 'extracting'
+
+interface ExtractApiPayload {
+  screenshotUrl?: string
+  imageBase64?: string
+  sourceLabel?: string
+  extractedCss?: string
+  pageAnalysis?: PageStyleAnalysis
+}
 
 interface UseExtractionResult {
   url: string
@@ -114,7 +122,7 @@ export function useExtraction({
   }, [pendingPreviewUrl])
 
   const callExtractAPI = async (
-    payload: { screenshotUrl?: string; imageBase64?: string; sourceLabel?: string },
+    payload: ExtractApiPayload,
     signal?: AbortSignal
   ): Promise<DisplayStyleReport> => {
     const res = await fetch('/api/extract', {
@@ -181,7 +189,12 @@ export function useExtraction({
         label = new URL(url.trim()).hostname.replace(/^www\./, '')
       } catch {}
 
-      const result = await callExtractAPI({ screenshotUrl: ssData.screenshotUrl, sourceLabel: label }, abort.signal)
+      const result = await callExtractAPI({
+        screenshotUrl: ssData.screenshotUrl,
+        sourceLabel: label,
+        extractedCss: ssData.extractedCss,
+        pageAnalysis: ssData.pageAnalysis,
+      }, abort.signal)
       result.thumbnailUrl = ssData.screenshotUrl
 
       await saveExtraction(result, ssData.screenshotUrl)

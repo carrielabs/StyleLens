@@ -19,6 +19,8 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/storage/supabaseClient'
 import type { ColorToken, DisplayStyleReport, StyleReport } from '@/lib/types'
 import { getTopColors } from './viewUtils'
+import { BRAND_PRESETS } from '@/lib/presets/brandPresets'
+import PresetItem from './PresetItem'
 
 type SidebarRecord = {
   id: string
@@ -68,6 +70,8 @@ interface HomeSidebarProps {
   cancelRename: () => void
   supabase: BrowserSupabaseClient
   setIsAuthVisible: Dispatch<SetStateAction<boolean>>
+  featuredCollapsed: boolean
+  setFeaturedCollapsed: Dispatch<SetStateAction<boolean>>
 }
 
 export default function HomeSidebar({
@@ -108,6 +112,8 @@ export default function HomeSidebar({
   cancelRename,
   supabase,
   setIsAuthVisible,
+  featuredCollapsed,
+  setFeaturedCollapsed,
 }: HomeSidebarProps) {
   const identityAvatarSources = (user?.identities ?? [])
     .flatMap(identity => [
@@ -200,6 +206,36 @@ export default function HomeSidebar({
           }}
         />
       </div>
+
+      {sidebarOpen && (
+        <>
+          <SectionHeader 
+            label="Featured Styles" 
+            collapsed={featuredCollapsed} 
+            onToggle={() => setFeaturedCollapsed(v => !v)} 
+          />
+          {!featuredCollapsed && (
+            <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+              {Object.values(BRAND_PRESETS).map(preset => (
+                <PresetItem
+                  key={preset.id}
+                  preset={preset}
+                  isActive={activeItemId === preset.id}
+                  collapsed={!sidebarOpen}
+                  onClick={() => {
+                    setActiveItemId(preset.id!)
+                    setReport(preset)
+                    setError(null)
+                    setShowUserMenu(false)
+                    setContextMenuId(null)
+                    setIsSearchOpen(false)
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       {sidebarOpen && pinnedList.length > 0 && (
         <>

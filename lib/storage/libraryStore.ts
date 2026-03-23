@@ -48,11 +48,9 @@ export async function saveToLibrary(
       .from('style_records')
       .insert({
         user_id: user.id,
-        source_type: report.sourceType,
         source_label: report.sourceLabel,
         thumbnail_url: thumbnailUrl || null,
-        style_data: report,
-        tags: report.tags
+        style_data: report
       })
       .select()
       .single()
