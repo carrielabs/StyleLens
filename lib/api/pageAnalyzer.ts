@@ -108,6 +108,75 @@ type StateAccumulator = {
   evidenceScore: number
 }
 
+export function createEmptyPageAnalysis(sourceCount?: { inlineStyleBlocks: number; linkedStylesheets: number }): PageStyleAnalysis {
+  return {
+    colorCandidates: [],
+    semanticColorSystem: undefined,
+    typographyCandidates: [],
+    typographyTokens: [],
+    radiusCandidates: [],
+    radiusTokens: [],
+    shadowCandidates: [],
+    shadowTokens: [],
+    spacingCandidates: [],
+    spacingTokens: [],
+    layoutHints: [],
+    layoutEvidence: [],
+    stateTokens: {},
+    cssTextExcerpt: '',
+    sourceCount: sourceCount || {
+      inlineStyleBlocks: 0,
+      linkedStylesheets: 0,
+    },
+  }
+}
+
+function isLikelyAuthGate(targetUrl: string, content: string, finalUrl?: string): boolean {
+  const lower = content.toLowerCase()
+  const urlToCheck = (finalUrl || targetUrl).toLowerCase()
+
+  if (/\b(login|signin|sign-in|auth|account|password-reset|reset-password|session)\b/.test(new URL(urlToCheck).pathname.toLowerCase())) {
+    return true
+  }
+
+  let score = 0
+  if (/\blog in with\b|\bsign in with\b|\bcontinue with\b/.test(lower)) score += 3
+  if (/\bpasskey\b|\bsso\b|\boauth\b/.test(lower)) score += 2
+  if (/\bforgot password\b|\buse an organization email\b/.test(lower)) score += 2
+  if (/\byour ai workspace\b|\bcreate account\b|\blog in to your\b/.test(lower)) score += 2
+
+  const targetPath = new URL(targetUrl).pathname.toLowerCase()
+  const targetLooksAuth = /\b(login|signin|sign-in|auth|account|session)\b/.test(targetPath)
+  return !targetLooksAuth && score >= 4
+}
+
+export function isLikelyAuthAnalysis(analysis: Pick<PageStyleAnalysis, 'typographyCandidates' | 'layoutHints' | 'colorCandidates'>): boolean {
+  const textBlob = [
+    ...analysis.typographyCandidates.map(candidate => candidate.sampleText || ''),
+    ...analysis.layoutHints,
+    ...analysis.colorCandidates.map(candidate => `${candidate.selectorHint || ''} ${candidate.property}`),
+  ]
+    .join(' ')
+    .toLowerCase()
+
+  let score = 0
+  if (/\blog in with\b|\bsign in with\b|\bcontinue with\b/.test(textBlob)) score += 3
+  if (/\byour ai workspace\b|\blog in to your\b|\buse an organization email\b/.test(textBlob)) score += 3
+  if (/\bpasskey\b|\bsso\b|\boauth\b/.test(textBlob)) score += 2
+  if (/\blogin\b|\bsign in\b|\bforgot password\b|\bcontinue\b/.test(textBlob)) score += 1
+
+  return score >= 4
+}
+
+export function sanitizePageAnalysis(
+  analysis: PageStyleAnalysis | undefined
+): PageStyleAnalysis | undefined {
+  if (!analysis) return analysis
+  if (!isLikelyAuthAnalysis(analysis)) return analysis
+
+  return createEmptyPageAnalysis(analysis.sourceCount)
+}
+
 function normalizeHex(value: string): string | null {
   const match = value.match(/#([0-9a-f]{3,8})/i)
   if (!match) return null
@@ -363,6 +432,16 @@ function isContainerBackgroundCandidate(candidate: PageColorCandidate) {
     || kinds.includes('surface')
     || kinds.includes('card')
     || kinds.length === 0
+}
+
+function isLikelyEmbeddedHeroMedia(candidate: PageColorCandidate) {
+  const selector = (candidate.selectorHint || '').toLowerCase()
+  return /heromedia|productimage|gradient|playpause|controller|video|media|image|app-inner|appinner|notion-app-inner|product|screenshot|workspace|editor|board/.test(selector)
+}
+
+function isLikelyUtilityNavBackground(candidate: PageColorCandidate) {
+  const selector = (candidate.selectorHint || '').toLowerCase()
+  return /downloadbox|download-box|nav|navbar|header|menu|button|btn|cta/.test(selector)
 }
 
 function mergeColorCandidates(domGroup: PageColorCandidate[], cssGroup: PageColorCandidate[]): PageColorCandidate[] {
@@ -868,6 +947,42 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
 
   const ranked = [...candidates].sort((a, b) => (b.evidenceScore || b.count) - (a.evidenceScore || a.count))
   const used = new Set<string>()
+  const inferLayerMode = (layerCandidates: PageColorCandidate[], fallback: 'light' | 'dark' = 'light') => {
+    const preferred = [...layerCandidates].sort((a, b) => {
+      const weight = (candidate: PageColorCandidate) => {
+        if (candidate.property === 'css-variable') return 4
+        if (candidate.property === 'visual-hero' || candidate.property === 'visual-page') return 3
+        if (candidate.property === 'background-image') return 2
+        if (candidate.property === 'background-color') return 1
+        return 0
+      }
+      const weightDiff = weight(b) - weight(a)
+      if (weightDiff !== 0) return weightDiff
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
+
+    if (!preferred) return fallback
+    return getColorBrightness(preferred.hex) < 145 ? 'dark' : 'light'
+  }
+
+  const globalBackgroundCandidates = ranked.filter(candidate =>
+    candidate.layerHints.includes('global') &&
+    !candidate.layerHints.includes('content') &&
+    isLikelyBackgroundCandidate(candidate) &&
+    isContainerBackgroundCandidate(candidate) &&
+    !isLikelyUtilityNavBackground(candidate) &&
+    !isLikelyTextCandidate(candidate) &&
+    candidate.property !== 'screenshot-content' &&
+    candidate.property !== 'visual-content' &&
+    candidate.property !== 'cta-background' &&
+    !candidate.roleHints.includes('accent')
+  )
+  const heroBackgroundCandidates = ranked.filter(candidate =>
+    candidate.layerHints.includes('hero') &&
+    isLikelyBackgroundCandidate(candidate) &&
+    isContainerBackgroundCandidate(candidate) &&
+    !isLikelyEmbeddedHeroMedia(candidate)
+  )
   const backgroundMode = (() => {
     const textCandidate = ranked.find(candidate =>
       isLikelyTextCandidate(candidate) &&
@@ -885,6 +1000,8 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
     if (!backgroundCandidate) return 'light'
     return getColorBrightness(backgroundCandidate.hex) < 145 ? 'dark' : 'light'
   })()
+  const heroBackgroundMode = inferLayerMode(heroBackgroundCandidates, backgroundMode)
+  const pageBackgroundMode = inferLayerMode(globalBackgroundCandidates, 'light')
   const prefersDarkText = backgroundMode === 'light'
   const preferredTextCandidates = ranked.filter(candidate =>
     isLikelyTextCandidate(candidate) &&
@@ -904,16 +1021,23 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
     getColorChroma(candidate.hex) >= 18
   )
 
-  const heroBackground = [...ranked]
-    .filter(candidate =>
-      candidate.layerHints.includes('hero') &&
-      isLikelyBackgroundCandidate(candidate) &&
-      isContainerBackgroundCandidate(candidate)
+  const heroBackground = [...heroBackgroundCandidates]
+    .filter(candidate => heroBackgroundMode === 'dark'
+      ? getColorBrightness(candidate.hex) <= 205
+      : getColorBrightness(candidate.hex) >= 60
     )
     .sort((a, b) => {
-      const aVisualBoost = a.property === 'visual-hero' ? 3 : a.property === 'background-image' ? 2 : a.property === 'background-color' ? 1 : 0
-      const bVisualBoost = b.property === 'visual-hero' ? 3 : b.property === 'background-image' ? 2 : b.property === 'background-color' ? 1 : 0
+      const aVisualBoost = a.property === 'visual-hero' || a.property === 'screenshot-hero' ? 3 : a.property === 'background-image' ? 2 : a.property === 'background-color' ? 1 : 0
+      const bVisualBoost = b.property === 'visual-hero' || b.property === 'screenshot-hero' ? 3 : b.property === 'background-image' ? 2 : b.property === 'background-color' ? 1 : 0
       if (aVisualBoost !== bVisualBoost) return bVisualBoost - aVisualBoost
+
+      const aModeMismatch = heroBackgroundMode === 'dark'
+        ? Number(getColorBrightness(a.hex) > 170)
+        : Number(getColorBrightness(a.hex) < 85)
+      const bModeMismatch = heroBackgroundMode === 'dark'
+        ? Number(getColorBrightness(b.hex) > 170)
+        : Number(getColorBrightness(b.hex) < 85)
+      if (aModeMismatch !== bModeMismatch) return aModeMismatch - bModeMismatch
 
       const aHeroBoost = a.property === 'background-image' ? 2 : a.property === 'background-color' ? 1 : 0
       const bHeroBoost = b.property === 'background-image' ? 2 : b.property === 'background-color' ? 1 : 0
@@ -921,8 +1045,8 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
 
       const aBrightness = getColorBrightness(a.hex)
       const bBrightness = getColorBrightness(b.hex)
-      if (backgroundMode === 'dark' && aBrightness !== bBrightness) return aBrightness - bBrightness
-      if (backgroundMode === 'light' && aBrightness !== bBrightness) return bBrightness - aBrightness
+      if (heroBackgroundMode === 'dark' && aBrightness !== bBrightness) return aBrightness - bBrightness
+      if (heroBackgroundMode === 'light' && aBrightness !== bBrightness) return bBrightness - aBrightness
 
       const aChroma = getColorChroma(a.hex)
       const bChroma = getColorChroma(b.hex)
@@ -932,18 +1056,14 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
     })[0]
   if (heroBackground) used.add(heroBackground.hex.toUpperCase())
 
-  const pageBackground = [...ranked]
+  const pageBackground = [...globalBackgroundCandidates]
     .filter(candidate =>
-      candidate.layerHints.includes('global') &&
-      !candidate.layerHints.includes('content') &&
-      isLikelyBackgroundCandidate(candidate) &&
-      isContainerBackgroundCandidate(candidate) &&
-      !isLikelyTextCandidate(candidate) &&
-      candidate.property !== 'screenshot-content' &&
-      candidate.property !== 'visual-content' &&
-      candidate.property !== 'cta-background' &&
-      !candidate.roleHints.includes('accent') &&
-      !used.has(candidate.hex.toUpperCase())
+      !used.has(candidate.hex.toUpperCase()) &&
+      (!heroBackground || getColorDistance(candidate.hex, heroBackground.hex) >= 28)
+    )
+    .filter(candidate => pageBackgroundMode === 'light'
+      ? getColorBrightness(candidate.hex) >= 170
+      : getColorBrightness(candidate.hex) <= 120
     )
     .sort((a, b) => {
       const pageWeight = (candidate: PageColorCandidate) => {
@@ -957,17 +1077,35 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       const bVisualBoost = pageWeight(b)
       if (aVisualBoost !== bVisualBoost) return bVisualBoost - aVisualBoost
 
+      const aModeMismatch = pageBackgroundMode === 'light'
+        ? Number(getColorBrightness(a.hex) < 150)
+        : Number(getColorBrightness(a.hex) > 170)
+      const bModeMismatch = pageBackgroundMode === 'light'
+        ? Number(getColorBrightness(b.hex) < 150)
+        : Number(getColorBrightness(b.hex) > 170)
+      if (aModeMismatch !== bModeMismatch) return aModeMismatch - bModeMismatch
+
       const aChroma = getColorChroma(a.hex)
       const bChroma = getColorChroma(b.hex)
-      if (backgroundMode === 'light' && aChroma !== bChroma) return aChroma - bChroma
-      if (backgroundMode === 'dark' && aChroma !== bChroma) return aChroma - bChroma
+      if (pageBackgroundMode === 'light' && aChroma !== bChroma) return aChroma - bChroma
+      if (pageBackgroundMode === 'dark' && aChroma !== bChroma) return aChroma - bChroma
 
       const aBrightness = getColorBrightness(a.hex)
       const bBrightness = getColorBrightness(b.hex)
-      if (backgroundMode === 'light' && aBrightness !== bBrightness) return bBrightness - aBrightness
-      if (backgroundMode === 'dark' && aBrightness !== bBrightness) return aBrightness - bBrightness
+      if (pageBackgroundMode === 'light' && aBrightness !== bBrightness) return bBrightness - aBrightness
+      if (pageBackgroundMode === 'dark' && aBrightness !== bBrightness) return aBrightness - bBrightness
       return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
     })[0]
+    || [...globalBackgroundCandidates]
+      .filter(candidate =>
+        !used.has(candidate.hex.toUpperCase()) &&
+        (!heroBackground || getColorDistance(candidate.hex, heroBackground.hex) >= 28)
+      )
+      .sort((a, b) => {
+        const aBrightness = getColorBrightness(a.hex)
+        const bBrightness = getColorBrightness(b.hex)
+        return bBrightness - aBrightness
+      })[0]
   if (pageBackground) used.add(pageBackground.hex.toUpperCase())
 
   const surface = [...ranked]
@@ -1383,6 +1521,12 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
     })
 
     await page.waitForTimeout(1200)
+    const finalUrl = page.url()
+    const authProbeText = `${await page.title().catch(() => '')} ${(await page.textContent('body').catch(() => '') || '').slice(0, 1200)}`
+    if (isLikelyAuthGate(targetUrl, authProbeText, finalUrl)) {
+      throw new Error(`Auth gate detected during DOM analysis: ${finalUrl}`)
+    }
+
     const interactiveStateTokens = await collectInteractiveStateSignals(page)
 
     const collectSnapshot = () => page.evaluate(({ maxVisibleElements }) => {
@@ -1681,7 +1825,9 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
         const widthRatio = rect.width / Math.max(window.innerWidth, 1)
         const heightRatio = rect.height / Math.max(window.innerHeight, 1)
         const isTopRegion = rect.top >= -8 && rect.top < window.innerHeight * 0.45
-        const looksLikeHero = isTopRegion && widthRatio > 0.72 && heightRatio > 0.18
+        const selectorLower = selectorHint.toLowerCase()
+        const looksLikeEmbeddedMedia = /app-inner|appinner|notion-app-inner|product|screenshot|workspace|editor|board|media|video|image|player/.test(selectorLower)
+        const looksLikeHero = !looksLikeEmbeddedMedia && isTopRegion && widthRatio > 0.72 && heightRatio > 0.18
         const layerHints: Array<'global' | 'hero' | 'content'> = looksLikeHero ? ['hero'] : (componentKinds.includes('card') ? ['content'] : ['global'])
         const areaWeight = Math.max(1, Math.round(Math.min(areaRatio * 30, 14)))
         const viewportWeight = isTopRegion ? 4 : rect.top < window.innerHeight ? 2 : 0
@@ -1769,6 +1915,11 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
 
 export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAnalysis> {
   const html = await fetchText(targetUrl)
+  if (isLikelyAuthGate(targetUrl, html)) {
+    console.warn('[pageAnalyzer] Auth gate detected in fetched HTML, falling back to screenshot-only shell analysis:', targetUrl)
+    return createEmptyPageAnalysis()
+  }
+
   const inlineBlocks = extractStyleBlocks(html)
   const stylesheetUrls = extractStylesheetHrefs(html, targetUrl)
 
@@ -1804,7 +1955,7 @@ export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAna
     domSignals?.stateTokens
   )
 
-  return {
+  const analysis: PageStyleAnalysis = {
     colorCandidates,
     // This preliminary stage only gathers raw shell evidence. Final semantic slots
     // should be rebuilt later after Hero screenshot signals are merged in aiExtract.
@@ -1826,4 +1977,14 @@ export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAna
       linkedStylesheets: stylesheetTexts.filter(Boolean).length,
     },
   }
+
+  if (isLikelyAuthAnalysis(analysis)) {
+    console.warn('[pageAnalyzer] Auth-like measured analysis detected after merge, discarding pageAnalysis for:', targetUrl)
+    return createEmptyPageAnalysis({
+      inlineStyleBlocks: inlineBlocks.length,
+      linkedStylesheets: stylesheetTexts.filter(Boolean).length,
+    })
+  }
+
+  return analysis
 }

@@ -9,6 +9,7 @@ const TARGETS = [
   'https://linear.app',
   'https://stripe.com',
   'https://www.apple.com',
+  'https://www.notion.com/',
 ]
 
 describe('pageAnalyzer real-world verification', () => {

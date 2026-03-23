@@ -37,7 +37,7 @@ export default function Home() {
   const [greeting, setGreeting] = useState<GreetingData | null>(null)
 
   const searchInputRef = useRef<HTMLInputElement | null>(null)
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
   const {
     extractions,
     isLoadingHistory,
@@ -61,6 +61,7 @@ export default function Home() {
     modalFiltered,
     pinnedList,
     recentList,
+    openHistoryItem,
     saveExtraction,
     syncHistoryForSession,
     togglePin,
@@ -131,7 +132,13 @@ export default function Home() {
       }
     }
 
-    void supabase.auth.getSession().then(({ data: { session } }) => syncSession(session))
+    void supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => syncSession(session))
+      .catch(async (err) => {
+        console.warn('Failed to initialize Supabase session:', err)
+        await syncSession(null)
+      })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') return
@@ -255,6 +262,7 @@ export default function Home() {
           setActiveItemId={setActiveItemId}
           setReport={setReport}
           setError={setError}
+          openHistoryItem={openHistoryItem}
           setUrl={setUrl}
           clearPendingFile={clearPendingFile}
           urlInputRef={urlInputRef}
@@ -318,6 +326,7 @@ export default function Home() {
           modalSearchQuery={modalSearchQuery}
           setModalSearchQuery={setModalSearchQuery}
           modalFiltered={modalFiltered}
+          openHistoryItem={openHistoryItem}
           setError={setError}
           searchInputRef={searchInputRef}
           isLightboxOpen={isLightboxOpen}

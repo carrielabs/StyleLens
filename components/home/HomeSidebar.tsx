@@ -17,19 +17,13 @@ import {
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/storage/supabaseClient'
-import type { ColorToken, DisplayStyleReport, StyleReport } from '@/lib/types'
+import type { ColorToken, DisplayStyleReport, HomeHistoryRecord, StyleReport } from '@/lib/types'
 import { getTopColors } from './viewUtils'
 import { BRAND_PRESETS } from '@/lib/presets/brandPresets'
 import PresetItem from './PresetItem'
+import { FLAGS } from '@/lib/flags'
 
-type SidebarRecord = {
-  id: string
-  user_id: string | null
-  source_label: string
-  style_data: (StyleReport & { __pinned?: boolean }) | null
-  thumbnail_url: string | null
-  created_at: string
-}
+type SidebarRecord = HomeHistoryRecord
 type BrowserSupabaseClient = ReturnType<typeof createClient>
 
 interface HomeSidebarProps {
@@ -59,6 +53,7 @@ interface HomeSidebarProps {
   setActiveItemId: Dispatch<SetStateAction<string | null>>
   setReport: Dispatch<SetStateAction<DisplayStyleReport | null>>
   setError: Dispatch<SetStateAction<string | null>>
+  openHistoryItem: (item: HomeHistoryRecord) => Promise<void>
   setUrl: Dispatch<SetStateAction<string>>
   clearPendingFile: () => void
   urlInputRef: RefObject<HTMLInputElement | null>
@@ -101,6 +96,7 @@ export default function HomeSidebar({
   setActiveItemId,
   setReport,
   setError,
+  openHistoryItem,
   setUrl,
   clearPendingFile,
   urlInputRef,
@@ -216,7 +212,9 @@ export default function HomeSidebar({
           />
           {!featuredCollapsed && (
             <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-              {Object.values(BRAND_PRESETS).map(preset => (
+              {Object.values(BRAND_PRESETS)
+                .filter(p => FLAGS.ENABLE_DESIGN_AUDITS || (p.id !== 'preset_linear_v2' && p.id !== 'preset_linear_v3'))
+                .map(preset => (
                 <PresetItem
                   key={preset.id}
                   preset={preset}
@@ -255,7 +253,7 @@ export default function HomeSidebar({
                   renamingId={renamingId}
                   renameValue={renameValue}
                   onRenameChange={setRenameValue}
-                  onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null); setShowUserMenu(false) }}
+                  onClick={() => { setShowUserMenu(false); void openHistoryItem(item) }}
                   onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
                   onPin={() => togglePin(item.id)}
                   onDelete={() => deleteItem(item.id)}
@@ -281,7 +279,9 @@ export default function HomeSidebar({
               }} />
             ))}
           </div>
-        ) : !isAuthResolved ? null : !user && recentList.length === 0 ? (
+        ) : !isAuthResolved && recentList.length === 0 ? (
+          <EmptyState>正在加载历史记录...</EmptyState>
+        ) : !user && recentList.length === 0 ? (
           <EmptyState>登录后查看历史记录</EmptyState>
         ) : recentList.length === 0 ? (
           <EmptyState>
@@ -301,7 +301,7 @@ export default function HomeSidebar({
               renamingId={renamingId}
               renameValue={renameValue}
               onRenameChange={setRenameValue}
-              onClick={() => { setActiveItemId(item.id); setReport(item.style_data); setError(null); setShowUserMenu(false) }}
+              onClick={() => { setShowUserMenu(false); void openHistoryItem(item) }}
               onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
               onPin={() => togglePin(item.id)}
               onDelete={() => deleteItem(item.id)}

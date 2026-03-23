@@ -5,6 +5,10 @@ import { useState } from 'react'
 import ColorSystem from './ColorSystem'
 import Typography from './Typography'
 import DesignDetails from './DesignDetails'
+import DesignDetailsElite from './DesignDetailsElite'
+import DesignDetailsEliteV2 from './DesignDetailsEliteV2'
+import DesignDetailsEliteV3 from './DesignDetailsEliteV3'
+import AtomicSandbox from './AtomicSandbox'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateJsonToken } from '@/lib/exporters/jsonExporter'
@@ -12,6 +16,7 @@ import { generateMarkdown } from '@/lib/exporters/markdownExporter'
 import { Copy, Check } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { FLAGS } from '@/lib/flags'
 
 const i18n = {
   zh: {
@@ -58,6 +63,9 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
   const [isHovered, setIsHovered] = useState(false)
 
   const t = i18n[lang]
+  const isV2 = report.id === 'preset_linear_v2'
+  const isV3 = report.id === 'preset_linear_v3'
+  const isElite = isV2 || isV3
 
   const contentMap = {
     markdown: generateMarkdown(report, lang),
@@ -77,60 +85,84 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
       display: 'flex', 
       flexDirection: 'column', 
       gap: '40px', 
-      maxWidth: fullWidth ? 'none' : '680px', 
+      maxWidth: (fullWidth || isElite) ? 'none' : '680px', 
       paddingBottom: '80px',
-      fontFamily: 'var(--font-sans)'
+      fontFamily: 'var(--font-sans)',
+      width: '100%'
     }}>
       
+      {!isElite && (
+        <>
+          {/* 1. 风格描述 */}
+          <section>
+            <SectionLabel>{t.vibe}</SectionLabel>
+            <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.7, letterSpacing: '0.01em', fontWeight: 400 }}>
+              {lang === 'en' ? (report.summaryEn || report.summary) : (report.summaryZh || report.summary)}
+            </p>
+          </section>
 
+          {/* 2. 标签 */}
+          <section>
+            <SectionLabel>{t.tags}</SectionLabel>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {(lang === 'en' ? (report.tagsEn || report.tags) : (report.tagsZh || report.tags)).map(tag => (
+                <span key={tag} style={{
+                  fontSize: '12px', padding: '4px 12px', background: 'transparent', borderRadius: '100px', 
+                  color: 'var(--text-secondary)', fontWeight: 500, border: '1px solid rgba(0,0,0,0.08)'
+                }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </section>
 
-      {/* 1. 风格描述 */}
-      <section>
-        <SectionLabel>{t.vibe}</SectionLabel>
-        <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.7, letterSpacing: '0.01em', fontWeight: 400 }}>
-          {lang === 'en' ? (report.summaryEn || report.summary) : (report.summaryZh || report.summary)}
-        </p>
-      </section>
+          {/* 3. 色彩体系 */}
+          <section>
+            <SectionLabel>{t.colors}</SectionLabel>
+            <ColorSystem colors={report.colors} colorSystem={report.colorSystem} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} />
+          </section>
 
-      {/* 2. 标签 - Outline Ghost Version */}
-      <section>
-        <SectionLabel>{t.tags}</SectionLabel>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {(lang === 'en' ? (report.tagsEn || report.tags) : (report.tagsZh || report.tags)).map(tag => (
-            <span key={tag} style={{
-              fontSize: '12px', padding: '4px 12px', background: 'transparent', borderRadius: '100px', 
-              color: 'var(--text-secondary)', fontWeight: 500, border: '1px solid rgba(0,0,0,0.08)'
-            }}>
-              {tag}
-            </span>
-          ))}
-        </div>
-      </section>
+          {/* 4. 字体排版 */}
+          <section>
+             <SectionLabel>{t.typo}</SectionLabel>
+             <Typography data={report.typography} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
+          </section>
+        </>
+      )}
 
-      {/* 3. 色彩体系 */}
-      <section>
-        <SectionLabel>{t.colors}</SectionLabel>
-        <ColorSystem colors={report.colors} colorSystem={report.colorSystem} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} />
-      </section>
-
-      {/* 4. 字体排版 */}
-      <section>
-         <SectionLabel>{t.typo}</SectionLabel>
-         <Typography data={report.typography} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
-      </section>
-
-      {/* 5. 细节解析 */}
-      <section>
-         <SectionLabel>{t.details}</SectionLabel>
-         <DesignDetails data={report.designDetails} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
-      </section>
+      {/* 5. 细节解析 / V2 Spec Audit / V3 Unified Audit */}
+      {FLAGS.ENABLE_DESIGN_AUDITS && (
+        <section>
+            {!isElite && <SectionLabel>{t.details}</SectionLabel>}
+            {report.id === 'preset_linear' ? (
+              <>
+                <DesignDetailsElite data={report.designDetails} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
+                <AtomicSandbox lang={lang} />
+              </>
+            ) : isV2 ? (
+              <>
+                <DesignDetailsEliteV2 data={report.designDetails} lang={lang} />
+                <div style={{ padding: '0 48px', marginTop: '48px' }}>
+                  <AtomicSandbox lang={lang} />
+                </div>
+              </>
+            ) : isV3 ? (
+              <DesignDetailsEliteV3 data={report.designDetails} lang={lang} report={report} />
+            ) : (
+              <DesignDetails data={report.designDetails} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
+            )}
+        </section>
+      )}
 
       {/* 6. 导出面板 */}
-      <section style={{ paddingTop: '24px' }}>
+      <section style={{ 
+        paddingTop: '24px',
+        paddingLeft: isElite ? '48px' : '0',
+        paddingRight: isElite ? '48px' : '0'
+      }}>
         <SectionLabel>{t.export}</SectionLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          {/* Technical Minimalist Tabs (Pro/IDE Style) */}
           <div style={{ 
             display: 'flex', 
             gap: '24px', 
@@ -173,7 +205,6 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
             {t[`${activeCode}_desc` as keyof typeof t]}
           </div>
 
-          {/* Code View (Floating Sheet / IDE Style) */}
           <div 
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}

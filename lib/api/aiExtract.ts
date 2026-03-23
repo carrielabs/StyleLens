@@ -3,7 +3,9 @@ import type { ColorToken, ExtractRequest, PageColorCandidate, PageStyleAnalysis,
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import fetchNode from 'node-fetch'
 import sharp from 'sharp'
+import fs from 'fs'
 import { mergeScreenshotColorSignals } from '@/lib/api/heroVisualAnalyzer'
+import { sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message
@@ -256,6 +258,14 @@ function debugSelectedPalette(colors: ColorToken[]) {
   })
 }
 
+function writeUrlDebugSnapshot(label: string, payload: unknown) {
+  try {
+    fs.writeFileSync(`/tmp/stylelens-${label}.json`, JSON.stringify(payload, null, 2), 'utf8')
+  } catch (error) {
+    console.warn('[aiExtract] Failed to write debug snapshot:', error)
+  }
+}
+
 function inferRoleFromSemanticSlot(slot: keyof SemanticColorSystem): ColorToken['role'] {
   switch (slot) {
     case 'heroBackground':
@@ -277,6 +287,87 @@ function inferRoleFromSemanticSlot(slot: keyof SemanticColorSystem): ColorToken[
     default:
       return 'other'
   }
+}
+
+function hexDistance(hexA?: string, hexB?: string): number {
+  if (!hexA || !hexB) return Number.POSITIVE_INFINITY
+
+  const parse = (hex: string) => {
+    const clean = hex.replace('#', '')
+    return [
+      Number.parseInt(clean.slice(0, 2), 16),
+      Number.parseInt(clean.slice(2, 4), 16),
+      Number.parseInt(clean.slice(4, 6), 16),
+    ]
+  }
+
+  const [r1, g1, b1] = parse(hexA)
+  const [r2, g2, b2] = parse(hexB)
+  return Math.sqrt(((r1 - r2) ** 2) + ((g1 - g2) ** 2) + ((b1 - b2) ** 2))
+}
+
+function isExtremeNoiseColor(hex?: string): boolean {
+  if (!hex) return false
+  const clean = hex.replace('#', '').toUpperCase()
+  return clean === '00FF00' || clean === 'FFFF00'
+}
+
+function dedupeColorTokens(tokens: Array<ColorToken | undefined>, minDistance = 14): ColorToken[] {
+  const result: ColorToken[] = []
+  for (const token of tokens) {
+    if (!token) continue
+    if (isExtremeNoiseColor(token.hex)) continue
+    const isDuplicate = result.some(existing => hexDistance(existing.hex, token.hex) < minDistance)
+    if (isDuplicate) continue
+    result.push(token)
+  }
+  return result
+}
+
+function normalizeSemanticColorSystem(colorSystem?: SemanticColorSystem): SemanticColorSystem | undefined {
+  if (!colorSystem) return undefined
+
+  const normalized: SemanticColorSystem = { ...colorSystem }
+
+  if (normalized.heroTextPrimary && normalized.textPrimary && hexDistance(normalized.heroTextPrimary.hex, normalized.textPrimary.hex) < 18) {
+    normalized.heroTextPrimary = undefined
+  }
+
+  if (normalized.textSecondary && normalized.textPrimary && hexDistance(normalized.textSecondary.hex, normalized.textPrimary.hex) < 20) {
+    normalized.textSecondary = undefined
+  }
+
+  if (normalized.textPrimary && normalized.border && hexDistance(normalized.border.hex, normalized.textPrimary.hex) < 18) {
+    normalized.border = undefined
+  }
+
+  if (normalized.heroSecondaryAction && normalized.heroPrimaryAction && hexDistance(normalized.heroSecondaryAction.hex, normalized.heroPrimaryAction.hex) < 22) {
+    normalized.heroSecondaryAction = undefined
+  }
+
+  if (normalized.secondaryAction && normalized.primaryAction && hexDistance(normalized.secondaryAction.hex, normalized.primaryAction.hex) < 22) {
+    normalized.secondaryAction = undefined
+  }
+
+  normalized.heroAccentColors = dedupeColorTokens(
+    (normalized.heroAccentColors || []).filter(token =>
+      hexDistance(token.hex, normalized.heroBackground?.hex) >= 20 &&
+      hexDistance(token.hex, normalized.heroPrimaryAction?.hex) >= 20
+    ),
+    20
+  ).slice(0, 2)
+
+  normalized.contentColors = dedupeColorTokens(normalized.contentColors || [], 20).slice(0, 3)
+
+  if (normalized.contentColors?.length) {
+    normalized.contentColors = normalized.contentColors.filter(token =>
+      !isExtremeNoiseColor(token.hex) &&
+      hexDistance(token.hex, normalized.primaryAction?.hex) >= 16 &&
+      hexDistance(token.hex, normalized.textPrimary?.hex) >= 16
+    )
+  }
+
+  return normalized
 }
 
 function hydrateSemanticColorSystem(
@@ -393,9 +484,11 @@ function applyMeasuredUrlSignals(
 ) {
   if (!pageAnalysis) return parsed
 
-  const colorSystem = hydrateSemanticColorSystem(pageAnalysis.semanticColorSystem, parsed.colors || [])
+  const colorSystem = normalizeSemanticColorSystem(
+    hydrateSemanticColorSystem(pageAnalysis.semanticColorSystem, parsed.colors || [])
+  )
   const compatibilityColors = colorSystem
-    ? [
+    ? dedupeColorTokens([
         colorSystem.heroBackground,
         colorSystem.heroTextPrimary,
         colorSystem.heroPrimaryAction,
@@ -407,7 +500,7 @@ function applyMeasuredUrlSignals(
         colorSystem.border,
         colorSystem.primaryAction,
         colorSystem.secondaryAction,
-      ].filter(Boolean) as ColorToken[]
+      ], 18)
     : parsed.colors
 
   debugSelectedPalette(compatibilityColors)
@@ -459,15 +552,28 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
 
   console.log(`[aiExtract] Image prepared. Mime: ${mimeType}, B64 Length: ${base64Data.length}`)
 
-  let requestWithAnalysis = req
-  if (req.sourceType === 'url' && req.pageAnalysis && base64Data) {
-    const mergedAnalysis = await mergeScreenshotColorSignals(req.pageAnalysis, base64Data)
+  let requestWithAnalysis = {
+    ...req,
+    pageAnalysis: sanitizePageAnalysis(req.pageAnalysis),
+  }
+  if (requestWithAnalysis.sourceType === 'url') {
+    writeUrlDebugSnapshot('url-before-merge', {
+      sourceLabel: requestWithAnalysis.sourceLabel,
+      pageAnalysis: requestWithAnalysis.pageAnalysis,
+    })
+  }
+  if (requestWithAnalysis.sourceType === 'url' && requestWithAnalysis.pageAnalysis && base64Data) {
+    const mergedAnalysis = await mergeScreenshotColorSignals(requestWithAnalysis.pageAnalysis, base64Data)
     if (mergedAnalysis) {
       requestWithAnalysis = {
-        ...req,
+        ...requestWithAnalysis,
         pageAnalysis: mergedAnalysis,
       }
     }
+    writeUrlDebugSnapshot('url-after-merge', {
+      sourceLabel: requestWithAnalysis.sourceLabel,
+      pageAnalysis: requestWithAnalysis.pageAnalysis,
+    })
   }
 
   let promptText = USER_PROMPT_TEMPLATE
@@ -543,6 +649,12 @@ function parseAndFormatResponse(
 
   if (req.sourceType === 'url') {
     parsed = applyMeasuredUrlSignals(parsed, req.pageAnalysis)
+    writeUrlDebugSnapshot('url-final-report', {
+      sourceLabel: req.sourceLabel,
+      inputPageAnalysis: req.pageAnalysis,
+      finalColorSystem: parsed.colorSystem,
+      finalColors: parsed.colors,
+    })
   }
 
   return {

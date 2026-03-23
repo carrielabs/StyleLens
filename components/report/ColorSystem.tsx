@@ -18,6 +18,27 @@ export default function ColorSystem({
 }) {
   const [copiedHex, setCopiedHex] = useState<string | null>(null)
 
+  const hexDistance = (hexA?: string, hexB?: string) => {
+    if (!hexA || !hexB) return Number.POSITIVE_INFINITY
+    const parse = (hex: string) => {
+      const clean = hex.replace('#', '')
+      return [
+        Number.parseInt(clean.slice(0, 2), 16),
+        Number.parseInt(clean.slice(2, 4), 16),
+        Number.parseInt(clean.slice(4, 6), 16),
+      ]
+    }
+    const [r1, g1, b1] = parse(hexA)
+    const [r2, g2, b2] = parse(hexB)
+    return Math.sqrt(((r1 - r2) ** 2) + ((g1 - g2) ** 2) + ((b1 - b2) ** 2))
+  }
+
+  const isExtremeNoiseColor = (hex?: string) => {
+    if (!hex) return false
+    const clean = hex.replace('#', '').toUpperCase()
+    return clean === '00FF00' || clean === 'FFFF00'
+  }
+
   const copyColor = (hex: string) => {
     navigator.clipboard.writeText(hex)
     setCopiedHex(hex)
@@ -68,24 +89,33 @@ export default function ColorSystem({
         colorSystem.border && { ...colorSystem.border, roleLabelOverride: lang === 'zh' ? '边框线' : 'Border' },
         colorSystem.primaryAction && { ...colorSystem.primaryAction, roleLabelOverride: lang === 'zh' ? '主动作色' : 'Primary action' },
         colorSystem.secondaryAction && { ...colorSystem.secondaryAction, roleLabelOverride: lang === 'zh' ? '次动作色' : 'Secondary action' },
-        ...(colorSystem.heroAccentColors || []).map(color => ({ ...color, roleLabelOverride: lang === 'zh' ? 'Hero 点缀色' : 'Hero accent' })),
       ].filter(Boolean) as DisplayColor[]
     : colors.map(color => ({ ...color }))
 
-  const getEvidenceLabel = (color: ColorToken) => {
-    const candidate = measuredCandidates.get(color.hex.toUpperCase())
-    if (!candidate) return null
+  const dedupedSystemPalette = systemPalette.filter((color, index, list) => {
+    if (isExtremeNoiseColor(color.hex)) return false
 
-    const hints = candidate.roleHints
-    const isSystemSignal = hints.some(hint =>
-      ['background', 'surface', 'text', 'border', 'primary', 'accent'].includes(hint)
-    )
+    const sameHexIndex = list.findIndex(item => item.hex.toUpperCase() === color.hex.toUpperCase())
+    if (sameHexIndex !== index) return false
 
-    if (isSystemSignal) {
-      return lang === 'zh' ? '系统色证据' : 'System signal'
-    }
-    return lang === 'zh' ? '测量候选' : 'Measured'
-  }
+    const isTextRole = (label?: string) => ['主文字', '辅助文字', 'Hero 文字', 'Text primary', 'Text secondary', 'Hero text'].includes(label || '')
+    if (!isTextRole(color.roleLabelOverride)) return true
+
+    return list.findIndex(item =>
+      isTextRole(item.roleLabelOverride) &&
+      hexDistance(item.hex, color.hex) < 20
+    ) === index
+  })
+
+  const accentPalette: DisplayColor[] = sourceType === 'url' && colorSystem
+    ? [
+        ...(colorSystem.heroAccentColors || []).map(color => ({ ...color, roleLabelOverride: lang === 'zh' ? 'Hero 点缀色' : 'Hero accent' })),
+        ...contentColors.map(color => ({ ...color, roleLabelOverride: lang === 'zh' ? '内容点缀色' : 'Content accent' })),
+      ].filter((color, index, list) =>
+        !isExtremeNoiseColor(color.hex) &&
+        list.findIndex(item => item.hex.toUpperCase() === color.hex.toUpperCase()) === index
+      )
+    : []
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -113,9 +143,8 @@ export default function ColorSystem({
         gridTemplateColumns: 'repeat(8, 1fr)', 
         gap: '12px' 
       }}>
-      {systemPalette.map((c, i) => {
-        const evidenceLabel = getEvidenceLabel(c)
-        const isLowPriorityOther = sourceType === 'url' && c.role === 'other' && !evidenceLabel
+      {dedupedSystemPalette.map((c, i) => {
+        const isLowPriorityOther = sourceType === 'url' && c.role === 'other'
         return (
         <div 
           key={i}
@@ -144,18 +173,6 @@ export default function ColorSystem({
             <div style={{ fontSize: '11px', color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {c.roleLabelOverride || getRoleLabel(c.role)}
             </div>
-            {evidenceLabel && (
-              <div style={{
-                fontSize: '10px',
-                color: 'var(--text-secondary)',
-                fontWeight: 500,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                {evidenceLabel}
-              </div>
-            )}
             <div style={{ 
               fontSize: '11px', 
               fontFamily: 'var(--font-mono)', 
@@ -169,13 +186,13 @@ export default function ColorSystem({
       )})}
       </div>
 
-      {(contentColors.length > 0 || measuredContentCandidates.length > 0) && (
+      {(accentPalette.length > 0 || measuredContentCandidates.length > 0) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-            {lang === 'zh' ? '内容区辅助色' : 'Content module colors'}
+            {lang === 'zh' ? '辅助点缀色' : 'Secondary accents'}
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {contentColors.map(candidate => (
+            {accentPalette.map(candidate => (
               <div
                 key={`${candidate.hex}-layered`}
                 style={{
@@ -198,9 +215,12 @@ export default function ColorSystem({
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
                   {candidate.hex.toUpperCase()}
                 </span>
+                <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                  {candidate.roleLabelOverride || getRoleLabel(candidate.role)}
+                </span>
               </div>
             ))}
-            {contentColors.length === 0 && measuredContentCandidates.map(candidate => (
+            {accentPalette.length === 0 && measuredContentCandidates.map(candidate => (
               <div
                 key={`${candidate.hex}-${candidate.property}`}
                 style={{

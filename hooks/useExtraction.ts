@@ -31,6 +31,7 @@ interface ExtractApiPayload {
   sourceLabel?: string
   extractedCss?: string
   pageAnalysis?: PageStyleAnalysis
+  sourceType: 'image' | 'url'
 }
 
 interface UseExtractionResult {
@@ -190,6 +191,7 @@ export function useExtraction({
       } catch {}
 
       const result = await callExtractAPI({
+        sourceType: 'url',
         screenshotUrl: ssData.screenshotUrl,
         sourceLabel: label,
         extractedCss: ssData.extractedCss,
@@ -250,7 +252,7 @@ export function useExtraction({
 
     try {
       const base64 = await toBase64(file)
-      const result = await callExtractAPI({ imageBase64: base64, sourceLabel: file.name }, abort.signal)
+      const result = await callExtractAPI({ sourceType: 'image', imageBase64: base64, sourceLabel: file.name }, abort.signal)
       result.thumbnailUrl = base64
 
       setReport(result)

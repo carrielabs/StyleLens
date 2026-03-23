@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import type { ScreenshotResponse } from '@/lib/types'
-import { analyzePageStyles } from '@/lib/api/pageAnalyzer'
+import { analyzePageStyles, sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
 
 // Persistent file-based cache to survive server restarts (HMR/Next.js Dev)
 const CACHE_FILE = path.resolve(process.cwd(), '.screenshot_cache.json')
@@ -35,6 +35,7 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
 
   try {
     pageAnalysis = await analyzePageStyles(targetUrl)
+    pageAnalysis = sanitizePageAnalysis(pageAnalysis)
   } catch (error) {
     console.warn('[Screenshotter] Page analysis failed, falling back to screenshot-only mode:', error)
   }

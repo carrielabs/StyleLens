@@ -132,18 +132,41 @@ async function extractHeroEdgeColors(
       return !intersects
     })
 
-  const colors = new Map<string, number>()
+  const colors = new Map<string, { weight: number; brightness: number; chroma: number }>()
+  let darkRegionVotes = 0
+  let lightRegionVotes = 0
   for (const region of regions) {
     const sampled = await extractDominantRegionColors(imageBuffer, region)
     sampled.forEach((hex, index) => {
       const weight = Math.max(1, 5 - index)
-      colors.set(hex, (colors.get(hex) || 0) + weight)
+      const r = Number.parseInt(hex.slice(1, 3), 16)
+      const g = Number.parseInt(hex.slice(3, 5), 16)
+      const b = Number.parseInt(hex.slice(5, 7), 16)
+      const brightness = (r + g + b) / 3
+      const chroma = Math.max(r, g, b) - Math.min(r, g, b)
+      if (brightness < 120) darkRegionVotes += weight
+      if (brightness > 215) lightRegionVotes += weight
+      const current = colors.get(hex) || { weight: 0, brightness, chroma }
+      current.weight += weight
+      current.brightness = brightness
+      current.chroma = chroma
+      colors.set(hex, current)
     })
   }
 
+  const prefersDarkHero = darkRegionVotes > lightRegionVotes * 1.2
+
   return [...colors.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([hex]) => hex)
+    .map(([hex, value]) => {
+      let score = value.weight
+      if (prefersDarkHero && value.brightness > 225) score -= 8
+      if (prefersDarkHero && value.brightness > 200 && value.chroma < 18) score -= 5
+      if (prefersDarkHero && value.brightness < 110) score += 4
+      return { hex, score }
+    })
+    .sort((a, b) => b.score - a.score)
+    .filter(item => item.score > 0)
+    .map(item => item.hex)
     .slice(0, 5)
 }
 
@@ -241,10 +264,12 @@ export async function mergeScreenshotColorSignals(
     if (!visualCandidates.length) return pageAnalysis
 
     const augmentedCandidates = [...pageAnalysis.colorCandidates]
-    const existing = new Map(augmentedCandidates.map(candidate => [candidate.hex.toUpperCase(), candidate]))
 
     for (const visualCandidate of visualCandidates) {
-      const current = existing.get(visualCandidate.hex)
+      const current = augmentedCandidates.find(candidate =>
+        candidate.hex.toUpperCase() === visualCandidate.hex.toUpperCase() &&
+        candidate.layerHints.some(layer => visualCandidate.layerHints.includes(layer))
+      )
       if (current) {
         current.count += visualCandidate.count
         current.evidenceScore = (current.evidenceScore || 0) + (visualCandidate.evidenceScore || 0)
@@ -255,7 +280,6 @@ export async function mergeScreenshotColorSignals(
           current.property = visualCandidate.property
         }
       } else {
-        existing.set(visualCandidate.hex, visualCandidate)
         augmentedCandidates.push(visualCandidate)
       }
     }
