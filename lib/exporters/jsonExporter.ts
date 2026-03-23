@@ -139,6 +139,12 @@ function buildDimensionSection<T extends RadiusToken | ShadowToken | SpacingToke
 
 function buildStateSection(stateTokens?: ComponentStateTokens) {
   const source = stateTokens || {}
+  const tokenTypeForProperty = (property: string) => {
+    if (property === 'box-shadow') return 'boxShadow'
+    if (property === 'opacity') return 'number'
+    if (property === 'transform') return 'string'
+    return 'color'
+  }
   const components = (Object.entries(source) as Array<[string, NonNullable<ComponentStateTokens[keyof ComponentStateTokens]> | undefined]>)
     .filter(([, tokens]) => (tokens || []).length > 0)
     .map(([component, tokens]) => [
@@ -148,7 +154,7 @@ function buildStateSection(stateTokens?: ComponentStateTokens) {
           `${token.state}-${slugify(token.property)}`,
           {
             $value: token.value,
-            $type: token.property === 'box-shadow' ? 'boxShadow' : 'color',
+            $type: tokenTypeForProperty(token.property),
             $description: `${token.state} state token for ${component}`,
           },
         ])

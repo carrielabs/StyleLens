@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import type { ColorToken, ExtractRequest, LayeredColorSystem, PageColorCandidate, PageStyleAnalysis, StyleReport, Typography, DesignDetails } from '@/lib/types'
+import type { ColorToken, ExtractRequest, PageColorCandidate, PageStyleAnalysis, SemanticColorSystem, StyleReport, Typography, DesignDetails } from '@/lib/types'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import fetchNode from 'node-fetch'
 import sharp from 'sharp'
@@ -223,17 +223,6 @@ function hexToHsl(hex: string): string {
   return `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`
 }
 
-function inferRoleFromHints(hints: string[]): ColorToken['role'] {
-  if (hints.includes('hero')) return 'background'
-  if (hints.includes('background')) return 'background'
-  if (hints.includes('surface')) return 'surface'
-  if (hints.includes('text')) return 'text'
-  if (hints.includes('primary')) return 'primary'
-  if (hints.includes('accent')) return 'accent'
-  if (hints.includes('border')) return 'border'
-  return 'other'
-}
-
 function fallbackColorName(role: ColorToken['role']): string {
   const map: Record<ColorToken['role'], string> = {
     background: 'Background',
@@ -246,24 +235,6 @@ function fallbackColorName(role: ColorToken['role']): string {
     other: 'Other',
   }
   return map[role]
-}
-
-function buildColorTokenFromCandidate(
-  candidate: PageColorCandidate,
-  aiByHex: Map<string, ColorToken>,
-  forcedRole?: ColorToken['role']
-): ColorToken {
-  const hex = candidate.hex.toUpperCase()
-  const matched = aiByHex.get(hex)
-  const role = forcedRole || matched?.role || inferRoleFromHints(candidate.roleHints)
-  return {
-    role,
-    hex,
-    rgb: matched?.rgb || hexToRgb(hex),
-    hsl: matched?.hsl || hexToHsl(hex),
-    name: matched?.name || fallbackColorName(role),
-    description: matched?.description || `Measured from ${candidate.property}${candidate.selectorHint ? ` on ${candidate.selectorHint}` : ''}`,
-  }
 }
 
 function debugColorCandidates(label: string, candidates: PageColorCandidate[]) {
@@ -308,21 +279,6 @@ function isNearNeutral(r: number, g: number, b: number): boolean {
 function isExtremeMonochrome(r: number, g: number, b: number): boolean {
   const avg = (r + g + b) / 3
   return avg < 18 || avg > 246
-}
-
-function getColorChroma(hex: string): number {
-  const [r, g, b] = hexToRgbParts(hex)
-  return Math.max(r, g, b) - Math.min(r, g, b)
-}
-
-function getColorBrightness(hex: string): number {
-  const [r, g, b] = hexToRgbParts(hex)
-  return (r + g + b) / 3
-}
-
-function isChromaticDark(hex: string): boolean {
-  const [r, g, b] = hexToRgbParts(hex)
-  return getColorBrightness(hex) < 90 && !isNearNeutral(r, g, b) && getColorChroma(hex) >= 28
 }
 
 async function extractDominantRegionColors(
@@ -487,247 +443,62 @@ async function mergeScreenshotColorSignals(
   }
 }
 
-function pickMeasuredColors(pageAnalysis: PageStyleAnalysis, aiColors: ColorToken[]): ColorToken[] {
-  debugColorCandidates('incoming measured candidates', pageAnalysis.colorCandidates)
-  const aiByHex = new Map(aiColors.map(color => [color.hex.toUpperCase(), color]))
-  const measured = pageAnalysis.colorCandidates
-    .filter(candidate => candidate.count >= 1)
-
-  const scored = measured.map(candidate => {
-    const hints = new Set(candidate.roleHints)
-    const layers = new Set(candidate.layerHints)
-    let priority = candidate.count
-
-    if (candidate.property === 'screenshot-hero') priority += 26
-    if (candidate.property === 'screenshot-content') priority -= 6
-    if (candidate.property === 'background-image') priority += 14
-    if (candidate.property === 'background-color') priority += 10
-    if (candidate.property === 'color') priority += 5
-    if (candidate.property === 'border-color') priority += 3
-
-    if (hints.has('background')) priority += 10
-    if (hints.has('surface')) priority += 8
-    if (hints.has('text')) priority += 7
-    if (hints.has('border')) priority += 5
-    if (hints.has('primary')) priority += 5
-    if (hints.has('accent')) priority += 3
-    if (hints.has('hero')) priority += 16
-    if (layers.has('global')) priority += 10
-    if (layers.has('hero')) priority += 18
-    if (layers.has('content')) priority -= 10
-
-    return { candidate, priority }
-  }).sort((a, b) => b.priority - a.priority)
-
-  const selected: typeof measured = []
-  const seenHex = new Set<string>()
-  const seenRoles = new Set<ColorToken['role']>()
-  const requiredRoles: Array<ColorToken['role']> = ['background', 'surface', 'text', 'border', 'primary', 'accent']
-
-  const heroBackground = [...scored]
-    .filter(({ candidate }) =>
-      candidate.roleHints.includes('hero') &&
-      !candidate.layerHints.includes('content')
-    )
-    .sort((a, b) => {
-      const aChromatic = isChromaticDark(a.candidate.hex) ? 1 : 0
-      const bChromatic = isChromaticDark(b.candidate.hex) ? 1 : 0
-      if (aChromatic !== bChromatic) return bChromatic - aChromatic
-
-      const aChroma = getColorChroma(a.candidate.hex)
-      const bChroma = getColorChroma(b.candidate.hex)
-      if (aChroma !== bChroma) return bChroma - aChroma
-
-      const aBrightness = getColorBrightness(a.candidate.hex)
-      const bBrightness = getColorBrightness(b.candidate.hex)
-      if (aBrightness !== bBrightness) return aBrightness - bBrightness
-
-      return b.priority - a.priority
-    })[0]
-
-  if (heroBackground) {
-    selected.unshift(heroBackground.candidate)
-    seenHex.add(heroBackground.candidate.hex.toUpperCase())
-    seenRoles.add('background')
+function inferRoleFromSemanticSlot(slot: keyof SemanticColorSystem): ColorToken['role'] {
+  switch (slot) {
+    case 'heroBackground':
+    case 'pageBackground':
+      return 'background'
+    case 'surface':
+      return 'surface'
+    case 'textPrimary':
+    case 'textSecondary':
+      return 'text'
+    case 'border':
+      return 'border'
+    case 'primaryAction':
+      return 'primary'
+    case 'secondaryAction':
+      return 'secondary'
+    case 'contentColors':
+      return 'accent'
+    default:
+      return 'other'
   }
-
-  for (const role of requiredRoles) {
-    if (seenRoles.has(role)) continue
-    const hit = scored.find(({ candidate }) => {
-      const inferredRole = inferRoleFromHints(candidate.roleHints)
-      if (candidate.layerHints.includes('content') && !candidate.layerHints.includes('hero')) return false
-      if (seenHex.has(candidate.hex.toUpperCase())) return false
-      if (seenRoles.has(inferredRole) && inferredRole !== 'other') return false
-      return inferredRole === role
-    })
-    if (hit) {
-      selected.push(hit.candidate)
-      seenHex.add(hit.candidate.hex.toUpperCase())
-      seenRoles.add(role)
-    }
-  }
-
-  for (const { candidate } of scored) {
-    if (selected.length >= 8) break
-    const hex = candidate.hex.toUpperCase()
-    if (seenHex.has(hex)) continue
-    if (candidate.layerHints.includes('content') && !candidate.layerHints.includes('hero')) continue
-    const inferredRole = inferRoleFromHints(candidate.roleHints)
-    if (seenRoles.has(inferredRole) && inferredRole !== 'other') continue
-    selected.push(candidate)
-    seenHex.add(hex)
-    if (inferredRole !== 'other') seenRoles.add(inferredRole)
-  }
-
-  const colors = selected.map(candidate =>
-    buildColorTokenFromCandidate(
-      candidate,
-      aiByHex,
-      candidate.roleHints.includes('hero') ? 'background' : undefined
-    )
-  )
-
-  const unique = new Map<string, ColorToken>()
-  for (const color of colors) {
-    if (!unique.has(color.hex)) unique.set(color.hex, color)
-  }
-
-  const finalPalette = [...unique.values()]
-    .filter(color => {
-      if ((color.role === 'accent' || color.role === 'other') && (color.hex === '#FFFF00' || color.hex === '#FFFB30')) {
-        return false
-      }
-      return true
-    })
-    .slice(0, 8)
-  debugSelectedPalette(finalPalette)
-  return finalPalette
 }
 
-function buildLayeredColorSystem(pageAnalysis: PageStyleAnalysis, aiColors: ColorToken[]): LayeredColorSystem {
-  if (pageAnalysis.semanticColorSystem) {
-    const aiByHex = new Map(aiColors.map(color => [color.hex.toUpperCase(), color]))
-    const hydrate = (color?: ColorToken) => {
-      if (!color) return undefined
-      const matched = aiByHex.get(color.hex.toUpperCase())
-      return {
-        ...color,
-        rgb: matched?.rgb || color.rgb || hexToRgb(color.hex),
-        hsl: matched?.hsl || color.hsl || hexToHsl(color.hex),
-        name: matched?.name || color.name,
-        description: matched?.description || color.description,
-      }
-    }
+function hydrateSemanticColorSystem(
+  semanticColorSystem: SemanticColorSystem | undefined,
+  aiColors: ColorToken[]
+): SemanticColorSystem | undefined {
+  if (!semanticColorSystem) return undefined
 
+  const aiByHex = new Map(aiColors.map(color => [color.hex.toUpperCase(), color]))
+  const hydrate = (color: ColorToken | undefined, role: ColorToken['role']) => {
+    if (!color) return undefined
+    const hex = color.hex.toUpperCase()
+    const matched = aiByHex.get(hex)
     return {
-      heroBackground: hydrate(pageAnalysis.semanticColorSystem.heroBackground),
-      pageBackground: hydrate(pageAnalysis.semanticColorSystem.pageBackground),
-      surface: hydrate(pageAnalysis.semanticColorSystem.surface),
-      textPrimary: hydrate(pageAnalysis.semanticColorSystem.textPrimary),
-      textSecondary: hydrate(pageAnalysis.semanticColorSystem.textSecondary),
-      border: hydrate(pageAnalysis.semanticColorSystem.border),
-      primaryAction: hydrate(pageAnalysis.semanticColorSystem.primaryAction),
-      secondaryAction: hydrate(pageAnalysis.semanticColorSystem.secondaryAction),
-      contentColors: (pageAnalysis.semanticColorSystem.contentColors || []).map(color => hydrate(color)!).filter(Boolean),
+      role,
+      hex,
+      rgb: matched?.rgb || color.rgb || hexToRgb(hex),
+      hsl: matched?.hsl || color.hsl || hexToHsl(hex),
+      name: matched?.name || color.name || fallbackColorName(role),
+      description: matched?.description || color.description || fallbackColorName(role),
     }
   }
 
-  const measured = pageAnalysis.colorCandidates.filter(candidate => candidate.count >= 1)
-  const aiByHex = new Map(aiColors.map(color => [color.hex.toUpperCase(), color]))
-
-  const nonContent = measured.filter(candidate => !candidate.layerHints.includes('content') || candidate.layerHints.includes('hero'))
-  const heroCandidates = nonContent
-    .filter(candidate =>
-      candidate.layerHints.includes('hero') &&
-      (
-        candidate.property === 'background-color' ||
-        candidate.property === 'background-image' ||
-        candidate.property === 'screenshot-hero'
-      )
-    )
-    .sort((a, b) => {
-      const aScreenshotHero = a.property === 'screenshot-hero' ? 1 : 0
-      const bScreenshotHero = b.property === 'screenshot-hero' ? 1 : 0
-      if (aScreenshotHero !== bScreenshotHero) return bScreenshotHero - aScreenshotHero
-
-      const aBackgroundVisual = (a.property === 'background-image' || a.property === 'background-color') ? 1 : 0
-      const bBackgroundVisual = (b.property === 'background-image' || b.property === 'background-color') ? 1 : 0
-      if (aBackgroundVisual !== bBackgroundVisual) return bBackgroundVisual - aBackgroundVisual
-
-      const aChromatic = isChromaticDark(a.hex) ? 1 : 0
-      const bChromatic = isChromaticDark(b.hex) ? 1 : 0
-      if (aChromatic !== bChromatic) return bChromatic - aChromatic
-
-      const aNeutralPenalty = getColorChroma(a.hex) < 20 ? 1 : 0
-      const bNeutralPenalty = getColorChroma(b.hex) < 20 ? 1 : 0
-      if (aNeutralPenalty !== bNeutralPenalty) return aNeutralPenalty - bNeutralPenalty
-
-      return b.count - a.count
-    })
-
-  const lightGlobal = nonContent
-    .filter(candidate => candidate.layerHints.includes('global'))
-    .sort((a, b) => {
-      const brightnessDiff = getColorBrightness(b.hex) - getColorBrightness(a.hex)
-      if (brightnessDiff !== 0) return brightnessDiff
-      return b.count - a.count
-    })
-
-  const darkTextCandidates = nonContent
-    .filter(candidate => candidate.roleHints.includes('text') || candidate.property === 'color')
-    .sort((a, b) => {
-      const brightnessDiff = getColorBrightness(a.hex) - getColorBrightness(b.hex)
-      if (brightnessDiff !== 0) return brightnessDiff
-      return b.count - a.count
-    })
-
-  const borderCandidates = nonContent
-    .filter(candidate => candidate.roleHints.includes('border') || candidate.property === 'border-color')
-    .sort((a, b) => b.count - a.count)
-
-  const actionCandidates = nonContent
-    .filter(candidate => candidate.roleHints.includes('primary') || candidate.roleHints.includes('accent'))
-    .sort((a, b) => {
-      const aChroma = getColorChroma(a.hex)
-      const bChroma = getColorChroma(b.hex)
-      if (aChroma !== bChroma) return bChroma - aChroma
-      return b.count - a.count
-    })
-
-  const contentColors = measured
-    .filter(candidate => candidate.layerHints.includes('content') && !candidate.layerHints.includes('hero'))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 6)
-    .map(candidate => buildColorTokenFromCandidate(candidate, aiByHex, 'accent'))
-
-  const heroBackground = heroCandidates[0]
-  const pageBackground = lightGlobal.find(candidate => candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase())
-  const surface = lightGlobal.find(candidate =>
-    candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase() &&
-    candidate.hex.toUpperCase() !== pageBackground?.hex.toUpperCase()
-  )
-  const textPrimary = darkTextCandidates.find(candidate => candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase())
-  const border = borderCandidates.find(candidate => candidate.hex.toUpperCase() !== textPrimary?.hex.toUpperCase())
-  const primary = actionCandidates.find(candidate => candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase())
-  const secondary = actionCandidates.find(candidate =>
-    candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase() &&
-    candidate.hex.toUpperCase() !== primary?.hex.toUpperCase()
-  )
-  const textSecondary = darkTextCandidates.find(candidate =>
-    candidate.hex.toUpperCase() !== textPrimary?.hex.toUpperCase() &&
-    candidate.hex.toUpperCase() !== heroBackground?.hex.toUpperCase()
-  )
-
   return {
-    heroBackground: heroBackground ? buildColorTokenFromCandidate(heroBackground, aiByHex, 'background') : undefined,
-    pageBackground: pageBackground ? buildColorTokenFromCandidate(pageBackground, aiByHex, 'background') : undefined,
-    surface: surface ? buildColorTokenFromCandidate(surface, aiByHex, 'surface') : undefined,
-    textPrimary: textPrimary ? buildColorTokenFromCandidate(textPrimary, aiByHex, 'text') : undefined,
-    textSecondary: textSecondary ? buildColorTokenFromCandidate(textSecondary, aiByHex, 'text') : undefined,
-    border: border ? buildColorTokenFromCandidate(border, aiByHex, 'border') : undefined,
-    primaryAction: primary ? buildColorTokenFromCandidate(primary, aiByHex, 'primary') : undefined,
-    secondaryAction: secondary ? buildColorTokenFromCandidate(secondary, aiByHex, 'secondary') : undefined,
-    contentColors,
+    heroBackground: hydrate(semanticColorSystem.heroBackground, inferRoleFromSemanticSlot('heroBackground')),
+    pageBackground: hydrate(semanticColorSystem.pageBackground, inferRoleFromSemanticSlot('pageBackground')),
+    surface: hydrate(semanticColorSystem.surface, inferRoleFromSemanticSlot('surface')),
+    textPrimary: hydrate(semanticColorSystem.textPrimary, inferRoleFromSemanticSlot('textPrimary')),
+    textSecondary: hydrate(semanticColorSystem.textSecondary, inferRoleFromSemanticSlot('textSecondary')),
+    border: hydrate(semanticColorSystem.border, inferRoleFromSemanticSlot('border')),
+    primaryAction: hydrate(semanticColorSystem.primaryAction, inferRoleFromSemanticSlot('primaryAction')),
+    secondaryAction: hydrate(semanticColorSystem.secondaryAction, inferRoleFromSemanticSlot('secondaryAction')),
+    contentColors: (semanticColorSystem.contentColors || [])
+      .map(color => hydrate(color, 'accent'))
+      .filter((value): value is ColorToken => Boolean(value)),
   }
 }
 
@@ -803,25 +574,26 @@ function applyMeasuredUrlSignals(
 ) {
   if (!pageAnalysis) return parsed
 
-  const layeredColorSystem = pageAnalysis.colorCandidates.length
-    ? buildLayeredColorSystem(pageAnalysis, parsed.colors || [])
-    : undefined
-  const compatibilityColors = layeredColorSystem
+  const colorSystem = hydrateSemanticColorSystem(pageAnalysis.semanticColorSystem, parsed.colors || [])
+  const compatibilityColors = colorSystem
     ? [
-        layeredColorSystem.heroBackground,
-        layeredColorSystem.pageBackground,
-        layeredColorSystem.surface,
-        layeredColorSystem.textPrimary,
-        layeredColorSystem.border,
-        layeredColorSystem.primaryAction,
-        layeredColorSystem.secondaryAction,
+        colorSystem.heroBackground,
+        colorSystem.pageBackground,
+        colorSystem.surface,
+        colorSystem.textPrimary,
+        colorSystem.textSecondary,
+        colorSystem.border,
+        colorSystem.primaryAction,
+        colorSystem.secondaryAction,
       ].filter(Boolean) as ColorToken[]
     : parsed.colors
 
+  debugSelectedPalette(compatibilityColors)
+
   return {
     ...parsed,
-    colors: pageAnalysis.colorCandidates.length ? compatibilityColors : parsed.colors,
-    colorSystem: layeredColorSystem,
+    colors: colorSystem ? compatibilityColors : parsed.colors,
+    colorSystem,
     typography: pageAnalysis.typographyTokens.length ? pickMeasuredTypography(pageAnalysis, parsed.typography) : parsed.typography,
     designDetails: pickMeasuredDesignDetails(pageAnalysis, parsed.designDetails),
   }

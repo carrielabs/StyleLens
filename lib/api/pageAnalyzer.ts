@@ -251,6 +251,88 @@ function scoreColor(candidate: ColorAccumulator) {
   return score
 }
 
+function hexToRgbParts(hex: string): [number, number, number] {
+  const clean = hex.replace('#', '')
+  return [
+    Number.parseInt(clean.slice(0, 2), 16),
+    Number.parseInt(clean.slice(2, 4), 16),
+    Number.parseInt(clean.slice(4, 6), 16),
+  ]
+}
+
+function getColorBrightness(hex: string): number {
+  const [r, g, b] = hexToRgbParts(hex)
+  return (r + g + b) / 3
+}
+
+function getColorChroma(hex: string): number {
+  const [r, g, b] = hexToRgbParts(hex)
+  return Math.max(r, g, b) - Math.min(r, g, b)
+}
+
+function isLikelyTextCandidate(candidate: PageColorCandidate) {
+  return candidate.property === 'color'
+}
+
+function isLikelyBackgroundCandidate(candidate: PageColorCandidate) {
+  return candidate.property === 'background-color'
+    || candidate.property === 'background-image'
+    || candidate.property === 'screenshot-hero'
+    || candidate.property === 'screenshot-content'
+}
+
+function isLikelySurfaceCandidate(candidate: PageColorCandidate) {
+  const usesBackgroundPaint = candidate.property === 'background-color' || candidate.property === 'background-image'
+  if (!usesBackgroundPaint) return false
+  return candidate.roleHints.includes('surface')
+    || !!candidate.componentKinds?.includes('card')
+    || !!candidate.componentKinds?.includes('surface')
+    || candidate.layerHints.includes('content')
+}
+
+function isLikelyActionCandidate(candidate: PageColorCandidate) {
+  return candidate.roleHints.includes('primary')
+    || candidate.roleHints.includes('secondary')
+    || candidate.roleHints.includes('accent')
+    || !!candidate.componentKinds?.includes('button')
+    || !!candidate.componentKinds?.includes('link')
+}
+
+function scoreActionCandidate(candidate: PageColorCandidate) {
+  let score = candidate.evidenceScore || candidate.count || 0
+  const kinds = candidate.componentKinds || []
+  const selector = (candidate.selectorHint || '').toLowerCase()
+
+  if (candidate.property === 'background-color') score += 22
+  if (candidate.property === 'background-image') score += 18
+  if (candidate.property === 'border-color') score += 6
+  if (candidate.property === 'color') score += 2
+
+  if (kinds.includes('button')) score += 30
+  if (selector.includes('cta') || selector.includes('button') || selector.includes('btn')) score += 18
+  if (kinds.includes('link')) score -= 10
+
+  if (candidate.roleHints.includes('primary')) score += 12
+  if (candidate.roleHints.includes('secondary')) score += 6
+  if (candidate.roleHints.includes('accent')) score += 4
+
+  if (candidate.hex.toUpperCase() === '#0000EE') score -= 18
+
+  score += Math.min(20, getColorChroma(candidate.hex))
+  return score
+}
+
+function isContainerBackgroundCandidate(candidate: PageColorCandidate) {
+  const kinds = candidate.componentKinds || []
+  if (kinds.includes('button') || kinds.includes('link') || kinds.includes('input')) return false
+  return kinds.includes('hero')
+    || kinds.includes('nav')
+    || kinds.includes('section')
+    || kinds.includes('surface')
+    || kinds.includes('card')
+    || kinds.length === 0
+}
+
 function mergeColorCandidates(domGroup: PageColorCandidate[], cssGroup: PageColorCandidate[]): PageColorCandidate[] {
   const merged = new Map<string, ColorAccumulator>()
 
@@ -549,6 +631,60 @@ function mergeComponentStateTokens(...sources: Array<ComponentStateTokens | unde
   return merged
 }
 
+function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
+  const available = sources.filter(Boolean)
+  if (!available.length) {
+    return {
+      colorCandidates: [],
+      typographyCandidates: [],
+      radiusCandidates: [],
+      shadowCandidates: [],
+      spacingCandidates: [],
+      layoutHints: [],
+      rawRadiusTokens: [],
+      rawShadowTokens: [],
+      rawSpacingTokens: [],
+      rawLayoutEvidence: [],
+      stateTokens: emptyComponentStateTokens(),
+    }
+  }
+
+  return {
+    colorCandidates: mergeColorCandidates(available.flatMap(source => source.colorCandidates), []),
+    typographyCandidates: mergeTypographyCandidates(...available.map(source => source.typographyCandidates)),
+    radiusCandidates: mergeUniqueValues(10, ...available.map(source => source.radiusCandidates)),
+    shadowCandidates: mergeUniqueValues(8, ...available.map(source => source.shadowCandidates)),
+    spacingCandidates: mergeUniqueValues(12, ...available.map(source => source.spacingCandidates)),
+    layoutHints: mergeUniqueValues(8, ...available.map(source => source.layoutHints)),
+    rawRadiusTokens: mergeValueAccumulators(...available.map(source => source.rawRadiusTokens)).map(entry => ({
+      value: entry.value,
+      count: entry.count,
+      componentKinds: [...entry.componentKinds],
+      evidenceScore: entry.evidenceScore,
+    })),
+    rawShadowTokens: mergeValueAccumulators(...available.map(source => source.rawShadowTokens)).map(entry => ({
+      value: entry.value,
+      count: entry.count,
+      componentKinds: [...entry.componentKinds],
+      evidenceScore: entry.evidenceScore,
+    })),
+    rawSpacingTokens: mergeValueAccumulators(...available.map(source => source.rawSpacingTokens)).map(entry => ({
+      value: entry.value,
+      count: entry.count,
+      componentKinds: [...entry.componentKinds],
+      evidenceScore: entry.evidenceScore,
+    })),
+    rawLayoutEvidence: mergeLayoutAccumulators(...available.map(source => source.rawLayoutEvidence)).map(entry => ({
+      label: entry.label,
+      kind: entry.kind,
+      count: entry.count,
+      componentKinds: [...entry.componentKinds],
+      evidenceScore: entry.evidenceScore,
+    })),
+    stateTokens: mergeComponentStateTokens(...available.map(source => source.stateTokens)),
+  }
+}
+
 type InteractiveSnapshot = {
   property: StateTokenValue['property']
   value: string
@@ -700,32 +836,109 @@ function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticCol
 
   const ranked = [...candidates].sort((a, b) => (b.evidenceScore || b.count) - (a.evidenceScore || a.count))
   const used = new Set<string>()
+  const backgroundMode = (() => {
+    const textCandidate = ranked.find(candidate =>
+      isLikelyTextCandidate(candidate) &&
+      !candidate.layerHints.includes('content')
+    )
+    if (textCandidate) {
+      return getColorBrightness(textCandidate.hex) > 170 ? 'dark' : 'light'
+    }
 
-  const heroBackground = pickSlot(ranked, candidate =>
-    candidate.layerHints.includes('hero') &&
-    candidate.roleHints.includes('background')
+    const backgroundCandidate = ranked.find(candidate =>
+      isLikelyBackgroundCandidate(candidate) &&
+      isContainerBackgroundCandidate(candidate) &&
+      !candidate.layerHints.includes('content')
+    )
+    if (!backgroundCandidate) return 'light'
+    return getColorBrightness(backgroundCandidate.hex) < 145 ? 'dark' : 'light'
+  })()
+  const prefersDarkText = backgroundMode === 'light'
+  const preferredTextCandidates = ranked.filter(candidate =>
+    isLikelyTextCandidate(candidate) &&
+    !candidate.layerHints.includes('content')
   )
+
+  const heroBackground = [...ranked]
+    .filter(candidate =>
+      candidate.layerHints.includes('hero') &&
+      isLikelyBackgroundCandidate(candidate) &&
+      isContainerBackgroundCandidate(candidate)
+    )
+    .sort((a, b) => {
+      const aHeroBoost = a.property === 'background-image' ? 2 : a.property === 'background-color' ? 1 : 0
+      const bHeroBoost = b.property === 'background-image' ? 2 : b.property === 'background-color' ? 1 : 0
+      if (aHeroBoost !== bHeroBoost) return bHeroBoost - aHeroBoost
+
+      const aBrightness = getColorBrightness(a.hex)
+      const bBrightness = getColorBrightness(b.hex)
+      if (backgroundMode === 'dark' && aBrightness !== bBrightness) return aBrightness - bBrightness
+      if (backgroundMode === 'light' && aBrightness !== bBrightness) return bBrightness - aBrightness
+
+      const aChroma = getColorChroma(a.hex)
+      const bChroma = getColorChroma(b.hex)
+      if (aChroma !== bChroma) return bChroma - aChroma
+
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
   if (heroBackground) used.add(heroBackground.hex.toUpperCase())
 
-  const pageBackground = pickSlot(ranked, candidate =>
-    candidate.layerHints.includes('global') &&
-    candidate.roleHints.includes('background')
-  , used)
+  const pageBackground = [...ranked]
+    .filter(candidate =>
+      candidate.layerHints.includes('global') &&
+      isLikelyBackgroundCandidate(candidate) &&
+      isContainerBackgroundCandidate(candidate) &&
+      !isLikelyTextCandidate(candidate) &&
+      !used.has(candidate.hex.toUpperCase())
+    )
+    .sort((a, b) => {
+      const aBrightness = getColorBrightness(a.hex)
+      const bBrightness = getColorBrightness(b.hex)
+      if (backgroundMode === 'light' && aBrightness !== bBrightness) return bBrightness - aBrightness
+      if (backgroundMode === 'dark' && aBrightness !== bBrightness) return aBrightness - bBrightness
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
   if (pageBackground) used.add(pageBackground.hex.toUpperCase())
 
-  const surface = pickSlot(ranked, candidate =>
-    candidate.roleHints.includes('surface') || !!candidate.componentKinds?.includes('card') || !!candidate.componentKinds?.includes('surface')
-  , used)
+  const surface = [...ranked]
+    .filter(candidate =>
+      isLikelySurfaceCandidate(candidate) &&
+      candidate.hex.toUpperCase() !== pageBackground?.hex.toUpperCase() &&
+      !used.has(candidate.hex.toUpperCase())
+    )
+    .sort((a, b) => {
+      const aLayerBoost = a.layerHints.includes('content') ? 1 : 0
+      const bLayerBoost = b.layerHints.includes('content') ? 1 : 0
+      if (aLayerBoost !== bLayerBoost) return bLayerBoost - aLayerBoost
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
   if (surface) used.add(surface.hex.toUpperCase())
 
-  const textPrimary = pickSlot(ranked, candidate =>
-    candidate.roleHints.includes('text')
-  , used)
+  const textPrimary = preferredTextCandidates
+    .filter(candidate => !used.has(candidate.hex.toUpperCase()))
+    .sort((a, b) => {
+      const aBrightness = getColorBrightness(a.hex)
+      const bBrightness = getColorBrightness(b.hex)
+      if (prefersDarkText && aBrightness !== bBrightness) return aBrightness - bBrightness
+      if (!prefersDarkText && aBrightness !== bBrightness) return bBrightness - aBrightness
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
   if (textPrimary) used.add(textPrimary.hex.toUpperCase())
 
-  const textSecondary = pickSlot(ranked, candidate =>
-    candidate.roleHints.includes('text-secondary') || (candidate.roleHints.includes('text') && candidate.hex.toUpperCase() !== textPrimary?.hex.toUpperCase())
-  , used)
+  const textSecondary = preferredTextCandidates
+    .filter(candidate => !used.has(candidate.hex.toUpperCase()))
+    .sort((a, b) => {
+      const aSecondaryHint = a.roleHints.includes('text-secondary') ? 1 : 0
+      const bSecondaryHint = b.roleHints.includes('text-secondary') ? 1 : 0
+      if (aSecondaryHint !== bSecondaryHint) return bSecondaryHint - aSecondaryHint
+
+      const primaryBrightness = textPrimary ? getColorBrightness(textPrimary.hex) : prefersDarkText ? 20 : 235
+      const aDistance = Math.abs(getColorBrightness(a.hex) - primaryBrightness)
+      const bDistance = Math.abs(getColorBrightness(b.hex) - primaryBrightness)
+      if (aDistance !== bDistance) return bDistance - aDistance
+
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
   if (textSecondary) used.add(textSecondary.hex.toUpperCase())
 
   const border = pickSlot(ranked, candidate =>
@@ -733,18 +946,39 @@ function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticCol
   , used)
   if (border) used.add(border.hex.toUpperCase())
 
-  const primaryAction = pickSlot(ranked, candidate =>
-    candidate.roleHints.includes('primary') || !!candidate.componentKinds?.includes('button')
-  , used)
+  const actionCandidates = ranked.filter(candidate =>
+    isLikelyActionCandidate(candidate) &&
+    !used.has(candidate.hex.toUpperCase()) &&
+    getColorChroma(candidate.hex) >= 18
+  )
+
+  const primaryAction = [...actionCandidates]
+    .sort((a, b) => {
+      const scoreDiff = scoreActionCandidate(b) - scoreActionCandidate(a)
+      if (scoreDiff !== 0) return scoreDiff
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
   if (primaryAction) used.add(primaryAction.hex.toUpperCase())
 
-  const secondaryAction = pickSlot(ranked, candidate =>
-    candidate.roleHints.includes('secondary') || candidate.roleHints.includes('accent')
-  , used)
+  const secondaryAction = [...actionCandidates]
+    .filter(candidate => candidate.hex.toUpperCase() !== primaryAction?.hex.toUpperCase())
+    .sort((a, b) => {
+      const aSecondaryHint = a.roleHints.includes('secondary') ? 1 : 0
+      const bSecondaryHint = b.roleHints.includes('secondary') ? 1 : 0
+      if (aSecondaryHint !== bSecondaryHint) return bSecondaryHint - aSecondaryHint
+
+      const scoreDiff = scoreActionCandidate(b) - scoreActionCandidate(a)
+      if (scoreDiff !== 0) return scoreDiff
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
   if (secondaryAction) used.add(secondaryAction.hex.toUpperCase())
 
   const contentColors = ranked
-    .filter(candidate => candidate.layerHints.includes('content') && !used.has(candidate.hex.toUpperCase()))
+    .filter(candidate =>
+      candidate.layerHints.includes('content') &&
+      !used.has(candidate.hex.toUpperCase()) &&
+      getColorChroma(candidate.hex) >= 12
+    )
     .slice(0, 6)
     .map(candidate => toToken(candidate, 'accent'))
     .filter((value): value is NonNullable<typeof value> => Boolean(value))
@@ -988,7 +1222,7 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
     await page.waitForTimeout(1200)
     const interactiveStateTokens = await collectInteractiveStateSignals(page)
 
-    const domSignals = await page.evaluate(({ maxVisibleElements }) => {
+    const collectSnapshot = () => page.evaluate(({ maxVisibleElements }) => {
       type ComponentKind = 'hero' | 'nav' | 'button' | 'card' | 'section' | 'input' | 'link' | 'text' | 'surface'
       type ValueAccumulator = { value: string; count: number; componentKinds: ComponentKind[]; evidenceScore: number }
       type LayoutAccumulator = { label: string; kind: 'hero' | 'grid' | 'flex' | 'navigation' | 'form' | 'section' | 'multi-column' | 'sticky' | 'stack'; count: number; componentKinds: ComponentKind[]; evidenceScore: number }
@@ -1197,9 +1431,22 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
       }
     }, { maxVisibleElements: MAX_VISIBLE_ELEMENTS })
 
+    const snapshots: RawDomSignals[] = []
+    snapshots.push(await collectSnapshot())
+
+    await page.waitForTimeout(900)
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.waitForTimeout(250)
+    snapshots.push(await collectSnapshot())
+
+    await page.waitForTimeout(900)
+    snapshots.push(await collectSnapshot())
+
+    const domSignals = mergeRawDomSignals(...snapshots)
+
     return {
       ...domSignals,
-      stateTokens: interactiveStateTokens,
+      stateTokens: mergeComponentStateTokens(domSignals.stateTokens, interactiveStateTokens),
     }
   } finally {
     await browser.close()
