@@ -9,6 +9,7 @@ import DesignDetailsElite from './DesignDetailsElite'
 import DesignDetailsEliteV2 from './DesignDetailsEliteV2'
 import DesignDetailsEliteV3 from './DesignDetailsEliteV3'
 import AtomicSandbox from './AtomicSandbox'
+import StyleInspector from './StyleInspector'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateJsonToken } from '@/lib/exporters/jsonExporter'
@@ -181,7 +182,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
       {!isElite && (
         <section>
           <SectionLabel>{t.sandbox}</SectionLabel>
-          <AtomicSandbox report={report} lang={lang} />
+          <StyleInspector report={report} lang={lang} />
         </section>
       )}
 
