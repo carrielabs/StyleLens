@@ -8,6 +8,7 @@ import DesignDetails from './DesignDetails'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateMarkdown } from '@/lib/exporters/markdownExporter'
+import AtomicSandbox from './AtomicSandbox'
 import { Copy, Check } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -19,6 +20,7 @@ const i18n = {
     colors: '色彩体系',
     typo: '字体排版',
     details: '细节解析',
+    sandbox: '样式预览',
     export: '代码输出',
     markdown_desc: '用于设计交接的标准 Markdown 文档',
     css_desc: '前端可直接复制的 :root 变量映射',
@@ -35,6 +37,7 @@ const i18n = {
     colors: 'Color System',
     typo: 'Typography',
     details: 'Design Details',
+    sandbox: 'Style Preview',
     export: 'Export Assets',
     markdown_desc: 'Standard Markdown documentation for handoff',
     css_desc: ':root CSS variables ready for your stylesheet',
@@ -117,6 +120,12 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
       <section>
          <SectionLabel>{t.details}</SectionLabel>
          <DesignDetails data={report.designDetails} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
+      </section>
+
+      {/* 5.5 样式预览 */}
+      <section>
+        <SectionLabel>{t.sandbox}</SectionLabel>
+        <AtomicSandbox report={report} lang={lang} />
       </section>
 
       {/* 6. 导出面板 */}
