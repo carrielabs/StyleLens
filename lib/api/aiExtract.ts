@@ -423,7 +423,7 @@ function selectAiFallbackColor(
   return filtered[0]
 }
 
-function deriveScreenshotShellFallback(
+export function deriveScreenshotShellFallback(
   pageAnalysis: PageStyleAnalysis,
   aiColors: ColorToken[]
 ): Partial<LayeredColorSystem> {
@@ -447,18 +447,27 @@ function deriveScreenshotShellFallback(
     .filter(candidate => candidate.brightness >= 600 && candidate.chroma <= 48)
     .sort((a, b) => b.brightness - a.brightness)
 
-  const pageBackground = lightNeutrals[0]
+  const pureWhiteThreshold = 750
+  const slightlyDarkerNeutral = lightNeutrals.find(candidate =>
+    candidate.brightness < pureWhiteThreshold &&
+    candidate.chroma <= 24
+  )
+
+  const pageBackgroundCandidate = slightlyDarkerNeutral || lightNeutrals[0]
+  const surfaceCandidate = lightNeutrals.find(candidate => candidate.hex !== pageBackgroundCandidate?.hex)
+    || (slightlyDarkerNeutral ? lightNeutrals[0] : undefined)
+
+  const pageBackground = pageBackgroundCandidate
     ? {
         role: 'background' as const,
-        hex: lightNeutrals[0].hex,
-        rgb: hexToRgb(lightNeutrals[0].hex),
-        hsl: hexToHsl(lightNeutrals[0].hex),
+        hex: pageBackgroundCandidate.hex,
+        rgb: hexToRgb(pageBackgroundCandidate.hex),
+        hsl: hexToHsl(pageBackgroundCandidate.hex),
         name: 'Page Background',
         description: 'Recovered from screenshot shell region',
       }
     : undefined
 
-  const surfaceCandidate = lightNeutrals.find(candidate => candidate.hex !== pageBackground?.hex)
   const surface = surfaceCandidate
     ? {
         role: 'surface' as const,
@@ -490,6 +499,66 @@ function deriveScreenshotShellFallback(
   }
 }
 
+export function deriveAiShellFallback(colors: ColorToken[]): Partial<LayeredColorSystem> {
+  const withMetrics = colors
+    .filter(color => !isExtremeNoiseColor(color.hex))
+    .map(color => {
+      const clean = color.hex.replace('#', '')
+      const r = Number.parseInt(clean.slice(0, 2), 16)
+      const g = Number.parseInt(clean.slice(2, 4), 16)
+      const b = Number.parseInt(clean.slice(4, 6), 16)
+      const brightness = r + g + b
+      const chroma = Math.max(r, g, b) - Math.min(r, g, b)
+      return { color, brightness, chroma }
+    })
+
+  const lightNeutrals = withMetrics
+    .filter(item => item.brightness >= 600 && item.chroma <= 48)
+    .sort((a, b) => a.brightness - b.brightness)
+
+  const pageBackgroundItem = lightNeutrals.find(item => item.brightness < 750) || lightNeutrals[0]
+  const surfaceItem = lightNeutrals.find(item => item.color.hex !== pageBackgroundItem?.color.hex) || lightNeutrals.at(-1)
+
+  const darkNeutrals = withMetrics
+    .filter(item => item.brightness <= 220 && item.chroma <= 40)
+    .sort((a, b) => a.brightness - b.brightness)
+
+  const textPrimaryItem = darkNeutrals[0]
+  const textSecondaryItem = darkNeutrals.find(item =>
+    item.color.hex !== textPrimaryItem?.color.hex &&
+    item.brightness >= (textPrimaryItem?.brightness || 0) + 18
+  )
+
+  return {
+    pageBackground: pageBackgroundItem?.color
+      ? { ...pageBackgroundItem.color, role: 'background', name: 'Page Background' }
+      : undefined,
+    surface: surfaceItem?.color
+      ? { ...surfaceItem.color, role: 'surface', name: 'Surface' }
+      : undefined,
+    textPrimary: textPrimaryItem?.color
+      ? { ...textPrimaryItem.color, role: 'text', name: 'Text Primary' }
+      : undefined,
+    textSecondary: textSecondaryItem?.color
+      ? { ...textSecondaryItem.color, role: 'text', name: 'Text Secondary' }
+      : undefined,
+  }
+}
+
+export function recoverShellSemanticSlots(pageAnalysis: PageStyleAnalysis): PageStyleAnalysis {
+  const fallback = deriveScreenshotShellFallback(pageAnalysis, [])
+  if (!fallback.pageBackground && !fallback.surface) return pageAnalysis
+
+  return {
+    ...pageAnalysis,
+    semanticColorSystem: {
+      ...(pageAnalysis.semanticColorSystem || {}),
+      pageBackground: pageAnalysis.semanticColorSystem?.pageBackground || fallback.pageBackground,
+      surface: pageAnalysis.semanticColorSystem?.surface || fallback.surface,
+    }
+  }
+}
+
 function summarizeSpacing(pageAnalysis: PageStyleAnalysis, fallback?: string) {
   if (!pageAnalysis.spacingTokens.length) return fallback || 'Measured spacing not available'
   const top = pageAnalysis.spacingTokens.slice(0, 4).map(token => token.value).join(' | ')
@@ -501,24 +570,47 @@ function summarizeLayout(pageAnalysis: PageStyleAnalysis, fallback?: string) {
   return pageAnalysis.layoutEvidence.slice(0, 3).map(item => item.label).join(' | ')
 }
 
-function pickMeasuredTypography(pageAnalysis: PageStyleAnalysis, aiTypography: Typography): Typography {
-  if (!pageAnalysis.typographyTokens.length) return aiTypography
+function hasNumericTypographyValue(value?: string) {
+  if (!value) return false
+  const normalized = value.trim().toLowerCase()
+  if (!normalized || normalized.includes('nan') || normalized === 'unknown') return false
+  return /\d/.test(normalized)
+}
 
-  const tokens = pageAnalysis.typographyTokens
-  const distinctFamilies = [...new Set(tokens.map(token => token.fontFamily).filter(Boolean))]
+function pickMeasuredTypography(pageAnalysis: PageStyleAnalysis, aiTypography: Typography): Typography {
+  const tokens = pageAnalysis.typographyTokens.filter(token => hasNumericTypographyValue(token.fontSize))
+  const candidates = pageAnalysis.typographyCandidates.filter(candidate => hasNumericTypographyValue(candidate.fontSize))
+  const sourceTypography = tokens.length
+    ? tokens.map(token => ({
+        fontFamily: token.fontFamily,
+        fontSize: token.fontSize,
+        fontWeight: token.fontWeight,
+        lineHeight: token.lineHeight,
+        letterSpacing: token.letterSpacing,
+      }))
+    : candidates
+
+  if (!sourceTypography.length) return aiTypography
+
+  const distinctFamilies = [...new Set(sourceTypography.map(token => token.fontFamily).filter(Boolean))]
   const primaryFamily = distinctFamilies.slice(0, 3).join(', ') || aiTypography.fontFamily
 
-  const numericWeights = tokens
+  const numericWeights = sourceTypography
     .map(token => Number(token.fontWeight))
     .filter(weight => Number.isFinite(weight))
 
-  const numericSizes = tokens
+  const numericSizes = sourceTypography
     .map(token => Number.parseFloat(token.fontSize || ''))
     .filter(size => Number.isFinite(size))
     .sort((a, b) => b - a)
 
-  const lineHeight = tokens.find(token => token.lineHeight)?.lineHeight || aiTypography.lineHeight
-  const letterSpacing = tokens.find(token => token.letterSpacing)?.letterSpacing || aiTypography.letterSpacing
+  const lineHeight =
+    sourceTypography.find(token => hasNumericTypographyValue(token.lineHeight))?.lineHeight ||
+    aiTypography.lineHeight
+  const letterSpacing =
+    sourceTypography.find(token => token.letterSpacing && token.letterSpacing !== 'normal')?.letterSpacing ||
+    sourceTypography.find(token => token.letterSpacing)?.letterSpacing ||
+    aiTypography.letterSpacing
 
   return {
     ...aiTypography,
@@ -556,7 +648,7 @@ function pickMeasuredDesignDetails(pageAnalysis: PageStyleAnalysis, aiDetails: D
   }
 }
 
-function applyMeasuredUrlSignals(
+export function applyMeasuredUrlSignals(
   parsed: Omit<StyleReport, 'id' | 'sourceType' | 'sourceLabel' | 'thumbnailUrl' | 'createdAt'>,
   pageAnalysis?: PageStyleAnalysis
 ) {
@@ -566,12 +658,13 @@ function applyMeasuredUrlSignals(
     hydrateSemanticColorSystem(pageAnalysis.semanticColorSystem, parsed.colors || [])
   )
   const screenshotShellFallback = deriveScreenshotShellFallback(pageAnalysis, parsed.colors || [])
+  const aiShellFallback = deriveAiShellFallback(parsed.colors || [])
   const colorSystem = normalizeSemanticColorSystem({
     ...hydratedColorSystem,
-    pageBackground: hydratedColorSystem?.pageBackground || screenshotShellFallback.pageBackground,
-    surface: hydratedColorSystem?.surface || screenshotShellFallback.surface,
-    textPrimary: hydratedColorSystem?.textPrimary || screenshotShellFallback.textPrimary,
-    textSecondary: hydratedColorSystem?.textSecondary || screenshotShellFallback.textSecondary,
+    pageBackground: hydratedColorSystem?.pageBackground || screenshotShellFallback.pageBackground || aiShellFallback.pageBackground,
+    surface: hydratedColorSystem?.surface || screenshotShellFallback.surface || aiShellFallback.surface,
+    textPrimary: hydratedColorSystem?.textPrimary || screenshotShellFallback.textPrimary || aiShellFallback.textPrimary,
+    textSecondary: hydratedColorSystem?.textSecondary || screenshotShellFallback.textSecondary || aiShellFallback.textSecondary,
   })
   const compatibilityColors = colorSystem
     ? dedupeColorTokens([
@@ -653,7 +746,7 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
     if (mergedAnalysis) {
       requestWithAnalysis = {
         ...requestWithAnalysis,
-        pageAnalysis: mergedAnalysis,
+        pageAnalysis: recoverShellSemanticSlots(mergedAnalysis),
       }
     }
     writeUrlDebugSnapshot('url-after-merge', {

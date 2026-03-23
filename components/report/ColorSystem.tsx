@@ -58,24 +58,66 @@ export default function ColorSystem({
     return map[role]?.[lang] || (lang === 'zh' ? '其他' : 'Other')
   }
 
+  const deriveShellFallbackFromColors = (palette: ColorToken[]) => {
+    const enriched = palette
+      .filter(color => !isExtremeNoiseColor(color.hex))
+      .map(color => {
+        const clean = color.hex.replace('#', '')
+        const r = Number.parseInt(clean.slice(0, 2), 16)
+        const g = Number.parseInt(clean.slice(2, 4), 16)
+        const b = Number.parseInt(clean.slice(4, 6), 16)
+        const brightness = r + g + b
+        const chroma = Math.max(r, g, b) - Math.min(r, g, b)
+        return { color, brightness, chroma }
+      })
+
+    const lightNeutrals = enriched
+      .filter(item => item.brightness >= 600 && item.chroma <= 48)
+      .sort((a, b) => a.brightness - b.brightness)
+    const darkNeutrals = enriched
+      .filter(item => item.brightness <= 220 && item.chroma <= 40)
+      .sort((a, b) => a.brightness - b.brightness)
+
+    const pageBackground = lightNeutrals.find(item => item.brightness < 750)?.color || lightNeutrals[0]?.color
+    const surface = lightNeutrals.find(item => item.color.hex !== pageBackground?.hex)?.color || lightNeutrals.at(-1)?.color
+    const textPrimary = darkNeutrals[0]?.color
+    const textSecondary = darkNeutrals.find(item => item.color.hex !== textPrimary?.hex)?.color
+
+    return { pageBackground, surface, textPrimary, textSecondary }
+  }
+
   type DisplayColor = ColorToken & { roleLabelOverride?: string }
   const contentColors = sourceType === 'url'
     ? (colorSystem?.contentColors || [])
     : []
 
-  const systemPalette: DisplayColor[] = sourceType === 'url' && colorSystem
+  const shellFallback: Partial<LayeredColorSystem> = sourceType === 'url'
+    ? deriveShellFallbackFromColors(colors)
+    : {}
+
+  const normalizedColorSystem: LayeredColorSystem | undefined = sourceType === 'url' && colorSystem
+    ? {
+        ...colorSystem,
+        pageBackground: colorSystem.pageBackground || shellFallback.pageBackground,
+        surface: colorSystem.surface || shellFallback.surface,
+        textPrimary: colorSystem.textPrimary || shellFallback.textPrimary,
+        textSecondary: colorSystem.textSecondary || shellFallback.textSecondary,
+      }
+    : colorSystem
+
+  const systemPalette: DisplayColor[] = sourceType === 'url' && normalizedColorSystem
     ? [
-        colorSystem.heroBackground && { ...colorSystem.heroBackground, roleLabelOverride: lang === 'zh' ? 'Hero 背景' : 'Hero background' },
-        colorSystem.heroTextPrimary && { ...colorSystem.heroTextPrimary, roleLabelOverride: lang === 'zh' ? 'Hero 文字' : 'Hero text' },
-        colorSystem.heroPrimaryAction && { ...colorSystem.heroPrimaryAction, roleLabelOverride: lang === 'zh' ? 'Hero 主按钮' : 'Hero primary action' },
-        colorSystem.heroSecondaryAction && { ...colorSystem.heroSecondaryAction, roleLabelOverride: lang === 'zh' ? 'Hero 次按钮' : 'Hero secondary action' },
-        colorSystem.pageBackground && { ...colorSystem.pageBackground, roleLabelOverride: lang === 'zh' ? '页面背景' : 'Page background' },
-        colorSystem.surface && { ...colorSystem.surface, roleLabelOverride: lang === 'zh' ? '面板色' : 'Surface' },
-        colorSystem.textPrimary && { ...colorSystem.textPrimary, roleLabelOverride: lang === 'zh' ? '主文字' : 'Text primary' },
-        colorSystem.textSecondary && { ...colorSystem.textSecondary, roleLabelOverride: lang === 'zh' ? '辅助文字' : 'Text secondary' },
-        colorSystem.border && { ...colorSystem.border, roleLabelOverride: lang === 'zh' ? '边框线' : 'Border' },
-        colorSystem.primaryAction && { ...colorSystem.primaryAction, roleLabelOverride: lang === 'zh' ? '主动作色' : 'Primary action' },
-        colorSystem.secondaryAction && { ...colorSystem.secondaryAction, roleLabelOverride: lang === 'zh' ? '次动作色' : 'Secondary action' },
+        normalizedColorSystem.heroBackground && { ...normalizedColorSystem.heroBackground, roleLabelOverride: lang === 'zh' ? 'Hero 背景' : 'Hero background' },
+        normalizedColorSystem.heroTextPrimary && { ...normalizedColorSystem.heroTextPrimary, roleLabelOverride: lang === 'zh' ? 'Hero 文字' : 'Hero text' },
+        normalizedColorSystem.heroPrimaryAction && { ...normalizedColorSystem.heroPrimaryAction, roleLabelOverride: lang === 'zh' ? 'Hero 主按钮' : 'Hero primary action' },
+        normalizedColorSystem.heroSecondaryAction && { ...normalizedColorSystem.heroSecondaryAction, roleLabelOverride: lang === 'zh' ? 'Hero 次按钮' : 'Hero secondary action' },
+        normalizedColorSystem.pageBackground && { ...normalizedColorSystem.pageBackground, roleLabelOverride: lang === 'zh' ? '页面背景' : 'Page background' },
+        normalizedColorSystem.surface && { ...normalizedColorSystem.surface, roleLabelOverride: lang === 'zh' ? '面板色' : 'Surface' },
+        normalizedColorSystem.textPrimary && { ...normalizedColorSystem.textPrimary, roleLabelOverride: lang === 'zh' ? '主文字' : 'Text primary' },
+        normalizedColorSystem.textSecondary && { ...normalizedColorSystem.textSecondary, roleLabelOverride: lang === 'zh' ? '辅助文字' : 'Text secondary' },
+        normalizedColorSystem.border && { ...normalizedColorSystem.border, roleLabelOverride: lang === 'zh' ? '边框线' : 'Border' },
+        normalizedColorSystem.primaryAction && { ...normalizedColorSystem.primaryAction, roleLabelOverride: lang === 'zh' ? '主动作色' : 'Primary action' },
+        normalizedColorSystem.secondaryAction && { ...normalizedColorSystem.secondaryAction, roleLabelOverride: lang === 'zh' ? '次动作色' : 'Secondary action' },
       ].filter(Boolean) as DisplayColor[]
     : colors.map(color => ({ ...color }))
 
