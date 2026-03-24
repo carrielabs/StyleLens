@@ -185,6 +185,18 @@ export function useExtraction({
       const ssData = await ssRes.json()
       if (!ssData.success) throw new Error(ssData.error || '截图失败')
 
+      const screenshotAnalysis = ssData.pageAnalysis as PageStyleAnalysis | undefined
+      console.log('[font-debug] useExtraction:/api/screenshot result', {
+        typographyCandidates: screenshotAnalysis?.typographyCandidates?.length || 0,
+        typographyTokens: screenshotAnalysis?.typographyTokens?.length || 0,
+        candidateSizes: (screenshotAnalysis?.typographyCandidates || [])
+          .slice(0, 8)
+          .map(candidate => candidate.fontSize),
+        tokenSizes: (screenshotAnalysis?.typographyTokens || [])
+          .slice(0, 8)
+          .map(token => token.fontSize),
+      })
+
       let label = url.trim()
       try {
         label = new URL(url.trim()).hostname.replace(/^www\./, '')

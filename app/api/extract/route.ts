@@ -24,6 +24,18 @@ export async function POST(req: Request) {
   try {
     const body: ExtractRequest = await req.json()
 
+    console.log('[font-debug] /api/extract received pageAnalysis', {
+      hasPageAnalysis: Boolean(body.pageAnalysis),
+      typographyCandidates: body.pageAnalysis?.typographyCandidates?.length || 0,
+      typographyTokens: body.pageAnalysis?.typographyTokens?.length || 0,
+      candidateSizes: (body.pageAnalysis?.typographyCandidates || [])
+        .slice(0, 8)
+        .map(candidate => candidate.fontSize),
+      tokenSizes: (body.pageAnalysis?.typographyTokens || [])
+        .slice(0, 8)
+        .map(token => token.fontSize),
+    })
+
     if (!body.imageBase64 && !body.screenshotUrl) {
       return NextResponse.json(
         { success: false, error: 'Missing imageBase64 or screenshotUrl' },
