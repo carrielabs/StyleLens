@@ -35,6 +35,10 @@ export default function DesignInspector({ report, lang }: Props) {
   const borderHex    = colorSystem?.border?.hex        || colors.find(c => c.role === 'border')?.hex   || '#e5e5e5'
   const bgHex        = colorSystem?.pageBackground?.hex || colors.find(c => c.role === 'background')?.hex || '#FFFFFF'
 
+  // ── Preview-safe derived colors (guards against saturated bg, invisible component text) ──
+  const previewBg = safePreviewBg(bgHex, designDetails.colorMode)
+  const { surface: previewSurface, text: previewText } = safeComponentColors(surfaceHex, textHex, designDetails.colorMode)
+
   // ── Measured tokens ───────────────────────────────────────────────────────
   const radiusTokens: RadiusToken[]         = analysis?.radiusTokens     || []
   const shadowTokens: ShadowToken[]         = analysis?.shadowTokens     || []
@@ -216,10 +220,10 @@ export default function DesignInspector({ report, lang }: Props) {
               {/* Left: component visual */}
               <div>
                 {compTab === 'button' && (
-                  <ComponentPreview bg={bgHex}>
+                  <ComponentPreview bg={previewBg}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                       <button style={btnStyle}>
-                        {snap?.text || (lang === 'zh' ? '主要按钮' : 'Primary Button')}
+                        {isValidButtonText(snap?.text) ? snap!.text : (lang === 'zh' ? '主要按钮' : 'Primary Button')}
                       </button>
                       <button style={{
                         background: 'transparent',
@@ -238,13 +242,13 @@ export default function DesignInspector({ report, lang }: Props) {
                   </ComponentPreview>
                 )}
                 {compTab === 'input' && (
-                  <ComponentPreview bg={bgHex}>
+                  <ComponentPreview bg={previewBg}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
                       <input
                         readOnly defaultValue=""
                         placeholder={lang === 'zh' ? '输入框示例' : 'Input placeholder'}
                         style={{
-                          background: surfaceHex, color: textHex,
+                          background: previewSurface, color: previewText,
                           border: bestBorder('input').value,
                           borderRadius: bestRadius('input').value,
                           padding: '10px 14px', fontSize: '14px',
@@ -256,7 +260,7 @@ export default function DesignInspector({ report, lang }: Props) {
                         placeholder={lang === 'zh' ? '禁用状态' : 'Disabled state'}
                         disabled
                         style={{
-                          background: surfaceHex, color: textHex,
+                          background: previewSurface, color: previewText,
                           border: bestBorder('input').value,
                           borderRadius: bestRadius('input').value,
                           padding: '10px 14px', fontSize: '14px',
@@ -268,9 +272,9 @@ export default function DesignInspector({ report, lang }: Props) {
                   </ComponentPreview>
                 )}
                 {compTab === 'card' && (
-                  <ComponentPreview bg={bgHex}>
+                  <ComponentPreview bg={previewBg}>
                     <div style={{
-                      background: surfaceHex, color: textHex,
+                      background: previewSurface, color: previewText,
                       border: bestBorder('card').value,
                       borderRadius: bestRadius('card').value,
                       boxShadow: bestShadow('card').value,
@@ -279,7 +283,7 @@ export default function DesignInspector({ report, lang }: Props) {
                       <div style={{ fontSize: '15px', fontWeight: typography.headingWeight || 600, fontFamily: typography.fontFamily, marginBottom: '6px' }}>
                         {lang === 'zh' ? '卡片标题' : 'Card Title'}
                       </div>
-                      <div style={{ fontSize: '13px', color: textHex, opacity: 0.6, fontFamily: typography.fontFamily }}>
+                      <div style={{ fontSize: '13px', color: previewText, opacity: 0.6, fontFamily: typography.fontFamily }}>
                         {lang === 'zh' ? '说明文字内容' : 'Description text content'}
                       </div>
                     </div>
@@ -688,102 +692,171 @@ export default function DesignInspector({ report, lang }: Props) {
 
         {/* ══════════════ 风格 STYLE ══════════════ */}
         {mainTab === 'style' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
-            {/* Personality tags */}
+            {/* ── Brand Fingerprint card — styled with the site's own colors ── */}
             <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '设计性格' : 'Design Personality'}</p>
-              {visualStyle?.personality?.length ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {visualStyle.personality.map((tag, i) => (
-                    <span key={i} style={{
-                      padding: '5px 12px', borderRadius: '99px',
-                      background: i === 0 ? '#1D1D1F' : '#F5F5F7',
-                      color: i === 0 ? '#FFFFFF' : '#3C3C43',
-                      fontSize: '13px', fontWeight: 500,
-                    }}>
-                      {tag}
-                    </span>
-                  ))}
+              <p style={sectionLabel}>{lang === 'zh' ? '品牌指纹' : 'Brand Fingerprint'}</p>
+              <div style={{
+                borderRadius: '14px',
+                border: `1px solid rgba(${hexToRgbParts(primaryHex)},0.22)`,
+                background: `rgba(${hexToRgbParts(primaryHex)},0.04)`,
+                padding: '20px 22px',
+                display: 'flex', flexDirection: 'column', gap: '18px',
+              }}>
+
+                {/* Color swatches row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '48px', fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>
+                    {lang === 'zh' ? '色彩' : 'Color'}
+                  </span>
+                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                    {[
+                      { hex: primaryHex,  title: lang === 'zh' ? '主色' : 'Primary' },
+                      { hex: bgHex,       title: lang === 'zh' ? '背景' : 'Background' },
+                      { hex: surfaceHex,  title: lang === 'zh' ? '表面' : 'Surface' },
+                      { hex: textHex,     title: lang === 'zh' ? '文字' : 'Text' },
+                      ...(colorSystem?.heroAccentColors?.slice(0, 2).map(c => ({ hex: c.hex, title: c.name })) || []),
+                    ].map((c, i) => (
+                      <div key={i} title={`${c.title}: ${c.hex}`} style={{
+                        width: '22px', height: '22px', borderRadius: '5px',
+                        background: c.hex, border: '1px solid rgba(0,0,0,0.09)',
+                        flexShrink: 0,
+                      }} />
+                    ))}
+                  </div>
+                  <code style={{ fontSize: '11px', color: '#8E8E93', fontFamily: 'var(--font-mono)', marginLeft: '2px' }}>
+                    {primaryHex}
+                  </code>
                 </div>
-              ) : (
-                // Fallback: use report tags
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {(lang === 'zh' ? (report.tagsZh || report.tags) : (report.tagsEn || report.tags)).slice(0, 8).map((tag, i) => (
-                    <span key={i} style={{
-                      padding: '5px 12px', borderRadius: '99px',
-                      background: i === 0 ? '#1D1D1F' : '#F5F5F7',
-                      color: i === 0 ? '#FFFFFF' : '#3C3C43',
-                      fontSize: '13px', fontWeight: 500,
-                    }}>
-                      {tag}
-                    </span>
-                  ))}
+
+                {/* Typography specimen */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '14px' }}>
+                  <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '48px', fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>
+                    {lang === 'zh' ? '字体' : 'Font'}
+                  </span>
+                  <span style={{
+                    fontSize: '18px', fontWeight: typography.headingWeight || 600,
+                    fontFamily: typography.fontFamily, color: '#1D1D1F', lineHeight: 1,
+                  }}>
+                    {typography.fontFamily.split(',')[0].replace(/["']/g, '').trim()}
+                  </span>
+                  <span style={{ fontSize: '12px', color: '#8E8E93' }}>
+                    {lang === 'zh'
+                      ? `标题 ${typography.headingWeight || '—'} · 正文 ${typography.bodyWeight || '—'}`
+                      : `H: ${typography.headingWeight || '—'} · B: ${typography.bodyWeight || '—'}`}
+                  </span>
                 </div>
-              )}
+
+                {/* Style character tags — personality tags merged from report tags */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '48px', fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>
+                    {lang === 'zh' ? '气质' : 'Style'}
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                    {(visualStyle?.personality?.length
+                      ? visualStyle.personality
+                      : (lang === 'zh' ? (report.tagsZh || report.tags) : (report.tagsEn || report.tags))
+                    ).slice(0, 6).map((tag, i) => (
+                      <span key={i} style={{
+                        padding: '3px 10px', borderRadius: '99px', fontSize: '12px', fontWeight: 500,
+                        background: i === 0 ? primaryHex : `rgba(${hexToRgbParts(primaryHex)},0.12)`,
+                        color: i === 0 ? (isLight(primaryHex) ? '#000000' : '#FFFFFF') : primaryHex,
+                      }}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Icon style + density + color temp — only render if at least one value is known */}
-            {(visualStyle?.iconStyle || visualStyle?.density || visualStyle?.colorTemperature) && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
-                {visualStyle?.iconStyle && (
-                  <StyleFactCard
-                    label={lang === 'zh' ? '图标风格' : 'Icon Style'}
-                    value={visualStyle.iconStyle}
-                    sub={visualStyle.iconLibrary}
-                    measured={false}
-                  />
-                )}
-                {visualStyle?.density && (
-                  <StyleFactCard
-                    label={lang === 'zh' ? '内容密度' : 'Density'}
-                    value={visualStyle.density}
-                    measured={false}
-                  />
-                )}
-                {visualStyle?.colorTemperature && (
-                  <StyleFactCard
-                    label={lang === 'zh' ? '色温' : 'Color Temp'}
-                    value={visualStyle.colorTemperature}
-                    measured={false}
-                    accent={visualStyle.colorTemperature === 'warm' ? '#FF9F0A' : visualStyle.colorTemperature === 'cool' ? '#007AFF' : undefined}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Image style */}
-            {visualStyle?.imageStyle && visualStyle.imageStyle !== 'none' && (
+            {/* ── AI 印象 ── visual inferences from screenshot, all translated ── */}
+            {(visualStyle?.iconStyle || visualStyle?.density || visualStyle?.colorTemperature ||
+              (visualStyle?.imageStyle && visualStyle.imageStyle !== 'none')) && (
               <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '图片风格' : 'Image Style'}</p>
-                <div style={{ ...chip }}>
-                  <span style={dot(false)} />
-                  {visualStyle.imageStyle}
+                <p style={sectionLabel}>{lang === 'zh' ? 'AI 印象' : 'AI Impressions'}</p>
+                <p style={{ margin: '-8px 0 12px 0', fontSize: '11px', color: '#AEAEB2' }}>
+                  {lang === 'zh'
+                    ? '来自截图的视觉推断，无法 DOM 测量'
+                    : 'Visually inferred from screenshot — not DOM-measurable'}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
+                  {visualStyle?.iconStyle && (
+                    <StyleFactCard
+                      label={lang === 'zh' ? '图标风格' : 'Icon Style'}
+                      value={lang === 'zh' ? translateIconStyle(visualStyle.iconStyle) : visualStyle.iconStyle}
+                      sub={visualStyle.iconLibrary}
+                      measured={false}
+                      lang={lang}
+                    />
+                  )}
+                  {visualStyle?.density && (
+                    <StyleFactCard
+                      label={lang === 'zh' ? '内容密度' : 'Density'}
+                      value={lang === 'zh' ? translateDensity(visualStyle.density) : visualStyle.density}
+                      measured={false}
+                      lang={lang}
+                    />
+                  )}
+                  {visualStyle?.colorTemperature && (
+                    <StyleFactCard
+                      label={lang === 'zh' ? '色温' : 'Color Temp'}
+                      value={lang === 'zh' ? translateColorTemp(visualStyle.colorTemperature) : visualStyle.colorTemperature}
+                      measured={false}
+                      lang={lang}
+                      accent={visualStyle.colorTemperature === 'warm' ? '#FF9F0A' : visualStyle.colorTemperature === 'cool' ? '#007AFF' : undefined}
+                    />
+                  )}
+                  {visualStyle?.imageStyle && visualStyle.imageStyle !== 'none' && (
+                    <StyleFactCard
+                      label={lang === 'zh' ? '图片风格' : 'Image Style'}
+                      value={lang === 'zh' ? translateImageStyle(visualStyle.imageStyle) : visualStyle.imageStyle}
+                      measured={false}
+                      lang={lang}
+                    />
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Color system overview */}
+            {/* ── 色彩模式 — iOS-style segmented control ── */}
             <div>
               <p style={sectionLabel}>{lang === 'zh' ? '色彩模式' : 'Color Mode'}</p>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{
-                  width: '36px', height: '36px', borderRadius: '8px',
-                  background: designDetails.colorMode === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                  border: '1px solid rgba(0,0,0,0.12)',
-                  flexShrink: 0,
-                }} />
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1F' }}>
-                    {designDetails.colorMode === 'dark'
-                      ? (lang === 'zh' ? '深色模式' : 'Dark Mode')
-                      : designDetails.colorMode === 'system'
-                        ? (lang === 'zh' ? '跟随系统' : 'System Adaptive')
-                        : (lang === 'zh' ? '浅色模式' : 'Light Mode')}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#AEAEB2' }}>AI inferred</div>
-                </div>
+              <div style={{
+                display: 'inline-flex', borderRadius: '10px', overflow: 'hidden',
+                border: '1px solid rgba(0,0,0,0.08)', background: '#F5F5F7',
+              }}>
+                {([
+                  { id: 'light',  zh: '浅色', en: 'Light' },
+                  { id: 'dark',   zh: '深色', en: 'Dark' },
+                  { id: 'system', zh: '跟随系统', en: 'Adaptive' },
+                ] as const).map((m, i) => {
+                  const active = designDetails.colorMode === m.id
+                  return (
+                    <div key={m.id} style={{
+                      padding: '8px 16px', fontSize: '13px',
+                      fontWeight: active ? 600 : 400,
+                      background: active ? '#FFFFFF' : 'transparent',
+                      color: active ? '#1D1D1F' : '#8E8E93',
+                      borderRight: i < 2 ? '1px solid rgba(0,0,0,0.07)' : 'none',
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      boxShadow: active ? '0 1px 3px rgba(0,0,0,0.09)' : 'none',
+                    }}>
+                      <span style={{
+                        width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
+                        background: m.id === 'dark' ? '#3A3A3C' : m.id === 'system' ? 'linear-gradient(135deg,#F5F5F7 50%,#3A3A3C 50%)' : '#E5E5EA',
+                        border: '1px solid rgba(0,0,0,0.12)',
+                      }} />
+                      {lang === 'zh' ? m.zh : m.en}
+                    </div>
+                  )
+                })}
               </div>
+              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={dot(false)} />
+                {lang === 'zh' ? 'AI 推断' : 'AI inferred'}
+              </p>
             </div>
 
           </div>
@@ -917,9 +990,11 @@ function InteractionChip({ label, value, measured }: { label: string; value: str
   )
 }
 
-function StyleFactCard({ label, value, sub, measured, accent }: {
-  label: string; value: string; sub?: string; measured: boolean; accent?: string
+function StyleFactCard({ label, value, sub, measured, accent, lang }: {
+  label: string; value: string; sub?: string; measured: boolean; accent?: string; lang?: 'zh' | 'en'
 }) {
+  // Only apply capitalize for purely ASCII/Latin values (English); Chinese values don't need it
+  const isLatinValue = /^[\x00-\x7F\s-]+$/.test(value)
   return (
     <div style={{
       padding: '14px 16px', background: '#F5F5F7', borderRadius: '12px',
@@ -928,7 +1003,7 @@ function StyleFactCard({ label, value, sub, measured, accent }: {
       <p style={{ margin: '0 0 4px 0', fontSize: '11px', fontWeight: 600, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         {label}
       </p>
-      <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1D1D1F', textTransform: 'capitalize' }}>
+      <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1D1D1F', textTransform: isLatinValue ? 'capitalize' : 'none' }}>
         {value}
       </p>
       {sub && (
@@ -938,7 +1013,11 @@ function StyleFactCard({ label, value, sub, measured, accent }: {
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
         <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: measured ? '#34C759' : '#AEAEB2', display: 'inline-block' }} />
-        <span style={{ fontSize: '10px', color: '#AEAEB2' }}>{measured ? 'Measured' : 'AI inferred'}</span>
+        <span style={{ fontSize: '10px', color: '#AEAEB2' }}>
+          {measured
+            ? (lang === 'zh' ? '测量值' : 'Measured')
+            : (lang === 'zh' ? 'AI 推断' : 'AI inferred')}
+        </span>
       </div>
     </div>
   )
@@ -959,6 +1038,49 @@ function LegendItem({ color, label }: { color: string; label: string }) {
       <span style={{ fontSize: '11px', color: '#8E8E93' }}>{label}</span>
     </span>
   )
+}
+
+/** Convert #RRGGBB to "r,g,b" for use in rgba() strings */
+function hexToRgbParts(hex: string): string {
+  const clean = hex.replace('#', '')
+  if (clean.length !== 6) return '0,0,0'
+  return [
+    parseInt(clean.slice(0, 2), 16),
+    parseInt(clean.slice(2, 4), 16),
+    parseInt(clean.slice(4, 6), 16),
+  ].join(',')
+}
+
+function translateIconStyle(v: string): string {
+  const m: Record<string, string> = {
+    'minimal': '极简线条', 'outline': '描边', 'solid': '实心填充',
+    'rounded-outline': '圆角描边', 'duotone': '双色调', 'mixed': '混合风格',
+    'none': '无图标',
+  }
+  return m[v] || v
+}
+
+function translateDensity(v: string): string {
+  const m: Record<string, string> = {
+    'sparse': '稀疏', 'comfortable': '适中', 'dense': '紧凑',
+  }
+  return m[v] || v
+}
+
+function translateColorTemp(v: string): string {
+  const m: Record<string, string> = {
+    'warm': '暖色调', 'cool': '冷色调', 'neutral': '中性',
+  }
+  return m[v] || v
+}
+
+function translateImageStyle(v: string): string {
+  const m: Record<string, string> = {
+    'photography': '摄影图片', 'illustration': '插图',
+    'product-screenshots': '产品截图', 'abstract': '抽象图形',
+    'mixed': '混合', 'none': '无图片',
+  }
+  return m[v] || v
 }
 
 function inferRadius(d: string): string {
@@ -996,4 +1118,69 @@ function isLight(hex: string): boolean {
   const g = parseInt(clean.slice(2, 4), 16)
   const b = parseInt(clean.slice(4, 6), 16)
   return (r * 299 + g * 587 + b * 114) / 1000 > 155
+}
+
+/**
+ * Guard against saturated action/accent colors being used as preview backgrounds.
+ * If the hex has HSL saturation > 0.25, it's a chromatic color (e.g. Linear's #5E6AD2),
+ * not a neutral page background — fall back to a safe neutral based on colorMode.
+ */
+function safePreviewBg(hex: string, colorMode: string): string {
+  const clean = hex.replace('#', '')
+  if (clean.length !== 6) return hex
+  const r = parseInt(clean.slice(0, 2), 16) / 255
+  const g = parseInt(clean.slice(2, 4), 16) / 255
+  const b = parseInt(clean.slice(4, 6), 16) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  const s = max === min ? 0 : l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min)
+  if (s > 0.25) {
+    return colorMode === 'dark' ? '#1C1C1E' : '#F5F5F7'
+  }
+  return hex
+}
+
+/**
+ * Return contrast-safe surface + text colors for component previews.
+ * Fixes cases where dark-mode sites have surfaceHex incorrectly assigned as white,
+ * or where both extracted colors are the same luminance (invisible text).
+ */
+function safeComponentColors(
+  surface: string,
+  text: string,
+  colorMode: string
+): { surface: string; text: string } {
+  const surfaceLight = isLight(surface)
+  const textLight = isLight(text)
+
+  // Dark site but both extracted colors are light → surface is wrong, use dark surface
+  if (colorMode === 'dark' && surfaceLight && textLight) {
+    return { surface: '#2C2C2E', text }
+  }
+  // Light site but both are dark → text is probably wrong
+  if (colorMode === 'light' && !surfaceLight && !textLight) {
+    return { surface, text: '#1D1D1F' }
+  }
+  // Same luminance bucket → flip text
+  if (surfaceLight === textLight) {
+    return { surface, text: surfaceLight ? '#1D1D1F' : '#FFFFFF' }
+  }
+  return { surface, text }
+}
+
+/**
+ * Validate that snap.text is actually a usable button label, not error text or garbage.
+ */
+function isValidButtonText(text: string | undefined): text is string {
+  if (!text) return false
+  const t = text.trim()
+  if (t.length === 0 || t.length > 60) return false
+  const lower = t.toLowerCase()
+  if (
+    lower.includes('错误') || lower.includes('error') || lower.includes('failed') ||
+    lower.includes('undefined') || lower.includes('null') ||
+    lower.startsWith('http') || lower.includes('@') ||
+    lower.includes('exception') || lower.includes('warning')
+  ) return false
+  return true
 }

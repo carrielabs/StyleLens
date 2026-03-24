@@ -55,7 +55,6 @@ export function generateCssVariables(report: StyleReport): string {
   }
 
   css += `
-
   /* ── Typography ─────────────────────────────── */
   --font-family: ${typography.fontFamily};
   --font-weight-heading: ${typography.headingWeight};

@@ -115,7 +115,7 @@ export default function AtomicSandbox({ report, lang }: Props) {
               border: isInjected ? `1px solid ${borderHex}` : '1.5px solid #E5E5EA',
               padding: '0 12px',
               display: 'flex', alignItems: 'center',
-              color: isInjected ? textHex : '#8E8E93',
+              color: isInjected ? textHex + '80' : '#8E8E93',
               fontSize: '13px',
               fontFamily: isInjected ? typography.fontFamily : 'system-ui',
               letterSpacing: isInjected ? typography.letterSpacing : 'normal',
@@ -145,7 +145,7 @@ export default function AtomicSandbox({ report, lang }: Props) {
               <div style={{ fontSize: '12px', fontWeight: 600, color: isInjected ? textHex : '#1D1D1F', letterSpacing: isInjected ? typography.letterSpacing : 'normal', fontFamily: isInjected ? typography.fontFamily : 'system-ui' }}>
                 {lang === 'zh' ? '卡片标题' : 'Card Title'}
               </div>
-              <div style={{ fontSize: '11px', color: isInjected ? textHex : '#8E8E93' }}>
+              <div style={{ fontSize: '11px', color: isInjected ? textHex + '80' : '#8E8E93' }}>
                 {lang === 'zh' ? '说明文字' : 'Description'}
               </div>
             </div>

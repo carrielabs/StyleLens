@@ -58,7 +58,9 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
   if (gradients.length > 0) {
     md += isEn ? `\n### Gradients\n` : `\n### 渐变\n`
     gradients.forEach((g, i) => {
-      md += `- **${isEn ? `Gradient ${i + 1}` : `渐变 ${i + 1}`}**: \`${g.css}\` — ${g.description}\n`
+      md += isEn
+        ? `- **Gradient ${i + 1}**: \`${g.css}\` — ${g.description}\n`
+        : `- **渐变 ${i + 1}**: \`${g.css}\` — ${g.description}\n`
     })
   }
 
