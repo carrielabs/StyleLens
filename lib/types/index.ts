@@ -1,5 +1,23 @@
 // ─── Style Extract Result ────────────────────────────────────────────────────
 
+export type EvidenceSource =
+  | 'dom-computed'
+  | 'screenshot-sampled'
+  | 'inferred'
+
+export type EvidenceConfidence =
+  | 'high'
+  | 'medium'
+  | 'low'
+
+export interface TokenMeta {
+  source: EvidenceSource
+  confidence: EvidenceConfidence
+  evidenceCount: number
+  context?: string
+  viewport?: string
+}
+
 export interface ColorToken {
   role: 'background' | 'surface' | 'primary' | 'secondary' | 'accent' | 'text' | 'border' | 'other'
   hex: string
@@ -7,6 +25,7 @@ export interface ColorToken {
   hsl: string
   name: string
   description: string
+  meta?: TokenMeta
 }
 
 export interface SemanticColorSystem {
@@ -51,6 +70,7 @@ export interface TypographyToken {
   sampleCount: number
   componentKinds: ComponentKind[]
   evidenceScore: number
+  meta?: TokenMeta
 }
 
 export interface RadiusToken {
@@ -59,6 +79,7 @@ export interface RadiusToken {
   sampleCount: number
   componentKinds: ComponentKind[]
   evidenceScore: number
+  meta?: TokenMeta
 }
 
 export interface ShadowToken {
@@ -67,6 +88,7 @@ export interface ShadowToken {
   sampleCount: number
   componentKinds: ComponentKind[]
   evidenceScore: number
+  meta?: TokenMeta
 }
 
 export interface SpacingToken {
@@ -75,6 +97,7 @@ export interface SpacingToken {
   sampleCount: number
   componentKinds: ComponentKind[]
   evidenceScore: number
+  meta?: TokenMeta
 }
 
 export interface LayoutEvidence {
@@ -83,6 +106,7 @@ export interface LayoutEvidence {
   sampleCount: number
   componentKinds: ComponentKind[]
   evidenceScore: number
+  meta?: TokenMeta
 }
 
 export interface BorderToken {
@@ -91,6 +115,7 @@ export interface BorderToken {
   color?: string         // '#E5E5E5'
   sampleCount: number
   componentKinds: ComponentKind[]
+  meta?: TokenMeta
 }
 
 export interface TransitionToken {
@@ -99,6 +124,7 @@ export interface TransitionToken {
   easing: string         // 'ease', 'ease-in-out', 'cubic-bezier(...)'
   sampleCount: number
   componentKinds: ComponentKind[]
+  meta?: TokenMeta
 }
 
 export type InteractionState = 'default' | 'hover' | 'focus' | 'active' | 'disabled' | 'selected'
@@ -110,6 +136,7 @@ export interface StateTokenValue {
   componentKinds: ComponentKind[]
   evidenceScore: number
   measured: boolean
+  meta?: TokenMeta
 }
 
 export interface ComponentStateTokens {
@@ -227,6 +254,7 @@ export interface PageColorCandidate {
   viewportWeight?: number
   repetitionWeight?: number
   evidenceScore?: number
+  meta?: TokenMeta
 }
 
 export interface PageTypographyCandidate {
@@ -239,6 +267,7 @@ export interface PageTypographyCandidate {
   componentKinds?: ComponentKind[]
   sampleText?: string
   evidenceScore?: number
+  meta?: TokenMeta
 }
 
 export interface PageStyleAnalysis {
