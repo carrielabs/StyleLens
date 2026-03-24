@@ -35,6 +35,110 @@ function isLikelyAuthNavigation(url: string): boolean {
   return /\/(login|signin|sign-in|auth|session)(?:[/?#]|$)/.test(lower)
 }
 
+async function installClientNavigationLock(page: import('playwright').Page) {
+  await page.addInitScript(() => {
+    const block = (kind: string, url?: string | URL | null) => {
+      try {
+        const nextUrl = String(url || '')
+        if (/\/(login|signin|sign-in|auth|session)(?:[/?#]|$)/i.test(nextUrl)) {
+          console.warn(`[StyleLens:init] blocked client navigation (${kind}): ${nextUrl}`)
+          return true
+        }
+      } catch {
+        return false
+      }
+      return false
+    }
+
+    const locationProto = Object.getPrototypeOf(window.location) as Location & {
+      assign?: (url: string | URL) => void
+      replace?: (url: string | URL) => void
+    }
+
+    const originalAssign = locationProto.assign?.bind(window.location)
+    const originalReplace = locationProto.replace?.bind(window.location)
+    const originalPushState = history.pushState.bind(history)
+    const originalReplaceState = history.replaceState.bind(history)
+
+    if (originalAssign) {
+      locationProto.assign = ((url: string | URL) => {
+        if (block('location.assign', url)) return
+        return originalAssign(url)
+      }) as typeof window.location.assign
+    }
+
+    if (originalReplace) {
+      locationProto.replace = ((url: string | URL) => {
+        if (block('location.replace', url)) return
+        return originalReplace(url)
+      }) as typeof window.location.replace
+    }
+
+    history.pushState = ((data: unknown, unused: string, url?: string | URL | null) => {
+      if (block('history.pushState', url)) return
+      return originalPushState(data, unused, url)
+    }) as typeof history.pushState
+
+    history.replaceState = ((data: unknown, unused: string, url?: string | URL | null) => {
+      if (block('history.replaceState', url)) return
+      return originalReplaceState(data, unused, url)
+    }) as typeof history.replaceState
+  })
+}
+
+async function prepareSettledPageForAtomicCapture(page: import('playwright').Page) {
+  await page.addStyleTag({
+    content: `
+      *, *::before, *::after {
+        transition: none !important;
+        animation: none !important;
+        caret-color: transparent !important;
+      }
+      html {
+        scroll-behavior: auto !important;
+      }
+    `,
+  }).catch(() => undefined)
+
+  await page.evaluate(async () => {
+    const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts
+    if (fonts?.ready) {
+      await fonts.ready.catch(() => undefined)
+    }
+  }).catch(() => undefined)
+
+  await page.waitForSelector('h1, main, [role="main"], [data-hero]', { state: 'visible', timeout: 5_000 }).catch(() => undefined)
+  const hasStableTypography = await page.waitForFunction(async () => {
+    const countVisiblePxText = () => {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+      let node: Node | null
+      let matched = 0
+      while ((node = walker.nextNode())) {
+        const text = node.textContent?.trim()
+        if (!text || text.length < 2) continue
+        const parent = node.parentElement
+        if (!parent) continue
+        const rect = parent.getBoundingClientRect()
+        if (rect.width < 2 || rect.height < 2) continue
+        const style = getComputedStyle(parent)
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue
+        if (/\d+(\.\d+)?px/.test(style.fontSize)) matched += 1
+      }
+      return matched
+    }
+
+    const first = countVisiblePxText()
+    if (first < 3) return false
+
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+
+    const second = countVisiblePxText()
+    return second >= 3
+  }, { timeout: 5_000 }).then(() => true).catch(() => false)
+
+  console.log('[Screenshotter] stable typography detected:', hasStableTypography)
+}
+
 export async function captureScreenshot(targetUrl: string): Promise<ScreenshotResponse> {
   const normalizedUrl = targetUrl.toLowerCase().trim()
   let pageAnalysis = null
@@ -43,6 +147,7 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
     const browser = await chromium.launch({ headless: true })
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 960 } })
+      await installClientNavigationLock(page)
 
       await page.route('**/*', route => {
         const request = route.request()
@@ -54,8 +159,7 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
       })
 
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 })
-      await page.waitForSelector('h1, main, [role="main"], [data-hero]', { state: 'visible', timeout: 5_000 }).catch(() => undefined)
-      await page.waitForTimeout(350)
+      await prepareSettledPageForAtomicCapture(page)
 
       const [buffer, analysis] = await Promise.all([
         page.screenshot({

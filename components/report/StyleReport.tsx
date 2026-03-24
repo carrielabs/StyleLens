@@ -188,12 +188,6 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
         </section>
       )}
 
-      {/* 5.5 样式预览 */}
-      <section>
-        <SectionLabel>{t.sandbox}</SectionLabel>
-        <AtomicSandbox report={report} lang={lang} />
-      </section>
-
       {/* 6. 导出面板 */}
       <section style={{ 
         paddingTop: '24px',

@@ -588,13 +588,36 @@ function mergeTypographyCandidates(...groups: PageTypographyCandidate[][]): Page
     return /\d/.test(normalized)
   }
 
+  const parseTypographySize = (value?: string) => {
+    if (!value) return Number.NaN
+    const normalized = value.trim().toLowerCase()
+    if (!normalized || normalized === 'unknown' || normalized === 'inherit' || normalized.includes('nan')) return Number.NaN
+    const numeric = Number.parseFloat(normalized)
+    if (!Number.isFinite(numeric)) return Number.NaN
+    if (normalized.endsWith('px')) return numeric
+    if (normalized.endsWith('rem') || normalized.endsWith('em')) return numeric * 16
+    return numeric
+  }
+
   const typographyRank = (candidate: TypographyAccumulator) => {
     let score = candidate.evidenceScore
+    const size = parseTypographySize(candidate.fontSize)
     if (hasNumericSize(candidate.fontSize)) score += 100
+    if (Number.isFinite(size)) {
+      score += Math.min(size * 3, 240)
+      if (size >= 48) score += 160
+      else if (size >= 36) score += 120
+      else if (size >= 28) score += 90
+      else if (size >= 20) score += 50
+      else if (size <= 13) score -= 80
+      else if (size <= 15) score -= 30
+    }
     if (candidate.sampleText && candidate.sampleText.trim().length >= 2) score += 30
     if (candidate.fontFamily && candidate.fontFamily !== 'inherit') score += 10
     if (candidate.lineHeight && candidate.lineHeight !== 'normal' && candidate.lineHeight !== 'inherit') score += 6
     if (candidate.letterSpacing && candidate.letterSpacing !== 'normal' && candidate.letterSpacing !== 'inherit') score += 6
+    if (candidate.componentKinds?.has('hero')) score += 60
+    if (candidate.componentKinds?.has('nav')) score -= 25
     return score
   }
 
@@ -2090,10 +2113,20 @@ async function extractDomSignalsFromPage(
         const tag = el.tagName.toLowerCase()
         const isHeading = /^h[1-6]$/.test(tag)
         const isTopRegion = rect.top >= -8 && rect.top < window.innerHeight * 0.45
+        const numericFontSize = Number.parseFloat(style.fontSize || '')
+        const sizeBonus =
+          Number.isFinite(numericFontSize) && numericFontSize >= 48 ? 160
+            : Number.isFinite(numericFontSize) && numericFontSize >= 36 ? 120
+              : Number.isFinite(numericFontSize) && numericFontSize >= 28 ? 90
+                : Number.isFinite(numericFontSize) && numericFontSize >= 20 ? 45
+                  : Number.isFinite(numericFontSize) && numericFontSize <= 13 ? -50
+                    : 0
+
         const textEvidence =
           (isHeading ? 20 : 0)
           + (isTopRegion ? 10 : 0)
           + Math.max(1, Math.round(Math.min((rect.width * rect.height) / Math.max(window.innerWidth * window.innerHeight, 1) * 20, 10)))
+          + sizeBonus
 
         const key = [style.fontFamily, style.fontSize, style.fontWeight, style.lineHeight, style.letterSpacing].join('|')
         const existing = typoMap.get(key) || {
@@ -2324,12 +2357,123 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
       deviceScaleFactor: 1,
     })
 
+    await page.addInitScript(() => {
+      const block = (kind: string, url?: string | URL | null) => {
+        try {
+          const nextUrl = String(url || '')
+          if (/\/(login|signin|sign-in|auth|session)(?:[/?#]|$)/i.test(nextUrl)) {
+            console.warn(`[pageAnalyzer:init] blocked client navigation (${kind}): ${nextUrl}`)
+            return true
+          }
+        } catch {
+          return false
+        }
+        return false
+      }
+
+      const locationProto = Object.getPrototypeOf(window.location) as Location & {
+        assign?: (url: string | URL) => void
+        replace?: (url: string | URL) => void
+      }
+
+      const originalAssign = locationProto.assign?.bind(window.location)
+      const originalReplace = locationProto.replace?.bind(window.location)
+      const originalPushState = history.pushState.bind(history)
+      const originalReplaceState = history.replaceState.bind(history)
+
+      if (originalAssign) {
+        locationProto.assign = ((url: string | URL) => {
+          if (block('location.assign', url)) return
+          return originalAssign(url)
+        }) as typeof window.location.assign
+      }
+
+      if (originalReplace) {
+        locationProto.replace = ((url: string | URL) => {
+          if (block('location.replace', url)) return
+          return originalReplace(url)
+        }) as typeof window.location.replace
+      }
+
+      history.pushState = ((data: unknown, unused: string, url?: string | URL | null) => {
+        if (block('history.pushState', url)) return
+        return originalPushState(data, unused, url)
+      }) as typeof history.pushState
+
+      history.replaceState = ((data: unknown, unused: string, url?: string | URL | null) => {
+        if (block('history.replaceState', url)) return
+        return originalReplaceState(data, unused, url)
+      }) as typeof history.replaceState
+    })
+
+    await page.route('**/*', route => {
+      const request = route.request()
+      const lower = request.url().toLowerCase()
+      if (
+        request.isNavigationRequest()
+        && /\/(login|signin|sign-in|auth|session)(?:[/?#]|$)/.test(lower)
+      ) {
+        console.warn('[pageAnalyzer] Blocking likely auth navigation during direct DOM extraction:', request.url())
+        return route.abort('aborted')
+      }
+      return route.continue()
+    })
+
     await page.goto(targetUrl, {
       waitUntil: 'domcontentloaded',
       timeout: PAGE_ANALYSIS_TIMEOUT,
     })
 
-    return await extractDomSignalsFromPage(page, targetUrl)
+    await page.addStyleTag({
+      content: `
+        *, *::before, *::after {
+          transition: none !important;
+          animation: none !important;
+          caret-color: transparent !important;
+        }
+        html {
+          scroll-behavior: auto !important;
+        }
+      `,
+    }).catch(() => undefined)
+
+    await page.evaluate(async () => {
+      const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts
+      if (fonts?.ready) {
+        await fonts.ready.catch(() => undefined)
+      }
+    }).catch(() => undefined)
+
+    await page.waitForSelector('h1, main, [role="main"], [data-hero]', {
+      state: 'visible',
+      timeout: 5_000,
+    }).catch(() => undefined)
+    await page.waitForFunction(() => {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+      let node: Node | null
+      let matched = 0
+      while ((node = walker.nextNode())) {
+        const text = node.textContent?.trim()
+        if (!text || text.length < 2) continue
+        const parent = node.parentElement
+        if (!parent) continue
+        const rect = parent.getBoundingClientRect()
+        if (rect.width < 2 || rect.height < 2) continue
+        const style = getComputedStyle(parent)
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue
+        if (/\d+(\.\d+)?px/.test(style.fontSize)) {
+          matched += 1
+          if (matched >= 3) return true
+        }
+      }
+      return false
+    }, { timeout: 5_000 }).catch(() => undefined)
+    await page.waitForTimeout(500)
+
+    return await extractDomSignalsFromPage(page, targetUrl, {
+      pageAlreadySettled: true,
+      snapshotCount: 1,
+    })
   } finally {
     await browser.close()
   }
