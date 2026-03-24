@@ -2,8 +2,13 @@
 
 import { useState } from 'react'
 import type { StyleReport, RadiusToken, ShadowToken, BorderToken, TransitionToken, ButtonSnapshot, PageSection, VisualStyleAnalysis, InteractionStyleAI } from '@/lib/types'
+import { gradeTokens, confidenceLabel } from '@/lib/design-details/gradeTokens'
+import type { GradedTokenSet } from '@/lib/design-details/gradeTokens'
 
-type MainTab = 'components' | 'shape' | 'space' | 'interaction' | 'style'
+// Zone = physical separation between measured data and AI impressions
+type Zone = 'measured' | 'impression'
+type MeasuredTab = 'components' | 'shape' | 'space'
+type ImpressionTab = 'interaction' | 'style'
 type ComponentTab = 'button' | 'input' | 'card' | 'badge'
 
 interface Props {
@@ -12,7 +17,9 @@ interface Props {
 }
 
 export default function DesignInspector({ report, lang }: Props) {
-  const [mainTab, setMainTab] = useState<MainTab>('components')
+  const [zone, setZone] = useState<Zone>('measured')
+  const [measuredTab, setMeasuredTab] = useState<MeasuredTab>('components')
+  const [impressionTab, setImpressionTab] = useState<ImpressionTab>('interaction')
   const [compTab, setCompTab] = useState<ComponentTab>('button')
   const [isInjected, setIsInjected] = useState(false)
 
@@ -71,6 +78,9 @@ export default function DesignInspector({ report, lang }: Props) {
     : (designDetails.pageSections || [])
   const pageSecsMeasured                    = !!(analysis?.pageSections?.length)
 
+  // ── Graded token set (pure function layer) ───────────────────────────────────
+  const graded: GradedTokenSet = gradeTokens(radiusTokens, shadowTokens, spacingTokens, layoutEvidence, borderTokens)
+
   // ── AI-inferred style ─────────────────────────────────────────────────────
   const visualStyle: VisualStyleAnalysis | undefined  = designDetails.visualStyle
   const interactionStyle: InteractionStyleAI | undefined = designDetails.interactionStyle
@@ -90,6 +100,19 @@ export default function DesignInspector({ report, lang }: Props) {
   const componentRadiusFallback = radiusFallbackValues.find(v => !v.includes('%')) || '6px'
   const primaryRadius = radiusFallbackValues[0] || '4px'
   const primaryShadow = shadowFallbackValues[0] || 'none'
+
+  // ── meta.source → friendly label ──────────────────────────────────────────
+  function sourceLabel(meta?: { source?: string; confidence?: string; evidenceCount?: number }): string {
+    if (!meta?.source) return ''
+    if (meta.source === 'dom-computed') return lang === 'zh' ? 'DOM 实测' : 'DOM'
+    if (meta.source === 'screenshot-sampled') return lang === 'zh' ? '截图采样' : 'screenshot'
+    return lang === 'zh' ? 'AI 推断' : 'AI inferred'
+  }
+  function sourceDotColor(meta?: { source?: string }): string {
+    if (meta?.source === 'dom-computed') return '#34C759'
+    if (meta?.source === 'screenshot-sampled') return '#FF9F0A'
+    return '#AEAEB2'
+  }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function bestRadius(kind: string): { value: string; measured: boolean } {
@@ -208,27 +231,108 @@ export default function DesignInspector({ report, lang }: Props) {
     transition: 'all 0.12s ease',
   })
 
-  const TABS: [MainTab, string][] = [
+  // Zone-specific accent colors
+  const measuredAccent = '#34C759'  // green — DOM evidence
+  const impressionAccent = '#AEAEB2' // gray — AI inferred
+
+  const MEASURED_TABS: [MeasuredTab, string][] = [
     ['components', lang === 'zh' ? '组件' : 'Components'],
     ['shape',      lang === 'zh' ? '形态' : 'Shape'],
     ['space',      lang === 'zh' ? '布局' : 'Layout'],
-    ['interaction',lang === 'zh' ? '交互' : 'Interaction'],
-    ['style',      lang === 'zh' ? '风格' : 'Style'],
+  ]
+  const IMPRESSION_TABS: [ImpressionTab, string][] = [
+    ['interaction', lang === 'zh' ? '交互感' : 'Interaction'],
+    ['style',       lang === 'zh' ? '视觉性格' : 'Personality'],
   ]
 
   return (
     <div style={outerWrap}>
-      {/* ── Main tabs ───────────────────────────────────────────────────── */}
-      <div style={tabBar}>
-        {TABS.map(([id, label]) => (
-          <button key={id} style={tabBtn(mainTab === id)} onClick={() => setMainTab(id)}>{label}</button>
-        ))}
+
+      {/* ── Zone selector ─────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+        {/* Measured zone pill */}
+        <button
+          onClick={() => setZone('measured')}
+          style={{
+            flex: 1, padding: '14px 20px', border: 'none', cursor: 'pointer',
+            background: zone === 'measured' ? '#FFFFFF' : '#FAFAFA',
+            borderBottom: zone === 'measured' ? `2px solid ${measuredAccent}` : '2px solid transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span style={{
+            width: '7px', height: '7px', borderRadius: '50%',
+            background: zone === 'measured' ? measuredAccent : '#D1D1D6',
+            transition: 'background 0.15s ease',
+          }} />
+          <span style={{
+            fontSize: '13px', fontWeight: zone === 'measured' ? 600 : 400,
+            color: zone === 'measured' ? '#1D1D1F' : '#8E8E93',
+          }}>
+            {lang === 'zh' ? 'DOM 测量' : 'DOM Measured'}
+          </span>
+        </button>
+
+        {/* Divider */}
+        <div style={{ width: '1px', background: 'rgba(0,0,0,0.06)', margin: '8px 0' }} />
+
+        {/* AI impression zone pill */}
+        <button
+          onClick={() => setZone('impression')}
+          style={{
+            flex: 1, padding: '14px 20px', border: 'none', cursor: 'pointer',
+            background: zone === 'impression' ? '#FFFFFF' : '#FAFAFA',
+            borderBottom: zone === 'impression' ? `2px solid ${impressionAccent}` : '2px solid transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span style={{
+            width: '7px', height: '7px', borderRadius: '50%',
+            background: zone === 'impression' ? impressionAccent : '#D1D1D6',
+            transition: 'background 0.15s ease',
+          }} />
+          <span style={{
+            fontSize: '13px', fontWeight: zone === 'impression' ? 600 : 400,
+            color: zone === 'impression' ? '#1D1D1F' : '#8E8E93',
+          }}>
+            {lang === 'zh' ? 'AI 印象' : 'AI Impression'}
+          </span>
+        </button>
       </div>
+
+      {/* ── Sub-tab bar (zone-specific) ──────────────────────────────── */}
+      <div style={{ ...tabBar, borderBottom: '1px solid rgba(0,0,0,0.04)', background: zone === 'measured' ? 'rgba(52,199,89,0.03)' : 'rgba(174,174,178,0.06)' }}>
+        {zone === 'measured'
+          ? MEASURED_TABS.map(([id, label]) => (
+              <button key={id} style={tabBtn(measuredTab === id)} onClick={() => setMeasuredTab(id)}>{label}</button>
+            ))
+          : IMPRESSION_TABS.map(([id, label]) => (
+              <button key={id} style={tabBtn(impressionTab === id)} onClick={() => setImpressionTab(id)}>{label}</button>
+            ))
+        }
+      </div>
+
+      {/* ── AI disclaimer banner (impression zone only) ──────────────── */}
+      {zone === 'impression' && (
+        <div style={{
+          padding: '8px 24px', background: 'rgba(174,174,178,0.08)',
+          borderBottom: '1px solid rgba(0,0,0,0.04)',
+          display: 'flex', alignItems: 'center', gap: '8px',
+        }}>
+          <span style={{ fontSize: '11px', color: '#8E8E93' }}>
+            {lang === 'zh'
+              ? '⚠️ 以下内容由 AI 从截图推断，无法通过 DOM 测量验证，仅供设计参考'
+              : '⚠️ Inferred by AI from screenshot — not DOM-measurable, for design reference only'}
+          </span>
+        </div>
+      )}
 
       <div style={tabContent}>
 
         {/* ══════════════ 组件 COMPONENTS ══════════════ */}
-        {mainTab === 'components' && (
+        {zone === 'measured' && measuredTab === 'components' && (
           <>
             {/* Inject toggle header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -423,69 +527,123 @@ export default function DesignInspector({ report, lang }: Props) {
         )}
 
         {/* ══════════════ 形态 SHAPE ══════════════ */}
-        {mainTab === 'shape' && (
+        {zone === 'measured' && measuredTab === 'shape' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
             {/* Radius + Shadow side by side */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
               {/* Radius */}
               <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '边框圆角' : 'Border Radius'}</p>
-                {(() => {
-                  const items = radiusTokens.length > 0
-                    ? radiusTokens.map(t => ({ value: t.value, sub: `${t.sampleCount}×${t.componentKinds?.length ? ' · ' + t.componentKinds.slice(0, 2).join(', ') : ''}`, measured: true }))
-                    : radiusFallbackValues.map(v => ({ value: v, sub: lang === 'zh' ? 'AI 推断' : 'AI inferred', measured: false }))
-                  if (!items.length) return <EmptyTab lang={lang} />
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {items.map((item, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                          <div style={{ width: '44px', height: '44px', background: '#1D1D1F', borderRadius: item.value, flexShrink: 0 }} />
-                          <div>
-                            <code style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', display: 'block' }}>{item.value}</code>
-                            <span style={{ fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={dot(item.measured)} />
-                              {item.sub}
-                            </span>
-                          </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <p style={{ ...sectionLabel, margin: 0 }}>{lang === 'zh' ? '边框圆角' : 'Border Radius'}</p>
+                  {graded.radiusConfidence !== 'none' && (
+                    <span style={{ fontSize: '10px', color: graded.radiusConfidence === 'high' ? '#34C759' : '#AEAEB2', fontWeight: 500 }}>
+                      {confidenceLabel(graded.radiusConfidence, lang)}
+                    </span>
+                  )}
+                </div>
+                {graded.radius.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {graded.radius.map((t, i) => (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '10px 12px', borderRadius: '10px',
+                        background: t.grade === 'A' ? '#F5F5F7' : '#FAFAFA',
+                        border: `1px solid ${t.grade === 'A' ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.04)'}`,
+                      }}>
+                        <div style={{ width: '36px', height: '36px', background: '#1D1D1F', borderRadius: t.value, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <code style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', display: 'block' }}>{t.value}</code>
+                          <span style={{ fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                            <span style={{ ...dot(t.grade !== 'C'), background: sourceDotColor(t.meta) }} />
+                            {sourceLabel(t.meta) || (t.grade !== 'C' ? (lang === 'zh' ? '测量' : 'measured') : (lang === 'zh' ? '推断' : 'inferred'))}
+                            {' · '}{t.sampleCount}×
+                            {t.componentKinds?.length > 0 && (
+                              <span style={{ color: '#C7C7CC' }}> · {t.componentKinds.slice(0, 2).join(', ')}</span>
+                            )}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  )
-                })()}
+                        {t.grade === 'A' && (
+                          <span style={{ fontSize: '10px', color: '#34C759', fontWeight: 600, flexShrink: 0 }}>A</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : radiusFallbackValues.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {radiusFallbackValues.map((v, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', background: '#FAFAFA', border: '1px solid rgba(0,0,0,0.04)' }}>
+                        <div style={{ width: '36px', height: '36px', background: '#AEAEB2', borderRadius: v, flexShrink: 0 }} />
+                        <div>
+                          <code style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#AEAEB2', display: 'block' }}>{v}</code>
+                          <span style={{ fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                            <span style={dot(false)} />
+                            {lang === 'zh' ? 'AI 推断' : 'AI inferred'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <EmptyTab lang={lang} />}
               </div>
 
               {/* Shadow */}
               <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '阴影层级' : 'Shadow Elevation'}</p>
-                {(() => {
-                  const items = shadowTokens.length > 0
-                    ? shadowTokens.map(t => ({ value: t.value, sub: `${t.sampleCount}×`, measured: true }))
-                    : shadowFallbackValues.map(v => ({ value: v, sub: lang === 'zh' ? 'AI 推断' : 'AI inferred', measured: false }))
-                  if (!items.length) return <EmptyTab lang={lang} />
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {items.map((item, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                          <div style={{
-                            width: '56px', height: '36px', background: '#FFFFFF',
-                            borderRadius: '6px', boxShadow: item.value, flexShrink: 0,
-                            border: '0.5px solid rgba(0,0,0,0.05)',
-                          }} />
-                          <div style={{ overflow: 'hidden', flex: 1 }}>
-                            <code style={{ fontSize: '11px', color: '#3C3C43', fontFamily: 'var(--font-mono)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {item.value}
-                            </code>
-                            <span style={{ fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={dot(item.measured)} />
-                              {item.sub}
-                            </span>
-                          </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <p style={{ ...sectionLabel, margin: 0 }}>{lang === 'zh' ? '阴影层级' : 'Shadow Elevation'}</p>
+                  {graded.shadowConfidence !== 'none' && (
+                    <span style={{ fontSize: '10px', color: graded.shadowConfidence === 'high' ? '#34C759' : '#AEAEB2', fontWeight: 500 }}>
+                      {confidenceLabel(graded.shadowConfidence, lang)}
+                    </span>
+                  )}
+                </div>
+                {graded.shadow.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {graded.shadow.map((t, i) => (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '10px 12px', borderRadius: '10px',
+                        background: t.grade === 'A' ? '#F5F5F7' : '#FAFAFA',
+                        border: `1px solid ${t.grade === 'A' ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.04)'}`,
+                      }}>
+                        <div style={{
+                          width: '48px', height: '32px', background: '#FFFFFF', borderRadius: '6px',
+                          boxShadow: t.value, flexShrink: 0, border: '0.5px solid rgba(0,0,0,0.06)',
+                        }} />
+                        <div style={{ overflow: 'hidden', flex: 1 }}>
+                          <code style={{ fontSize: '11px', color: '#3C3C43', fontFamily: 'var(--font-mono)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {t.value}
+                          </code>
+                          <span style={{ fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                            <span style={{ ...dot(t.grade !== 'C'), background: sourceDotColor(t.meta) }} />
+                            {sourceLabel(t.meta) || (t.grade !== 'C' ? (lang === 'zh' ? '测量' : 'measured') : (lang === 'zh' ? '推断' : 'inferred'))}
+                            {' · '}{t.sampleCount}×
+                            {t.componentKinds?.length > 0 && (
+                              <span style={{ color: '#C7C7CC' }}> · {t.componentKinds.slice(0, 2).join(', ')}</span>
+                            )}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  )
-                })()}
+                        {t.grade === 'A' && (
+                          <span style={{ fontSize: '10px', color: '#34C759', fontWeight: 600, flexShrink: 0 }}>A</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : shadowFallbackValues.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {shadowFallbackValues.map((v, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', background: '#FAFAFA', border: '1px solid rgba(0,0,0,0.04)' }}>
+                        <div style={{ width: '48px', height: '32px', background: '#FFFFFF', borderRadius: '6px', boxShadow: v, flexShrink: 0, border: '0.5px solid rgba(0,0,0,0.06)' }} />
+                        <div style={{ overflow: 'hidden', flex: 1 }}>
+                          <code style={{ fontSize: '11px', color: '#AEAEB2', fontFamily: 'var(--font-mono)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</code>
+                          <span style={{ fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                            <span style={dot(false)} />{lang === 'zh' ? 'AI 推断' : 'AI inferred'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <EmptyTab lang={lang} />}
               </div>
             </div>
 
@@ -510,7 +668,7 @@ export default function DesignInspector({ report, lang }: Props) {
         )}
 
         {/* ══════════════ 布局 LAYOUT ══════════════ */}
-        {mainTab === 'space' && (
+        {zone === 'measured' && measuredTab === 'space' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
             {/* Page sections wireframe */}
@@ -531,30 +689,50 @@ export default function DesignInspector({ report, lang }: Props) {
               )}
             </div>
 
-            {/* Spacing scale + max-width */}
+            {/* Spacing (high-freq measurements) + max-width */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
               {/* Spacing */}
               <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '间距阶梯' : 'Spacing Scale'}</p>
-                {spacingTokens.length > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <p style={{ ...sectionLabel, margin: 0 }}>
+                    {lang === 'zh' ? '常用测量值' : 'Common Spacing Values'}
+                  </p>
+                  {graded.spacingConfidence !== 'none' && (
+                    <span style={{ fontSize: '10px', color: graded.spacingConfidence === 'high' ? '#34C759' : '#AEAEB2', fontWeight: 500 }}>
+                      {lang === 'zh' ? `前 ${graded.spacing.length} 高频` : `Top ${graded.spacing.length}`}
+                    </span>
+                  )}
+                </div>
+                {graded.spacing.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {spacingTokens.map((t, i) => {
-                      const n = parseFloat(t.value)
-                      const pct = isFinite(n) ? Math.max(4, Math.min(100, (n / 80) * 100)) : 10
-                      return (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', minWidth: '48px' }}>{t.value}</code>
-                          <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: '#EFEFEF' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', borderRadius: '999px', background: '#1D1D1F' }} />
-                          </div>
-                          <span style={{ fontSize: '11px', color: '#AEAEB2', minWidth: '32px', textAlign: 'right' }}>{t.sampleCount}×</span>
+                    {graded.spacing.map((t, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', minWidth: '44px' }}>{t.value}</code>
+                        <div style={{ flex: 1, height: '5px', borderRadius: '999px', background: '#EFEFEF', overflow: 'hidden' }}>
+                          <div style={{
+                            width: `${Math.max(4, t.freqRatio * 100)}%`,
+                            height: '100%', borderRadius: '999px',
+                            background: t.grade === 'A' ? '#1D1D1F' : '#AEAEB2',
+                            transition: 'width 0.3s ease',
+                          }} />
                         </div>
-                      )
-                    })}
+                        <span style={{ fontSize: '11px', color: '#AEAEB2', minWidth: '28px', textAlign: 'right', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <span style={dot(t.grade !== 'C')} />
+                          {t.sampleCount}×
+                        </span>
+                      </div>
+                    ))}
+                    <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#C7C7CC' }}>
+                      {lang === 'zh'
+                        ? '基于 DOM 测量频次，不代表设计规范中的 spacing scale'
+                        : 'Based on DOM measurement frequency — not a designed spacing scale'}
+                    </p>
                   </div>
                 ) : (
                   <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                    {sourceIsUrl ? (lang === 'zh' ? '暂未检测到间距数据' : 'No spacing data detected') : (lang === 'zh' ? '需要 URL 才能测量间距' : 'Requires URL analysis')}
+                    {sourceIsUrl
+                      ? (lang === 'zh' ? '暂未检测到间距数据' : 'No spacing data detected')
+                      : (lang === 'zh' ? '需要 URL 才能测量间距' : 'Requires URL analysis')}
                   </p>
                 )}
               </div>
@@ -585,52 +763,65 @@ export default function DesignInspector({ report, lang }: Props) {
               </div>
             </div>
 
-            {/* Layout patterns + grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-              <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '布局模式' : 'Layout Patterns'}</p>
-                {layoutEvidence.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {layoutEvidence.map((item, i) => (
-                      <div key={i} style={{ ...chip }}>
+            {/* Layout evidence: structural parameters only (C-grade) */}
+            <div>
+              <p style={sectionLabel}>{lang === 'zh' ? '结构参数' : 'Structural Parameters'}</p>
+              {(() => {
+                // Kind → icon mapping (text emoji icons, no external dep)
+                const kindIcon: Record<string, string> = {
+                  hero: '⬛', grid: '⊞', flex: '↔', navigation: '≡',
+                  form: '⊟', section: '▤', 'multi-column': '⊟⊟', sticky: '📌', stack: '↕',
+                }
+                const hasLayout = graded.layout.length > 0 || !!gridColumns || !!pageMaxWidth
+                if (!hasLayout && !designDetails.layoutEn) {
+                  return (
+                    <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
+                      {sourceIsUrl ? (lang === 'zh' ? '未检测到' : 'Not detected') : (lang === 'zh' ? '需要 URL' : 'Requires URL')}
+                    </p>
+                  )
+                }
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Measured structural params */}
+                    {gridColumns && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', background: '#F5F5F7', borderRadius: '8px' }}>
+                        <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '80px' }}>{lang === 'zh' ? '列数' : 'Columns'}</span>
+                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#1D1D1F', flex: 1 }}>{gridColumns}</code>
                         <span style={dot(true)} />
-                        {item.label}
-                        <span style={{ color: '#AEAEB2' }}>×{item.sampleCount}</span>
                       </div>
-                    ))}
+                    )}
+                    {/* Layout pattern evidence chips */}
+                    {graded.layout.length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                        {graded.layout.map((item, i) => (
+                          <div key={i} style={{ ...chip, fontSize: '12px' }}>
+                            <span style={{ fontSize: '10px', opacity: 0.6 }}>{kindIcon[item.kind] || '·'}</span>
+                            <span style={dot(item.grade !== 'C')} />
+                            {item.label}
+                            <span style={{ color: '#AEAEB2', fontSize: '10px' }}>{item.sampleCount}×</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : designDetails.layoutEn ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                        {(lang === 'zh' ? designDetails.layoutZh || designDetails.layoutEn : designDetails.layoutEn)
+                          .split('|').map((v, i) => (
+                            <div key={i} style={{ ...chip, fontSize: '12px' }}>
+                              <span style={dot(false)} />
+                              {v.trim()}
+                            </div>
+                          ))}
+                      </div>
+                    ) : null}
                   </div>
-                ) : designDetails.layoutEn ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {(lang === 'zh' ? designDetails.layoutZh || designDetails.layoutEn : designDetails.layoutEn)
-                      .split('|').map((v, i) => (
-                        <div key={i} style={{ ...chip }}>
-                          <span style={dot(false)} />
-                          {v.trim()}
-                        </div>
-                      ))}
-                  </div>
-                ) : (
-                  <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                    {sourceIsUrl ? (lang === 'zh' ? '未检测到' : 'Not detected') : (lang === 'zh' ? '需要 URL' : 'Requires URL')}
-                  </p>
-                )}
-              </div>
-
-              {gridColumns && (
-                <div>
-                  <p style={sectionLabel}>{lang === 'zh' ? '网格系统' : 'Grid System'}</p>
-                  <div style={{ ...chip }}>
-                    <span style={dot(true)} />
-                    <code style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{gridColumns}</code>
-                  </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
           </div>
         )}
 
         {/* ══════════════ 交互 INTERACTION ══════════════ */}
-        {mainTab === 'interaction' && (
+        {zone === 'impression' && impressionTab === 'interaction' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
             {/* AI motion character — always show if available */}
@@ -742,7 +933,7 @@ export default function DesignInspector({ report, lang }: Props) {
         )}
 
         {/* ══════════════ 风格 STYLE ══════════════ */}
-        {mainTab === 'style' && (
+        {zone === 'impression' && impressionTab === 'style' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
             {/* ── Brand Fingerprint card — styled with the site's own colors ── */}
