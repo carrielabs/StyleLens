@@ -1,7 +1,21 @@
 import type { StyleReport } from '@/lib/types'
+import { gradeTokens, exportableRadius, exportableShadow, exportableSpacing } from '@/lib/design-details/gradeTokens'
 
 export function generateCssVariables(report: StyleReport): string {
   const { colors, colorSystem, typography, designDetails, gradients } = report
+  const analysis = report.pageAnalysis
+
+  // ── Graded token sets for high-confidence CSS output ────────────────────────
+  const graded = gradeTokens(
+    analysis?.radiusTokens || [],
+    analysis?.shadowTokens || [],
+    analysis?.spacingTokens || [],
+    analysis?.layoutEvidence || [],
+    analysis?.borderTokens || [],
+  )
+  const gradedRadius  = exportableRadius(graded)
+  const gradedShadow  = exportableShadow(graded)
+  const gradedSpacing = exportableSpacing(graded)
 
   // Prefer colorSystem (Codex's precise extraction) with fallback to colors array
   const bgHex      = colorSystem?.pageBackground?.hex   || colorSystem?.heroBackground?.hex || colors.find(c => c.role === 'background')?.hex || '#ffffff'
@@ -62,11 +76,48 @@ export function generateCssVariables(report: StyleReport): string {
   --line-height-base: ${typography.lineHeight};
   --letter-spacing-base: ${typography.letterSpacing};
 
-  /* ── Geometry ────────────────────────────────── */
-  --radius-base: ${radius};
-  --shadow-base: ${shadow};
-  --border-style: ${designDetails.borderStyle};
+  /* ── Geometry (radius) ───────────────────────── */`
 
+  if (gradedRadius.length > 0) {
+    gradedRadius.forEach((t, i) => {
+      const confidence = t.meta?.source === 'dom-computed' ? '✅' : '⚠️'
+      const count = t.meta?.evidenceCount ?? t.sampleCount
+      const ctx = t.componentKinds?.join(', ') || 'page'
+      css += `\n  /* ${confidence} ${count}× in ${ctx} · grade ${t.grade} */`
+      css += `\n  --radius-${i === 0 ? 'base' : i + 1}: ${t.value};`
+    })
+  } else {
+    css += `\n  /* ⚠️ No DOM-measured radius — AI inferred */`
+    css += `\n  --radius-base: ${radius};`
+  }
+
+  css += `\n\n  /* ── Geometry (shadow) ───────────────────────── */`
+  if (gradedShadow.length > 0) {
+    gradedShadow.forEach((t, i) => {
+      const confidence = t.meta?.source === 'dom-computed' ? '✅' : '⚠️'
+      const count = t.meta?.evidenceCount ?? t.sampleCount
+      css += `\n  /* ${confidence} ${count}× · grade ${t.grade} */`
+      css += `\n  --shadow-${i === 0 ? 'base' : i + 1}: ${t.value};`
+    })
+  } else {
+    css += `\n  /* ⚠️ No DOM-measured shadow — AI inferred */`
+    css += `\n  --shadow-base: ${shadow};`
+  }
+
+  css += `\n  --border-style: ${designDetails.borderStyle};`
+
+  if (gradedSpacing.length > 0) {
+    css += `\n\n  /* ── Common spacing values (measured frequency, NOT a designed scale) ── */`
+    gradedSpacing.forEach(t => {
+      const confidence = t.meta?.source === 'dom-computed' ? '✅' : '⚠️'
+      const count = t.meta?.evidenceCount ?? t.sampleCount
+      const gridNote = t.isStandard8n ? ' · 8pt grid ✓' : t.isStandard4n ? ' · 4pt grid ✓' : ''
+      css += `\n  /* ${confidence} found ${count}×${gridNote} */`
+      css += `\n  --spacing-${t.value.replace(/[^0-9.]/g, '')}: ${t.value};`
+    })
+  }
+
+  css += `
   /* ── Motion ──────────────────────────────────── */
   --transition-base: ${transition};
 }`

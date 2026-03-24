@@ -7,6 +7,7 @@ import type {
   StyleReport,
   TypographyToken,
 } from '@/lib/types'
+import { gradeTokens, exportableRadius, exportableShadow, exportableSpacing } from '@/lib/design-details/gradeTokens'
 
 type DtcgToken = {
   $value: unknown
@@ -167,11 +168,62 @@ function buildStateSection(stateTokens?: ComponentStateTokens) {
 export function generateJsonToken(report: StyleReport): string {
   const analysis = report.pageAnalysis
   const typographyTokens = analysis?.typographyTokens || []
-  const radiusTokens = analysis?.radiusTokens || []
-  const shadowTokens = analysis?.shadowTokens || []
-  const spacingTokens = analysis?.spacingTokens || []
   const layoutEvidence = analysis?.layoutEvidence || []
   const layoutHints = analysis?.layoutHints || []
+
+  // ── Apply grading: only export A+B grade tokens ────────────────────────────
+  const graded = gradeTokens(
+    analysis?.radiusTokens || [],
+    analysis?.shadowTokens || [],
+    analysis?.spacingTokens || [],
+    layoutEvidence,
+    analysis?.borderTokens || [],
+  )
+  const gradedRadius  = exportableRadius(graded)
+  const gradedShadow  = exportableShadow(graded)
+  const gradedSpacing = exportableSpacing(graded)
+
+  // ── Radius: use graded tokens with semantic descriptions ───────────────────
+  const radiusSection = gradedRadius.length
+    ? Object.fromEntries(
+        gradedRadius.map(t => [
+          slugify(t.label),
+          dimensionToken(
+            t.value, 'borderRadius',
+            `Measured from ${t.componentKinds.join(', ') || 'page'} elements · ${t.sampleCount}× · grade ${t.grade}`
+          )
+        ])
+      )
+    : buildDimensionSection([], report.designDetails.cssRadius?.split('|').map(v => v.trim()).filter(Boolean) || [], 'borderRadius')
+
+  // ── Shadow: use graded tokens ──────────────────────────────────────────────
+  const shadowSection = gradedShadow.length
+    ? Object.fromEntries(
+        gradedShadow.map(t => [
+          slugify(t.label),
+          dimensionToken(
+            t.value, 'boxShadow',
+            `Measured from ${t.componentKinds.join(', ') || 'page'} elements · ${t.sampleCount}× · grade ${t.grade}`
+          )
+        ])
+      )
+    : buildDimensionSection([], report.designDetails.cssShadow?.split('|').map(v => v.trim()).filter(Boolean) || [], 'boxShadow')
+
+  // ── Spacing: raw frequency measurements, not a designed scale ─────────────
+  // Keys are value-based (e.g. "8px"), NOT --spacing-1/2/3 — naming requires
+  // a design decision that AI should not make unilaterally.
+  const spacingSection = gradedSpacing.length
+    ? Object.fromEntries(
+        gradedSpacing.map(t => [
+          `measured-${slugify(t.value)}`,
+          {
+            $value: t.value,
+            $type: 'dimension',
+            $description: `High-frequency spacing measurement · found ${t.sampleCount}× in DOM · grade ${t.grade} (not a designed spacing scale)`,
+          } as DtcgToken
+        ])
+      )
+    : buildDimensionSection([], report.designDetails.spacingSystem.split('|').map(v => v.trim()).filter(Boolean), 'spacing')
 
   const tokenDocument = {
     $schema: 'https://tr.designtokens.org/format/',
@@ -185,17 +237,16 @@ export function generateJsonToken(report: StyleReport): string {
       },
       color: buildColorSection(report),
       typography: buildTypographySection(typographyTokens, report.typography),
-      radius: buildDimensionSection(radiusTokens, report.designDetails.cssRadius?.split('|').map(item => item.trim()).filter(Boolean) || [], 'borderRadius'),
-      shadow: buildDimensionSection(shadowTokens, report.designDetails.cssShadow?.split('|').map(item => item.trim()).filter(Boolean) || [], 'boxShadow'),
-      spacing: buildDimensionSection(spacingTokens, report.designDetails.spacingSystem.split('|').map(item => item.trim()).filter(Boolean), 'spacing'),
+      radius: radiusSection,
+      shadow: shadowSection,
+      spacing: spacingSection,
       layout: {
         structure: {
           $value: layoutEvidence.map(item => item.label).join(' | ') || layoutHints.join(' | ') || report.designDetails.layoutStructure,
           $type: 'string',
-          $description: 'Measured layout evidence summarized as a structural token',
+          $description: 'Measured layout pattern evidence',
         },
       },
-      states: buildStateSection(analysis?.stateTokens),
     },
   }
 
