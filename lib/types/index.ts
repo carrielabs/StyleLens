@@ -9,6 +9,116 @@ export interface ColorToken {
   description: string
 }
 
+export interface SemanticColorSystem {
+  heroBackground?: ColorToken
+  heroTextPrimary?: ColorToken
+  heroPrimaryAction?: ColorToken
+  heroSecondaryAction?: ColorToken
+  heroAccentColors?: ColorToken[]
+  pageBackground?: ColorToken
+  surface?: ColorToken
+  textPrimary?: ColorToken
+  textSecondary?: ColorToken
+  border?: ColorToken
+  primaryAction?: ColorToken
+  secondaryAction?: ColorToken
+  contentColors?: ColorToken[]
+}
+
+export type LayeredColorSystem = SemanticColorSystem
+
+export type ComponentKind =
+  | 'hero'
+  | 'nav'
+  | 'button'
+  | 'card'
+  | 'section'
+  | 'input'
+  | 'link'
+  | 'text'
+  | 'surface'
+
+export interface TypographyToken {
+  id: string
+  label: string
+  fontFamily: string
+  fontSize: string
+  fontWeight: string
+  lineHeight: string
+  letterSpacing: string
+  usage: 'display' | 'heading' | 'title' | 'body' | 'label' | 'caption'
+  sampleText?: string
+  sampleCount: number
+  componentKinds: ComponentKind[]
+  evidenceScore: number
+}
+
+export interface RadiusToken {
+  value: string
+  label: string
+  sampleCount: number
+  componentKinds: ComponentKind[]
+  evidenceScore: number
+}
+
+export interface ShadowToken {
+  value: string
+  label: string
+  sampleCount: number
+  componentKinds: ComponentKind[]
+  evidenceScore: number
+}
+
+export interface SpacingToken {
+  value: string
+  label: string
+  sampleCount: number
+  componentKinds: ComponentKind[]
+  evidenceScore: number
+}
+
+export interface LayoutEvidence {
+  label: string
+  kind: 'hero' | 'grid' | 'flex' | 'navigation' | 'form' | 'section' | 'multi-column' | 'sticky' | 'stack'
+  sampleCount: number
+  componentKinds: ComponentKind[]
+  evidenceScore: number
+}
+
+export interface BorderToken {
+  width: string          // '1px', '2px'
+  style: string          // 'solid', 'dashed'
+  color?: string         // '#E5E5E5'
+  sampleCount: number
+  componentKinds: ComponentKind[]
+}
+
+export interface TransitionToken {
+  property: string       // 'all', 'background-color', 'transform'
+  duration: string       // '150ms', '250ms'
+  easing: string         // 'ease', 'ease-in-out', 'cubic-bezier(...)'
+  sampleCount: number
+  componentKinds: ComponentKind[]
+}
+
+export type InteractionState = 'default' | 'hover' | 'focus' | 'active' | 'disabled' | 'selected'
+
+export interface StateTokenValue {
+  value: string
+  property: 'color' | 'background-color' | 'border-color' | 'box-shadow' | 'opacity' | 'transform'
+  state: InteractionState
+  componentKinds: ComponentKind[]
+  evidenceScore: number
+  measured: boolean
+}
+
+export interface ComponentStateTokens {
+  button?: StateTokenValue[]
+  link?: StateTokenValue[]
+  input?: StateTokenValue[]
+  card?: StateTokenValue[]
+}
+
 export interface Gradient {
   css: string
   description: string
@@ -27,6 +137,53 @@ export interface Typography {
   googleFontsAlt?: string
 }
 
+// ── Button snapshot (DOM-measured exact CSS from real button element) ──────────
+export interface ButtonSnapshot {
+  backgroundColor?: string   // '#2383E2'
+  color?: string             // '#FFFFFF'
+  borderRadius?: string      // '8px'
+  paddingH?: string          // '20px'
+  paddingV?: string          // '10px'
+  fontSize?: string          // '15px'
+  fontWeight?: string        // '600'
+  fontFamily?: string
+  border?: string            // 'none' or '1px solid #xxx'
+  boxShadow?: string
+  letterSpacing?: string
+  width?: string             // actual rendered width e.g. '148px'
+  height?: string
+  text?: string              // button label text e.g. 'Get Notion free'
+}
+
+// ── Page section (one visible section of the page) ────────────────────────────
+export interface PageSection {
+  index: number
+  purpose: 'hero' | 'features' | 'pricing' | 'testimonials' | 'cta' | 'footer' | 'section'
+  layout: 'full-width' | '2-column' | '3-column-grid' | '4-column-grid' | 'asymmetric' | 'grid'
+  columns: number
+  hasCTA: boolean
+  hasImage: boolean
+  heading?: string
+  measured: boolean          // true = DOM-measured, false = AI-inferred
+}
+
+// ── Visual style (AI-inferred from screenshot) ────────────────────────────────
+export interface VisualStyleAnalysis {
+  iconStyle?: 'solid' | 'outline' | 'rounded-outline' | 'duotone' | 'mixed' | 'minimal' | 'none'
+  personality?: string[]     // e.g. ['minimal', 'professional', 'bold']
+  density?: 'sparse' | 'comfortable' | 'dense'
+  imageStyle?: 'photography' | 'illustration' | 'product-screenshots' | 'abstract' | 'mixed' | 'none'
+  colorTemperature?: 'warm' | 'cool' | 'neutral'
+  iconLibrary?: string       // 'heroicons', 'lucide', 'custom' etc.
+}
+
+// ── Interaction style (AI-inferred for image reports, measured for URL) ───────
+export interface InteractionStyleAI {
+  hoverEffect?: string       // 'subtle color shift', 'scale up'
+  transitionFeel?: string    // 'snappy', 'smooth', 'bouncy'
+  animationCharacter?: string // 'restrained', 'expressive'
+}
+
 export interface DesignDetails {
   overallStyle: string
   colorMode: 'dark' | 'light' | 'system'
@@ -38,8 +195,9 @@ export interface DesignDetails {
   imageHandling: string
   layoutStructure: string
   // Exact CSS values
-  cssRadius?: string 
-  cssShadow?: string 
+  cssRadius?: string
+  cssShadow?: string
+  cssStroke?: string
   // Ultra-short bilingual tags replacing paragraphs
   layoutEn?: string
   layoutZh?: string
@@ -47,6 +205,14 @@ export interface DesignDetails {
   spacingZh?: string
   motionEn?: string
   motionZh?: string
+  iconEn?: string
+  iconZh?: string
+  signatureEn?: string
+  signatureZh?: string
+  // Structured AI analysis (for image reports & URL fallback)
+  pageSections?: PageSection[]
+  visualStyle?: VisualStyleAnalysis
+  interactionStyle?: InteractionStyleAI
 }
 
 export interface PageColorCandidate {
@@ -56,6 +222,11 @@ export interface PageColorCandidate {
   count: number
   roleHints: string[]
   layerHints: Array<'global' | 'hero' | 'content'>
+  componentKinds?: ComponentKind[]
+  areaWeight?: number
+  viewportWeight?: number
+  repetitionWeight?: number
+  evidenceScore?: number
 }
 
 export interface PageTypographyCandidate {
@@ -65,15 +236,31 @@ export interface PageTypographyCandidate {
   lineHeight?: string
   letterSpacing?: string
   count: number
+  componentKinds?: ComponentKind[]
+  sampleText?: string
+  evidenceScore?: number
 }
 
 export interface PageStyleAnalysis {
   colorCandidates: PageColorCandidate[]
+  semanticColorSystem?: SemanticColorSystem
   typographyCandidates: PageTypographyCandidate[]
+  typographyTokens: TypographyToken[]
   radiusCandidates: string[]
+  radiusTokens: RadiusToken[]
   shadowCandidates: string[]
+  shadowTokens: ShadowToken[]
   spacingCandidates: string[]
+  spacingTokens: SpacingToken[]
   layoutHints: string[]
+  layoutEvidence: LayoutEvidence[]
+  stateTokens?: ComponentStateTokens
+  borderTokens?: BorderToken[]
+  transitionTokens?: TransitionToken[]
+  pageMaxWidth?: string
+  gridColumns?: string
+  buttonSnapshot?: ButtonSnapshot
+  pageSections?: PageSection[]
   cssTextExcerpt?: string
   sourceCount: {
     inlineStyleBlocks: number
@@ -87,6 +274,7 @@ export interface StyleReport {
   sourceLabel: string
   thumbnailUrl?: string
   pageAnalysis?: PageStyleAnalysis
+  colorSystem?: LayeredColorSystem
   summary: string
   summaryEn?: string
   summaryZh?: string

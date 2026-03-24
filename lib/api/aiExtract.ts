@@ -1,8 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import type { ColorToken, ExtractRequest, PageColorCandidate, PageStyleAnalysis, StyleReport, Typography, DesignDetails } from '@/lib/types'
+import type { ColorToken, ExtractRequest, LayeredColorSystem, PageColorCandidate, PageStyleAnalysis, SemanticColorSystem, StyleReport, Typography, DesignDetails } from '@/lib/types'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import fetchNode from 'node-fetch'
 import sharp from 'sharp'
+import fs from 'fs'
+import { mergeScreenshotColorSignals } from '@/lib/api/heroVisualAnalyzer'
+import { sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message
@@ -137,10 +140,41 @@ const USER_PROMPT_TEMPLATE = `Analyze this design and return a complete style re
     "motionEn": "Ultra-short motion type (e.g., 'Spring physics', 'Subtle fade')",
     "motionZh": "Ultra-short Chinese (e.g., '弹性物理过渡', '微弱淡入')",
     
-    // NEW: We need strict exact CSS for actual visual rendering in the UI. 
+    // NEW: We need strict exact CSS for actual visual rendering in the UI.
     // If the site uses multiple sizes/variants, separate them by "|"
     "cssRadius": "Exact CSS value like '8px' or multiple '4px | 12px | 50%'. STRICTLY ONLY THE VALUES.",
-    "cssShadow": "Exact CSS box-shadow like '0 4px 12px rgba(0,0,0,0.1)' or multiple separated by '|'. STRICTLY ONLY THE VALUES."
+    "cssShadow": "Exact CSS box-shadow like '0 4px 12px rgba(0,0,0,0.1)' or multiple separated by '|'. STRICTLY ONLY THE VALUES.",
+
+    // Page sections — structural breakdown of major page sections top to bottom
+    "pageSections": [
+      {
+        "index": 0,
+        "purpose": "hero|features|pricing|testimonials|cta|footer|section",
+        "layout": "full-width|2-column|3-column-grid|4-column-grid|asymmetric|grid",
+        "columns": 1,
+        "hasCTA": true,
+        "hasImage": false,
+        "heading": "Section heading text if visible (omit if not visible)",
+        "measured": false
+      }
+    ],
+
+    // Visual style DNA — icon family, personality, density
+    "visualStyle": {
+      "iconStyle": "solid|outline|rounded-outline|duotone|mixed|minimal|none",
+      "personality": ["minimal", "professional", "bold"],
+      "density": "sparse|comfortable|dense",
+      "imageStyle": "photography|illustration|product-screenshots|abstract|mixed|none",
+      "colorTemperature": "warm|cool|neutral",
+      "iconLibrary": "heroicons|lucide|feather|fontawesome|custom|unknown"
+    },
+
+    // Interaction style — how the UI feels in motion
+    "interactionStyle": {
+      "hoverEffect": "Brief description: 'subtle color shift', 'scale up 1.02', 'underline appears', etc.",
+      "transitionFeel": "snappy|smooth|bouncy",
+      "animationCharacter": "restrained|expressive|none"
+    }
   }
 }
 
@@ -161,21 +195,29 @@ function formatPageAnalysis(pageAnalysis?: PageStyleAnalysis): string {
     .map(candidate => `${candidate.hex} | ${candidate.property} | layer=${candidate.layerHints.join('/') || 'none'} | hints=${candidate.roleHints.join('/') || 'none'} | count=${candidate.count}`)
     .join('\n')
 
-  const typography = pageAnalysis.typographyCandidates
-    .map(candidate => `${candidate.fontFamily} | size=${candidate.fontSize || 'unknown'} | weight=${candidate.fontWeight || 'unknown'} | lineHeight=${candidate.lineHeight || 'unknown'} | count=${candidate.count}`)
+  const typography = pageAnalysis.typographyTokens
+    .map(token => `${token.label} | family=${token.fontFamily} | size=${token.fontSize} | weight=${token.fontWeight} | lineHeight=${token.lineHeight} | letterSpacing=${token.letterSpacing} | score=${token.evidenceScore}`)
     .join('\n')
+
+  const semanticSlots = pageAnalysis.semanticColorSystem
+    ? Object.entries(pageAnalysis.semanticColorSystem)
+        .filter(([, value]) => value && !Array.isArray(value))
+        .map(([slot, value]) => `${slot}=${(value as ColorToken).hex}`)
+        .join(' | ')
+    : 'none'
 
   return `
 
 Measured page style signals (prefer these over screenshot-only guesses):
+- Semantic color slots: ${semanticSlots}
 - Color candidates:
 ${colors || 'none'}
-- Typography candidates:
+- Typography tokens:
 ${typography || 'none'}
-- Radius candidates: ${pageAnalysis.radiusCandidates.join(' | ') || 'none'}
-- Shadow candidates: ${pageAnalysis.shadowCandidates.join(' | ') || 'none'}
-- Spacing candidates: ${pageAnalysis.spacingCandidates.join(' | ') || 'none'}
-- Layout hints: ${pageAnalysis.layoutHints.join(' | ') || 'none'}
+- Radius tokens: ${pageAnalysis.radiusTokens.map(token => token.value).join(' | ') || 'none'}
+- Shadow tokens: ${pageAnalysis.shadowTokens.map(token => token.value).join(' | ') || 'none'}
+- Spacing tokens: ${pageAnalysis.spacingTokens.map(token => token.value).join(' | ') || 'none'}
+- Layout evidence: ${pageAnalysis.layoutEvidence.map(item => item.label).join(' | ') || 'none'}
 `
 }
 
@@ -215,17 +257,6 @@ function hexToHsl(hex: string): string {
   return `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`
 }
 
-function inferRoleFromHints(hints: string[]): ColorToken['role'] {
-  if (hints.includes('hero')) return 'background'
-  if (hints.includes('background')) return 'background'
-  if (hints.includes('surface')) return 'surface'
-  if (hints.includes('text')) return 'text'
-  if (hints.includes('primary')) return 'primary'
-  if (hints.includes('accent')) return 'accent'
-  if (hints.includes('border')) return 'border'
-  return 'other'
-}
-
 function fallbackColorName(role: ColorToken['role']): string {
   const map: Record<ColorToken['role'], string> = {
     background: 'Background',
@@ -258,309 +289,359 @@ function debugSelectedPalette(colors: ColorToken[]) {
   })
 }
 
-function quantizeChannel(channel: number): number {
-  return Math.max(0, Math.min(255, Math.round(channel / 16) * 16))
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  return `#${[r, g, b].map(channel => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`
-}
-
-function isNearNeutral(r: number, g: number, b: number): boolean {
-  return Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b)) < 18
-}
-
-function isExtremeMonochrome(r: number, g: number, b: number): boolean {
-  const avg = (r + g + b) / 3
-  return avg < 18 || avg > 246
-}
-
-async function extractDominantRegionColors(
-  imageBuffer: Buffer,
-  region: { left: number; top: number; width: number; height: number }
-): Promise<string[]> {
-  if (region.width <= 4 || region.height <= 4) return []
-
-  const { data, info } = await sharp(imageBuffer)
-    .extract(region)
-    .resize(96, 96, { fit: 'fill' })
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
-
-  const buckets = new Map<string, number>()
-  for (let i = 0; i < data.length; i += info.channels) {
-    const r = data[i]
-    const g = data[i + 1]
-    const b = data[i + 2]
-    const key = rgbToHex(quantizeChannel(r), quantizeChannel(g), quantizeChannel(b))
-    buckets.set(key, (buckets.get(key) || 0) + 1)
-  }
-
-  const ranked = [...buckets.entries()]
-    .map(([hex, count]) => {
-      const r = Number.parseInt(hex.slice(1, 3), 16)
-      const g = Number.parseInt(hex.slice(3, 5), 16)
-      const b = Number.parseInt(hex.slice(5, 7), 16)
-      let priority = count
-      if (!isNearNeutral(r, g, b)) priority += 60
-      if (!isExtremeMonochrome(r, g, b)) priority += 30
-      return { hex, priority, count }
-    })
-    .sort((a, b) => b.priority - a.priority)
-    .slice(0, 4)
-
-  return ranked.map(item => item.hex)
-}
-
-async function extractHeroEdgeColors(
-  imageBuffer: Buffer,
-  width: number,
-  height: number
-): Promise<string[]> {
-  const heroHeight = Math.max(60, Math.floor(height * 0.38))
-  const sideWidth = Math.max(36, Math.floor(width * 0.16))
-  const topBandHeight = Math.max(28, Math.floor(heroHeight * 0.22))
-  const lowerBandTop = Math.max(0, Math.floor(heroHeight * 0.58))
-  const lowerBandHeight = Math.max(28, Math.floor(heroHeight * 0.18))
-
-  const regions = [
-    { left: 0, top: 0, width: sideWidth, height: heroHeight },
-    { left: width - sideWidth, top: 0, width: sideWidth, height: heroHeight },
-    { left: 0, top: 0, width, height: topBandHeight },
-    { left: 0, top: lowerBandTop, width: Math.max(36, Math.floor(width * 0.18)), height: lowerBandHeight },
-    { left: width - Math.max(36, Math.floor(width * 0.18)), top: lowerBandTop, width: Math.max(36, Math.floor(width * 0.18)), height: lowerBandHeight },
-  ]
-
-  const colors = new Map<string, number>()
-  for (const region of regions) {
-    const sampled = await extractDominantRegionColors(imageBuffer, region)
-    sampled.forEach((hex, index) => {
-      const weight = Math.max(1, 5 - index)
-      colors.set(hex, (colors.get(hex) || 0) + weight)
-    })
-  }
-
-  return [...colors.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([hex]) => hex)
-    .slice(0, 5)
-}
-
-async function mergeScreenshotColorSignals(
-  pageAnalysis: PageStyleAnalysis | undefined,
-  base64Data: string
-): Promise<PageStyleAnalysis | undefined> {
-  if (!pageAnalysis) return pageAnalysis
-
+function writeUrlDebugSnapshot(label: string, payload: unknown) {
   try {
-    const imageBuffer = Buffer.from(base64Data, 'base64')
-    const metadata = await sharp(imageBuffer).metadata()
-    const width = metadata.width || 0
-    const height = metadata.height || 0
-    if (width < 40 || height < 40) return pageAnalysis
-
-    const heroColors = await extractHeroEdgeColors(imageBuffer, width, height)
-
-    const contentColors = await extractDominantRegionColors(imageBuffer, {
-      left: 0,
-      top: Math.floor(height * 0.42),
-      width,
-      height: Math.max(40, Math.floor(height * 0.42)),
-    })
-
-    const augmentedCandidates = [...pageAnalysis.colorCandidates]
-    const existing = new Map(augmentedCandidates.map(candidate => [candidate.hex.toUpperCase(), candidate]))
-
-    for (const hex of heroColors) {
-      const current = existing.get(hex)
-    if (current) {
-      current.count += 18
-      current.roleHints = [...new Set([...current.roleHints, 'background', 'hero'])]
-      current.layerHints = [...new Set([...(current.layerHints || []), 'hero'])] as Array<'global' | 'hero' | 'content'>
-      if (current.property === 'color' || current.property === 'border-color') {
-        current.property = 'background-image'
-      }
-    } else {
-      const candidate: PageColorCandidate = {
-        hex,
-        property: 'screenshot-hero',
-        selectorHint: 'hero-region',
-          count: 18,
-          roleHints: ['background', 'hero'],
-          layerHints: ['hero'],
-        }
-        augmentedCandidates.push(candidate)
-        existing.set(hex, candidate)
-      }
-    }
-
-    for (const hex of contentColors) {
-      const current = existing.get(hex)
-      if (current) {
-        current.count += 8
-        current.roleHints = [...new Set([...current.roleHints, 'surface'])]
-        current.layerHints = [...new Set([...(current.layerHints || []), 'global'])] as Array<'global' | 'hero' | 'content'>
-      } else {
-        const candidate: PageColorCandidate = {
-          hex,
-          property: 'screenshot-content',
-          selectorHint: 'content-region',
-          count: 8,
-          roleHints: ['surface'],
-          layerHints: ['global'],
-        }
-        augmentedCandidates.push(candidate)
-        existing.set(hex, candidate)
-      }
-    }
-
-    const mergedAnalysis = {
-      ...pageAnalysis,
-      colorCandidates: augmentedCandidates,
-    }
-    debugColorCandidates('merged screenshot/page candidates', mergedAnalysis.colorCandidates)
-    return mergedAnalysis
+    fs.writeFileSync(`/tmp/stylelens-${label}.json`, JSON.stringify(payload, null, 2), 'utf8')
   } catch (error) {
-    console.warn('[aiExtract] Screenshot color analysis failed:', error)
-    return pageAnalysis
+    console.warn('[aiExtract] Failed to write debug snapshot:', error)
   }
 }
 
-function pickMeasuredColors(pageAnalysis: PageStyleAnalysis, aiColors: ColorToken[]): ColorToken[] {
-  debugColorCandidates('incoming measured candidates', pageAnalysis.colorCandidates)
+function inferRoleFromSemanticSlot(slot: keyof SemanticColorSystem): ColorToken['role'] {
+  switch (slot) {
+    case 'heroBackground':
+    case 'pageBackground':
+      return 'background'
+    case 'surface':
+      return 'surface'
+    case 'textPrimary':
+    case 'textSecondary':
+      return 'text'
+    case 'border':
+      return 'border'
+    case 'primaryAction':
+      return 'primary'
+    case 'secondaryAction':
+      return 'secondary'
+    case 'contentColors':
+      return 'accent'
+    default:
+      return 'other'
+  }
+}
+
+function hexDistance(hexA?: string, hexB?: string): number {
+  if (!hexA || !hexB) return Number.POSITIVE_INFINITY
+
+  const parse = (hex: string) => {
+    const clean = hex.replace('#', '')
+    return [
+      Number.parseInt(clean.slice(0, 2), 16),
+      Number.parseInt(clean.slice(2, 4), 16),
+      Number.parseInt(clean.slice(4, 6), 16),
+    ]
+  }
+
+  const [r1, g1, b1] = parse(hexA)
+  const [r2, g2, b2] = parse(hexB)
+  return Math.sqrt(((r1 - r2) ** 2) + ((g1 - g2) ** 2) + ((b1 - b2) ** 2))
+}
+
+function isExtremeNoiseColor(hex?: string): boolean {
+  if (!hex) return false
+  const clean = hex.replace('#', '').toUpperCase()
+  return clean === '00FF00' || clean === 'FFFF00'
+}
+
+function dedupeColorTokens(tokens: Array<ColorToken | undefined>, minDistance = 14): ColorToken[] {
+  const result: ColorToken[] = []
+  for (const token of tokens) {
+    if (!token) continue
+    if (isExtremeNoiseColor(token.hex)) continue
+    const isDuplicate = result.some(existing => hexDistance(existing.hex, token.hex) < minDistance)
+    if (isDuplicate) continue
+    result.push(token)
+  }
+  return result
+}
+
+function normalizeSemanticColorSystem(colorSystem?: SemanticColorSystem): SemanticColorSystem | undefined {
+  if (!colorSystem) return undefined
+
+  const normalized: SemanticColorSystem = { ...colorSystem }
+
+  if (normalized.heroTextPrimary && normalized.textPrimary && hexDistance(normalized.heroTextPrimary.hex, normalized.textPrimary.hex) < 18) {
+    normalized.heroTextPrimary = undefined
+  }
+
+  if (normalized.textSecondary && normalized.textPrimary && hexDistance(normalized.textSecondary.hex, normalized.textPrimary.hex) < 20) {
+    normalized.textSecondary = undefined
+  }
+
+  if (normalized.textPrimary && normalized.border && hexDistance(normalized.border.hex, normalized.textPrimary.hex) < 18) {
+    normalized.border = undefined
+  }
+
+  if (normalized.heroSecondaryAction && normalized.heroPrimaryAction && hexDistance(normalized.heroSecondaryAction.hex, normalized.heroPrimaryAction.hex) < 22) {
+    normalized.heroSecondaryAction = undefined
+  }
+
+  if (normalized.secondaryAction && normalized.primaryAction && hexDistance(normalized.secondaryAction.hex, normalized.primaryAction.hex) < 22) {
+    normalized.secondaryAction = undefined
+  }
+
+  normalized.heroAccentColors = dedupeColorTokens(
+    (normalized.heroAccentColors || []).filter(token =>
+      hexDistance(token.hex, normalized.heroBackground?.hex) >= 20 &&
+      hexDistance(token.hex, normalized.heroPrimaryAction?.hex) >= 20
+    ),
+    20
+  ).slice(0, 2)
+
+  normalized.contentColors = dedupeColorTokens(normalized.contentColors || [], 20).slice(0, 3)
+
+  if (normalized.contentColors?.length) {
+    normalized.contentColors = normalized.contentColors.filter(token =>
+      !isExtremeNoiseColor(token.hex) &&
+      hexDistance(token.hex, normalized.primaryAction?.hex) >= 16 &&
+      hexDistance(token.hex, normalized.textPrimary?.hex) >= 16
+    )
+  }
+
+  return normalized
+}
+
+function hydrateSemanticColorSystem(
+  semanticColorSystem: SemanticColorSystem | undefined,
+  aiColors: ColorToken[]
+): SemanticColorSystem | undefined {
+  if (!semanticColorSystem) return undefined
+
   const aiByHex = new Map(aiColors.map(color => [color.hex.toUpperCase(), color]))
-  const measured = pageAnalysis.colorCandidates
-    .filter(candidate => candidate.count >= 1)
-
-  const scored = measured.map(candidate => {
-    const hints = new Set(candidate.roleHints)
-    const layers = new Set(candidate.layerHints)
-    let priority = candidate.count
-
-    if (candidate.property === 'screenshot-hero') priority += 26
-    if (candidate.property === 'screenshot-content') priority -= 6
-    if (candidate.property === 'background-image') priority += 14
-    if (candidate.property === 'background-color') priority += 10
-    if (candidate.property === 'color') priority += 5
-    if (candidate.property === 'border-color') priority += 3
-
-    if (hints.has('background')) priority += 10
-    if (hints.has('surface')) priority += 8
-    if (hints.has('text')) priority += 7
-    if (hints.has('border')) priority += 5
-    if (hints.has('primary')) priority += 5
-    if (hints.has('accent')) priority += 3
-    if (hints.has('hero')) priority += 16
-    if (layers.has('global')) priority += 10
-    if (layers.has('hero')) priority += 18
-    if (layers.has('content')) priority -= 10
-
-    return { candidate, priority }
-  }).sort((a, b) => b.priority - a.priority)
-
-  const selected: typeof measured = []
-  const seenHex = new Set<string>()
-  const seenRoles = new Set<ColorToken['role']>()
-  const requiredRoles: Array<ColorToken['role']> = ['background', 'surface', 'text', 'border', 'primary', 'accent']
-
-  for (const role of requiredRoles) {
-    const hit = scored.find(({ candidate }) => {
-      const inferredRole = inferRoleFromHints(candidate.roleHints)
-      if (candidate.layerHints.includes('content') && !candidate.layerHints.includes('hero')) return false
-      if (role === 'background') {
-        return inferredRole === role && !seenHex.has(candidate.hex.toUpperCase())
-      }
-      return inferredRole === role && !seenHex.has(candidate.hex.toUpperCase())
-    })
-    if (hit) {
-      selected.push(hit.candidate)
-      seenHex.add(hit.candidate.hex.toUpperCase())
-      seenRoles.add(role)
-    }
-  }
-
-  const heroBackground = scored.find(({ candidate }) =>
-    candidate.roleHints.includes('hero') &&
-    !candidate.layerHints.includes('content') &&
-    !seenHex.has(candidate.hex.toUpperCase())
-  )
-  if (heroBackground) {
-    selected.unshift(heroBackground.candidate)
-    seenHex.add(heroBackground.candidate.hex.toUpperCase())
-  }
-
-  for (const { candidate } of scored) {
-    if (selected.length >= 8) break
-    const hex = candidate.hex.toUpperCase()
-    if (seenHex.has(hex)) continue
-    if (candidate.layerHints.includes('content') && !candidate.layerHints.includes('hero')) continue
-    selected.push(candidate)
-    seenHex.add(hex)
-  }
-
-  const colors = selected.map(candidate => {
-    const hex = candidate.hex.toUpperCase()
+  const hydrate = (color: ColorToken | undefined, role: ColorToken['role']) => {
+    if (!color) return undefined
+    const hex = color.hex.toUpperCase()
     const matched = aiByHex.get(hex)
-    let role = matched?.role || inferRoleFromHints(candidate.roleHints)
-    if (candidate.roleHints.includes('hero')) role = 'background'
-
     return {
       role,
       hex,
-      rgb: matched?.rgb || hexToRgb(hex),
-      hsl: matched?.hsl || hexToHsl(hex),
-      name: matched?.name || fallbackColorName(role),
-      description: matched?.description || `Measured from ${candidate.property}${candidate.selectorHint ? ` on ${candidate.selectorHint}` : ''}`,
-    } satisfies ColorToken
-  })
-
-  const unique = new Map<string, ColorToken>()
-  for (const color of colors) {
-    if (!unique.has(color.hex)) unique.set(color.hex, color)
+      rgb: matched?.rgb || color.rgb || hexToRgb(hex),
+      hsl: matched?.hsl || color.hsl || hexToHsl(hex),
+      name: matched?.name || color.name || fallbackColorName(role),
+      description: matched?.description || color.description || fallbackColorName(role),
+    }
   }
 
-  const finalPalette = [...unique.values()]
-    .filter(color => {
-      if ((color.role === 'accent' || color.role === 'other') && (color.hex === '#FFFF00' || color.hex === '#FFFB30')) {
-        return false
+  return {
+    heroBackground: hydrate(semanticColorSystem.heroBackground, inferRoleFromSemanticSlot('heroBackground')),
+    heroTextPrimary: hydrate(semanticColorSystem.heroTextPrimary, inferRoleFromSemanticSlot('textPrimary')),
+    heroPrimaryAction: hydrate(semanticColorSystem.heroPrimaryAction, inferRoleFromSemanticSlot('primaryAction')),
+    heroSecondaryAction: hydrate(semanticColorSystem.heroSecondaryAction, inferRoleFromSemanticSlot('secondaryAction')),
+    heroAccentColors: (semanticColorSystem.heroAccentColors || [])
+      .map(color => hydrate(color, 'accent'))
+      .filter((value): value is ColorToken => Boolean(value)),
+    pageBackground: hydrate(semanticColorSystem.pageBackground, inferRoleFromSemanticSlot('pageBackground')),
+    surface: hydrate(semanticColorSystem.surface, inferRoleFromSemanticSlot('surface')),
+    textPrimary: hydrate(semanticColorSystem.textPrimary, inferRoleFromSemanticSlot('textPrimary')),
+    textSecondary: hydrate(semanticColorSystem.textSecondary, inferRoleFromSemanticSlot('textSecondary')),
+    border: hydrate(semanticColorSystem.border, inferRoleFromSemanticSlot('border')),
+    primaryAction: hydrate(semanticColorSystem.primaryAction, inferRoleFromSemanticSlot('primaryAction')),
+    secondaryAction: hydrate(semanticColorSystem.secondaryAction, inferRoleFromSemanticSlot('secondaryAction')),
+    contentColors: (semanticColorSystem.contentColors || [])
+      .map(color => hydrate(color, 'accent'))
+      .filter((value): value is ColorToken => Boolean(value)),
+  }
+}
+
+function selectAiFallbackColor(
+  colors: ColorToken[],
+  predicate: (color: ColorToken) => boolean,
+  sort?: (a: ColorToken, b: ColorToken) => number
+) {
+  const filtered = colors.filter(predicate)
+  if (!filtered.length) return undefined
+  if (sort) filtered.sort(sort)
+  return filtered[0]
+}
+
+export function deriveScreenshotShellFallback(
+  pageAnalysis: PageStyleAnalysis,
+  aiColors: ColorToken[]
+): Partial<LayeredColorSystem> {
+  const screenshotShell = (pageAnalysis.colorCandidates || [])
+    .filter(candidate => candidate.property === 'screenshot-content')
+    .map(candidate => ({
+      ...candidate,
+      brightness: parseInt(candidate.hex.slice(1, 3), 16) + parseInt(candidate.hex.slice(3, 5), 16) + parseInt(candidate.hex.slice(5, 7), 16),
+      chroma: Math.max(
+        parseInt(candidate.hex.slice(1, 3), 16),
+        parseInt(candidate.hex.slice(3, 5), 16),
+        parseInt(candidate.hex.slice(5, 7), 16)
+      ) - Math.min(
+        parseInt(candidate.hex.slice(1, 3), 16),
+        parseInt(candidate.hex.slice(3, 5), 16),
+        parseInt(candidate.hex.slice(5, 7), 16)
+      )
+    }))
+
+  const lightNeutrals = screenshotShell
+    .filter(candidate => candidate.brightness >= 600 && candidate.chroma <= 48)
+    .sort((a, b) => b.brightness - a.brightness)
+
+  const pureWhiteThreshold = 750
+  const slightlyDarkerNeutral = lightNeutrals.find(candidate =>
+    candidate.brightness < pureWhiteThreshold &&
+    candidate.chroma <= 24
+  )
+
+  const pageBackgroundCandidate = slightlyDarkerNeutral || lightNeutrals[0]
+  const surfaceCandidate = lightNeutrals.find(candidate => candidate.hex !== pageBackgroundCandidate?.hex)
+    || (slightlyDarkerNeutral ? lightNeutrals[0] : undefined)
+
+  const pageBackground = pageBackgroundCandidate
+    ? {
+        role: 'background' as const,
+        hex: pageBackgroundCandidate.hex,
+        rgb: hexToRgb(pageBackgroundCandidate.hex),
+        hsl: hexToHsl(pageBackgroundCandidate.hex),
+        name: 'Page Background',
+        description: 'Recovered from screenshot shell region',
       }
-      return true
+    : undefined
+
+  const surface = surfaceCandidate
+    ? {
+        role: 'surface' as const,
+        hex: surfaceCandidate.hex,
+        rgb: hexToRgb(surfaceCandidate.hex),
+        hsl: hexToHsl(surfaceCandidate.hex),
+        name: 'Surface',
+        description: 'Recovered from screenshot shell region',
+      }
+    : undefined
+
+  const textPrimaryFallback = selectAiFallbackColor(
+    aiColors,
+    color => color.role === 'text',
+    (a, b) => hexDistance(a.hex, '#000000') - hexDistance(b.hex, '#000000')
+  )
+
+  const textSecondaryFallback = selectAiFallbackColor(
+    aiColors,
+    color => color.role === 'text' && color.hex.toUpperCase() !== textPrimaryFallback?.hex.toUpperCase(),
+    (a, b) => hexDistance(a.hex, '#666666') - hexDistance(b.hex, '#666666')
+  )
+
+  return {
+    pageBackground,
+    surface,
+    textPrimary: textPrimaryFallback,
+    textSecondary: textSecondaryFallback,
+  }
+}
+
+export function deriveAiShellFallback(colors: ColorToken[]): Partial<LayeredColorSystem> {
+  const withMetrics = colors
+    .filter(color => !isExtremeNoiseColor(color.hex))
+    .map(color => {
+      const clean = color.hex.replace('#', '')
+      const r = Number.parseInt(clean.slice(0, 2), 16)
+      const g = Number.parseInt(clean.slice(2, 4), 16)
+      const b = Number.parseInt(clean.slice(4, 6), 16)
+      const brightness = r + g + b
+      const chroma = Math.max(r, g, b) - Math.min(r, g, b)
+      return { color, brightness, chroma }
     })
-    .slice(0, 8)
-  debugSelectedPalette(finalPalette)
-  return finalPalette
+
+  const lightNeutrals = withMetrics
+    .filter(item => item.brightness >= 600 && item.chroma <= 48)
+    .sort((a, b) => a.brightness - b.brightness)
+
+  const pageBackgroundItem = lightNeutrals.find(item => item.brightness < 750) || lightNeutrals[0]
+  const surfaceItem = lightNeutrals.find(item => item.color.hex !== pageBackgroundItem?.color.hex) || lightNeutrals.at(-1)
+
+  const darkNeutrals = withMetrics
+    .filter(item => item.brightness <= 220 && item.chroma <= 40)
+    .sort((a, b) => a.brightness - b.brightness)
+
+  const textPrimaryItem = darkNeutrals[0]
+  const textSecondaryItem = darkNeutrals.find(item =>
+    item.color.hex !== textPrimaryItem?.color.hex &&
+    item.brightness >= (textPrimaryItem?.brightness || 0) + 18
+  )
+
+  return {
+    pageBackground: pageBackgroundItem?.color
+      ? { ...pageBackgroundItem.color, role: 'background', name: 'Page Background' }
+      : undefined,
+    surface: surfaceItem?.color
+      ? { ...surfaceItem.color, role: 'surface', name: 'Surface' }
+      : undefined,
+    textPrimary: textPrimaryItem?.color
+      ? { ...textPrimaryItem.color, role: 'text', name: 'Text Primary' }
+      : undefined,
+    textSecondary: textSecondaryItem?.color
+      ? { ...textSecondaryItem.color, role: 'text', name: 'Text Secondary' }
+      : undefined,
+  }
+}
+
+export function recoverShellSemanticSlots(pageAnalysis: PageStyleAnalysis): PageStyleAnalysis {
+  const fallback = deriveScreenshotShellFallback(pageAnalysis, [])
+  if (!fallback.pageBackground && !fallback.surface) return pageAnalysis
+
+  return {
+    ...pageAnalysis,
+    semanticColorSystem: {
+      ...(pageAnalysis.semanticColorSystem || {}),
+      pageBackground: pageAnalysis.semanticColorSystem?.pageBackground || fallback.pageBackground,
+      surface: pageAnalysis.semanticColorSystem?.surface || fallback.surface,
+    }
+  }
 }
 
 function summarizeSpacing(pageAnalysis: PageStyleAnalysis, fallback?: string) {
-  if (!pageAnalysis.spacingCandidates.length) return fallback || 'Measured spacing not available'
-  const top = pageAnalysis.spacingCandidates.slice(0, 4).join(' | ')
+  if (!pageAnalysis.spacingTokens.length) return fallback || 'Measured spacing not available'
+  const top = pageAnalysis.spacingTokens.slice(0, 4).map(token => token.value).join(' | ')
   return `Measured spacing scale: ${top}`
 }
 
 function summarizeLayout(pageAnalysis: PageStyleAnalysis, fallback?: string) {
-  if (!pageAnalysis.layoutHints.length) return fallback || 'Measured layout not available'
-  return pageAnalysis.layoutHints.slice(0, 3).join(' | ')
+  if (!pageAnalysis.layoutEvidence.length) return fallback || 'Measured layout not available'
+  return pageAnalysis.layoutEvidence.slice(0, 3).map(item => item.label).join(' | ')
+}
+
+function hasNumericTypographyValue(value?: string) {
+  if (!value) return false
+  const normalized = value.trim().toLowerCase()
+  if (!normalized || normalized.includes('nan') || normalized === 'unknown') return false
+  return /\d/.test(normalized)
 }
 
 function pickMeasuredTypography(pageAnalysis: PageStyleAnalysis, aiTypography: Typography): Typography {
-  if (!pageAnalysis.typographyCandidates.length) return aiTypography
+  const tokens = pageAnalysis.typographyTokens.filter(token => hasNumericTypographyValue(token.fontSize))
+  const candidates = pageAnalysis.typographyCandidates.filter(candidate => hasNumericTypographyValue(candidate.fontSize))
+  const sourceTypography = tokens.length
+    ? tokens.map(token => ({
+        fontFamily: token.fontFamily,
+        fontSize: token.fontSize,
+        fontWeight: token.fontWeight,
+        lineHeight: token.lineHeight,
+        letterSpacing: token.letterSpacing,
+      }))
+    : candidates
 
-  const candidates = pageAnalysis.typographyCandidates
-  const distinctFamilies = [...new Set(candidates.map(candidate => candidate.fontFamily).filter(Boolean))]
+  if (!sourceTypography.length) return aiTypography
+
+  const distinctFamilies = [...new Set(sourceTypography.map(token => token.fontFamily).filter(Boolean))]
   const primaryFamily = distinctFamilies.slice(0, 3).join(', ') || aiTypography.fontFamily
 
-  const numericWeights = candidates
-    .map(candidate => Number(candidate.fontWeight))
+  const numericWeights = sourceTypography
+    .map(token => Number(token.fontWeight))
     .filter(weight => Number.isFinite(weight))
 
-  const numericSizes = candidates
-    .map(candidate => Number.parseFloat(candidate.fontSize || ''))
+  const numericSizes = sourceTypography
+    .map(token => Number.parseFloat(token.fontSize || ''))
     .filter(size => Number.isFinite(size))
     .sort((a, b) => b - a)
 
-  const lineHeight = candidates.find(candidate => candidate.lineHeight)?.lineHeight || aiTypography.lineHeight
-  const letterSpacing = candidates.find(candidate => candidate.letterSpacing)?.letterSpacing || aiTypography.letterSpacing
+  const lineHeight =
+    sourceTypography.find(token => hasNumericTypographyValue(token.lineHeight))?.lineHeight ||
+    aiTypography.lineHeight
+  const letterSpacing =
+    sourceTypography.find(token => token.letterSpacing && token.letterSpacing !== 'normal')?.letterSpacing ||
+    sourceTypography.find(token => token.letterSpacing)?.letterSpacing ||
+    aiTypography.letterSpacing
 
   return {
     ...aiTypography,
@@ -577,37 +658,81 @@ function pickMeasuredTypography(pageAnalysis: PageStyleAnalysis, aiTypography: T
 }
 
 function pickMeasuredDesignDetails(pageAnalysis: PageStyleAnalysis, aiDetails: DesignDetails): DesignDetails {
+  // For URL reports: DOM-measured page sections override AI-inferred ones
+  const pageSections = (pageAnalysis.pageSections && pageAnalysis.pageSections.length > 0)
+    ? pageAnalysis.pageSections
+    : aiDetails.pageSections
+
   return {
     ...aiDetails,
-    borderRadius: pageAnalysis.radiusCandidates.length
-      ? `Measured radius variants: ${pageAnalysis.radiusCandidates.slice(0, 4).join(' | ')}`
+    borderRadius: pageAnalysis.radiusTokens.length
+      ? `Measured radius variants: ${pageAnalysis.radiusTokens.slice(0, 4).map(token => token.value).join(' | ')}`
       : aiDetails.borderRadius,
-    shadowStyle: pageAnalysis.shadowCandidates.length
-      ? `Measured shadow variants: ${pageAnalysis.shadowCandidates.slice(0, 3).join(' | ')}`
+    shadowStyle: pageAnalysis.shadowTokens.length
+      ? `Measured shadow variants: ${pageAnalysis.shadowTokens.slice(0, 3).map(token => token.value).join(' | ')}`
       : aiDetails.shadowStyle,
     spacingSystem: summarizeSpacing(pageAnalysis, aiDetails.spacingSystem),
     layoutStructure: summarizeLayout(pageAnalysis, aiDetails.layoutStructure),
-    cssRadius: pageAnalysis.radiusCandidates.length
-      ? pageAnalysis.radiusCandidates.slice(0, 5).join(' | ')
+    cssRadius: pageAnalysis.radiusTokens.length
+      ? pageAnalysis.radiusTokens.slice(0, 5).map(token => token.value).join(' | ')
       : aiDetails.cssRadius,
-    cssShadow: pageAnalysis.shadowCandidates.length
-      ? pageAnalysis.shadowCandidates.slice(0, 4).join(' | ')
+    cssShadow: pageAnalysis.shadowTokens.length
+      ? pageAnalysis.shadowTokens.slice(0, 4).map(token => token.value).join(' | ')
       : aiDetails.cssShadow,
-    layoutEn: pageAnalysis.layoutHints.length ? pageAnalysis.layoutHints.slice(0, 3).join(' | ') : aiDetails.layoutEn,
-    spacingEn: pageAnalysis.spacingCandidates.length ? pageAnalysis.spacingCandidates.slice(0, 4).join(' | ') : aiDetails.spacingEn,
+    layoutEn: pageAnalysis.layoutEvidence.length ? pageAnalysis.layoutEvidence.slice(0, 3).map(item => item.label).join(' | ') : aiDetails.layoutEn,
+    spacingEn: pageAnalysis.spacingTokens.length ? pageAnalysis.spacingTokens.slice(0, 4).map(token => token.value).join(' | ') : aiDetails.spacingEn,
+    pageSections,
+    // Always preserve AI-generated visual/interaction style (no DOM equivalent)
+    visualStyle: aiDetails.visualStyle,
+    interactionStyle: aiDetails.interactionStyle,
   }
 }
 
-function applyMeasuredUrlSignals(
+export function applyMeasuredUrlSignals(
   parsed: Omit<StyleReport, 'id' | 'sourceType' | 'sourceLabel' | 'thumbnailUrl' | 'createdAt'>,
   pageAnalysis?: PageStyleAnalysis
 ) {
   if (!pageAnalysis) return parsed
 
+  const hydratedColorSystem = normalizeSemanticColorSystem(
+    hydrateSemanticColorSystem(pageAnalysis.semanticColorSystem, parsed.colors || [])
+  )
+  const screenshotShellFallback = deriveScreenshotShellFallback(pageAnalysis, parsed.colors || [])
+  const aiShellFallback = deriveAiShellFallback(parsed.colors || [])
+  const colorSystem = normalizeSemanticColorSystem({
+    ...hydratedColorSystem,
+    pageBackground: hydratedColorSystem?.pageBackground || screenshotShellFallback.pageBackground || aiShellFallback.pageBackground,
+    surface: hydratedColorSystem?.surface || screenshotShellFallback.surface || aiShellFallback.surface,
+    textPrimary: hydratedColorSystem?.textPrimary || screenshotShellFallback.textPrimary || aiShellFallback.textPrimary,
+    textSecondary: hydratedColorSystem?.textSecondary || screenshotShellFallback.textSecondary || aiShellFallback.textSecondary,
+  })
+  const compatibilityColors = colorSystem
+    ? dedupeColorTokens([
+        colorSystem.heroBackground,
+        colorSystem.heroTextPrimary,
+        colorSystem.heroPrimaryAction,
+        colorSystem.heroSecondaryAction,
+        colorSystem.pageBackground,
+        colorSystem.surface,
+        colorSystem.textPrimary,
+        colorSystem.textSecondary,
+        colorSystem.border,
+        colorSystem.primaryAction,
+        colorSystem.secondaryAction,
+      ], 18)
+    : parsed.colors
+
+  debugSelectedPalette(compatibilityColors)
+
+  const hasMeasuredTypography =
+    pageAnalysis.typographyTokens.some(token => hasNumericTypographyValue(token.fontSize)) ||
+    pageAnalysis.typographyCandidates.some(candidate => hasNumericTypographyValue(candidate.fontSize))
+
   return {
     ...parsed,
-    colors: pageAnalysis.colorCandidates.length ? pickMeasuredColors(pageAnalysis, parsed.colors || []) : parsed.colors,
-    typography: pageAnalysis.typographyCandidates.length ? pickMeasuredTypography(pageAnalysis, parsed.typography) : parsed.typography,
+    colors: colorSystem ? compatibilityColors : parsed.colors,
+    colorSystem,
+    typography: hasMeasuredTypography ? pickMeasuredTypography(pageAnalysis, parsed.typography) : parsed.typography,
     designDetails: pickMeasuredDesignDetails(pageAnalysis, parsed.designDetails),
   }
 }
@@ -650,15 +775,28 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
 
   console.log(`[aiExtract] Image prepared. Mime: ${mimeType}, B64 Length: ${base64Data.length}`)
 
-  let requestWithAnalysis = req
-  if (req.sourceType === 'url' && req.pageAnalysis && base64Data) {
-    const mergedAnalysis = await mergeScreenshotColorSignals(req.pageAnalysis, base64Data)
+  let requestWithAnalysis = {
+    ...req,
+    pageAnalysis: sanitizePageAnalysis(req.pageAnalysis),
+  }
+  if (requestWithAnalysis.sourceType === 'url') {
+    writeUrlDebugSnapshot('url-before-merge', {
+      sourceLabel: requestWithAnalysis.sourceLabel,
+      pageAnalysis: requestWithAnalysis.pageAnalysis,
+    })
+  }
+  if (requestWithAnalysis.sourceType === 'url' && requestWithAnalysis.pageAnalysis && base64Data) {
+    const mergedAnalysis = await mergeScreenshotColorSignals(requestWithAnalysis.pageAnalysis, base64Data)
     if (mergedAnalysis) {
       requestWithAnalysis = {
-        ...req,
-        pageAnalysis: mergedAnalysis,
+        ...requestWithAnalysis,
+        pageAnalysis: recoverShellSemanticSlots(mergedAnalysis),
       }
     }
+    writeUrlDebugSnapshot('url-after-merge', {
+      sourceLabel: requestWithAnalysis.sourceLabel,
+      pageAnalysis: requestWithAnalysis.pageAnalysis,
+    })
   }
 
   let promptText = USER_PROMPT_TEMPLATE
@@ -734,6 +872,12 @@ function parseAndFormatResponse(
 
   if (req.sourceType === 'url') {
     parsed = applyMeasuredUrlSignals(parsed, req.pageAnalysis)
+    writeUrlDebugSnapshot('url-final-report', {
+      sourceLabel: req.sourceLabel,
+      inputPageAnalysis: req.pageAnalysis,
+      finalColorSystem: parsed.colorSystem,
+      finalColors: parsed.colors,
+    })
   }
 
   return {
@@ -748,6 +892,7 @@ function parseAndFormatResponse(
     tagsEn: parsed.tagsEn || parsed.tags,
     tagsZh: parsed.tagsZh || parsed.tags,
     colors: parsed.colors,
+    colorSystem: parsed.colorSystem,
     gradients: parsed.gradients || [],
     typography: parsed.typography,
     designDetails: parsed.designDetails,

@@ -1,7 +1,8 @@
 import fs from 'fs'
 import path from 'path'
+import { chromium } from 'playwright'
 import type { ScreenshotResponse } from '@/lib/types'
-import { analyzePageStyles } from '@/lib/api/pageAnalyzer'
+import { analyzePageStyles, analyzePageStylesFromPage, sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
 
 // Persistent file-based cache to survive server restarts (HMR/Next.js Dev)
 const CACHE_FILE = path.resolve(process.cwd(), '.screenshot_cache.json')
@@ -29,12 +30,76 @@ function savePersistentCache(cache: Map<string, string>) {
 
 const screenshotCache = getPersistentCache()
 
+function isLikelyAuthNavigation(url: string): boolean {
+  const lower = url.toLowerCase()
+  return /\/(login|signin|sign-in|auth|session)(?:[/?#]|$)/.test(lower)
+}
+
 export async function captureScreenshot(targetUrl: string): Promise<ScreenshotResponse> {
   const normalizedUrl = targetUrl.toLowerCase().trim()
   let pageAnalysis = null
 
   try {
+    const browser = await chromium.launch({ headless: true })
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 960 } })
+
+      await page.route('**/*', route => {
+        const request = route.request()
+        if (request.isNavigationRequest() && isLikelyAuthNavigation(request.url())) {
+          console.warn('[Screenshotter] Blocking likely auth navigation during same-page capture:', request.url())
+          return route.abort('aborted')
+        }
+        return route.continue()
+      })
+
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 })
+      await page.waitForSelector('h1, main, [role="main"], [data-hero]', { state: 'visible', timeout: 5_000 }).catch(() => undefined)
+      await page.waitForTimeout(350)
+
+      const [buffer, analysis] = await Promise.all([
+        page.screenshot({
+          type: 'jpeg',
+          quality: 80,
+          fullPage: true,
+        }),
+        analyzePageStylesFromPage(page, targetUrl, {
+          pageAlreadySettled: true,
+          snapshotCount: 1,
+        }),
+      ])
+
+      try {
+        pageAnalysis = analysis
+      } catch (analysisError) {
+        console.warn(
+          '[Screenshotter] Same-page DOM analysis failed; continuing with screenshot-only local capture:',
+          analysisError
+        )
+        pageAnalysis = null
+      }
+      const dataUrl = `data:image/jpeg;base64,${buffer.toString('base64')}`
+
+      screenshotCache.set(normalizedUrl, dataUrl)
+      savePersistentCache(screenshotCache)
+      console.log(`[Screenshotter] Local Playwright capture successful and cached. Size: ${buffer.byteLength}`)
+
+      return {
+        success: true,
+        screenshotUrl: dataUrl,
+        extractedCss: pageAnalysis?.cssTextExcerpt || '',
+        pageAnalysis: pageAnalysis || undefined,
+      }
+    } finally {
+      await browser.close().catch(() => undefined)
+    }
+  } catch (error) {
+    console.warn('[Screenshotter] Local Playwright capture failed, falling back to split mode:', error)
+  }
+
+  try {
     pageAnalysis = await analyzePageStyles(targetUrl)
+    pageAnalysis = sanitizePageAnalysis(pageAnalysis)
   } catch (error) {
     console.warn('[Screenshotter] Page analysis failed, falling back to screenshot-only mode:', error)
   }

@@ -91,7 +91,7 @@ export default function AtomicSandbox({ report, lang }: Props) {
               fontSize: '13px',
               fontWeight: isInjected ? 600 : 500,
               borderRadius: isInjected ? radius : '8px',
-              background: isInjected ? primaryHex : '#007AFF',
+              background: isInjected ? primaryHex : '#1D1D1F',
               color: '#FFFFFF',
               border: 'none',
               letterSpacing: isInjected ? typography.letterSpacing : 'normal',

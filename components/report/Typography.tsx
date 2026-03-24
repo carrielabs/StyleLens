@@ -44,48 +44,52 @@ export default function Typography({
     displayFonts.push(displayFonts[0])
   }
 
-  const styles = [
-    {
-      label: lang === 'zh' ? '主标题' : 'Heading',
-      size: '48px',
-      weight: normalizeWeight(data.headingWeight, 700),
-      lh: 1.1,
-      text: lang === 'zh' ? '探索设计的内在秩序。' : 'Discover the internal order of design.',
-      isBody: false
-    },
-    {
-      label: lang === 'zh' ? '副标题' : 'Subheader',
-      size: '24px',
-      weight: Math.max(400, normalizeWeight(data.headingWeight, 700) - 200),
-      lh: 1.3,
-      text: lang === 'zh' ? '去掉非必要元素，纯粹即是力量。' : 'Less, but better. Purity is power.',
-      isBody: false
-    },
-    {
-      label: lang === 'zh' ? '正文' : 'Body',
-      size: '16px',
-      weight: normalizeWeight(data.bodyWeight, 400),
-      lh: normalizeLineHeight(data.lineHeight, 1.6),
-      text: lang === 'zh' 
-        ? '优秀的设计是尽可能少的设计。它专注于最本质的方面，使得产品不被非必要元素所拖累。抛弃繁芜，回归本真。当界面变得隐形时，内容才能真正与用户产生共鸣与连接。' 
-        : 'Good design is as little design as possible. It concentrates on the essential aspects, not burdening the product with non-essentials. When the interface becomes invisible, content truly connects.',
-      isBody: true
-    },
-    {
-      label: lang === 'zh' ? '辅助说明' : 'Caption',
-      size: '13px',
-      weight: 400,
-      lh: 1.4,
-      text: lang === 'zh' ? '细节决定成败。' : 'Details make the design.',
-      isBody: false
-    }
-  ]
+  const hasRealSize = (value?: string) => {
+    if (!value) return false
+    const normalized = value.trim().toLowerCase()
+    if (normalized.includes('nan')) return false
+    return /\d/.test(normalized)
+  }
 
-  let parsedSpacing = String(data.letterSpacing || 'normal')
-  if (parsedSpacing.length > 15) parsedSpacing = 'normal' // hard truncate AI paragraph bleed
+  const hasRealMetric = (value?: string) => {
+    if (!value) return false
+    const normalized = value.trim().toLowerCase()
+    if (!normalized || normalized.includes('nan') || normalized === 'unknown') return false
+    return /\d/.test(normalized) || normalized === 'normal'
+  }
 
-  const measuredTypography = sourceType === 'url' ? (analysis?.typographyCandidates || []).slice(0, 8) : []
-  const hasMeasuredTypography = measuredTypography.length > 0
+  const recoveredTypography = sourceType === 'url'
+    ? (analysis?.typographyCandidates || [])
+        .filter(candidate => hasRealSize(candidate.fontSize))
+        .slice(0, 8)
+        .map((candidate, index) => ({
+          id: `candidate-${index + 1}`,
+          fontFamily: candidate.fontFamily,
+          fontSize: candidate.fontSize || '—',
+          fontWeight: candidate.fontWeight || '—',
+          letterSpacing: hasRealMetric(candidate.letterSpacing) ? candidate.letterSpacing! : 'normal',
+          lineHeight: hasRealMetric(candidate.lineHeight) ? candidate.lineHeight! : '—',
+          sampleCount: candidate.count,
+        }))
+    : []
+
+  const measuredTypography = sourceType === 'url'
+    ? (analysis?.typographyTokens || [])
+        .filter(token => hasRealSize(token.fontSize))
+        .slice(0, 8)
+    : []
+  const displayTypography = measuredTypography.length
+    ? measuredTypography.map(token => ({
+        id: token.id,
+        fontFamily: token.fontFamily,
+        fontSize: token.fontSize || '—',
+        fontWeight: token.fontWeight || '—',
+        letterSpacing: token.letterSpacing || 'normal',
+        lineHeight: token.lineHeight || '—',
+        sampleCount: token.sampleCount,
+      }))
+    : recoveredTypography
+  const hasMeasuredTypography = displayTypography.length > 0
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'auto', paddingBottom: '16px' }}>
@@ -127,108 +131,79 @@ export default function Typography({
               <div style={{ flex: '0 0 16%', textAlign: 'right' }}>{lang === 'zh' ? '频次' : 'Count'}</div>
             </div>
 
-            {measuredTypography.map((candidate, idx) => (
-              <div key={`${candidate.fontFamily}-${candidate.fontSize}-${idx}`} style={{
+            {displayTypography.map((token, idx) => (
+              <div key={`${token.id}-${idx}`} style={{
                 display: 'flex',
                 alignItems: 'baseline',
                 padding: '20px 0',
-                borderBottom: idx < measuredTypography.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none'
+                borderBottom: idx < displayTypography.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none'
               }}>
                 <div style={{
                   flex: '0 0 28%',
-                  fontSize: `clamp(14px, ${candidate.fontSize || '18px'}, 32px)`,
-                  fontWeight: normalizeWeight(candidate.fontWeight, 500),
+                  fontSize: `clamp(14px, ${token.fontSize || '18px'}, 32px)`,
+                  fontWeight: normalizeWeight(token.fontWeight, 500),
                   color: 'var(--text-primary)',
-                  fontFamily: candidate.fontFamily || `"${displayFonts[0]}", var(--font-sans), sans-serif`,
+                  fontFamily: token.fontFamily || `"${displayFonts[0]}", var(--font-sans), sans-serif`,
                   lineHeight: 1.2,
                   paddingRight: '16px',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
-                }} title={candidate.fontFamily}>
-                  {candidate.fontFamily}
+                }} title={token.fontFamily}>
+                  {token.fontFamily}
                 </div>
                 <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {candidate.fontSize || '—'}
+                  {token.fontSize || '—'}
                 </div>
                 <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {candidate.fontWeight || '—'}
+                  {token.fontWeight || '—'}
                 </div>
                 <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {candidate.letterSpacing || 'normal'}
+                  {token.letterSpacing || 'normal'}
                 </div>
                 <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {candidate.lineHeight || '—'}
+                  {token.lineHeight || '—'}
                 </div>
                 <div style={{ flex: '0 0 16%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {candidate.count}
+                  {token.sampleCount}
                 </div>
               </div>
             ))}
           </>
         ) : (
-          <>
-            <div style={{ 
-              display: 'flex', alignItems: 'baseline', paddingBottom: '16px', 
-              borderBottom: '1px solid var(--border-subtle)', 
-              fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600
-            }}>
-              <div style={{ flex: '0 0 32%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
-              <div style={{ flex: '0 0 16%' }}>{lang === 'zh' ? '场景' : 'Scenario'}</div>
-              <div style={{ flex: '0 0 13%', textAlign: 'right' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
-              <div style={{ flex: '0 0 13%', textAlign: 'right' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
-              <div style={{ flex: '0 0 13%', textAlign: 'right' }}>{lang === 'zh' ? '字间距' : 'Spacing'}</div>
-              <div style={{ flex: '0 0 13%', textAlign: 'right' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
+          <div style={{
+            borderTop: '1px solid var(--border-subtle)',
+            paddingTop: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+          }}>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {lang === 'zh' ? '暂未提取到可靠的字体尺寸数据' : 'Reliable typography measurements are not available yet'}
             </div>
-
-            {displayFonts.map((font, idx) => {
-              const style = styles[idx] || { ...styles[2], size: '14px', label: lang === 'zh' ? '其他' : 'OTHER' }
-              
-              return (
-                <div key={idx} style={{ 
-                  display: 'flex', 
-                  alignItems: 'baseline', 
-                  padding: '24px 0', 
-                  borderBottom: idx < displayFonts.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none' 
-                }}>
-                  <div style={{ 
-                    flex: '0 0 32%', 
-                    fontSize: `clamp(13px, ${style.size}, 36px)`, 
-                    fontWeight: style.weight, 
-                    color: 'var(--text-primary)', 
-                    fontFamily: `"${font}", var(--font-sans), sans-serif`, 
-                    lineHeight: 1.2, 
-                    paddingRight: '16px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }} title={font}>
-                    {font}
-                  </div>
-
-                  <div style={{ flex: '0 0 16%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
-                    {style.label}
-                  </div>
-
-                  <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                    {style.size}
-                  </div>
-
-                  <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                    {String(style.weight)}
-                  </div>
-
-                  <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                    {parsedSpacing}
-                  </div>
-
-                  <div style={{ flex: '0 0 13%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                    {String(style.lh)}
-                  </div>
-                </div>
-              )
-            })}
-          </>
+            <div style={{ fontSize: '13px', lineHeight: 1.7, color: 'var(--text-secondary)', maxWidth: '560px' }}>
+              {lang === 'zh'
+                ? '当前只展示从真实页面样式中恢复出的字号、字重、字距和行高。像 NaNpx、推断出来的标题层级或示意值已被隐藏。'
+                : 'Only typography values recovered from real page styles are shown here. Synthetic heading scales, NaN sizes, and illustrative values are hidden.'}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+              {displayFonts.slice(0, 3).map((font, idx) => (
+                <span
+                  key={`${font}-${idx}`}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '999px',
+                    background: '#F5F5F7',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)'
+                  }}
+                >
+                  {font}
+                </span>
+              ))}
+            </div>
+          </div>
         )}
 
       </div>

@@ -31,6 +31,7 @@ interface ExtractApiPayload {
   sourceLabel?: string
   extractedCss?: string
   pageAnalysis?: PageStyleAnalysis
+  sourceType: 'image' | 'url'
 }
 
 interface UseExtractionResult {
@@ -184,12 +185,25 @@ export function useExtraction({
       const ssData = await ssRes.json()
       if (!ssData.success) throw new Error(ssData.error || '截图失败')
 
+      const screenshotAnalysis = ssData.pageAnalysis as PageStyleAnalysis | undefined
+      console.log('[font-debug] useExtraction:/api/screenshot result', {
+        typographyCandidates: screenshotAnalysis?.typographyCandidates?.length || 0,
+        typographyTokens: screenshotAnalysis?.typographyTokens?.length || 0,
+        candidateSizes: (screenshotAnalysis?.typographyCandidates || [])
+          .slice(0, 8)
+          .map(candidate => candidate.fontSize),
+        tokenSizes: (screenshotAnalysis?.typographyTokens || [])
+          .slice(0, 8)
+          .map(token => token.fontSize),
+      })
+
       let label = url.trim()
       try {
         label = new URL(url.trim()).hostname.replace(/^www\./, '')
       } catch {}
 
       const result = await callExtractAPI({
+        sourceType: 'url',
         screenshotUrl: ssData.screenshotUrl,
         sourceLabel: label,
         extractedCss: ssData.extractedCss,
@@ -197,8 +211,8 @@ export function useExtraction({
       }, abort.signal)
       result.thumbnailUrl = ssData.screenshotUrl
 
-      await saveExtraction(result, ssData.screenshotUrl)
       setReport(result)
+      await saveExtraction(result, ssData.screenshotUrl)
       setUrl('')
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return
@@ -250,11 +264,11 @@ export function useExtraction({
 
     try {
       const base64 = await toBase64(file)
-      const result = await callExtractAPI({ imageBase64: base64, sourceLabel: file.name }, abort.signal)
+      const result = await callExtractAPI({ sourceType: 'image', imageBase64: base64, sourceLabel: file.name }, abort.signal)
       result.thumbnailUrl = base64
 
-      await saveExtraction(result, base64)
       setReport(result)
+      await saveExtraction(result, base64)
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return
       setError(err instanceof Error ? err.message : '上传分析失败')

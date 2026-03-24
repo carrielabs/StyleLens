@@ -87,12 +87,13 @@ export default function HomeWorkspace({
         />
       </div>
 
-      {activeItemId && report && (
+      {report && !isExtracting && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
-          <div className="no-scrollbar" style={{
-            width: '40%', height: '100%', backgroundColor: '#FFFFFF',
-            position: 'relative'
-          }}>
+          {!(report.id === 'preset_linear_v2' || report.id === 'preset_linear_v3') && (
+            <div className="no-scrollbar" style={{
+              width: '40%', height: '100%', backgroundColor: '#FFFFFF',
+              position: 'relative'
+            }}>
             <div className="scroll-mask-top" />
             <div style={{ height: '100%', overflowY: 'auto', padding: '64px 40px 40px', overscrollBehavior: 'contain' }} className="no-scrollbar">
               <div
@@ -112,6 +113,7 @@ export default function HomeWorkspace({
               </div>
             </div>
           </div>
+          )}
 
           <div className="no-scrollbar" style={{ flex: 1, height: '100%', overflowY: 'auto', backgroundColor: '#FFFFFF', position: 'relative' }}>
             <div className="scroll-mask-top" />
@@ -133,20 +135,22 @@ export default function HomeWorkspace({
                 ))}
               </div>
             </div>
-            <div style={{ padding: '0 48px 80px' }}>
-              <h1 style={{
-                fontSize: '32px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 40px 0',
-                lineHeight: 1.1, letterSpacing: '-0.03em'
-              }}>
-                {extractions.find(e => e.id === activeItemId)?.source_label || report.sourceLabel}
-              </h1>
+            <div style={{ padding: (report.id === 'preset_linear_v2' || report.id === 'preset_linear_v3') ? '0' : '0 48px 80px' }}>
+              {!(report.id === 'preset_linear_v2' || report.id === 'preset_linear_v3') && (
+                <h1 style={{
+                  fontSize: '32px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 40px 0',
+                  lineHeight: 1.1, letterSpacing: '-0.03em'
+                }}>
+                  {extractions.find(e => e.id === activeItemId)?.source_label || report.sourceLabel}
+                </h1>
+              )}
               <StyleReportView report={report} lang={reportLang} fullWidth={true} />
             </div>
           </div>
         </div>
       )}
 
-      {(!activeItemId || !report || isExtracting) && (
+      {(!report || isExtracting) && (
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
           padding: '48px', paddingTop: '18vh', gap: '0', position: 'relative', animation: 'fadeIn 0.4s ease-out'

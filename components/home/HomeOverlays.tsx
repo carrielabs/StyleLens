@@ -21,6 +21,7 @@ interface HomeOverlaysProps {
   modalSearchQuery: string
   setModalSearchQuery: Dispatch<SetStateAction<string>>
   modalFiltered: HomeHistoryRecord[]
+  openHistoryItem: (item: HomeHistoryRecord) => Promise<void>
   setError: Dispatch<SetStateAction<string | null>>
   searchInputRef: RefObject<HTMLInputElement | null>
   isLightboxOpen: boolean
@@ -47,6 +48,7 @@ export default function HomeOverlays({
   modalSearchQuery,
   setModalSearchQuery,
   modalFiltered,
+  openHistoryItem,
   setError,
   searchInputRef,
   isLightboxOpen,
@@ -70,7 +72,7 @@ export default function HomeOverlays({
           animation: 'fadeIn 0.4s ease'
         }} onClick={() => {
           const latest = extractions[0]
-          if (latest) { setActiveItemId(latest.id); setReport(latest.style_data) }
+          if (latest) { void openHistoryItem(latest) }
           else setReport(null)
         }}>
           <div style={{
@@ -89,7 +91,7 @@ export default function HomeOverlays({
               <button
                 onClick={() => {
                   const latest = extractions[0]
-                  if (latest) { setActiveItemId(latest.id); setReport(latest.style_data) }
+                  if (latest) { void openHistoryItem(latest) }
                   else setReport(null)
                 }}
                 style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5F5F5', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1A1A1A', cursor: 'pointer', transition: 'all 0.2s' }}
@@ -164,11 +166,10 @@ export default function HomeOverlays({
                   <div
                     key={item.id}
                     onClick={() => {
-                      setActiveItemId(item.id)
-                      setReport(item.style_data)
                       setError(null)
                       setIsSearchOpen(false)
                       setModalSearchQuery('')
+                      void openHistoryItem(item)
                     }}
                     style={{
                       padding: '8px 20px', display: 'flex', alignItems: 'center', gap: '14px',

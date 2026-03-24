@@ -1,21 +1,24 @@
 import type { StyleReport } from '@/lib/types'
 
 export function generatePrompt(report: StyleReport, language: 'en' | 'zh' = 'en'): string {
-  const { colors, typography, designDetails, gradients } = report
+  const { colors, colorSystem, typography, designDetails, gradients } = report
 
-  const bg       = colors.find(c => c.role === 'background')
-  const surface  = colors.find(c => c.role === 'surface')
-  const primary  = colors.find(c => c.role === 'primary')
-  const accent   = colors.find(c => c.role === 'accent')
-  const textMain = colors.find(c => c.role === 'text')
-  const border   = colors.find(c => c.role === 'border')
-  const secondary = colors.find(c => c.role === 'secondary')
+  // Prefer colorSystem (Codex's precise extraction) with fallback to colors array
+  const bg       = colorSystem?.pageBackground   || colorSystem?.heroBackground || colors.find(c => c.role === 'background')
+  const surface  = colorSystem?.surface          || colors.find(c => c.role === 'surface')
+  const primary  = colorSystem?.primaryAction    || colors.find(c => c.role === 'primary')
+  const secondary = colorSystem?.secondaryAction || colors.find(c => c.role === 'secondary')
+  const textMain = colorSystem?.textPrimary      || colors.find(c => c.role === 'text')
+  const border   = colorSystem?.border           || colors.find(c => c.role === 'border')
+  const accents  = colorSystem?.contentColors?.length
+    ? colorSystem.contentColors
+    : colors.filter(c => c.role === 'accent')
 
-  const hex = (c: typeof bg) => c ? c.hex.toUpperCase() : null
-  const named = (c: typeof bg) => c ? `${c.hex.toUpperCase()} /* ${c.name} */` : null
+  const hex   = (c: any) => c ? c.hex.toUpperCase() : null
+  const named = (c: any) => c ? `${c.hex.toUpperCase()} /* ${c.name} */` : null
 
-  const radius   = designDetails.cssRadius   || inferRadius(designDetails.borderRadius)
-  const shadow   = designDetails.cssShadow   || inferShadow(designDetails.shadowStyle)
+  const radius   = designDetails.cssRadius || inferRadius(designDetails.borderRadius)
+  const shadow   = designDetails.cssShadow || inferShadow(designDetails.shadowStyle)
   const duration = inferDuration(designDetails.animationTendency)
   const easing   = inferEasing(designDetails.animationTendency)
 
@@ -25,12 +28,10 @@ export function generatePrompt(report: StyleReport, language: 'en' | 'zh' = 'en'
   const isSubtle     = isSubtleMotion(designDetails.animationTendency)
   const hasGradients = gradients.length > 0
 
-  // Derive hover color: darken primary in light mode, lighten in dark mode
   const hoverHint = isDark
     ? 'lighten the background by 8–10%, no hue shift'
     : 'darken the background by 8–10%, no hue shift'
 
-  // Button text color: use bg color on filled primary button for contrast
   const btnTextColor = isDark
     ? (bg ? hex(bg) : '#000000')
     : (bg ? hex(bg) : '#ffffff')
@@ -47,13 +48,13 @@ Style DNA: ${report.summaryEn || report.summary}
 ## 1. COLOR CONTRACT
 
 ### Palette (use only these colors)
-${bg       ? `Background (page base):       ${named(bg)}` : ''}
-${surface  ? `Surface (cards, panels):       ${named(surface)}` : ''}
-${primary  ? `Primary (CTAs, links, active): ${named(primary)}` : ''}
-${secondary? `Secondary (muted actions):     ${named(secondary)}` : ''}
-${accent   ? `Accent (highlights, badges):   ${named(accent)}` : ''}
-${textMain ? `Text (body, headings):         ${named(textMain)}` : ''}
-${border   ? `Border (dividers, outlines):   ${named(border)}` : ''}
+${bg        ? `Background (page base):       ${named(bg)}` : ''}
+${surface   ? `Surface (cards, panels):      ${named(surface)}` : ''}
+${primary   ? `Primary (CTAs, links, active): ${named(primary)}` : ''}
+${secondary ? `Secondary (muted actions):    ${named(secondary)}` : ''}
+${accents.length ? `Accent(s) (highlights):       ${accents.map(c => `${c.hex.toUpperCase()} /* ${c.name} */`).join(', ')}` : ''}
+${textMain  ? `Text (body, headings):        ${named(textMain)}` : ''}
+${border    ? `Border (dividers, outlines):  ${named(border)}` : ''}
 
 ### Color Application Rules
 - Page background: always ${hex(bg) || 'var(--color-bg-base)'}
@@ -112,21 +113,21 @@ font-weight: ${typography.headingWeight}
 transition: background ${duration} ${easing}
 hover: ${hoverHint} on background
 
-### Button (Secondary / Ghost)
+### Button (Secondary / Ghost Button)
 background: transparent
 color: ${hex(primary) || 'var(--color-primary)'}
 border: 1px solid ${hex(border) || 'var(--color-border)'}
 border-radius: ${radius}
 padding: [match source visually — not extracted]
 
-### Card / Panel
+### Card / Panel (Card / Panel)
 background: ${hex(surface) || hex(bg) || 'var(--color-surface)'}
 border: 1px solid ${hex(border) || 'var(--color-border)'}
 border-radius: ${radius}
 box-shadow: ${shadow}
 padding: [match source visually — not extracted]
 
-### Input / Form Field
+### Input / Form Field (Input / Form Field)
 background: ${hex(surface) || hex(bg) || 'var(--color-surface)'}
 border: 1px solid ${hex(border) || 'var(--color-border)'}
 border-radius: ${radius}
@@ -148,7 +149,7 @@ ${isFlat  ? '✗ DO NOT add drop shadows or elevation layers — this design is 
 ✗ DO NOT add padding or margin that would create spacing inconsistent with: ${designDetails.spacingSystem}`
   }
 
-  // ─── Chinese version ────────────────────────────────────────────────────────
+  // ─── Chinese version ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   return `你正在实现一个 UI 界面。以下是一份绑定性设计契约，不得偏离任何指定的值。所有未指定的决策，必须默认选择最保守/最简约的方案。
 
@@ -161,13 +162,13 @@ ${isFlat  ? '✗ DO NOT add drop shadows or elevation layers — this design is 
 ## 1. 色彩契约
 
 ### 色板（只能使用以下颜色）
-${bg       ? `背景色（页面底层）:           ${named(bg)}` : ''}
-${surface  ? `面板色（卡片、容器）:         ${named(surface)}` : ''}
-${primary  ? `主色（CTA、链接、激活态）:    ${named(primary)}` : ''}
-${secondary? `辅助色（次要操作）:           ${named(secondary)}` : ''}
-${accent   ? `强调色（高亮、徽章）:         ${named(accent)}` : ''}
-${textMain ? `文字色（正文、标题）:         ${named(textMain)}` : ''}
-${border   ? `边框色（分割线、描边）:       ${named(border)}` : ''}
+${bg        ? `背景色（页面底层）:           ${named(bg)}` : ''}
+${surface   ? `面板色（卡片、容器）:         ${named(surface)}` : ''}
+${primary   ? `主色（CTA、链接、激活态）:    ${named(primary)}` : ''}
+${secondary ? `辅助色（次要操作）:           ${named(secondary)}` : ''}
+${accents.length ? `强调色（高亮、内容色）:       ${accents.map(c => `${c.hex.toUpperCase()} /* ${c.name} */`).join(', ')}` : ''}
+${textMain  ? `文字色（正文、标题）:         ${named(textMain)}` : ''}
+${border    ? `边框色（分割线、描边）:       ${named(border)}` : ''}
 
 ### 颜色使用规则
 - 页面背景：始终使用 ${hex(bg) || 'var(--color-bg-base)'}

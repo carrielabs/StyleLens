@@ -1,20 +1,43 @@
 'use client'
 
 import { useState } from 'react'
-import type { ColorToken, PageStyleAnalysis } from '@/lib/types'
+import type { ColorToken, LayeredColorSystem, PageStyleAnalysis } from '@/lib/types'
 
 export default function ColorSystem({
   colors,
+  colorSystem,
   analysis,
   sourceType,
   lang
 }: {
   colors: ColorToken[]
+  colorSystem?: LayeredColorSystem
   analysis?: PageStyleAnalysis
   sourceType: 'image' | 'url'
   lang: 'zh' | 'en'
 }) {
   const [copiedHex, setCopiedHex] = useState<string | null>(null)
+
+  const hexDistance = (hexA?: string, hexB?: string) => {
+    if (!hexA || !hexB) return Number.POSITIVE_INFINITY
+    const parse = (hex: string) => {
+      const clean = hex.replace('#', '')
+      return [
+        Number.parseInt(clean.slice(0, 2), 16),
+        Number.parseInt(clean.slice(2, 4), 16),
+        Number.parseInt(clean.slice(4, 6), 16),
+      ]
+    }
+    const [r1, g1, b1] = parse(hexA)
+    const [r2, g2, b2] = parse(hexB)
+    return Math.sqrt(((r1 - r2) ** 2) + ((g1 - g2) ** 2) + ((b1 - b2) ** 2))
+  }
+
+  const isExtremeNoiseColor = (hex?: string) => {
+    if (!hex) return false
+    const clean = hex.replace('#', '').toUpperCase()
+    return clean === '00FF00' || clean === 'FFFF00'
+  }
 
   const copyColor = (hex: string) => {
     navigator.clipboard.writeText(hex)
@@ -35,63 +58,110 @@ export default function ColorSystem({
     return map[role]?.[lang] || (lang === 'zh' ? '其他' : 'Other')
   }
 
-  const measuredCandidates = new Map(
-    (analysis?.colorCandidates || []).map(candidate => [candidate.hex.toUpperCase(), candidate])
-  )
+  const deriveShellFallbackFromColors = (palette: ColorToken[]) => {
+    const enriched = palette
+      .filter(color => !isExtremeNoiseColor(color.hex))
+      .map(color => {
+        const clean = color.hex.replace('#', '')
+        const r = Number.parseInt(clean.slice(0, 2), 16)
+        const g = Number.parseInt(clean.slice(2, 4), 16)
+        const b = Number.parseInt(clean.slice(4, 6), 16)
+        const brightness = r + g + b
+        const chroma = Math.max(r, g, b) - Math.min(r, g, b)
+        return { color, brightness, chroma }
+      })
+
+    const lightNeutrals = enriched
+      .filter(item => item.brightness >= 600 && item.chroma <= 48)
+      .sort((a, b) => a.brightness - b.brightness)
+    const darkNeutrals = enriched
+      .filter(item => item.brightness <= 220 && item.chroma <= 40)
+      .sort((a, b) => a.brightness - b.brightness)
+
+    const pageBackground = lightNeutrals.find(item => item.brightness < 750)?.color || lightNeutrals[0]?.color
+    const surface = lightNeutrals.find(item => item.color.hex !== pageBackground?.hex)?.color || lightNeutrals.at(-1)?.color
+    const textPrimary = darkNeutrals[0]?.color
+    const textSecondary = darkNeutrals.find(item => item.color.hex !== textPrimary?.hex)?.color
+
+    return { pageBackground, surface, textPrimary, textSecondary }
+  }
+
+  type DisplayColor = ColorToken & { roleLabelOverride?: string }
   const contentColors = sourceType === 'url'
-    ? (analysis?.colorCandidates || [])
-        .filter(candidate =>
-          candidate.layerHints.includes('content') &&
-          !candidate.layerHints.includes('hero') &&
-          !colors.some(color => color.hex.toUpperCase() === candidate.hex.toUpperCase())
-        )
-        .slice(0, 6)
+    ? (colorSystem?.contentColors || [])
     : []
 
-  const getEvidenceLabel = (color: ColorToken) => {
-    const candidate = measuredCandidates.get(color.hex.toUpperCase())
-    if (!candidate) return null
+  const shellFallback: Partial<LayeredColorSystem> = sourceType === 'url'
+    ? deriveShellFallbackFromColors(colors)
+    : {}
 
-    const hints = candidate.roleHints
-    const isSystemSignal = hints.some(hint =>
-      ['background', 'surface', 'text', 'border', 'primary', 'accent'].includes(hint)
+  const normalizedColorSystem: LayeredColorSystem | undefined = sourceType === 'url' && colorSystem
+    ? {
+        ...colorSystem,
+        pageBackground: colorSystem.pageBackground || shellFallback.pageBackground,
+        surface: colorSystem.surface || shellFallback.surface,
+        textPrimary: colorSystem.textPrimary || shellFallback.textPrimary,
+        textSecondary: colorSystem.textSecondary || shellFallback.textSecondary,
+      }
+    : colorSystem
+
+  const systemPalette: DisplayColor[] = sourceType === 'url' && normalizedColorSystem
+    ? [
+        normalizedColorSystem.heroBackground && { ...normalizedColorSystem.heroBackground, roleLabelOverride: lang === 'zh' ? 'Hero 背景' : 'Hero background' },
+        normalizedColorSystem.heroTextPrimary && { ...normalizedColorSystem.heroTextPrimary, roleLabelOverride: lang === 'zh' ? 'Hero 文字' : 'Hero text' },
+        normalizedColorSystem.heroPrimaryAction && { ...normalizedColorSystem.heroPrimaryAction, roleLabelOverride: lang === 'zh' ? 'Hero 主按钮' : 'Hero primary action' },
+        normalizedColorSystem.heroSecondaryAction && { ...normalizedColorSystem.heroSecondaryAction, roleLabelOverride: lang === 'zh' ? 'Hero 次按钮' : 'Hero secondary action' },
+        normalizedColorSystem.pageBackground && { ...normalizedColorSystem.pageBackground, roleLabelOverride: lang === 'zh' ? '页面背景' : 'Page background' },
+        normalizedColorSystem.surface && { ...normalizedColorSystem.surface, roleLabelOverride: lang === 'zh' ? '面板色' : 'Surface' },
+        normalizedColorSystem.textPrimary && { ...normalizedColorSystem.textPrimary, roleLabelOverride: lang === 'zh' ? '主文字' : 'Text primary' },
+        normalizedColorSystem.textSecondary && { ...normalizedColorSystem.textSecondary, roleLabelOverride: lang === 'zh' ? '辅助文字' : 'Text secondary' },
+        normalizedColorSystem.border && { ...normalizedColorSystem.border, roleLabelOverride: lang === 'zh' ? '边框线' : 'Border' },
+        normalizedColorSystem.primaryAction && { ...normalizedColorSystem.primaryAction, roleLabelOverride: lang === 'zh' ? '主动作色' : 'Primary action' },
+        normalizedColorSystem.secondaryAction && { ...normalizedColorSystem.secondaryAction, roleLabelOverride: lang === 'zh' ? '次动作色' : 'Secondary action' },
+      ].filter(Boolean) as DisplayColor[]
+    : colors.map(color => ({ ...color }))
+
+  const dedupedSystemPalette = systemPalette.filter((color, index, list) => {
+    if (isExtremeNoiseColor(color.hex)) return false
+
+    const sameHexIndex = list.findIndex(item => item.hex.toUpperCase() === color.hex.toUpperCase())
+    if (sameHexIndex !== index) return false
+
+    const isTextRole = (label?: string) => ['主文字', '辅助文字', 'Hero 文字', 'Text primary', 'Text secondary', 'Hero text'].includes(label || '')
+    if (!isTextRole(color.roleLabelOverride)) return true
+
+    return list.findIndex(item =>
+      isTextRole(item.roleLabelOverride) &&
+      hexDistance(item.hex, color.hex) < 20
+    ) === index
+  })
+
+  const accentPalette: DisplayColor[] = sourceType === 'url' && colorSystem
+    ? [
+        ...(colorSystem.heroAccentColors || []).map(color => ({ ...color, roleLabelOverride: lang === 'zh' ? '辅助色' : 'Accent' })),
+        ...contentColors.map(color => ({ ...color, roleLabelOverride: lang === 'zh' ? '辅助色' : 'Accent' })),
+      ].filter((color, index, list) =>
+        !isExtremeNoiseColor(color.hex) &&
+        list.findIndex(item => item.hex.toUpperCase() === color.hex.toUpperCase()) === index
+      )
+    : []
+
+  const paletteItems: DisplayColor[] = [
+    ...dedupedSystemPalette,
+    ...accentPalette.filter(accent =>
+      !dedupedSystemPalette.some(color => color.hex.toUpperCase() === accent.hex.toUpperCase())
     )
-
-    if (isSystemSignal) {
-      return lang === 'zh' ? '系统色证据' : 'System signal'
-    }
-    return lang === 'zh' ? '测量候选' : 'Measured'
-  }
+  ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      {sourceType === 'url' && analysis && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            {lang === 'zh'
-              ? 'URL 模式下，颜色优先基于页面样式测量结果；插图、截图和媒体内容中的装饰色会被降权。'
-              : 'For URL analysis, colors prioritize measured page style signals; decorative colors from illustrations, screenshots, and media are deprioritized.'}
-          </p>
-          <span style={{
-            fontSize: '11px',
-            color: 'var(--text-secondary)',
-            padding: '3px 8px',
-            borderRadius: '999px',
-            border: '1px solid rgba(0,0,0,0.08)'
-          }}>
-            {lang === 'zh' ? '系统色优先' : 'System colors prioritized'}
-          </span>
-        </div>
-      )}
-
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(8, 1fr)', 
         gap: '12px' 
       }}>
-      {colors.map((c, i) => {
-        const evidenceLabel = getEvidenceLabel(c)
-        const isLowPriorityOther = sourceType === 'url' && c.role === 'other' && !evidenceLabel
+      {paletteItems.map((c, i) => {
+        const isLowPriorityOther = sourceType === 'url' && c.role === 'other'
         return (
         <div 
           key={i}
@@ -118,20 +188,8 @@ export default function ColorSystem({
           {/* Strict Label Stack */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {getRoleLabel(c.role)}
+              {c.roleLabelOverride || getRoleLabel(c.role)}
             </div>
-            {evidenceLabel && (
-              <div style={{
-                fontSize: '10px',
-                color: 'var(--text-secondary)',
-                fontWeight: 500,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                {evidenceLabel}
-              </div>
-            )}
             <div style={{ 
               fontSize: '11px', 
               fontFamily: 'var(--font-mono)', 
@@ -145,40 +203,6 @@ export default function ColorSystem({
       )})}
       </div>
 
-      {contentColors.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-            {lang === 'zh' ? '内容区辅助色' : 'Content module colors'}
-          </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {contentColors.map(candidate => (
-              <div
-                key={`${candidate.hex}-${candidate.property}`}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 10px',
-                  borderRadius: '999px',
-                  background: '#F6F6F6',
-                  border: '1px solid rgba(0,0,0,0.05)'
-                }}
-              >
-                <span style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '999px',
-                  background: candidate.hex,
-                  boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)'
-                }} />
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                  {candidate.hex.toUpperCase()}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

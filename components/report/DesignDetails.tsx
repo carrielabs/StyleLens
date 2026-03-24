@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
-import type { DesignDetails as DetailsType, PageStyleAnalysis } from '@/lib/types'
+import { useMemo, useState } from 'react'
+import type { DesignDetails as DetailsType, PageStyleAnalysis, StateTokenValue } from '@/lib/types'
 
 type TabKey = 'radius' | 'shadow' | 'layout' | 'spacing' | 'motion'
 
@@ -21,14 +21,14 @@ export default function DesignDetails({
   const [activeTab, setActiveTab] = useState<TabKey>('radius')
 
   const t = {
-    radius: lang === 'zh' ? '边框圆角' : 'Border radius',
+    radius: lang === 'zh' ? '边框圆角' : 'Border Radius',
     shadow: lang === 'zh' ? '阴影层级' : 'Shadows',
     layout: lang === 'zh' ? '布局网格' : 'Layout',
     spacing: lang === 'zh' ? '空间配比' : 'Spacing',
-    motion: lang === 'zh' ? '动效偏好' : 'Motion'
+    motion: lang === 'zh' ? '动效偏好' : 'Motion',
   }
 
-  const tabs: { key: TabKey, label: string }[] = [
+  const tabs: { key: TabKey; label: string }[] = [
     { key: 'radius', label: t.radius },
     { key: 'shadow', label: t.shadow },
     { key: 'layout', label: t.layout },
@@ -36,30 +36,51 @@ export default function DesignDetails({
     { key: 'motion', label: t.motion },
   ]
 
-  const parse = (val?: string) => val ? val.split('|').map(s => s.trim()).filter(Boolean) : []
-  const measuredRadius = sourceType === 'url' ? analysis?.radiusCandidates || [] : []
-  const measuredShadow = sourceType === 'url' ? analysis?.shadowCandidates || [] : []
-  const measuredSpacing = sourceType === 'url' ? analysis?.spacingCandidates || [] : []
-  const measuredLayout = sourceType === 'url' ? analysis?.layoutHints || [] : []
-  
-  const items = {
-    radius: measuredRadius.length ? measuredRadius : parse(data.cssRadius),
-    shadow: measuredShadow.length ? measuredShadow : parse(data.cssShadow),
-    layout: measuredLayout.length ? measuredLayout : (lang === 'zh' ? parse(data.layoutZh || data.layoutEn) : parse(data.layoutEn || data.layoutZh)),
-    spacing: measuredSpacing.length ? measuredSpacing : (lang === 'zh' ? parse(data.spacingZh || data.spacingEn) : parse(data.spacingEn || data.spacingZh)),
-    motion: lang === 'zh' ? parse(data.motionZh || data.motionEn) : parse(data.motionEn || data.motionZh)
+  const measuredRadius  = sourceType === 'url' ? analysis?.radiusTokens  || [] : []
+  const measuredShadow  = sourceType === 'url' ? analysis?.shadowTokens  || [] : []
+  const measuredSpacing = sourceType === 'url' ? analysis?.spacingTokens || [] : []
+  const measuredLayout  = sourceType === 'url' ? analysis?.layoutEvidence || [] : []
+  const measuredStates  = sourceType === 'url'
+    ? Object.entries(analysis?.stateTokens || {}).flatMap(([component, values]) =>
+        ((values || []) as StateTokenValue[]).map(v => ({ component, ...v }))
+      )
+    : []
+
+  const items = useMemo(() => ({
+    radius:  measuredRadius,
+    shadow:  measuredShadow,
+    layout:  measuredLayout,
+    spacing: measuredSpacing,
+    motion:  measuredStates,
+  }), [measuredLayout, measuredRadius, measuredShadow, measuredSpacing, measuredStates])
+
+  const hasMeasured: Record<TabKey, boolean> = {
+    radius:  items.radius.length  > 0,
+    shadow:  items.shadow.length  > 0,
+    layout:  items.layout.length  > 0,
+    spacing: items.spacing.length > 0,
+    motion:  items.motion.length  > 0,
   }
 
-  const showMeasuredBadge = sourceType === 'url'
+  // AI-inferred text fallbacks (from extraction pipeline)
+  const aiFallback: Record<TabKey, string> = {
+    radius:  data.cssRadius   || data.borderRadius        || '',
+    shadow:  data.cssShadow   || data.shadowStyle         || '',
+    layout:  data.layoutStructure                         || '',
+    spacing: data.spacingSystem                           || '',
+    motion:  data.animationTendency                       || '',
+  }
+
+  const isCurrentMeasured = hasMeasured[activeTab]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-      
-      {/* 1. Technical Underline Tabs (Unified Style) */}
-      <div style={{ 
-        display: 'flex', gap: '32px', borderBottom: '1px solid rgba(0,0,0,0.06)',
-        width: '100%', overflowX: 'auto', alignItems: 'baseline' 
-      }} className="no-scrollbar">
+
+      {/* Tabs */}
+      <div
+        style={{ display: 'flex', gap: '32px', borderBottom: '1px solid rgba(0,0,0,0.06)', width: '100%', overflowX: 'auto', alignItems: 'baseline' }}
+        className="no-scrollbar"
+      >
         {tabs.map(tab => (
           <button
             key={tab.key}
@@ -67,7 +88,6 @@ export default function DesignDetails({
             style={{
               padding: '12px 0', border: 'none', cursor: 'pointer',
               fontSize: '13px', fontWeight: activeTab === tab.key ? 600 : 500,
-              textTransform: 'none', letterSpacing: '0',
               background: 'none',
               color: activeTab === tab.key ? '#1D1D1F' : '#AEAEB2',
               transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -83,199 +103,173 @@ export default function DesignDetails({
         ))}
       </div>
 
-      {/* 2. Content Area (Unified Card Style: 16px radius, subtle border) */}
-      <div style={{ 
-        minHeight: '280px', background: '#FFFFFF', borderRadius: '16px', 
+      {/* Content card */}
+      <div style={{
+        minHeight: '220px', background: '#FFFFFF', borderRadius: '16px',
         border: '1px solid rgba(0,0,0,0.06)', padding: '24px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.01)'
       }}>
-        {showMeasuredBadge && activeTab !== 'motion' && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            marginBottom: '16px'
+
+        {/* Source badge */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+          <span style={{
+            fontSize: '11px', color: 'var(--text-secondary)',
+            padding: '3px 8px', borderRadius: '999px',
+            border: '1px solid rgba(0,0,0,0.08)'
           }}>
-            <span style={{
-              fontSize: '11px',
-              color: 'var(--text-secondary)',
-              padding: '3px 8px',
-              borderRadius: '999px',
-              border: '1px solid rgba(0,0,0,0.08)'
-            }}>
-              {lang === 'zh' ? '基于页面测量' : 'Measured from page'}
-            </span>
-          </div>
-        )}
+            {isCurrentMeasured
+              ? (lang === 'zh' ? '基于页面测量' : 'Measured from page')
+              : (lang === 'zh' ? 'AI 推断' : 'AI inferred')}
+          </span>
+        </div>
+
+        {/* ── Radius ── */}
         {activeTab === 'radius' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-               {items.radius.length > 0 ? items.radius.map((r, i) => (
-                 <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ height: '120px', background: '#F9F9F9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                       <div style={{ width: '60px', height: '45px', background: '#1D1D1F', borderRadius: r, position: 'relative', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                          <RedlineLabel value={r} />
-                       </div>
+          hasMeasured.radius ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
+              {items.radius.map((token, i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '100%', height: '96px', background: '#F5F5F7', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '64px', height: '40px', background: '#1D1D1F', borderRadius: token.value }} />
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F' }}>
+                      {token.value}
+                    </code>
+                    <div style={{ fontSize: '11px', color: '#AEAEB2', marginTop: '3px' }}>
+                      {token.sampleCount} {lang === 'zh' ? '次' : 'hits'}
+                      {token.componentKinds?.length ? ' · ' + token.componentKinds.slice(0, 2).join(', ') : ''}
                     </div>
-                    <code style={{ fontSize: '10px', color: '#AEAEB2', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>border-radius: {r};</code>
-                 </div>
-               )) : <EmptyState lang={lang} />}
-             </div>
-          </div>
-        )}
-
-        {activeTab === 'shadow' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-            {items.shadow.length > 0 ? items.shadow.map((s, i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ height: '120px', background: '#F9F9F9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: '60px', height: '45px', background: '#FFFFFF', borderRadius: '8px', boxShadow: s, position: 'relative' }}>
-                     <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '3px', height: '3px', background: '#FF3B30', borderRadius: '50%' }} />
-                     <div style={{ position: 'absolute', top: '-10px', right: '-12px', fontSize: '9px', fontWeight: 800, color: '#FF3B30', whiteSpace: 'nowrap' }}>
-                       {lang === 'zh' ? `阴影层级 ${i+1}` : `Shadow ${i+1}`}
-                     </div>
                   </div>
-                </div>
-                <code style={{ fontSize: '10px', color: '#AEAEB2', fontFamily: 'var(--font-mono)', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.substring(0, 30)}...</code>
-              </div>
-            )) : <EmptyState lang={lang} />}
-          </div>
-        )}
-
-        {activeTab === 'layout' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {sourceType === 'url' && measuredLayout.length > 0 && (
-              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {lang === 'zh'
-                  ? '这些布局标签来自页面可见元素的真实布局模式采样。'
-                  : 'These layout tags are derived from measured visible page structure.'}
-              </p>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-              {items.layout.map((l, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ height: '140px', background: '#1D1D1F', borderRadius: '12px', padding: '12px' }}>
-                    <LayoutSpecimen type={l} />
-                  </div>
-                  <TagBadge label={l} />
                 </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <AiFallback value={aiFallback.radius} lang={lang} />
+          )
         )}
 
-        {activeTab === 'spacing' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-             <div style={{ height: '140px', background: '#FFFFFF', border: '1px dashed #E5E5EA', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '16px', flexWrap: 'wrap' }}>
-                {items.spacing.length > 0 ? items.spacing.slice(0, 6).map((space, i) => (
-                  <div key={i} style={{
-                    padding: '10px 14px',
-                    borderRadius: '10px',
-                    background: '#F6F6F6',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#1D1D1F',
-                    fontFamily: 'var(--font-mono)'
-                  }}>
-                    {space}
+        {/* ── Shadow ── */}
+        {activeTab === 'shadow' && (
+          hasMeasured.shadow ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+              {items.shadow.map((token, i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '100%', height: '96px', background: '#F5F5F7', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '80px', height: '48px', background: '#FFFFFF', borderRadius: '8px', boxShadow: token.value }} />
                   </div>
-                )) : <EmptyState lang={lang} />}
-             </div>
-             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-               {items.spacing.map((s, i) => <TagBadge key={i} label={s} />)}
-             </div>
-          </div>
+                  <div style={{ textAlign: 'center', width: '100%', padding: '0 4px' }}>
+                    <code style={{ fontSize: '10px', color: '#8E8E93', fontFamily: 'var(--font-mono)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {token.value}
+                    </code>
+                    <div style={{ fontSize: '11px', color: '#AEAEB2', marginTop: '3px' }}>
+                      {token.sampleCount} {lang === 'zh' ? '次' : 'hits'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <AiFallback value={aiFallback.shadow} lang={lang} />
+          )
         )}
 
+        {/* ── Layout ── */}
+        {activeTab === 'layout' && (
+          hasMeasured.layout ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {items.layout.map((item, i) => (
+                <div key={i} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '12px 16px', borderRadius: '10px',
+                  background: '#F5F5F7'
+                }}>
+                  <span style={{ fontSize: '13px', fontWeight: 500, color: '#1D1D1F' }}>{item.label}</span>
+                  <span style={{ fontSize: '12px', color: '#8E8E93' }}>
+                    {item.sampleCount} {lang === 'zh' ? '处' : 'found'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <AiFallback value={aiFallback.layout} lang={lang} />
+          )
+        )}
+
+        {/* ── Spacing ── */}
+        {activeTab === 'spacing' && (
+          hasMeasured.spacing ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {items.spacing.map((token, i) => {
+                const numeric = Number.parseFloat(token.value)
+                const pct = Number.isFinite(numeric) ? Math.max(4, Math.min(100, (numeric / 80) * 100)) : 10
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', minWidth: '52px' }}>
+                      {token.value}
+                    </code>
+                    <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: '#EFEFEF' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', borderRadius: '999px', background: '#1D1D1F' }} />
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#AEAEB2', minWidth: '36px', textAlign: 'right' }}>
+                      {token.sampleCount}×
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <AiFallback value={aiFallback.spacing} lang={lang} />
+          )
+        )}
+
+        {/* ── Motion ── */}
         {activeTab === 'motion' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div style={{ height: '140px', background: '#F9F9F9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', padding: '24px' }}>
-               <div style={{ maxWidth: '520px', textAlign: 'center', fontSize: '13px', lineHeight: 1.7, color: '#6B6B73' }}>
-                 {lang === 'zh'
-                   ? '动效偏好目前仍主要来自 AI 对静态页面的推测。除非页面检测到明确的 CSS animation / transition 证据，否则不应把这里视为精确设计 token。'
-                   : 'Motion is still mostly inferred from static page analysis. Unless explicit CSS animation or transition evidence is detected, treat this section as interpretive rather than exact tokens.'}
-               </div>
+          hasMeasured.motion ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {items.motion.map((token, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: '12px', padding: '12px 16px', borderRadius: '10px',
+                  background: '#F5F5F7'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', textTransform: 'capitalize' }}>
+                      {token.component} · {token.state}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#8E8E93' }}>{token.property}</span>
+                  </div>
+                  <code style={{ fontSize: '12px', color: '#1D1D1F', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
+                    {token.value}
+                  </code>
+                </div>
+              ))}
             </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-               {items.motion.map((m, i) => <TagBadge key={i} label={m} theme="dark" />)}
-               {sourceType === 'url' && (
-                 <code style={{ fontSize: '10px', color: '#AEAEB2', fontFamily: 'var(--font-mono)', marginLeft: '8px' }}>
-                   {lang === 'zh' ? '当前为推测值' : 'currently inferred'}
-                 </code>
-               )}
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100px', color: '#AEAEB2', fontSize: '13px', textAlign: 'center', lineHeight: 1.6 }}>
+              {lang === 'zh'
+                ? '未检测到稳定的交互状态参数'
+                : 'No reliable interaction state measurements found'}
             </div>
-          </div>
+          )
         )}
+
       </div>
     </div>
   )
 }
 
-function LayoutSpecimen({ type }: { type: string }) {
-  const norm = type.toLowerCase()
-  if (norm.includes('bento') || norm.includes('grid')) {
+function AiFallback({ value, lang }: { value: string; lang: 'zh' | 'en' }) {
+  if (!value) {
     return (
-      <div style={{ display: 'grid', height: '100%', gridTemplateColumns: '1fr 2fr', gridTemplateRows: '1fr 1fr', gap: '8px' }}>
-        <div style={{ gridRow: 'span 2', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', border: '1px dashed rgba(255,255,255,0.2)' }} />
-        <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '4px', border: '1px dashed rgba(255,255,255,0.2)' }} />
-        <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '4px', border: '1px dashed rgba(255,255,255,0.2)' }} />
-      </div>
-    )
-  }
-  if (norm.includes('sidebar') || norm.includes('navigate')) {
-    return (
-      <div style={{ display: 'grid', height: '100%', gridTemplateColumns: '40px 1fr', gap: '8px' }}>
-         <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '4px', border: '1px dashed rgba(255,255,255,0.2)' }} />
-         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ height: '24px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px' }} />
-            <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: '4px' }} />
-         </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100px', color: '#AEAEB2', fontSize: '13px' }}>
+        {lang === 'zh' ? '未提取到该细节' : 'No details detected'}
       </div>
     )
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '8px' }}>
-       <div style={{ height: '32px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px' }} />
-       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', flex: 1, gap: '8px' }}>
-          <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '4px' }} />
-          <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '4px' }} />
-          <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '4px' }} />
-       </div>
-    </div>
-  )
-}
-
-function RedlineLabel({ value }: { value: string }) {
-  return (
-    <div style={{ 
-      position: 'absolute', top: '-8px', right: '-8px',
-      background: '#FF3B30', color: '#FFF', fontSize: '9px', 
-      padding: '2px 4px', borderRadius: '3px', fontWeight: 800, 
-      fontFamily: 'var(--font-mono)', zIndex: 1
-    }}>
-      {value}
-    </div>
-  )
-}
-
-function TagBadge({ label, theme = 'light' }: { label: string, theme?: 'light' | 'dark' }) {
-  return (
-    <span style={{ 
-      padding: '5px 14px', 
-      background: theme === 'light' ? '#F2F2F7' : '#1D1D1F', 
-      color: theme === 'light' ? '#1D1D1F' : '#FFF', 
-      borderRadius: '8px', fontSize: '12px', fontWeight: 600,
-      fontFamily: 'var(--font-sans)',
-      whiteSpace: 'nowrap'
-    }}>
-      {label}
-    </span>
-  )
-}
-
-function EmptyState({ lang }: { lang: 'zh' | 'en' }) {
-  return (
-    <div style={{ width: '100%', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#AEAEB2', fontSize: '13px' }}>
-      {lang === 'zh' ? '未提取到该细节' : 'No details detected'}
+    <div style={{ padding: '16px 20px', background: '#F5F5F7', borderRadius: '12px' }}>
+      <p style={{ margin: 0, fontSize: '14px', color: '#3C3C43', lineHeight: 1.7 }}>{value}</p>
     </div>
   )
 }

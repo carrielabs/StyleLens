@@ -1,28 +1,30 @@
 import type { StyleReport } from '@/lib/types'
 
 export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'): string {
-  const { colors, typography, designDetails, gradients } = report
+  const { colors, colorSystem, typography, designDetails, gradients } = report
   const isEn = lang === 'en'
 
   const summary    = isEn ? (report.summaryEn || report.summary) : (report.summaryZh || report.summary)
   const activeTags = isEn ? (report.tagsEn || report.tags) : (report.tagsZh || report.tags)
+  const radius     = designDetails.cssRadius || designDetails.borderRadius
+  const shadow     = designDetails.cssShadow || designDetails.shadowStyle
 
-  const radius = designDetails.cssRadius || designDetails.borderRadius
-  const shadow = designDetails.cssShadow || designDetails.shadowStyle
+  // Prefer colorSystem order (Codex's precise extraction) with fallback to colors array
+  const displayColors = colorSystem
+    ? [
+        colorSystem.heroBackground,
+        colorSystem.pageBackground,
+        colorSystem.surface,
+        colorSystem.textPrimary,
+        colorSystem.textSecondary,
+        colorSystem.border,
+        colorSystem.primaryAction,
+        colorSystem.secondaryAction,
+        ...(colorSystem.contentColors || []),
+      ].filter((c): c is NonNullable<typeof c> => Boolean(c))
+    : colors
 
-  const roleMap: Record<string, string> = isEn ? {
-    background: 'Background', surface: 'Surface', primary: 'Primary',
-    secondary: 'Secondary', accent: 'Accent', text: 'Text',
-    border: 'Border', other: 'Other'
-  } : {
-    background: '背景色', surface: '面板色', primary: '主色',
-    secondary: '辅助色', accent: '强调色', text: '文字色',
-    border: '边框色', other: '其他'
-  }
-
-  let md = isEn
-    ? `# Style Analysis Report\n\n`
-    : `# 风格分析报告\n\n`
+  let md = isEn ? `# Style Analysis Report\n\n` : `# 风格分析报告\n\n`
 
   md += isEn
     ? `**Source**: ${report.sourceLabel}  \n**Color Mode**: ${designDetails.colorMode}  \n**Overall**: ${summary}\n`
@@ -38,7 +40,17 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
     ? `| Role | Hex | Name | Usage |\n|------|-----|------|-------|\n`
     : `| 角色 | 颜色值 | 名称 | 用途说明 |\n|------|--------|------|----------|\n`
 
-  colors.forEach(c => {
+  const roleMap: Record<string, string> = isEn ? {
+    background: 'Background', surface: 'Surface', primary: 'Primary',
+    secondary: 'Secondary', accent: 'Accent', text: 'Text',
+    border: 'Border', other: 'Other'
+  } : {
+    background: '背景色', surface: '面板色', primary: '主色',
+    secondary: '辅助色', accent: '强调色', text: '文字色',
+    border: '边框色', other: '其他'
+  }
+
+  displayColors.forEach(c => {
     const role = roleMap[c.role] || c.role
     md += `| ${role} | \`${c.hex.toUpperCase()}\` | ${c.name} | ${c.description || '—'} |\n`
   })
@@ -54,9 +66,9 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
 
   // ── Typography ────────────────────────────────────────────────────────────
   md += isEn ? `\n## Typography\n\n` : `\n## 字体排版\n\n`
+  md += isEn ? `| Property | Value |\n|----------|-------|\n` : `| 属性 | 值 |\n|------|----|\n`
 
   if (isEn) {
-    md += `| Property | Value |\n|----------|-------|\n`
     md += `| Font Family | ${typography.fontFamily} |\n`
     if (typography.googleFontsAlt) md += `| Google Fonts Alt | ${typography.googleFontsAlt} |\n`
     md += `| Confidence | ${typography.confidence} |\n`
@@ -68,7 +80,6 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
     md += `| Alignment | ${typography.alignment} |\n`
     md += `| Text Treatment | ${typography.textTreatment} |\n`
   } else {
-    md += `| 属性 | 值 |\n|------|----|\n`
     md += `| 字体族 | ${typography.fontFamily} |\n`
     if (typography.googleFontsAlt) md += `| Google Fonts 替代 | ${typography.googleFontsAlt} |\n`
     md += `| 识别置信度 | ${typography.confidence === 'identified' ? '已识别' : '推断'} |\n`
@@ -83,9 +94,9 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
 
   // ── Design Details ────────────────────────────────────────────────────────
   md += isEn ? `\n## Design Details\n\n` : `\n## 设计细节\n\n`
+  md += isEn ? `| Property | Value |\n|----------|-------|\n` : `| 属性 | 值 |\n|------|----|\n`
 
   if (isEn) {
-    md += `| Property | Value |\n|----------|-------|\n`
     md += `| Border Radius | ${radius} |\n`
     md += `| Box Shadow | ${shadow} |\n`
     md += `| Border Style | ${designDetails.borderStyle} |\n`
@@ -95,7 +106,6 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
     md += `| Image Handling | ${designDetails.imageHandling} |\n`
     md += `| Overall Style | ${designDetails.overallStyle} |\n`
   } else {
-    md += `| 属性 | 值 |\n|------|----|\n`
     md += `| 圆角 | ${radius} |\n`
     md += `| 阴影 | ${shadow} |\n`
     md += `| 边框样式 | ${designDetails.borderStyle} |\n`
