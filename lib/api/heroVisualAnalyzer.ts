@@ -257,7 +257,7 @@ export async function analyzeHeroVisualSignals(imageBuffer: Buffer): Promise<Pag
       selectorHint: 'content-region',
       count: 8 - index,
       roleHints: ['surface'],
-      layerHints: ['global'] as Array<'global' | 'hero' | 'content'>,
+      layerHints: ['content'] as Array<'global' | 'hero' | 'content'>,
       componentKinds: contentKinds,
       evidenceScore: 12 - index * 2,
       meta: visualMeta('medium', 8 - index, 'content color'),

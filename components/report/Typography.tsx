@@ -53,6 +53,14 @@ export default function Typography({
     return primary || fonts[0] || 'System Font'
   }
 
+  const parseFontSize = (value?: string) => {
+    if (!value) return 0
+    const normalized = value.trim().toLowerCase()
+    if (normalized === 'unknown') return 0
+    const parsed = Number.parseFloat(normalized)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
   const fontNames = data.fontFamily.split(',').map(f => {
     let clean = f.replace(/['"]/g, '').replace(/e\.g\.,/gi, '').trim()
     if (clean.includes(':')) clean = clean.split(':')[1]?.trim() || clean
@@ -117,6 +125,18 @@ export default function Typography({
         sampleCount: token.sampleCount,
       }))
     : recoveredTypography
+  const sortedTypography = [...displayTypography].sort((a, b) => {
+    const sizeDelta = parseFontSize(b.fontSize) - parseFontSize(a.fontSize)
+    if (sizeDelta !== 0) return sizeDelta
+
+    const countDelta = (b.sampleCount || 0) - (a.sampleCount || 0)
+    if (countDelta !== 0) return countDelta
+
+    const weightDelta = normalizeWeight(b.fontWeight, 400) - normalizeWeight(a.fontWeight, 400)
+    if (weightDelta !== 0) return weightDelta
+
+    return getPrimaryFontName(a.fontFamily).localeCompare(getPrimaryFontName(b.fontFamily))
+  })
   const hasMeasuredTypography = displayTypography.length > 0
 
   return (
@@ -159,16 +179,15 @@ export default function Typography({
               <div style={{ flex: '0 0 16%', textAlign: 'right' }}>{lang === 'zh' ? '频次' : 'Count'}</div>
             </div>
 
-            {displayTypography.map((token, idx) => (
+            {sortedTypography.map((token, idx) => (
               (() => {
                 const primaryFont = getPrimaryFontName(token.fontFamily)
-                const fullFontStack = splitFontStack(token.fontFamily).join(', ')
                 return (
               <div key={`${token.id}-${idx}`} style={{
                 display: 'flex',
                 alignItems: 'baseline',
                 padding: '20px 0',
-                borderBottom: idx < displayTypography.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none'
+                borderBottom: idx < sortedTypography.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none'
               }}>
                 <div style={{
                   flex: '0 0 28%',
@@ -181,7 +200,7 @@ export default function Typography({
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
-                }} title={fullFontStack || token.fontFamily}>
+                }} title={primaryFont}>
                   {primaryFont}
                 </div>
                 <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
