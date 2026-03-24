@@ -285,6 +285,10 @@ function debugSelectedPalette(colors: ColorToken[]) {
   colors.forEach((color, index) => {
     console.log(
       `[color-debug] ${index + 1}. ${color.hex} role=${color.role} name=${color.name}`
+      + ` source=${color.meta?.source || 'n/a'}`
+      + ` confidence=${color.meta?.confidence || 'n/a'}`
+      + ` evidence=${color.meta?.evidenceCount ?? 'n/a'}`
+      + ` context=${color.meta?.context || 'n/a'}`
     )
   })
 }
@@ -408,7 +412,7 @@ function hydrateSemanticColorSystem(
   if (!semanticColorSystem) return undefined
 
   const aiByHex = new Map(aiColors.map(color => [color.hex.toUpperCase(), color]))
-  const hydrate = (color: ColorToken | undefined, role: ColorToken['role']) => {
+  const hydrate = (color: ColorToken | undefined, role: ColorToken['role']): ColorToken | undefined => {
     if (!color) return undefined
     const hex = color.hex.toUpperCase()
     const matched = aiByHex.get(hex)
@@ -419,6 +423,7 @@ function hydrateSemanticColorSystem(
       hsl: matched?.hsl || color.hsl || hexToHsl(hex),
       name: matched?.name || color.name || fallbackColorName(role),
       description: matched?.description || color.description || fallbackColorName(role),
+      meta: matched?.meta || color.meta,
     }
   }
 
@@ -496,6 +501,13 @@ export function deriveScreenshotShellFallback(
         hsl: hexToHsl(pageBackgroundCandidate.hex),
         name: 'Page Background',
         description: 'Recovered from screenshot shell region',
+        meta: {
+          source: pageBackgroundCandidate.meta?.source || 'screenshot-sampled',
+          confidence: pageBackgroundCandidate.meta?.confidence || 'medium',
+          evidenceCount: pageBackgroundCandidate.meta?.evidenceCount || pageBackgroundCandidate.count || 1,
+          context: pageBackgroundCandidate.meta?.context || 'page shell background',
+          viewport: pageBackgroundCandidate.meta?.viewport,
+        },
       }
     : undefined
 
@@ -507,6 +519,13 @@ export function deriveScreenshotShellFallback(
         hsl: hexToHsl(surfaceCandidate.hex),
         name: 'Surface',
         description: 'Recovered from screenshot shell region',
+        meta: {
+          source: surfaceCandidate.meta?.source || 'screenshot-sampled',
+          confidence: surfaceCandidate.meta?.confidence || 'medium',
+          evidenceCount: surfaceCandidate.meta?.evidenceCount || surfaceCandidate.count || 1,
+          context: surfaceCandidate.meta?.context || 'page shell surface',
+          viewport: surfaceCandidate.meta?.viewport,
+        },
       }
     : undefined
 
@@ -562,16 +581,60 @@ export function deriveAiShellFallback(colors: ColorToken[]): Partial<LayeredColo
 
   return {
     pageBackground: pageBackgroundItem?.color
-      ? { ...pageBackgroundItem.color, role: 'background', name: 'Page Background' }
+      ? {
+          ...pageBackgroundItem.color,
+          role: 'background',
+          name: 'Page Background',
+          meta: {
+            source: pageBackgroundItem.color.meta?.source || 'inferred',
+            confidence: pageBackgroundItem.color.meta?.confidence || 'medium',
+            evidenceCount: pageBackgroundItem.color.meta?.evidenceCount || 1,
+            context: pageBackgroundItem.color.meta?.context || 'page shell background',
+            viewport: pageBackgroundItem.color.meta?.viewport,
+          },
+        }
       : undefined,
     surface: surfaceItem?.color
-      ? { ...surfaceItem.color, role: 'surface', name: 'Surface' }
+      ? {
+          ...surfaceItem.color,
+          role: 'surface',
+          name: 'Surface',
+          meta: {
+            source: surfaceItem.color.meta?.source || 'inferred',
+            confidence: surfaceItem.color.meta?.confidence || 'medium',
+            evidenceCount: surfaceItem.color.meta?.evidenceCount || 1,
+            context: surfaceItem.color.meta?.context || 'page shell surface',
+            viewport: surfaceItem.color.meta?.viewport,
+          },
+        }
       : undefined,
     textPrimary: textPrimaryItem?.color
-      ? { ...textPrimaryItem.color, role: 'text', name: 'Text Primary' }
+      ? {
+          ...textPrimaryItem.color,
+          role: 'text',
+          name: 'Text Primary',
+          meta: {
+            source: textPrimaryItem.color.meta?.source || 'inferred',
+            confidence: textPrimaryItem.color.meta?.confidence || 'medium',
+            evidenceCount: textPrimaryItem.color.meta?.evidenceCount || 1,
+            context: textPrimaryItem.color.meta?.context || 'text color',
+            viewport: textPrimaryItem.color.meta?.viewport,
+          },
+        }
       : undefined,
     textSecondary: textSecondaryItem?.color
-      ? { ...textSecondaryItem.color, role: 'text', name: 'Text Secondary' }
+      ? {
+          ...textSecondaryItem.color,
+          role: 'text',
+          name: 'Text Secondary',
+          meta: {
+            source: textSecondaryItem.color.meta?.source || 'inferred',
+            confidence: textSecondaryItem.color.meta?.confidence || 'low',
+            evidenceCount: textSecondaryItem.color.meta?.evidenceCount || 1,
+            context: textSecondaryItem.color.meta?.context || 'secondary text color',
+            viewport: textSecondaryItem.color.meta?.viewport,
+          },
+        }
       : undefined,
   }
 }

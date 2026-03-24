@@ -16,6 +16,7 @@ import type {
   TransitionToken,
   ButtonSnapshot,
   PageSection,
+  TokenMeta,
 } from '@/lib/types'
 import { chromium, type ElementHandle, type Page } from 'playwright'
 
@@ -38,6 +39,8 @@ type ColorAccumulator = {
   viewportWeight: number
   repetitionWeight: number
   evidenceScore: number
+  sources: Set<TokenMeta['source']>
+  viewport?: string
 }
 
 type TypographyAccumulator = {
@@ -51,6 +54,8 @@ type TypographyAccumulator = {
   componentKinds: Set<ComponentKind>
   sampleText?: string
   evidenceScore: number
+  sources: Set<TokenMeta['source']>
+  viewport?: string
 }
 
 type ValueAccumulator = {
@@ -58,6 +63,8 @@ type ValueAccumulator = {
   count: number
   componentKinds: Set<ComponentKind>
   evidenceScore: number
+  sources: Set<TokenMeta['source']>
+  viewport?: string
 }
 
 type LayoutAccumulator = {
@@ -66,6 +73,8 @@ type LayoutAccumulator = {
   count: number
   componentKinds: Set<ComponentKind>
   evidenceScore: number
+  sources: Set<TokenMeta['source']>
+  viewport?: string
 }
 
 type RawDomColorCandidate = Omit<PageColorCandidate, 'layerHints' | 'roleHints'> & {
@@ -80,6 +89,7 @@ type RawValueAccumulator = {
   count: number
   componentKinds: ComponentKind[]
   evidenceScore: number
+  meta?: TokenMeta
 }
 
 type RawLayoutAccumulator = {
@@ -88,6 +98,7 @@ type RawLayoutAccumulator = {
   count: number
   componentKinds: ComponentKind[]
   evidenceScore: number
+  meta?: TokenMeta
 }
 
 type RawBorderAccumulator = {
@@ -96,6 +107,7 @@ type RawBorderAccumulator = {
   color?: string
   count: number
   componentKinds: ComponentKind[]
+  meta?: TokenMeta
 }
 
 type RawTransitionAccumulator = {
@@ -104,6 +116,7 @@ type RawTransitionAccumulator = {
   easing: string
   count: number
   componentKinds: ComponentKind[]
+  meta?: TokenMeta
 }
 
 type RawDomSignals = {
@@ -132,6 +145,7 @@ type StateAccumulator = {
   state: InteractionState
   componentKinds: Set<ComponentKind>
   evidenceScore: number
+  meta?: TokenMeta
 }
 
 export function createEmptyPageAnalysis(sourceCount?: { inlineStyleBlocks: number; linkedStylesheets: number }): PageStyleAnalysis {
@@ -526,6 +540,17 @@ function isLikelyUtilityNavBackground(candidate: PageColorCandidate) {
 function mergeColorCandidates(domGroup: PageColorCandidate[], cssGroup: PageColorCandidate[]): PageColorCandidate[] {
   const merged = new Map<string, ColorAccumulator>()
 
+  const deriveColorContext = (candidate: Pick<PageColorCandidate, 'roleHints' | 'layerHints' | 'componentKinds'>): string | undefined => {
+    if (candidate.layerHints.includes('hero')) return 'hero color'
+    if (candidate.componentKinds?.includes('nav')) return 'navigation color'
+    if (candidate.roleHints.includes('text')) return 'text color'
+    if (candidate.roleHints.includes('border')) return 'border color'
+    if (candidate.roleHints.includes('surface')) return 'surface color'
+    if (candidate.roleHints.includes('primary')) return 'primary action color'
+    if (candidate.roleHints.includes('secondary')) return 'secondary action color'
+    return 'page shell color'
+  }
+
   const weightedGroups = [
     { group: domGroup, weight: 1 },
     { group: cssGroup, weight: 0.35 },
@@ -546,6 +571,8 @@ function mergeColorCandidates(domGroup: PageColorCandidate[], cssGroup: PageColo
         viewportWeight: 0,
         repetitionWeight: 0,
         evidenceScore: 0,
+        sources: new Set<TokenMeta['source']>(),
+        viewport: candidate.meta?.viewport,
       }
       existing.count += candidate.count * weight
       existing.selectorHint = existing.selectorHint || candidate.selectorHint
@@ -556,6 +583,8 @@ function mergeColorCandidates(domGroup: PageColorCandidate[], cssGroup: PageColo
       existing.viewportWeight += (candidate.viewportWeight || 0) * weight
       existing.repetitionWeight += (candidate.repetitionWeight || 0) * weight
       existing.evidenceScore += (candidate.evidenceScore || 0) * weight
+      existing.viewport = existing.viewport || candidate.meta?.viewport
+      existing.sources.add(candidate.meta?.source || (weight >= 1 ? 'dom-computed' : 'inferred'))
       merged.set(key, existing)
     }
   }
@@ -575,11 +604,39 @@ function mergeColorCandidates(domGroup: PageColorCandidate[], cssGroup: PageColo
       viewportWeight: Math.round(item.viewportWeight),
       repetitionWeight: Math.round(item.repetitionWeight),
       evidenceScore: Math.round(scoreColor(item)),
+      meta: {
+        source: item.sources.has('dom-computed') ? 'dom-computed' : item.sources.has('screenshot-sampled') ? 'screenshot-sampled' : 'inferred',
+        confidence:
+          scoreColor(item) >= 120 || item.count >= 6 ? 'high'
+            : scoreColor(item) >= 60 || item.count >= 3 ? 'medium'
+              : 'low',
+        evidenceCount: Math.max(1, Math.round(item.count)),
+        context: deriveColorContext({
+          roleHints: [...item.roleHints],
+          layerHints: [...item.layerHints],
+          componentKinds: [...item.componentKinds],
+        }),
+        viewport: item.viewport,
+      },
     }))
 }
 
 function mergeTypographyCandidates(...groups: PageTypographyCandidate[][]): PageTypographyCandidate[] {
   const merged = new Map<string, TypographyAccumulator>()
+
+  const deriveTypographyContext = (candidate: { componentKinds?: ComponentKind[] | Set<ComponentKind>; fontSize?: string }): string | undefined => {
+    const rawKinds = candidate.componentKinds
+    const kinds = rawKinds instanceof Set ? [...rawKinds] : (rawKinds || [])
+    if (kinds.includes('hero')) return 'hero heading'
+    if (kinds.includes('nav')) return 'navigation text'
+
+    const size = parseTypographySize(candidate.fontSize)
+    if (Number.isFinite(size) && size >= 36) return 'display text'
+    if (Number.isFinite(size) && size >= 24) return 'section heading'
+    if (Number.isFinite(size) && size >= 14) return 'body text'
+    if (Number.isFinite(size)) return 'supporting text'
+    return undefined
+  }
 
   const hasNumericSize = (value?: string) => {
     if (!value) return false
@@ -635,11 +692,15 @@ function mergeTypographyCandidates(...groups: PageTypographyCandidate[][]): Page
         componentKinds: new Set<ComponentKind>(),
         sampleText: candidate.sampleText,
         evidenceScore: 0,
+        sources: new Set<TokenMeta['source']>(),
+        viewport: candidate.meta?.viewport,
       }
       existing.count += candidate.count
       candidate.componentKinds?.forEach(kind => existing.componentKinds.add(kind))
       existing.sampleText = existing.sampleText || candidate.sampleText
       existing.evidenceScore += candidate.evidenceScore || candidate.count
+      existing.viewport = existing.viewport || candidate.meta?.viewport
+      existing.sources.add(candidate.meta?.source || (candidate.sampleText ? 'dom-computed' : 'inferred'))
       merged.set(key, existing)
     }
   }
@@ -658,6 +719,16 @@ function mergeTypographyCandidates(...groups: PageTypographyCandidate[][]): Page
       componentKinds: [...item.componentKinds],
       sampleText: item.sampleText,
       evidenceScore: Math.round(item.evidenceScore),
+      meta: {
+        source: item.sources.has('dom-computed') ? 'dom-computed' : 'inferred',
+        confidence:
+          item.evidenceScore >= 220 || item.count >= 6 ? 'high'
+            : item.evidenceScore >= 100 || item.count >= 3 ? 'medium'
+              : 'low',
+        evidenceCount: item.count,
+        context: deriveTypographyContext(item),
+        viewport: item.viewport,
+      },
     }))
 }
 
@@ -677,6 +748,14 @@ function sortValueAccumulators(values: ValueAccumulator[]): ValueAccumulator[] {
   return [...values].sort((a, b) => b.evidenceScore - a.evidenceScore)
 }
 
+function getAccumulatorViewport(entry: ValueAccumulator | RawValueAccumulator | LayoutAccumulator | RawLayoutAccumulator) {
+  return (entry as { viewport?: string; meta?: TokenMeta }).viewport || (entry as { meta?: TokenMeta }).meta?.viewport
+}
+
+function getAccumulatorSource(entry: ValueAccumulator | RawValueAccumulator | LayoutAccumulator | RawLayoutAccumulator): TokenMeta['source'] {
+  return 'sources' in entry ? [...entry.sources][0] || 'inferred' : (entry.meta?.source || 'inferred')
+}
+
 function mergeValueAccumulators(...groups: Array<Array<ValueAccumulator | RawValueAccumulator>>): ValueAccumulator[] {
   const merged = new Map<string, ValueAccumulator>()
   for (const group of groups) {
@@ -686,10 +765,14 @@ function mergeValueAccumulators(...groups: Array<Array<ValueAccumulator | RawVal
         count: 0,
         componentKinds: new Set<ComponentKind>(),
         evidenceScore: 0,
+        sources: new Set<TokenMeta['source']>(),
+        viewport: getAccumulatorViewport(entry),
       }
       existing.count += entry.count
       entry.componentKinds.forEach(kind => existing.componentKinds.add(kind))
       existing.evidenceScore += entry.evidenceScore
+      existing.viewport = existing.viewport || getAccumulatorViewport(entry)
+      existing.sources.add(getAccumulatorSource(entry))
       merged.set(entry.value, existing)
     }
   }
@@ -707,10 +790,14 @@ function mergeLayoutAccumulators(...groups: Array<Array<LayoutAccumulator | RawL
         count: 0,
         componentKinds: new Set<ComponentKind>(),
         evidenceScore: 0,
+        sources: new Set<TokenMeta['source']>(),
+        viewport: getAccumulatorViewport(entry),
       }
       existing.count += entry.count
       entry.componentKinds.forEach(kind => existing.componentKinds.add(kind))
       existing.evidenceScore += entry.evidenceScore
+      existing.viewport = existing.viewport || getAccumulatorViewport(entry)
+      existing.sources.add(getAccumulatorSource(entry))
       merged.set(key, existing)
     }
   }
@@ -720,6 +807,7 @@ function mergeLayoutAccumulators(...groups: Array<Array<LayoutAccumulator | RawL
 function toTypographyTokens(candidates: PageTypographyCandidate[]): TypographyToken[] {
   return candidates.slice(0, 8).map((candidate, index) => {
     const size = Number.parseFloat(candidate.fontSize || '')
+    const candidateViewport = candidate.meta?.viewport
     const usage: TypographyToken['usage'] =
       Number.isFinite(size) && size >= 40 ? 'display'
         : Number.isFinite(size) && size >= 28 ? 'heading'
@@ -740,6 +828,24 @@ function toTypographyTokens(candidates: PageTypographyCandidate[]): TypographyTo
       sampleCount: candidate.count,
       componentKinds: candidate.componentKinds || [],
       evidenceScore: candidate.evidenceScore || candidate.count,
+      meta: candidate.meta || {
+        source: candidate.sampleText ? 'dom-computed' : 'inferred',
+        confidence:
+          (candidate.evidenceScore || candidate.count) >= 220 || candidate.count >= 6 ? 'high'
+            : (candidate.evidenceScore || candidate.count) >= 100 || candidate.count >= 3 ? 'medium'
+              : 'low',
+        evidenceCount: candidate.count,
+        context: usage === 'display'
+          ? 'hero heading'
+          : usage === 'heading'
+            ? 'section heading'
+            : usage === 'title'
+              ? 'title text'
+              : usage === 'body'
+                ? 'body text'
+                : 'supporting text',
+        viewport: candidateViewport,
+      },
     }
   })
 }
@@ -759,6 +865,16 @@ function toRadiusTokens(values: ValueAccumulator[]): RadiusToken[] {
     sampleCount: entry.count,
     componentKinds: [...entry.componentKinds],
     evidenceScore: Math.round(entry.evidenceScore),
+    meta: {
+      source: entry.sources.has('dom-computed') ? 'dom-computed' : 'inferred',
+      confidence:
+        entry.evidenceScore >= 40 || entry.count >= 6 ? 'high'
+          : entry.evidenceScore >= 18 || entry.count >= 3 ? 'medium'
+            : 'low',
+      evidenceCount: entry.count,
+      context: 'border radius',
+      viewport: entry.viewport,
+    },
   }))
 }
 
@@ -769,6 +885,16 @@ function toShadowTokens(values: ValueAccumulator[]): ShadowToken[] {
     sampleCount: entry.count,
     componentKinds: [...entry.componentKinds],
     evidenceScore: Math.round(entry.evidenceScore),
+    meta: {
+      source: entry.sources.has('dom-computed') ? 'dom-computed' : 'inferred',
+      confidence:
+        entry.evidenceScore >= 40 || entry.count >= 5 ? 'high'
+          : entry.evidenceScore >= 18 || entry.count >= 3 ? 'medium'
+            : 'low',
+      evidenceCount: entry.count,
+      context: 'box shadow',
+      viewport: entry.viewport,
+    },
   }))
 }
 
@@ -779,6 +905,16 @@ function toSpacingTokens(values: ValueAccumulator[]): SpacingToken[] {
     sampleCount: entry.count,
     componentKinds: [...entry.componentKinds],
     evidenceScore: Math.round(entry.evidenceScore),
+    meta: {
+      source: entry.sources.has('dom-computed') ? 'dom-computed' : 'inferred',
+      confidence:
+        entry.evidenceScore >= 30 || entry.count >= 8 ? 'high'
+          : entry.evidenceScore >= 14 || entry.count >= 4 ? 'medium'
+            : 'low',
+      evidenceCount: entry.count,
+      context: 'common spacing measurement',
+      viewport: entry.viewport,
+    },
   }))
 }
 
@@ -789,6 +925,16 @@ function toLayoutEvidence(values: LayoutAccumulator[]): LayoutEvidence[] {
     sampleCount: entry.count,
     componentKinds: [...entry.componentKinds],
     evidenceScore: Math.round(entry.evidenceScore),
+    meta: {
+      source: entry.sources.has('dom-computed') ? 'dom-computed' : 'inferred',
+      confidence:
+        entry.evidenceScore >= 20 || entry.count >= 4 ? 'high'
+          : entry.evidenceScore >= 8 || entry.count >= 2 ? 'medium'
+            : 'low',
+      evidenceCount: entry.count,
+      context: `${entry.kind} layout evidence`,
+      viewport: entry.viewport,
+    },
   }))
 }
 
@@ -809,6 +955,12 @@ function toBorderTokens(values: RawBorderAccumulator[]): BorderToken[] {
       color: v.color,
       sampleCount: v.count,
       componentKinds: v.componentKinds,
+      meta: v.meta || {
+        source: 'dom-computed',
+        confidence: v.count >= 4 ? 'high' : v.count >= 2 ? 'medium' : 'low',
+        evidenceCount: v.count,
+        context: 'border style',
+      },
     }))
 }
 
@@ -833,6 +985,12 @@ function toTransitionTokens(values: RawTransitionAccumulator[]): TransitionToken
       easing: v.easing,
       sampleCount: v.count,
       componentKinds: v.componentKinds,
+      meta: v.meta || {
+        source: 'dom-computed',
+        confidence: v.count >= 4 ? 'high' : v.count >= 2 ? 'medium' : 'low',
+        evidenceCount: v.count,
+        context: 'transition token',
+      },
     }))
 }
 
@@ -865,6 +1023,12 @@ function buildStateTokens(
       componentKinds: [...token.componentKinds],
       evidenceScore: Math.round(token.evidenceScore),
       measured: true,
+      meta: token.meta || {
+        source: 'inferred',
+        confidence: token.evidenceScore >= 18 ? 'high' : token.evidenceScore >= 8 ? 'medium' : 'low',
+        evidenceCount: 1,
+        context: `${token.state} state`,
+      },
     }
 
     if (token.componentKinds.has('button')) result.button?.push(payload)
@@ -948,18 +1112,48 @@ function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
       count: entry.count,
       componentKinds: [...entry.componentKinds],
       evidenceScore: entry.evidenceScore,
+      meta: {
+        source: entry.sources.has('dom-computed') ? 'dom-computed' : 'inferred',
+        confidence:
+          entry.evidenceScore >= 40 || entry.count >= 6 ? 'high'
+            : entry.evidenceScore >= 18 || entry.count >= 3 ? 'medium'
+              : 'low',
+        evidenceCount: entry.count,
+        context: 'border radius',
+        viewport: entry.viewport,
+      },
     })),
     rawShadowTokens: mergeValueAccumulators(...available.map(source => source.rawShadowTokens)).map(entry => ({
       value: entry.value,
       count: entry.count,
       componentKinds: [...entry.componentKinds],
       evidenceScore: entry.evidenceScore,
+      meta: {
+        source: entry.sources.has('dom-computed') ? 'dom-computed' : 'inferred',
+        confidence:
+          entry.evidenceScore >= 40 || entry.count >= 5 ? 'high'
+            : entry.evidenceScore >= 18 || entry.count >= 3 ? 'medium'
+              : 'low',
+        evidenceCount: entry.count,
+        context: 'box shadow',
+        viewport: entry.viewport,
+      },
     })),
     rawSpacingTokens: mergeValueAccumulators(...available.map(source => source.rawSpacingTokens)).map(entry => ({
       value: entry.value,
       count: entry.count,
       componentKinds: [...entry.componentKinds],
       evidenceScore: entry.evidenceScore,
+      meta: {
+        source: entry.sources.has('dom-computed') ? 'dom-computed' : 'inferred',
+        confidence:
+          entry.evidenceScore >= 30 || entry.count >= 8 ? 'high'
+            : entry.evidenceScore >= 14 || entry.count >= 4 ? 'medium'
+              : 'low',
+        evidenceCount: entry.count,
+        context: 'common spacing measurement',
+        viewport: entry.viewport,
+      },
     })),
     rawLayoutEvidence: mergeLayoutAccumulators(...available.map(source => source.rawLayoutEvidence)).map(entry => ({
       label: entry.label,
@@ -967,6 +1161,16 @@ function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
       count: entry.count,
       componentKinds: [...entry.componentKinds],
       evidenceScore: entry.evidenceScore,
+      meta: {
+        source: entry.sources.has('dom-computed') ? 'dom-computed' : 'inferred',
+        confidence:
+          entry.evidenceScore >= 20 || entry.count >= 4 ? 'high'
+            : entry.evidenceScore >= 8 || entry.count >= 2 ? 'medium'
+              : 'low',
+        evidenceCount: entry.count,
+        context: `${entry.kind} layout evidence`,
+        viewport: entry.viewport,
+      },
     })),
     rawBorderTokens: available.flatMap(s => s.rawBorderTokens || []),
     rawTransitionTokens: available.flatMap(s => s.rawTransitionTokens || []),
@@ -1128,6 +1332,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       hsl: '',
       name: candidate.roleHints.includes('hero') ? 'Hero Background' : 'Measured Color',
       description: `Measured from ${candidate.property}${candidate.selectorHint ? ` on ${candidate.selectorHint}` : ''}`,
+      meta: candidate.meta,
     }
   }
 
@@ -1529,27 +1734,30 @@ function extractCssSignals(cssText: string): {
 
       for (const hex of extractHexesFromValue(value)) {
         const key = `${hex}:${property}:${selectorHint}`
-        const existing = colors.get(key) || {
-          hex,
-          property,
+      const existing = colors.get(key) || {
+        hex,
+        property,
           selectorHint,
           count: 0,
           roleHints: new Set<string>(),
           layerHints: new Set<'global' | 'hero' | 'content'>(),
           componentKinds: new Set<ComponentKind>(),
-          areaWeight: 0,
-          viewportWeight: 0,
-          repetitionWeight: 0,
-          evidenceScore: 0,
-        }
+        areaWeight: 0,
+        viewportWeight: 0,
+        repetitionWeight: 0,
+        evidenceScore: 0,
+        sources: new Set<TokenMeta['source']>(),
+        viewport: undefined,
+      }
         existing.count += 1
         roleHintsFromProperty(property, selectorHint).forEach(hint => existing.roleHints.add(hint))
         layerHints.forEach(hint => existing.layerHints.add(hint))
         componentKinds.forEach(kind => existing.componentKinds.add(kind))
-        existing.repetitionWeight += 1
-        existing.evidenceScore += 2
-        colors.set(key, existing)
-      }
+      existing.repetitionWeight += 1
+      existing.evidenceScore += 2
+      existing.sources.add('inferred')
+      colors.set(key, existing)
+    }
 
       if (property === 'font-family') fontFamily = value.replace(/\s*!important$/, '')
       if (property === 'font-size') fontSize = value
@@ -1559,28 +1767,31 @@ function extractCssSignals(cssText: string): {
 
       if (property === 'border-radius' && value !== '0' && value !== '0px' && !value.includes('var(') && !value.includes('calc(')) {
         const normalized = normalizeRadiusShorthand(value)
-        const existing = radiusValues.get(normalized) || { value: normalized, count: 0, componentKinds: new Set<ComponentKind>(), evidenceScore: 0 }
+        const existing = radiusValues.get(normalized) || { value: normalized, count: 0, componentKinds: new Set<ComponentKind>(), evidenceScore: 0, sources: new Set<TokenMeta['source']>(), viewport: undefined }
         existing.count += 1
         componentKinds.forEach(kind => existing.componentKinds.add(kind))
         existing.evidenceScore += 1
+        existing.sources.add('inferred')
         radiusValues.set(normalized, existing)
       }
 
       if (property === 'box-shadow' && value !== 'none' && !value.includes('var(')) {
-        const existing = shadowValues.get(value) || { value, count: 0, componentKinds: new Set<ComponentKind>(), evidenceScore: 0 }
+        const existing = shadowValues.get(value) || { value, count: 0, componentKinds: new Set<ComponentKind>(), evidenceScore: 0, sources: new Set<TokenMeta['source']>(), viewport: undefined }
         existing.count += 1
         componentKinds.forEach(kind => existing.componentKinds.add(kind))
         existing.evidenceScore += 1
+        existing.sources.add('inferred')
         shadowValues.set(value, existing)
       }
 
       if (property === 'gap' || property.startsWith('padding') || property.startsWith('margin')) {
         for (const item of value.match(/\d+(\.\d+)?px/g) || []) {
           if (Number.parseFloat(item) < 4) continue
-          const existing = spacingValues.get(item) || { value: item, count: 0, componentKinds: new Set<ComponentKind>(), evidenceScore: 0 }
+          const existing = spacingValues.get(item) || { value: item, count: 0, componentKinds: new Set<ComponentKind>(), evidenceScore: 0, sources: new Set<TokenMeta['source']>(), viewport: undefined }
           existing.count += 1
           componentKinds.forEach(kind => existing.componentKinds.add(kind))
           existing.evidenceScore += 1
+          existing.sources.add('inferred')
           spacingValues.set(item, existing)
         }
       }
@@ -1592,6 +1803,8 @@ function extractCssSignals(cssText: string): {
           count: (layoutValues.get('Grid')?.count || 0) + 1,
           componentKinds: new Set(componentKinds),
           evidenceScore: (layoutValues.get('Grid')?.evidenceScore || 0) + 2,
+          sources: new Set<TokenMeta['source']>(['inferred']),
+          viewport: undefined,
         })
       }
       if (property === 'display' && value.includes('flex')) {
@@ -1601,6 +1814,8 @@ function extractCssSignals(cssText: string): {
           count: (layoutValues.get('Flex')?.count || 0) + 1,
           componentKinds: new Set(componentKinds),
           evidenceScore: (layoutValues.get('Flex')?.evidenceScore || 0) + 2,
+          sources: new Set<TokenMeta['source']>(['inferred']),
+          viewport: undefined,
         })
       }
       if (property.startsWith('grid-template-columns')) {
@@ -1610,6 +1825,8 @@ function extractCssSignals(cssText: string): {
           count: (layoutValues.get('Multi-column grid')?.count || 0) + 1,
           componentKinds: new Set(componentKinds),
           evidenceScore: (layoutValues.get('Multi-column grid')?.evidenceScore || 0) + 3,
+          sources: new Set<TokenMeta['source']>(['inferred']),
+          viewport: undefined,
         })
       }
       if (property === 'position' && value === 'sticky') {
@@ -1619,6 +1836,8 @@ function extractCssSignals(cssText: string): {
           count: (layoutValues.get('Sticky navigation')?.count || 0) + 1,
           componentKinds: new Set(componentKinds),
           evidenceScore: (layoutValues.get('Sticky navigation')?.evidenceScore || 0) + 3,
+          sources: new Set<TokenMeta['source']>(['inferred']),
+          viewport: undefined,
         })
       }
 
@@ -1630,6 +1849,12 @@ function extractCssSignals(cssText: string): {
           state: interactionState,
           componentKinds: new Set<ComponentKind>(),
           evidenceScore: 0,
+          meta: {
+            source: 'inferred',
+            confidence: 'medium',
+            evidenceCount: 1,
+            context: `${interactionState} state`,
+          },
         }
         componentKinds.forEach(kind => existing.componentKinds.add(kind))
         existing.evidenceScore += 3
@@ -1650,10 +1875,13 @@ function extractCssSignals(cssText: string): {
         componentKinds: new Set<ComponentKind>(),
         sampleText: undefined,
         evidenceScore: 0,
+        sources: new Set<TokenMeta['source']>(),
+        viewport: undefined,
       }
       existing.count += 1
       componentKinds.forEach(kind => existing.componentKinds.add(kind))
       existing.evidenceScore += 2
+      existing.sources.add('inferred')
       typography.set(key, existing)
     }
   }
@@ -1671,6 +1899,12 @@ function extractCssSignals(cssText: string): {
       viewportWeight: item.viewportWeight,
       repetitionWeight: item.repetitionWeight,
       evidenceScore: Math.round(scoreColor(item)),
+      meta: {
+        source: 'inferred',
+        confidence: scoreColor(item) >= 60 || item.count >= 3 ? 'medium' : 'low',
+        evidenceCount: Math.max(1, Math.round(item.count)),
+        context: roleHintsFromProperty(item.property, item.selectorHint).includes('hero') ? 'hero color' : roleHintsFromProperty(item.property, item.selectorHint).includes('text') ? 'text color' : 'css color rule',
+      },
     })),
     typographyCandidates: [...typography.values()].sort((a, b) => b.evidenceScore - a.evidenceScore).slice(0, 10).map(item => ({
       fontFamily: item.fontFamily,
@@ -1682,6 +1916,12 @@ function extractCssSignals(cssText: string): {
       componentKinds: [...item.componentKinds],
       sampleText: item.sampleText,
       evidenceScore: Math.round(item.evidenceScore),
+      meta: {
+        source: 'inferred',
+        confidence: item.evidenceScore >= 6 || item.count >= 3 ? 'medium' : 'low',
+        evidenceCount: item.count,
+        context: item.componentKinds.has('hero') ? 'hero text' : item.componentKinds.has('nav') ? 'navigation text' : 'css typography rule',
+      },
     })),
     radiusCandidates: [...radiusValues.keys()].slice(0, 10),
     shadowCandidates: [...shadowValues.keys()].slice(0, 8),
@@ -1724,8 +1964,33 @@ async function extractDomSignalsFromPage(
 
   const collectSnapshot = () => page.evaluate(({ maxVisibleElements }) => {
       type ComponentKind = 'hero' | 'nav' | 'button' | 'card' | 'section' | 'input' | 'link' | 'text' | 'surface'
-      type ValueAccumulator = { value: string; count: number; componentKinds: ComponentKind[]; evidenceScore: number }
-      type LayoutAccumulator = { label: string; kind: 'hero' | 'grid' | 'flex' | 'navigation' | 'form' | 'section' | 'multi-column' | 'sticky' | 'stack'; count: number; componentKinds: ComponentKind[]; evidenceScore: number }
+      type ValueAccumulator = {
+        value: string
+        count: number
+        componentKinds: ComponentKind[]
+        evidenceScore: number
+        meta?: {
+          source: 'dom-computed'
+          confidence: 'high' | 'medium' | 'low'
+          evidenceCount: number
+          context?: string
+          viewport?: string
+        }
+      }
+      type LayoutAccumulator = {
+        label: string
+        kind: 'hero' | 'grid' | 'flex' | 'navigation' | 'form' | 'section' | 'multi-column' | 'sticky' | 'stack'
+        count: number
+        componentKinds: ComponentKind[]
+        evidenceScore: number
+        meta?: {
+          source: 'dom-computed'
+          confidence: 'high' | 'medium' | 'low'
+          evidenceCount: number
+          context?: string
+          viewport?: string
+        }
+      }
 
       const colorMap = new Map<string, any>()
       const typoMap = new Map<string, any>()
@@ -1769,21 +2034,43 @@ async function extractDomSignalsFromPage(
         return [...kinds]
       }
 
-      const addValueToken = (map: Map<string, ValueAccumulator>, value: string, componentKinds: ComponentKind[], evidence: number) => {
+      const viewport = `${window.innerWidth}x${window.innerHeight}`
+
+      const addValueToken = (
+        map: Map<string, ValueAccumulator>,
+        value: string,
+        componentKinds: ComponentKind[],
+        evidence: number,
+        context: string
+      ) => {
         if (!value || value === '0px' || value === 'none') return
-        const existing = map.get(value) || { value, count: 0, componentKinds: [], evidenceScore: 0 }
+        const existing = map.get(value) || { value, count: 0, componentKinds: [], evidenceScore: 0, meta: undefined }
         existing.count += 1
         existing.componentKinds = [...new Set([...existing.componentKinds, ...componentKinds])]
         existing.evidenceScore += evidence
+        existing.meta = {
+          source: 'dom-computed',
+          confidence: existing.evidenceScore >= 30 || existing.count >= 5 ? 'high' : existing.evidenceScore >= 12 || existing.count >= 3 ? 'medium' : 'low',
+          evidenceCount: existing.count,
+          context,
+          viewport,
+        }
         map.set(value, existing)
       }
 
       const addLayout = (label: string, kind: LayoutAccumulator['kind'], componentKinds: ComponentKind[], evidence: number) => {
         const key = `${kind}:${label}`
-        const existing = layoutValues.get(key) || { label, kind, count: 0, componentKinds: [], evidenceScore: 0 }
+        const existing = layoutValues.get(key) || { label, kind, count: 0, componentKinds: [], evidenceScore: 0, meta: undefined }
         existing.count += 1
         existing.componentKinds = [...new Set([...existing.componentKinds, ...componentKinds])]
         existing.evidenceScore += evidence
+        existing.meta = {
+          source: 'dom-computed',
+          confidence: existing.evidenceScore >= 16 || existing.count >= 4 ? 'high' : existing.evidenceScore >= 8 || existing.count >= 2 ? 'medium' : 'low',
+          evidenceCount: existing.count,
+          context: `${kind} layout evidence`,
+          viewport,
+        }
         layoutValues.set(key, existing)
       }
 
@@ -2090,13 +2377,13 @@ async function extractDomSignalsFromPage(
             : (rParts.length === 4 && rParts[0] === rParts[2] && rParts[1] === rParts[3])
               ? `${rParts[0]} ${rParts[1]}`
               : style.borderRadius
-          addValueToken(radiusValues, normalized, componentKinds, evidence)
+          addValueToken(radiusValues, normalized, componentKinds, evidence, 'border radius')
         }
-        if (style.boxShadow && style.boxShadow !== 'none' && !style.boxShadow.startsWith('var(')) addValueToken(shadowValues, style.boxShadow, componentKinds, evidence)
+        if (style.boxShadow && style.boxShadow !== 'none' && !style.boxShadow.startsWith('var(')) addValueToken(shadowValues, style.boxShadow, componentKinds, evidence, 'box shadow')
 
         ;[style.gap, style.rowGap, style.columnGap, style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft, style.marginTop, style.marginBottom].forEach(value => {
           const match = value?.match(/\d+(\.\d+)?px/)
-          if (match && parseFloat(match[0]) >= 4) addValueToken(spacingValues, match[0], componentKinds, Math.max(1, Math.round(evidence * 0.5)))
+          if (match && parseFloat(match[0]) >= 4) addValueToken(spacingValues, match[0], componentKinds, Math.max(1, Math.round(evidence * 0.5)), 'common spacing measurement')
         })
 
       }
@@ -2139,16 +2426,42 @@ async function extractDomSignalsFromPage(
           componentKinds: [],
           sampleText: text,
           evidenceScore: 0,
+          meta: {
+            source: 'dom-computed' as const,
+            confidence: 'medium' as const,
+            evidenceCount: 0,
+            viewport: `${window.innerWidth}x${window.innerHeight}`,
+          },
         }
         existing.count += 1
         existing.componentKinds = [...new Set([...(existing.componentKinds || []), ...componentKinds])]
         existing.sampleText = existing.sampleText || text
         existing.evidenceScore += textEvidence
+        existing.meta = {
+          source: 'dom-computed',
+          confidence: existing.evidenceScore >= 220 || existing.count >= 6 ? 'high' : existing.evidenceScore >= 100 || existing.count >= 3 ? 'medium' : 'low',
+          evidenceCount: existing.count,
+          context: componentKinds.includes('hero') ? 'hero text' : componentKinds.includes('nav') ? 'navigation text' : isHeading ? 'heading text' : 'body text',
+          viewport: `${window.innerWidth}x${window.innerHeight}`,
+        }
         typoMap.set(key, existing)
       }
 
       // ── Border tokens (from elements with visible borders) ────────────────
-      const borderMap = new Map<string, { width: string; style: string; color?: string; count: number; componentKinds: ComponentKind[] }>()
+      const borderMap = new Map<string, {
+        width: string
+        style: string
+        color?: string
+        count: number
+        componentKinds: ComponentKind[]
+        meta?: {
+          source: 'dom-computed'
+          confidence: 'high' | 'medium' | 'low'
+          evidenceCount: number
+          context?: string
+          viewport?: string
+        }
+      }>()
       const borderTargets = Array.from(document.querySelectorAll<HTMLElement>('button, input, textarea, [class*="card"], [class*="panel"], article, section, aside'))
       for (const el of borderTargets.slice(0, 40)) {
         const style = window.getComputedStyle(el)
@@ -2163,13 +2476,33 @@ async function extractDomSignalsFromPage(
         })()
         const tag = el.tagName.toLowerCase()
         const kinds: ComponentKind[] = tag === 'button' ? ['button'] : (tag === 'input' || tag === 'textarea') ? ['input'] : ['card']
-        const existing = borderMap.get(key) || { width: bw, style: bs, color: hex, count: 0, componentKinds: kinds }
+        const existing = borderMap.get(key) || { width: bw, style: bs, color: hex, count: 0, componentKinds: kinds, meta: undefined }
         existing.count += 1
+        existing.meta = {
+          source: 'dom-computed',
+          confidence: existing.count >= 4 ? 'high' : existing.count >= 2 ? 'medium' : 'low',
+          evidenceCount: existing.count,
+          context: 'border style',
+          viewport,
+        }
         borderMap.set(key, existing)
       }
 
       // ── Transition tokens (from interactive elements) ──────────────────────
-      const transitionMap = new Map<string, { property: string; duration: string; easing: string; count: number; componentKinds: ComponentKind[] }>()
+      const transitionMap = new Map<string, {
+        property: string
+        duration: string
+        easing: string
+        count: number
+        componentKinds: ComponentKind[]
+        meta?: {
+          source: 'dom-computed'
+          confidence: 'high' | 'medium' | 'low'
+          evidenceCount: number
+          context?: string
+          viewport?: string
+        }
+      }>()
       const interactiveTargets = Array.from(document.querySelectorAll<HTMLElement>('button, a[href], input, [role="button"]'))
       for (const el of interactiveTargets.slice(0, 30)) {
         const style = window.getComputedStyle(el)
@@ -2188,8 +2521,15 @@ async function extractDomSignalsFromPage(
           const key = `${dur}:${easing}`
           const tag = el.tagName.toLowerCase()
           const kinds: ComponentKind[] = tag === 'button' ? ['button'] : tag === 'a' ? ['link'] : ['input']
-          const existing = transitionMap.get(key) || { property: prop, duration: dur, easing, count: 0, componentKinds: kinds }
+          const existing = transitionMap.get(key) || { property: prop, duration: dur, easing, count: 0, componentKinds: kinds, meta: undefined }
           existing.count += 1
+          existing.meta = {
+            source: 'dom-computed',
+            confidence: existing.count >= 4 ? 'high' : existing.count >= 2 ? 'medium' : 'low',
+            evidenceCount: existing.count,
+            context: 'transition token',
+            viewport,
+          }
           transitionMap.set(key, existing)
         }
       }
@@ -2343,8 +2683,37 @@ async function extractDomSignalsFromPage(
 
   const domSignals = mergeRawDomSignals(...snapshots)
 
+  const viewportSize = page.viewportSize()
+  const viewport = viewportSize ? `${viewportSize.width}x${viewportSize.height}` : undefined
+  const withColorMeta = (domSignals.colorCandidates || []).map(candidate => {
+    const evidenceScore = candidate.evidenceScore || candidate.count || 0
+    const context =
+      candidate.layerHints.includes('hero') ? 'hero color'
+        : candidate.roleHints.includes('text') ? 'text color'
+          : candidate.roleHints.includes('border') ? 'border color'
+            : candidate.roleHints.includes('surface') ? 'surface color'
+              : candidate.roleHints.includes('primary') ? 'primary action color'
+                : candidate.roleHints.includes('secondary') ? 'secondary action color'
+                  : 'page color'
+
+    return {
+      ...candidate,
+      meta: candidate.meta || {
+        source: 'dom-computed' as const,
+        confidence:
+          evidenceScore >= 220 || candidate.count >= 6 ? 'high'
+            : evidenceScore >= 100 || candidate.count >= 3 ? 'medium'
+              : 'low',
+        evidenceCount: candidate.count,
+        context,
+        viewport,
+      },
+    }
+  })
+
   return {
     ...domSignals,
+    colorCandidates: withColorMeta,
     stateTokens: mergeComponentStateTokens(domSignals.stateTokens, interactiveStateTokens),
   }
 }

@@ -1,5 +1,5 @@
 import sharp from 'sharp'
-import type { ComponentKind, PageColorCandidate, PageStyleAnalysis } from '@/lib/types'
+import type { ComponentKind, PageColorCandidate, PageStyleAnalysis, TokenMeta } from '@/lib/types'
 import { buildSemanticColorSystem } from '@/lib/api/pageAnalyzer'
 import { detectEmbeddedMediaRegion, detectHeroCtaRegions, detectHeroRegion, type VisualRegion } from '@/lib/api/heroRegionDetector'
 
@@ -217,6 +217,16 @@ export async function analyzeHeroVisualSignals(imageBuffer: Buffer): Promise<Pag
 
   const heroKinds: ComponentKind[] = ['hero', 'section', 'surface']
   const contentKinds: ComponentKind[] = ['card', 'surface', 'section']
+  const visualMeta = (
+    confidence: TokenMeta['confidence'],
+    evidenceCount: number,
+    context: string
+  ): TokenMeta => ({
+    source: 'screenshot-sampled',
+    confidence,
+    evidenceCount,
+    context,
+  })
 
   return [
     ...heroColors.map((hex, index) => ({
@@ -228,6 +238,7 @@ export async function analyzeHeroVisualSignals(imageBuffer: Buffer): Promise<Pag
       layerHints: ['hero'] as Array<'global' | 'hero' | 'content'>,
       componentKinds: heroKinds,
       evidenceScore: 30 - index * 3,
+      meta: visualMeta(index === 0 ? 'high' : 'medium', 18 - index, 'hero color'),
     })),
     ...heroActionColors.map((hex, index) => ({
       hex,
@@ -238,6 +249,7 @@ export async function analyzeHeroVisualSignals(imageBuffer: Buffer): Promise<Pag
       layerHints: ['hero'] as Array<'global' | 'hero' | 'content'>,
       componentKinds: ['hero', 'button'] as ComponentKind[],
       evidenceScore: 28 - index * 4,
+      meta: visualMeta(index === 0 ? 'high' : 'medium', 16 - index, 'hero action color'),
     })),
     ...contentColors.map((hex, index) => ({
       hex,
@@ -248,6 +260,7 @@ export async function analyzeHeroVisualSignals(imageBuffer: Buffer): Promise<Pag
       layerHints: ['global'] as Array<'global' | 'hero' | 'content'>,
       componentKinds: contentKinds,
       evidenceScore: 12 - index * 2,
+      meta: visualMeta('medium', 8 - index, 'content color'),
     })),
   ]
 }
@@ -271,6 +284,12 @@ export async function mergeScreenshotColorSignals(
         candidate.layerHints.some(layer => visualCandidate.layerHints.includes(layer))
       )
       if (current) {
+        const existingEvidence = current.meta?.evidenceCount || current.count
+        const visualEvidence = visualCandidate.meta?.evidenceCount || visualCandidate.count
+        const isCrossConfirmed =
+          current.meta?.source === 'dom-computed' &&
+          visualCandidate.meta?.source === 'screenshot-sampled'
+
         current.count += visualCandidate.count
         current.evidenceScore = (current.evidenceScore || 0) + (visualCandidate.evidenceScore || 0)
         current.roleHints = [...new Set([...current.roleHints, ...visualCandidate.roleHints])]
@@ -278,6 +297,23 @@ export async function mergeScreenshotColorSignals(
         current.componentKinds = [...new Set([...(current.componentKinds || []), ...(visualCandidate.componentKinds || [])])]
         if (current.property === 'color' || current.property === 'border-color') {
           current.property = visualCandidate.property
+        }
+        current.meta = {
+          source: current.meta?.source === 'dom-computed'
+            ? 'dom-computed'
+            : (visualCandidate.meta?.source || current.meta?.source || 'screenshot-sampled'),
+          confidence: isCrossConfirmed
+              ? 'high'
+              : current.meta?.confidence === 'high' || visualCandidate.meta?.confidence === 'high'
+                ? 'high'
+                : current.meta?.confidence === 'medium' || visualCandidate.meta?.confidence === 'medium'
+                  ? 'medium'
+                  : 'low',
+          evidenceCount: existingEvidence + visualEvidence,
+          context: isCrossConfirmed
+            ? `${current.meta?.context || visualCandidate.meta?.context || 'color'} (confirmed)`
+            : (current.meta?.context || visualCandidate.meta?.context),
+          viewport: current.meta?.viewport || visualCandidate.meta?.viewport,
         }
       } else {
         augmentedCandidates.push(visualCandidate)
