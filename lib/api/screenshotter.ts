@@ -93,6 +93,9 @@ async function prepareSettledPageForAtomicCapture(page: import('playwright').Pag
         transition: none !important;
         animation: none !important;
         caret-color: transparent !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: none !important;
       }
       html {
         scroll-behavior: auto !important;
