@@ -137,6 +137,53 @@ export interface Typography {
   googleFontsAlt?: string
 }
 
+// ── Button snapshot (DOM-measured exact CSS from real button element) ──────────
+export interface ButtonSnapshot {
+  backgroundColor?: string   // '#2383E2'
+  color?: string             // '#FFFFFF'
+  borderRadius?: string      // '8px'
+  paddingH?: string          // '20px'
+  paddingV?: string          // '10px'
+  fontSize?: string          // '15px'
+  fontWeight?: string        // '600'
+  fontFamily?: string
+  border?: string            // 'none' or '1px solid #xxx'
+  boxShadow?: string
+  letterSpacing?: string
+  width?: string             // actual rendered width e.g. '148px'
+  height?: string
+  text?: string              // button label text e.g. 'Get Notion free'
+}
+
+// ── Page section (one visible section of the page) ────────────────────────────
+export interface PageSection {
+  index: number
+  purpose: 'hero' | 'features' | 'pricing' | 'testimonials' | 'cta' | 'footer' | 'section'
+  layout: 'full-width' | '2-column' | '3-column-grid' | '4-column-grid' | 'asymmetric' | 'grid'
+  columns: number
+  hasCTA: boolean
+  hasImage: boolean
+  heading?: string
+  measured: boolean          // true = DOM-measured, false = AI-inferred
+}
+
+// ── Visual style (AI-inferred from screenshot) ────────────────────────────────
+export interface VisualStyleAnalysis {
+  iconStyle?: 'solid' | 'outline' | 'rounded-outline' | 'duotone' | 'mixed' | 'minimal' | 'none'
+  personality?: string[]     // e.g. ['minimal', 'professional', 'bold']
+  density?: 'sparse' | 'comfortable' | 'dense'
+  imageStyle?: 'photography' | 'illustration' | 'product-screenshots' | 'abstract' | 'mixed' | 'none'
+  colorTemperature?: 'warm' | 'cool' | 'neutral'
+  iconLibrary?: string       // 'heroicons', 'lucide', 'custom' etc.
+}
+
+// ── Interaction style (AI-inferred for image reports, measured for URL) ───────
+export interface InteractionStyleAI {
+  hoverEffect?: string       // 'subtle color shift', 'scale up'
+  transitionFeel?: string    // 'snappy', 'smooth', 'bouncy'
+  animationCharacter?: string // 'restrained', 'expressive'
+}
+
 export interface DesignDetails {
   overallStyle: string
   colorMode: 'dark' | 'light' | 'system'
@@ -148,8 +195,8 @@ export interface DesignDetails {
   imageHandling: string
   layoutStructure: string
   // Exact CSS values
-  cssRadius?: string 
-  cssShadow?: string 
+  cssRadius?: string
+  cssShadow?: string
   cssStroke?: string
   // Ultra-short bilingual tags replacing paragraphs
   layoutEn?: string
@@ -162,6 +209,10 @@ export interface DesignDetails {
   iconZh?: string
   signatureEn?: string
   signatureZh?: string
+  // Structured AI analysis (for image reports & URL fallback)
+  pageSections?: PageSection[]
+  visualStyle?: VisualStyleAnalysis
+  interactionStyle?: InteractionStyleAI
 }
 
 export interface PageColorCandidate {
@@ -206,8 +257,10 @@ export interface PageStyleAnalysis {
   stateTokens?: ComponentStateTokens
   borderTokens?: BorderToken[]
   transitionTokens?: TransitionToken[]
-  pageMaxWidth?: string     // e.g. '1200px', '1440px'
-  gridColumns?: string      // e.g. '12', 'repeat(3, 1fr)'
+  pageMaxWidth?: string
+  gridColumns?: string
+  buttonSnapshot?: ButtonSnapshot
+  pageSections?: PageSection[]
   cssTextExcerpt?: string
   sourceCount: {
     inlineStyleBlocks: number

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import type { StyleReport, RadiusToken, ShadowToken, BorderToken, TransitionToken } from '@/lib/types'
+import type { StyleReport, RadiusToken, ShadowToken, BorderToken, TransitionToken, ButtonSnapshot, PageSection, VisualStyleAnalysis, InteractionStyleAI } from '@/lib/types'
 
-type MainTab = 'components' | 'shape' | 'space' | 'interaction'
+type MainTab = 'components' | 'shape' | 'space' | 'interaction' | 'style'
 type ComponentTab = 'button' | 'input' | 'card' | 'badge'
 
 interface Props {
@@ -19,26 +19,41 @@ export default function DesignInspector({ report, lang }: Props) {
   const analysis = report.pageAnalysis
   const sourceIsUrl = report.sourceType === 'url'
 
-  // ── Color tokens ──────────────────────────────────────────────────────────
-  const primaryHex   = colorSystem?.primaryAction?.hex || colors.find(c => c.role === 'primary')?.hex  || '#1D1D1F'
+  // ── Snapshot data (DOM-measured button) ──────────────────────────────────
+  const snap: ButtonSnapshot | undefined = analysis?.buttonSnapshot
+
+  // ── Color tokens (fallback chain: colorSystem → colors array → defaults) ──
+  const primaryHex   = snap?.backgroundColor
+    || colorSystem?.primaryAction?.hex
+    || colorSystem?.heroPrimaryAction?.hex
+    || colors.find(c => c.role === 'primary')?.hex
+    || '#1D1D1F'
+  const primaryFgHex = snap?.color
+    || (primaryHex ? (isLight(primaryHex) ? '#000000' : '#FFFFFF') : '#FFFFFF')
   const surfaceHex   = colorSystem?.surface?.hex       || colors.find(c => c.role === 'surface')?.hex  || '#F5F5F7'
   const textHex      = colorSystem?.textPrimary?.hex   || colors.find(c => c.role === 'text')?.hex     || '#1a1a1a'
   const borderHex    = colorSystem?.border?.hex        || colors.find(c => c.role === 'border')?.hex   || '#e5e5e5'
   const bgHex        = colorSystem?.pageBackground?.hex || colors.find(c => c.role === 'background')?.hex || '#FFFFFF'
-  const primaryFgHex = colorSystem?.primaryAction?.hex
-    ? (isLight(colorSystem.primaryAction.hex) ? '#000000' : '#FFFFFF')
-    : '#FFFFFF'
 
   // ── Measured tokens ───────────────────────────────────────────────────────
-  const radiusTokens: RadiusToken[]     = analysis?.radiusTokens   || []
-  const shadowTokens: ShadowToken[]     = analysis?.shadowTokens   || []
-  const borderTokens: BorderToken[]     = analysis?.borderTokens   || []
+  const radiusTokens: RadiusToken[]         = analysis?.radiusTokens     || []
+  const shadowTokens: ShadowToken[]         = analysis?.shadowTokens     || []
+  const borderTokens: BorderToken[]         = analysis?.borderTokens     || []
   const transitionTokens: TransitionToken[] = analysis?.transitionTokens || []
-  const spacingTokens                   = analysis?.spacingTokens  || []
-  const layoutEvidence                  = analysis?.layoutEvidence || []
-  const stateTokens                     = analysis?.stateTokens    || {}
-  const pageMaxWidth                    = analysis?.pageMaxWidth
-  const gridColumns                     = analysis?.gridColumns
+  const spacingTokens                       = analysis?.spacingTokens    || []
+  const layoutEvidence                      = analysis?.layoutEvidence   || []
+  const stateTokens                         = analysis?.stateTokens      || {}
+  const pageMaxWidth                        = analysis?.pageMaxWidth
+  const gridColumns                         = analysis?.gridColumns
+  // Page sections: DOM-measured (URL) or AI-inferred (image)
+  const pageSections: PageSection[]         = analysis?.pageSections?.length
+    ? analysis.pageSections
+    : (designDetails.pageSections || [])
+  const pageSecsMeasured                    = !!(analysis?.pageSections?.length)
+
+  // ── AI-inferred style ─────────────────────────────────────────────────────
+  const visualStyle: VisualStyleAnalysis | undefined  = designDetails.visualStyle
+  const interactionStyle: InteractionStyleAI | undefined = designDetails.interactionStyle
 
   const hasStateData = Object.values(stateTokens).some(
     (arr) => (arr as Array<{ state: string }>).some(v => v.state !== 'default')
@@ -47,22 +62,29 @@ export default function DesignInspector({ report, lang }: Props) {
   // ── AI fallback CSS values ────────────────────────────────────────────────
   const cssRadius = designDetails.cssRadius || inferRadius(designDetails.borderRadius)
   const cssShadow = designDetails.cssShadow || 'none'
-
-  // Parse "|"-joined multi-value strings → individual CSS values
   const radiusFallbackValues = cssRadius
     .split('|').map(v => v.trim()).filter(v => v && v !== 'none' && !v.includes('var('))
   const shadowFallbackValues = cssShadow === 'none' ? [] :
     cssShadow.split('|').map(v => v.trim()).filter(v => v && v !== 'none' && !v.includes('var('))
-
+  // For UI components, 50%/100% means avatar/icon circles — exclude them from button/card/input radius
+  const componentRadiusFallback = radiusFallbackValues.find(v => !v.includes('%')) || '6px'
   const primaryRadius = radiusFallbackValues[0] || '4px'
   const primaryShadow = shadowFallbackValues[0] || 'none'
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function bestRadius(kind: string): { value: string; measured: boolean } {
+    // Prefer DOM-measured radius tokens scoped to this component kind
     const match = radiusTokens.find(t => (t.componentKinds as string[])?.includes(kind))
     if (match) return { value: match.value, measured: true }
+    // Fall back to any measured radius token (prefer non-percentage)
+    const nonPctToken = radiusTokens.find(t => !t.value.includes('%'))
+    if (nonPctToken) return { value: nonPctToken.value, measured: true }
     if (radiusTokens.length > 0) return { value: radiusTokens[0].value, measured: true }
-    return { value: primaryRadius, measured: false }
+    // Use buttonSnapshot for button kind
+    if (snap?.borderRadius && kind === 'button' && !snap.borderRadius.includes('%'))
+      return { value: snap.borderRadius, measured: true }
+    // AI fallback — never use percentage for UI components
+    return { value: componentRadiusFallback, measured: false }
   }
 
   function bestShadow(kind: string): { value: string; measured: boolean } {
@@ -87,6 +109,35 @@ export default function DesignInspector({ report, lang }: Props) {
     return entries.filter(e => e.state !== 'default' && e.value).slice(0, 6)
   }
 
+  // ── Button style (uses exact snapshot if available) ───────────────────────
+  const btnStyle: React.CSSProperties = snap ? {
+    backgroundColor: snap.backgroundColor,
+    color: snap.color,
+    borderRadius: snap.borderRadius,
+    padding: snap.paddingV && snap.paddingH ? `${snap.paddingV} ${snap.paddingH}` : undefined,
+    fontSize: snap.fontSize,
+    fontWeight: snap.fontWeight,
+    fontFamily: snap.fontFamily || typography.fontFamily,
+    border: snap.border || 'none',
+    boxShadow: snap.boxShadow,
+    letterSpacing: snap.letterSpacing,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  } : {
+    background: primaryHex,
+    color: primaryFgHex,
+    border: 'none',
+    cursor: 'pointer',
+    borderRadius: bestRadius('button').value,
+    boxShadow: bestShadow('button').value,
+    padding: '10px 20px',
+    fontSize: '14px',
+    fontWeight: typography.headingWeight || 600,
+    letterSpacing: typography.letterSpacing || 'normal',
+    fontFamily: typography.fontFamily,
+    whiteSpace: 'nowrap' as const,
+  }
+
   // ── Styles ────────────────────────────────────────────────────────────────
   const outerWrap: React.CSSProperties = {
     background: '#FFFFFF', borderRadius: '16px',
@@ -94,18 +145,16 @@ export default function DesignInspector({ report, lang }: Props) {
   }
   const tabBar: React.CSSProperties = {
     display: 'flex', gap: '0', borderBottom: '1px solid rgba(0,0,0,0.06)',
-    padding: '0 24px',
+    padding: '0 24px', overflowX: 'auto',
   }
   const tabBtn = (active: boolean): React.CSSProperties => ({
     background: 'none', border: 'none', cursor: 'pointer', padding: '14px 0',
     marginRight: '24px', fontSize: '14px', fontWeight: active ? 600 : 400,
     color: active ? '#1D1D1F' : '#8E8E93',
     borderBottom: active ? '2px solid #1D1D1F' : '2px solid transparent',
-    transition: 'all 0.15s ease',
+    transition: 'all 0.15s ease', flexShrink: 0,
   })
-  const tabContent: React.CSSProperties = {
-    padding: '24px',
-  }
+  const tabContent: React.CSSProperties = { padding: '24px' }
   const sectionLabel: React.CSSProperties = {
     margin: '0 0 12px 0', fontSize: '12px', fontWeight: 600,
     color: '#8E8E93', textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -120,9 +169,7 @@ export default function DesignInspector({ report, lang }: Props) {
     padding: '3px 8px', borderRadius: '6px', background: '#F5F5F7',
     fontSize: '12px', color: '#3C3C43',
   }
-  const subTabBar: React.CSSProperties = {
-    display: 'flex', gap: '8px', marginBottom: '20px',
-  }
+  const subTabBar: React.CSSProperties = { display: 'flex', gap: '8px', marginBottom: '20px' }
   const subTabBtn = (active: boolean): React.CSSProperties => ({
     background: active ? '#1D1D1F' : '#F5F5F7',
     border: 'none', cursor: 'pointer',
@@ -132,29 +179,35 @@ export default function DesignInspector({ report, lang }: Props) {
     transition: 'all 0.12s ease',
   })
 
+  const TABS: [MainTab, string][] = [
+    ['components', lang === 'zh' ? '组件' : 'Components'],
+    ['shape',      lang === 'zh' ? '形态' : 'Shape'],
+    ['space',      lang === 'zh' ? '布局' : 'Layout'],
+    ['interaction',lang === 'zh' ? '交互' : 'Interaction'],
+    ['style',      lang === 'zh' ? '风格' : 'Style'],
+  ]
+
   return (
     <div style={outerWrap}>
       {/* ── Main tabs ───────────────────────────────────────────────────── */}
       <div style={tabBar}>
-        {([
-          ['components', lang === 'zh' ? '组件' : 'Components'],
-          ['shape',      lang === 'zh' ? '形态' : 'Shape'],
-          ['space',      lang === 'zh' ? '布局' : 'Layout'],
-          ['interaction',lang === 'zh' ? '交互' : 'Interaction'],
-        ] as [MainTab, string][]).map(([id, label]) => (
+        {TABS.map(([id, label]) => (
           <button key={id} style={tabBtn(mainTab === id)} onClick={() => setMainTab(id)}>{label}</button>
         ))}
       </div>
 
       <div style={tabContent}>
 
-        {/* ══════════════ 组件 ══════════════ */}
+        {/* ══════════════ 组件 COMPONENTS ══════════════ */}
         {mainTab === 'components' && (
           <>
             <div style={subTabBar}>
               {(['button','input','card','badge'] as ComponentTab[]).map(k => (
                 <button key={k} style={subTabBtn(compTab === k)} onClick={() => setCompTab(k)}>
-                  {k.charAt(0).toUpperCase() + k.slice(1)}
+                  {k === 'button' ? (lang === 'zh' ? '按钮' : 'Button')
+                    : k === 'input' ? (lang === 'zh' ? '输入框' : 'Input')
+                    : k === 'card' ? (lang === 'zh' ? '卡片' : 'Card')
+                    : (lang === 'zh' ? '标签' : 'Badge')}
                 </button>
               ))}
             </div>
@@ -164,27 +217,24 @@ export default function DesignInspector({ report, lang }: Props) {
               <div>
                 {compTab === 'button' && (
                   <ComponentPreview bg={bgHex}>
-                    <button style={{
-                      background: primaryHex, color: primaryFgHex,
-                      border: 'none', cursor: 'pointer',
-                      borderRadius: bestRadius('button').value,
-                      boxShadow: bestShadow('button').value,
-                      padding: '10px 20px',
-                      fontSize: '14px', fontWeight: typography.headingWeight || 600,
-                      letterSpacing: typography.letterSpacing || 'normal',
-                      fontFamily: typography.fontFamily,
-                    }}>
-                      {lang === 'zh' ? '主要按钮' : 'Primary Button'}
-                    </button>
-                    <button style={{
-                      background: 'transparent', color: primaryHex,
-                      border: bestBorder('button').value, cursor: 'pointer',
-                      borderRadius: bestRadius('button').value,
-                      padding: '10px 20px', marginLeft: '10px',
-                      fontSize: '14px', fontFamily: typography.fontFamily,
-                    }}>
-                      {lang === 'zh' ? '次要按钮' : 'Secondary'}
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                      <button style={btnStyle}>
+                        {snap?.text || (lang === 'zh' ? '主要按钮' : 'Primary Button')}
+                      </button>
+                      <button style={{
+                        background: 'transparent',
+                        color: primaryHex,
+                        border: `1px solid ${primaryHex}`,
+                        cursor: 'pointer',
+                        borderRadius: snap?.borderRadius || bestRadius('button').value,
+                        padding: snap?.paddingV && snap?.paddingH ? `${snap.paddingV} ${snap.paddingH}` : '10px 20px',
+                        fontSize: snap?.fontSize || '14px',
+                        fontFamily: snap?.fontFamily || typography.fontFamily,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {lang === 'zh' ? '次要按钮' : 'Secondary'}
+                      </button>
+                    </div>
                   </ComponentPreview>
                 )}
                 {compTab === 'input' && (
@@ -236,8 +286,9 @@ export default function DesignInspector({ report, lang }: Props) {
                   </ComponentPreview>
                 )}
                 {compTab === 'badge' && (
-                  <ComponentPreview bg={bgHex}>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  // Use a neutral mid-grey preview bg so both dark and light badges are visible
+                  <ComponentPreview bg={isLight(bgHex) ? '#E8E8ED' : '#3A3A3C'}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                       {[
                         { label: lang === 'zh' ? '标签' : 'Tag', bg: primaryHex, color: primaryFgHex },
                         { label: lang === 'zh' ? '次要' : 'Secondary', bg: surfaceHex, color: textHex },
@@ -261,13 +312,18 @@ export default function DesignInspector({ report, lang }: Props) {
               {/* Right: token list */}
               <div>
                 {compTab === 'button' && <>
-                  <TokenRow label="background"     value={primaryHex}                            measured={true} />
-                  <TokenRow label="color"          value={primaryFgHex}                          measured={true} />
-                  <TokenRow label="border-radius"  value={bestRadius('button').value}            measured={bestRadius('button').measured} />
-                  <TokenRow label="box-shadow"     value={bestShadow('button').value}            measured={bestShadow('button').measured && sourceIsUrl} />
-                  <TokenRow label="font-family"    value={typography.fontFamily}                 measured={true} />
-                  <TokenRow label="font-weight"    value={String(typography.headingWeight || 600)} measured={true} />
-                  <TokenRow label="letter-spacing" value={typography.letterSpacing || 'normal'}  measured={true} />
+                  <TokenRow label="background"     value={snap?.backgroundColor || primaryHex}              measured={!!snap?.backgroundColor} />
+                  <TokenRow label="color"          value={snap?.color || primaryFgHex}                      measured={!!snap?.color} />
+                  <TokenRow label="border-radius"  value={snap?.borderRadius || bestRadius('button').value} measured={!!(snap?.borderRadius) || bestRadius('button').measured} />
+                  <TokenRow label="padding"        value={snap?.paddingV && snap?.paddingH ? `${snap.paddingV} ${snap.paddingH}` : '10px 20px'} measured={!!(snap?.paddingV)} />
+                  <TokenRow label="font-size"      value={snap?.fontSize || '14px'}                        measured={!!snap?.fontSize} />
+                  <TokenRow label="font-weight"    value={snap?.fontWeight || String(typography.headingWeight || 600)} measured={!!snap?.fontWeight} />
+                  <TokenRow label="font-family"    value={snap?.fontFamily || typography.fontFamily}       measured={!!snap?.fontFamily} />
+                  <TokenRow label="box-shadow"     value={snap?.boxShadow || bestShadow('button').value}   measured={!!(snap?.boxShadow) || (bestShadow('button').measured && sourceIsUrl)} />
+                  {snap?.letterSpacing && <TokenRow label="letter-spacing" value={snap.letterSpacing} measured={true} />}
+                  {snap?.width && snap?.height && (
+                    <TokenRow label="size" value={`${snap.width} × ${snap.height}`} measured={true} />
+                  )}
                   {getStates('button').length > 0 && (
                     <div style={{ marginTop: '16px' }}>
                       <p style={{ ...sectionLabel, marginBottom: '8px' }}>{lang === 'zh' ? '交互状态' : 'States'}</p>
@@ -311,11 +367,11 @@ export default function DesignInspector({ report, lang }: Props) {
           </>
         )}
 
-        {/* ══════════════ 形态 ══════════════ */}
+        {/* ══════════════ 形态 SHAPE ══════════════ */}
         {mainTab === 'shape' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
-            {/* Row 1: Radius + Shadow */}
+            {/* Radius + Shadow side by side */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
               {/* Radius */}
               <div>
@@ -378,7 +434,7 @@ export default function DesignInspector({ report, lang }: Props) {
               </div>
             </div>
 
-            {/* Row 2: Border tokens */}
+            {/* Border tokens */}
             {borderTokens.length > 0 && (
               <div>
                 <p style={sectionLabel}>{lang === 'zh' ? '边框样式' : 'Border Style'}</p>
@@ -398,38 +454,56 @@ export default function DesignInspector({ report, lang }: Props) {
           </div>
         )}
 
-        {/* ══════════════ 布局 ══════════════ */}
+        {/* ══════════════ 布局 LAYOUT ══════════════ */}
         {mainTab === 'space' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
-            {/* Spacing scale */}
+            {/* Page sections wireframe */}
             <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '间距阶梯' : 'Spacing Scale'}</p>
-              {spacingTokens.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {spacingTokens.map((t, i) => {
-                    const n = parseFloat(t.value)
-                    const pct = isFinite(n) ? Math.max(4, Math.min(100, (n / 80) * 100)) : 10
-                    return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', minWidth: '48px' }}>{t.value}</code>
-                        <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: '#EFEFEF' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', borderRadius: '999px', background: '#1D1D1F' }} />
-                        </div>
-                        <span style={{ fontSize: '11px', color: '#AEAEB2', minWidth: '32px', textAlign: 'right' }}>{t.sampleCount}×</span>
-                      </div>
-                    )
-                  })}
+              <p style={sectionLabel}>{lang === 'zh' ? '页面结构' : 'Page Structure'}</p>
+              {pageSections.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {pageSections.map((sec, i) => (
+                    <SectionRow key={i} section={sec} measured={pageSecsMeasured} lang={lang} primaryHex={primaryHex} />
+                  ))}
                 </div>
               ) : (
                 <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                  {sourceIsUrl ? (lang === 'zh' ? '暂未检测到间距数据' : 'No spacing data detected') : (lang === 'zh' ? '需要 URL 才能测量间距' : 'Requires URL analysis')}
+                  {sourceIsUrl
+                    ? (lang === 'zh' ? '未检测到页面结构' : 'No page sections detected')
+                    : (lang === 'zh' ? '分析中（AI 推断）' : 'AI inferred from screenshot')}
                 </p>
               )}
             </div>
 
-            {/* Page structure */}
+            {/* Spacing scale + max-width */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+              {/* Spacing */}
+              <div>
+                <p style={sectionLabel}>{lang === 'zh' ? '间距阶梯' : 'Spacing Scale'}</p>
+                {spacingTokens.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {spacingTokens.map((t, i) => {
+                      const n = parseFloat(t.value)
+                      const pct = isFinite(n) ? Math.max(4, Math.min(100, (n / 80) * 100)) : 10
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', minWidth: '48px' }}>{t.value}</code>
+                          <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: '#EFEFEF' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', borderRadius: '999px', background: '#1D1D1F' }} />
+                          </div>
+                          <span style={{ fontSize: '11px', color: '#AEAEB2', minWidth: '32px', textAlign: 'right' }}>{t.sampleCount}×</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
+                    {sourceIsUrl ? (lang === 'zh' ? '暂未检测到间距数据' : 'No spacing data detected') : (lang === 'zh' ? '需要 URL 才能测量间距' : 'Requires URL analysis')}
+                  </p>
+                )}
+              </div>
+
               {/* Max width */}
               <div>
                 <p style={sectionLabel}>{lang === 'zh' ? '页面宽度' : 'Page Max-Width'}</p>
@@ -454,8 +528,10 @@ export default function DesignInspector({ report, lang }: Props) {
                   </p>
                 )}
               </div>
+            </div>
 
-              {/* Layout patterns */}
+            {/* Layout patterns + grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
               <div>
                 <p style={sectionLabel}>{lang === 'zh' ? '布局模式' : 'Layout Patterns'}</p>
                 {layoutEvidence.length > 0 ? (
@@ -468,30 +544,114 @@ export default function DesignInspector({ report, lang }: Props) {
                       </div>
                     ))}
                   </div>
+                ) : designDetails.layoutEn ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {(lang === 'zh' ? designDetails.layoutZh || designDetails.layoutEn : designDetails.layoutEn)
+                      .split('|').map((v, i) => (
+                        <div key={i} style={{ ...chip }}>
+                          <span style={dot(false)} />
+                          {v.trim()}
+                        </div>
+                      ))}
+                  </div>
                 ) : (
                   <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
                     {sourceIsUrl ? (lang === 'zh' ? '未检测到' : 'Not detected') : (lang === 'zh' ? '需要 URL' : 'Requires URL')}
                   </p>
                 )}
               </div>
-            </div>
 
-            {/* Grid columns (if detected) */}
-            {gridColumns && (
-              <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '网格系统' : 'Grid System'}</p>
-                <div style={{ ...chip }}>
-                  <span style={dot(true)} />
-                  <code style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{gridColumns}</code>
+              {gridColumns && (
+                <div>
+                  <p style={sectionLabel}>{lang === 'zh' ? '网格系统' : 'Grid System'}</p>
+                  <div style={{ ...chip }}>
+                    <span style={dot(true)} />
+                    <code style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{gridColumns}</code>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
-        {/* ══════════════ 交互 ══════════════ */}
+        {/* ══════════════ 交互 INTERACTION ══════════════ */}
         {mainTab === 'interaction' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+
+            {/* AI motion character — always show if available */}
+            {(interactionStyle || designDetails.motionEn || designDetails.animationTendency) && (
+              <div>
+                <p style={sectionLabel}>{lang === 'zh' ? '动效性格' : 'Motion Character'}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {interactionStyle?.transitionFeel && isUsefulAiValue(interactionStyle.transitionFeel) && (
+                    <InteractionChip
+                      label={lang === 'zh' ? '过渡感' : 'Transition Feel'}
+                      value={interactionStyle.transitionFeel}
+                      measured={false}
+                    />
+                  )}
+                  {interactionStyle?.hoverEffect && isUsefulAiValue(interactionStyle.hoverEffect) && (
+                    <InteractionChip
+                      label={lang === 'zh' ? '悬停效果' : 'Hover Effect'}
+                      value={interactionStyle.hoverEffect}
+                      measured={false}
+                    />
+                  )}
+                  {interactionStyle?.animationCharacter && isUsefulAiValue(interactionStyle.animationCharacter) && (
+                    <InteractionChip
+                      label={lang === 'zh' ? '动画风格' : 'Animation Character'}
+                      value={interactionStyle.animationCharacter}
+                      measured={false}
+                    />
+                  )}
+                  {!interactionStyle && (() => {
+                    const raw = lang === 'zh'
+                      ? (designDetails.motionZh || designDetails.motionEn || designDetails.animationTendency || '')
+                      : (designDetails.motionEn || designDetails.animationTendency || '')
+                    const parts = raw.split('|').map(v => v.trim()).filter(Boolean)
+                    const labels = lang === 'zh'
+                      ? ['过渡感', '动效', '风格']
+                      : ['Transition', 'Motion', 'Character']
+                    return parts.map((part, i) => (
+                      <InteractionChip
+                        key={i}
+                        label={labels[i] || (lang === 'zh' ? '动效' : 'Motion')}
+                        value={part}
+                        measured={false}
+                      />
+                    ))
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* Transition timing cards */}
+            <div>
+              <p style={sectionLabel}>{lang === 'zh' ? '过渡时长' : 'Transition Timing'}</p>
+              {transitionTokens.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {transitionTokens.map((t, i) => (
+                    <div key={i} style={{ padding: '10px 14px', background: '#F5F5F7', borderRadius: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={dot(true)} />
+                        <code style={{ fontSize: '14px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#1D1D1F' }}>{t.duration}</code>
+                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#8E8E93' }}>{t.easing}</code>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#AEAEB2' }}>
+                        {t.property} · {t.sampleCount}×
+                        {t.componentKinds?.length ? ' · ' + t.componentKinds.join(', ') : ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
+                  {sourceIsUrl
+                    ? (lang === 'zh' ? '未检测到过渡属性' : 'No transition data detected')
+                    : (lang === 'zh' ? '需要 URL 才能测量' : 'Requires URL analysis')}
+                </p>
+              )}
+            </div>
 
             {/* State diffs */}
             <div>
@@ -516,47 +676,116 @@ export default function DesignInspector({ report, lang }: Props) {
                 </div>
               ) : (
                 <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                  {sourceIsUrl ? (lang === 'zh' ? '未检测到状态变化' : 'No state changes detected') : (lang === 'zh' ? '需要 URL 才能测量交互状态' : 'Requires URL analysis')}
+                  {sourceIsUrl
+                    ? (lang === 'zh' ? '未检测到状态变化' : 'No state changes detected')
+                    : (lang === 'zh' ? '需要 URL 才能测量交互状态' : 'Requires URL analysis')}
                 </p>
               )}
             </div>
 
-            {/* Transitions */}
+          </div>
+        )}
+
+        {/* ══════════════ 风格 STYLE ══════════════ */}
+        {mainTab === 'style' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+
+            {/* Personality tags */}
             <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '过渡时长' : 'Transition Timing'}</p>
-              {transitionTokens.length > 0 ? (
+              <p style={sectionLabel}>{lang === 'zh' ? '设计性格' : 'Design Personality'}</p>
+              {visualStyle?.personality?.length ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {transitionTokens.map((t, i) => (
-                    <div key={i} style={{ padding: '10px 14px', background: '#F5F5F7', borderRadius: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <span style={dot(true)} />
-                        <code style={{ fontSize: '14px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#1D1D1F' }}>{t.duration}</code>
-                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#8E8E93' }}>{t.easing}</code>
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#AEAEB2' }}>
-                        {t.property} · {t.sampleCount}×
-                        {t.componentKinds?.length ? ' · ' + t.componentKinds.join(', ') : ''}
-                      </div>
-                    </div>
+                  {visualStyle.personality.map((tag, i) => (
+                    <span key={i} style={{
+                      padding: '5px 12px', borderRadius: '99px',
+                      background: i === 0 ? '#1D1D1F' : '#F5F5F7',
+                      color: i === 0 ? '#FFFFFF' : '#3C3C43',
+                      fontSize: '13px', fontWeight: 500,
+                    }}>
+                      {tag}
+                    </span>
                   ))}
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                  {sourceIsUrl ? (lang === 'zh' ? '未检测到过渡属性' : 'No transition data detected') : (lang === 'zh' ? '需要 URL 才能测量' : 'Requires URL analysis')}
-                </p>
+                // Fallback: use report tags
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {(lang === 'zh' ? (report.tagsZh || report.tags) : (report.tagsEn || report.tags)).slice(0, 8).map((tag, i) => (
+                    <span key={i} style={{
+                      padding: '5px 12px', borderRadius: '99px',
+                      background: i === 0 ? '#1D1D1F' : '#F5F5F7',
+                      color: i === 0 ? '#FFFFFF' : '#3C3C43',
+                      fontSize: '13px', fontWeight: 500,
+                    }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* Animation tendency (AI) */}
-            {designDetails.animationTendency && !designDetails.animationTendency.includes(' ') === false && (
+            {/* Icon style + density + color temp — only render if at least one value is known */}
+            {(visualStyle?.iconStyle || visualStyle?.density || visualStyle?.colorTemperature) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+                {visualStyle?.iconStyle && (
+                  <StyleFactCard
+                    label={lang === 'zh' ? '图标风格' : 'Icon Style'}
+                    value={visualStyle.iconStyle}
+                    sub={visualStyle.iconLibrary}
+                    measured={false}
+                  />
+                )}
+                {visualStyle?.density && (
+                  <StyleFactCard
+                    label={lang === 'zh' ? '内容密度' : 'Density'}
+                    value={visualStyle.density}
+                    measured={false}
+                  />
+                )}
+                {visualStyle?.colorTemperature && (
+                  <StyleFactCard
+                    label={lang === 'zh' ? '色温' : 'Color Temp'}
+                    value={visualStyle.colorTemperature}
+                    measured={false}
+                    accent={visualStyle.colorTemperature === 'warm' ? '#FF9F0A' : visualStyle.colorTemperature === 'cool' ? '#007AFF' : undefined}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Image style */}
+            {visualStyle?.imageStyle && visualStyle.imageStyle !== 'none' && (
               <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '动效性格' : 'Motion Character'}</p>
+                <p style={sectionLabel}>{lang === 'zh' ? '图片风格' : 'Image Style'}</p>
                 <div style={{ ...chip }}>
                   <span style={dot(false)} />
-                  {designDetails.motionZh && lang === 'zh' ? designDetails.motionZh : designDetails.motionEn || designDetails.animationTendency}
+                  {visualStyle.imageStyle}
                 </div>
               </div>
             )}
+
+            {/* Color system overview */}
+            <div>
+              <p style={sectionLabel}>{lang === 'zh' ? '色彩模式' : 'Color Mode'}</p>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '8px',
+                  background: designDetails.colorMode === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  flexShrink: 0,
+                }} />
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1F' }}>
+                    {designDetails.colorMode === 'dark'
+                      ? (lang === 'zh' ? '深色模式' : 'Dark Mode')
+                      : designDetails.colorMode === 'system'
+                        ? (lang === 'zh' ? '跟随系统' : 'System Adaptive')
+                        : (lang === 'zh' ? '浅色模式' : 'Light Mode')}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#AEAEB2' }}>AI inferred</div>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -576,9 +805,9 @@ export default function DesignInspector({ report, lang }: Props) {
 function ComponentPreview({ bg, children }: { bg: string; children: React.ReactNode }) {
   return (
     <div style={{
-      background: bg, borderRadius: '12px', padding: '24px',
+      background: bg, borderRadius: '12px', padding: '32px 24px',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      minHeight: '120px', border: '1px solid rgba(0,0,0,0.06)',
+      minHeight: '140px', border: '1px solid rgba(0,0,0,0.06)',
     }}>
       {children}
     </div>
@@ -615,6 +844,106 @@ function StateRow({ state, prop, value }: { state: string; prop: string; value: 
   )
 }
 
+function SectionRow({ section, measured, lang, primaryHex }: {
+  section: PageSection; measured: boolean; lang: 'zh' | 'en'; primaryHex: string
+}) {
+  const purposeColors: Record<string, string> = {
+    hero: primaryHex,
+    features: '#34C759',
+    pricing: '#FF9F0A',
+    testimonials: '#AF52DE',
+    cta: '#FF3B30',
+    footer: '#8E8E93',
+    section: '#007AFF',
+  }
+  const purposeLabel: Record<string, { en: string; zh: string }> = {
+    hero:         { en: 'Hero',         zh: '主视觉' },
+    features:     { en: 'Features',     zh: '功能介绍' },
+    pricing:      { en: 'Pricing',      zh: '定价' },
+    testimonials: { en: 'Testimonials', zh: '用户评价' },
+    cta:          { en: 'CTA',          zh: '行动召唤' },
+    footer:       { en: 'Footer',       zh: '页脚' },
+    section:      { en: 'Section',      zh: '内容区' },
+  }
+  const color = purposeColors[section.purpose] || '#8E8E93'
+  const label = lang === 'zh'
+    ? (purposeLabel[section.purpose]?.zh || section.purpose)
+    : (purposeLabel[section.purpose]?.en || section.purpose)
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '12px',
+      padding: '10px 14px', borderRadius: '10px', background: '#F5F5F7',
+    }}>
+      {/* Color indicator */}
+      <div style={{ width: '4px', height: '32px', borderRadius: '2px', background: color, flexShrink: 0 }} />
+      {/* Purpose badge */}
+      <div style={{
+        padding: '3px 8px', borderRadius: '6px',
+        background: `${color}20`, color,
+        fontSize: '11px', fontWeight: 700, flexShrink: 0, minWidth: '64px', textAlign: 'center',
+      }}>
+        {label}
+      </div>
+      {/* Heading — strip AI qualifier suffixes like "(implied)", "(skeleton)", "(inferred)" */}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        <div style={{ fontSize: '12px', color: '#3C3C43', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {section.heading
+            ? section.heading.replace(/\s*\((implied|skeleton|inferred|estimated|assumed|unknown)[^)]*\)/gi, '').trim() || (lang === 'zh' ? '（无标题）' : '(no heading)')
+            : (lang === 'zh' ? '（无标题）' : '(no heading)')}
+        </div>
+        <div style={{ fontSize: '11px', color: '#AEAEB2', marginTop: '2px' }}>
+          {section.layout}{section.columns > 1 ? ` · ${section.columns} col` : ''}
+          {section.hasCTA ? ` · ${lang === 'zh' ? '有CTA' : 'has CTA'}` : ''}
+          {section.hasImage ? ` · ${lang === 'zh' ? '有图' : 'has image'}` : ''}
+        </div>
+      </div>
+      {/* Measured dot */}
+      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: measured ? '#34C759' : '#AEAEB2', flexShrink: 0 }} />
+    </div>
+  )
+}
+
+function InteractionChip({ label, value, measured }: { label: string; value: string; measured: boolean }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '10px',
+      padding: '10px 14px', background: '#F5F5F7', borderRadius: '10px',
+    }}>
+      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: measured ? '#34C759' : '#AEAEB2', flexShrink: 0 }} />
+      <span style={{ fontSize: '12px', color: '#8E8E93', minWidth: '80px', flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: '13px', fontWeight: 500, color: '#1D1D1F' }}>{value}</span>
+    </div>
+  )
+}
+
+function StyleFactCard({ label, value, sub, measured, accent }: {
+  label: string; value: string; sub?: string; measured: boolean; accent?: string
+}) {
+  return (
+    <div style={{
+      padding: '14px 16px', background: '#F5F5F7', borderRadius: '12px',
+      borderLeft: accent ? `3px solid ${accent}` : '3px solid #E5E5EA',
+    }}>
+      <p style={{ margin: '0 0 4px 0', fontSize: '11px', fontWeight: 600, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        {label}
+      </p>
+      <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1D1D1F', textTransform: 'capitalize' }}>
+        {value}
+      </p>
+      {sub && (
+        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#AEAEB2' }}>
+          {sub}
+        </p>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: measured ? '#34C759' : '#AEAEB2', display: 'inline-block' }} />
+        <span style={{ fontSize: '10px', color: '#AEAEB2' }}>{measured ? 'Measured' : 'AI inferred'}</span>
+      </div>
+    </div>
+  )
+}
+
 function EmptyTab({ lang }: { lang: 'zh' | 'en' }) {
   return (
     <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
@@ -640,6 +969,25 @@ function inferRadius(d: string): string {
   if (s.includes('medium')) return '8px'
   if (s.includes('small')) return '4px'
   return '6px'
+}
+
+/** Filter out useless AI non-answers like "None observed in provided data." */
+function isUsefulAiValue(v: string): boolean {
+  if (!v) return false
+  const lower = v.toLowerCase()
+  return !(
+    lower.startsWith('none observed') ||
+    lower.startsWith('not observed') ||
+    lower.startsWith('not detected') ||
+    lower.startsWith('no data') ||
+    lower.startsWith('no information') ||
+    lower.startsWith('unable to') ||
+    lower.startsWith('cannot determine') ||
+    lower.includes('provided data') ||
+    lower === 'none' ||
+    lower === 'n/a' ||
+    lower === 'unknown'
+  )
 }
 
 function isLight(hex: string): boolean {

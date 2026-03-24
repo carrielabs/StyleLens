@@ -14,6 +14,8 @@ import type {
   TypographyToken,
   BorderToken,
   TransitionToken,
+  ButtonSnapshot,
+  PageSection,
 } from '@/lib/types'
 import { chromium, type ElementHandle, type Page } from 'playwright'
 
@@ -120,6 +122,8 @@ type RawDomSignals = {
   pageMaxWidth?: string
   gridColumns?: string
   stateTokens?: ComponentStateTokens
+  buttonSnapshot?: ButtonSnapshot
+  pageSections?: PageSection[]
 }
 
 type StateAccumulator = {
@@ -904,6 +908,8 @@ function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
       rawBorderTokens: [],
       rawTransitionTokens: [],
       stateTokens: emptyComponentStateTokens(),
+      buttonSnapshot: undefined,
+      pageSections: [],
     }
   }
 
@@ -944,6 +950,12 @@ function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
     pageMaxWidth: available.map(s => s.pageMaxWidth).find(v => v),
     gridColumns: available.map(s => s.gridColumns).find(v => v),
     stateTokens: mergeComponentStateTokens(...available.map(source => source.stateTokens)),
+    buttonSnapshot: available.map(s => s.buttonSnapshot).find(v => v),
+    pageSections: (() => {
+      // Use sections from the snapshot with the most sections found
+      const allSections = available.map(s => s.pageSections || [])
+      return allSections.reduce((best, cur) => cur.length > best.length ? cur : best, [])
+    })(),
   }
 }
 
@@ -1660,8 +1672,22 @@ function extractCssSignals(cssText: string): {
   }
 }
 
-async function extractDomSignalsFromPage(page: Page, targetUrl: string): Promise<RawDomSignals> {
-  await page.waitForTimeout(1200)
+type DomExtractionOptions = {
+  pageAlreadySettled?: boolean
+  snapshotCount?: number
+}
+
+async function extractDomSignalsFromPage(
+  page: Page,
+  targetUrl: string,
+  options?: DomExtractionOptions
+): Promise<RawDomSignals> {
+  const pageAlreadySettled = options?.pageAlreadySettled ?? false
+  const snapshotCount = Math.max(1, Math.min(options?.snapshotCount ?? 3, 3))
+
+  if (!pageAlreadySettled) {
+    await page.waitForTimeout(1200)
+  }
   const finalUrl = page.url()
   const authProbeText = `${await page.title().catch(() => '')} ${(await page.textContent('body').catch(() => '') || '').slice(0, 1200)}`
   if (isLikelyAuthGate(targetUrl, authProbeText, finalUrl)) {
@@ -1960,30 +1986,44 @@ async function extractDomSignalsFromPage(page: Page, targetUrl: string): Promise
         .sort((a, b) => (b.getBoundingClientRect().width * b.getBoundingClientRect().height) - (a.getBoundingClientRect().width * a.getBoundingClientRect().height))
         .slice(0, maxVisibleElements)
 
-      const textElements = Array.from(document.querySelectorAll<HTMLElement>('body *'))
-        .filter(el => {
-          const style = window.getComputedStyle(el)
-          const rect = el.getBoundingClientRect()
-          if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false
-          if (rect.width < 4 || rect.height < 4) return false
-          if (rect.bottom < 0 || rect.top > window.innerHeight * 1.6) return false
-          const tag = el.tagName.toLowerCase()
-          if (['img', 'svg', 'video', 'canvas', 'picture'].includes(tag)) return false
+      const textNodes: Array<{ el: HTMLElement; text: string }> = []
+      const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode: node => {
+            const text = (node.textContent || '').trim().replace(/\s+/g, ' ')
+            if (text.length < 2 || text.length > 180) return NodeFilter.FILTER_REJECT
 
-          const text = (el.textContent || '').trim().replace(/\s+/g, ' ')
-          if (text.length < 2 || text.length > 220) return false
+            const parent = node.parentElement as HTMLElement | null
+            if (!parent) return NodeFilter.FILTER_REJECT
 
-          const semanticTextTag = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'a', 'button', 'label', 'li', 'strong', 'em', 'small'].includes(tag)
-          return semanticTextTag || hasDirectText(el)
-        })
-        .sort((a, b) => {
-          const aRect = a.getBoundingClientRect()
-          const bRect = b.getBoundingClientRect()
-          const aArea = aRect.width * aRect.height
-          const bArea = bRect.width * bRect.height
-          return bArea - aArea
-        })
-        .slice(0, Math.max(24, Math.floor(maxVisibleElements * 0.6)))
+            const tag = parent.tagName.toLowerCase()
+            if (['script', 'style', 'noscript', 'img', 'svg', 'video', 'canvas', 'picture'].includes(tag)) {
+              return NodeFilter.FILTER_REJECT
+            }
+
+            const style = window.getComputedStyle(parent)
+            const rect = parent.getBoundingClientRect()
+            if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
+              return NodeFilter.FILTER_REJECT
+            }
+            if (rect.width < 2 || rect.height < 2) return NodeFilter.FILTER_REJECT
+            if (rect.bottom < 0 || rect.top > window.innerHeight * 1.6) return NodeFilter.FILTER_REJECT
+
+            return NodeFilter.FILTER_ACCEPT
+          },
+        }
+      )
+
+      let currentTextNode: Node | null
+      while ((currentTextNode = walker.nextNode())) {
+        const parent = currentTextNode.parentElement as HTMLElement | null
+        if (!parent) continue
+        const text = (currentTextNode.textContent || '').trim().replace(/\s+/g, ' ')
+        textNodes.push({ el: parent, text })
+        if (textNodes.length >= Math.max(40, Math.floor(maxVisibleElements * 0.8))) break
+      }
 
       for (const el of visibleElements) {
         const style = window.getComputedStyle(el)
@@ -2038,13 +2078,14 @@ async function extractDomSignalsFromPage(page: Page, targetUrl: string): Promise
 
       }
 
-      for (const el of textElements) {
+      for (const entry of textNodes) {
+        const el = entry.el
         const style = window.getComputedStyle(el)
         const rect = el.getBoundingClientRect()
         const selectorHint = selectorHintFor(el)
         const componentKinds = classifyComponent(el, selectorHint)
-        const text = (el.textContent || '').trim().replace(/\s+/g, ' ')
-        if (text.length < 2 || text.length > 220) continue
+        const text = entry.text
+        if (text.length < 2 || text.length > 180) continue
 
         const tag = el.tagName.toLowerCase()
         const isHeading = /^h[1-6]$/.test(tag)
@@ -2135,6 +2176,102 @@ async function extractDomSignalsFromPage(page: Page, targetUrl: string): Promise
         }
       }
 
+      // ── Button snapshot (exact CSS from real primary button) ───────────────
+      let buttonSnapshot: Record<string, string | undefined> | undefined
+      // Cast wide net: <button>, role=button, CTA-named links, any styled <a> in hero/nav
+      const allBtns = Array.from(document.querySelectorAll<HTMLElement>(
+        'button, [role="button"], a[class*="btn"], a[class*="button"], a[class*="cta"], ' +
+        'a[href*="sign-up"], a[href*="signup"], a[href*="get-started"], a[href*="pricing"], ' +
+        'a[href*="free"], a[href*="download"], a[href*="start"], nav a, header a'
+      ))
+      // Score each candidate: prefer non-transparent bg, proper size, has text, not a nav link
+      const scoredBtns = allBtns.map(btn => {
+        const rect = btn.getBoundingClientRect()
+        const style = window.getComputedStyle(btn)
+        const bg = style.backgroundColor
+        const text = (btn.textContent || '').trim()
+        const isTransparentBg = !bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent'
+        let score = 0
+        if (rect.width >= 80 && rect.height >= 32) score += 3
+        if (!isTransparentBg) score += 4
+        if (text.length > 0 && text.length <= 30) score += 2
+        if (rect.top < window.innerHeight * 0.5) score += 2  // above fold
+        if (rect.width < 60 || rect.height < 24) score -= 10  // too small
+        if (text.length > 50) score -= 3  // too long = nav paragraph
+        return { btn, score, rect, isTransparentBg }
+      }).filter(item => item.score > 0 && item.rect.width > 0)
+      scoredBtns.sort((a, b) => b.score - a.score)
+      const primaryBtn = scoredBtns[0]?.btn
+      if (primaryBtn) {
+        const s = window.getComputedStyle(primaryBtn)
+        const rect = primaryBtn.getBoundingClientRect()
+        const bgHex = rgbToHex(s.backgroundColor) || s.backgroundColor
+        const colorHex = rgbToHex(s.color) || s.color
+        const borderColorHex = s.borderWidth !== '0px' ? (rgbToHex(s.borderColor) || s.borderColor) : undefined
+        buttonSnapshot = {
+          backgroundColor: bgHex,
+          color: colorHex,
+          borderRadius: s.borderRadius !== '0px' ? s.borderRadius : undefined,
+          paddingH: s.paddingLeft !== '0px' ? s.paddingLeft : (s.paddingRight !== '0px' ? s.paddingRight : undefined),
+          paddingV: s.paddingTop !== '0px' ? s.paddingTop : (s.paddingBottom !== '0px' ? s.paddingBottom : undefined),
+          fontSize: s.fontSize,
+          fontWeight: s.fontWeight,
+          fontFamily: s.fontFamily,
+          border: s.borderWidth !== '0px' ? `${s.borderWidth} ${s.borderStyle} ${borderColorHex}` : 'none',
+          boxShadow: s.boxShadow !== 'none' ? s.boxShadow : undefined,
+          letterSpacing: s.letterSpacing !== 'normal' && s.letterSpacing !== '0px' ? s.letterSpacing : undefined,
+          width: `${Math.round(rect.width)}px`,
+          height: `${Math.round(rect.height)}px`,
+          text: (primaryBtn.textContent || '').trim().slice(0, 30),
+        }
+      }
+
+      // ── Page sections (DOM-measured structural layout) ─────────────────────
+      const pageSections: Array<{
+        index: number; purpose: string; layout: string; columns: number
+        hasCTA: boolean; hasImage: boolean; heading?: string; measured: boolean
+      }> = []
+      const sectionEls = Array.from(document.querySelectorAll<HTMLElement>(
+        'section, [class*="section"], [class*="hero"], [class*="feature"], [class*="pricing"], [class*="testimonial"], [class*="cta"], footer'
+      ))
+      let si = 0
+      for (const el of sectionEls.slice(0, 12)) {
+        const rect = el.getBoundingClientRect()
+        if (rect.height < 80 || rect.width < 200) continue
+        const style = window.getComputedStyle(el)
+        const headingEl = el.querySelector('h1, h2, h3')
+        const headingText = ((headingEl?.textContent) || '').trim().slice(0, 60) || undefined
+        const hasCTA = !!el.querySelector('button, [role="button"], a[class*="btn"], a[class*="button"]')
+        const hasImage = !!el.querySelector('img, video, picture, [class*="image"], [class*="img"]')
+        let columns = 1
+        let layout = 'full-width'
+        if (style.display === 'grid' && style.gridTemplateColumns && style.gridTemplateColumns !== 'none') {
+          const colCount = style.gridTemplateColumns.split(/\s+(?=[^\(]*(?:\(|$))/).filter(Boolean).length
+          columns = colCount
+          layout = colCount === 2 ? '2-column' : colCount === 3 ? '3-column-grid' : colCount === 4 ? '4-column-grid' : 'grid'
+        } else if (style.display === 'flex' && style.flexDirection !== 'column') {
+          const visChildren = Array.from(el.children).filter(c => {
+            const cr = (c as HTMLElement).getBoundingClientRect()
+            return cr.width > 50 && cr.height > 20
+          })
+          if (visChildren.length >= 2 && visChildren.length <= 4) {
+            columns = visChildren.length
+            layout = columns === 2 ? '2-column' : `${columns}-column-grid`
+          }
+        }
+        const cls = (el.className || '').toString().toLowerCase()
+        const tag = el.tagName.toLowerCase()
+        const purpose = cls.includes('hero') ? 'hero'
+          : cls.includes('feature') ? 'features'
+          : cls.includes('pric') ? 'pricing'
+          : cls.includes('testimonial') || cls.includes('review') ? 'testimonials'
+          : cls.includes('cta') || cls.includes('call-to-action') ? 'cta'
+          : tag === 'footer' ? 'footer'
+          : 'section'
+        pageSections.push({ index: si++, purpose, layout, columns, hasCTA, hasImage, heading: headingText, measured: true })
+        if (si >= 8) break
+      }
+
       return {
         colorCandidates: [...colorMap.values()].sort((a, b) => b.evidenceScore - a.evidenceScore).slice(0, 18),
         typographyCandidates: [...typoMap.values()].sort((a, b) => b.evidenceScore - a.evidenceScore).slice(0, 10),
@@ -2151,19 +2288,25 @@ async function extractDomSignalsFromPage(page: Page, targetUrl: string): Promise
         pageMaxWidth,
         gridColumns,
         stateTokens: {},
+        buttonSnapshot: buttonSnapshot as ButtonSnapshot | undefined,
+        pageSections: pageSections as PageSection[],
       }
     }, { maxVisibleElements: MAX_VISIBLE_ELEMENTS })
 
   const snapshots: RawDomSignals[] = []
   snapshots.push(await collectSnapshot())
 
-  await page.waitForTimeout(900)
-  await page.evaluate(() => window.scrollTo(0, 0))
-  await page.waitForTimeout(250)
-  snapshots.push(await collectSnapshot())
+  if (snapshotCount >= 2) {
+    await page.waitForTimeout(pageAlreadySettled ? 160 : 900)
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.waitForTimeout(pageAlreadySettled ? 80 : 250)
+    snapshots.push(await collectSnapshot())
+  }
 
-  await page.waitForTimeout(900)
-  snapshots.push(await collectSnapshot())
+  if (snapshotCount >= 3) {
+    await page.waitForTimeout(pageAlreadySettled ? 160 : 900)
+    snapshots.push(await collectSnapshot())
+  }
 
   const domSignals = mergeRawDomSignals(...snapshots)
 
@@ -2262,6 +2405,8 @@ async function analyzePageStylesCore(
     transitionTokens: toTransitionTokens(domSignals?.rawTransitionTokens || []),
     pageMaxWidth: domSignals?.pageMaxWidth,
     gridColumns: domSignals?.gridColumns,
+    buttonSnapshot: domSignals?.buttonSnapshot,
+    pageSections: domSignals?.pageSections || [],
     cssTextExcerpt: cssText.slice(0, MAX_CSS_EXCERPT),
     sourceCount: {
       inlineStyleBlocks: inlineBlocks.length,
@@ -2290,8 +2435,12 @@ async function analyzePageStylesCore(
   return analysis
 }
 
-export async function analyzePageStylesFromPage(page: Page, targetUrl: string): Promise<PageStyleAnalysis> {
-  const domSignals = await extractDomSignalsFromPage(page, targetUrl)
+export async function analyzePageStylesFromPage(
+  page: Page,
+  targetUrl: string,
+  options?: DomExtractionOptions
+): Promise<PageStyleAnalysis> {
+  const domSignals = await extractDomSignalsFromPage(page, targetUrl, options)
   const html = (await page.content().catch(() => '')) || ''
   return analyzePageStylesCore(targetUrl, {
     htmlOverride: html,

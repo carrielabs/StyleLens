@@ -140,10 +140,41 @@ const USER_PROMPT_TEMPLATE = `Analyze this design and return a complete style re
     "motionEn": "Ultra-short motion type (e.g., 'Spring physics', 'Subtle fade')",
     "motionZh": "Ultra-short Chinese (e.g., '弹性物理过渡', '微弱淡入')",
     
-    // NEW: We need strict exact CSS for actual visual rendering in the UI. 
+    // NEW: We need strict exact CSS for actual visual rendering in the UI.
     // If the site uses multiple sizes/variants, separate them by "|"
     "cssRadius": "Exact CSS value like '8px' or multiple '4px | 12px | 50%'. STRICTLY ONLY THE VALUES.",
-    "cssShadow": "Exact CSS box-shadow like '0 4px 12px rgba(0,0,0,0.1)' or multiple separated by '|'. STRICTLY ONLY THE VALUES."
+    "cssShadow": "Exact CSS box-shadow like '0 4px 12px rgba(0,0,0,0.1)' or multiple separated by '|'. STRICTLY ONLY THE VALUES.",
+
+    // Page sections — structural breakdown of major page sections top to bottom
+    "pageSections": [
+      {
+        "index": 0,
+        "purpose": "hero|features|pricing|testimonials|cta|footer|section",
+        "layout": "full-width|2-column|3-column-grid|4-column-grid|asymmetric|grid",
+        "columns": 1,
+        "hasCTA": true,
+        "hasImage": false,
+        "heading": "Section heading text if visible (omit if not visible)",
+        "measured": false
+      }
+    ],
+
+    // Visual style DNA — icon family, personality, density
+    "visualStyle": {
+      "iconStyle": "solid|outline|rounded-outline|duotone|mixed|minimal|none",
+      "personality": ["minimal", "professional", "bold"],
+      "density": "sparse|comfortable|dense",
+      "imageStyle": "photography|illustration|product-screenshots|abstract|mixed|none",
+      "colorTemperature": "warm|cool|neutral",
+      "iconLibrary": "heroicons|lucide|feather|fontawesome|custom|unknown"
+    },
+
+    // Interaction style — how the UI feels in motion
+    "interactionStyle": {
+      "hoverEffect": "Brief description: 'subtle color shift', 'scale up 1.02', 'underline appears', etc.",
+      "transitionFeel": "snappy|smooth|bouncy",
+      "animationCharacter": "restrained|expressive|none"
+    }
   }
 }
 
@@ -627,6 +658,11 @@ function pickMeasuredTypography(pageAnalysis: PageStyleAnalysis, aiTypography: T
 }
 
 function pickMeasuredDesignDetails(pageAnalysis: PageStyleAnalysis, aiDetails: DesignDetails): DesignDetails {
+  // For URL reports: DOM-measured page sections override AI-inferred ones
+  const pageSections = (pageAnalysis.pageSections && pageAnalysis.pageSections.length > 0)
+    ? pageAnalysis.pageSections
+    : aiDetails.pageSections
+
   return {
     ...aiDetails,
     borderRadius: pageAnalysis.radiusTokens.length
@@ -645,6 +681,10 @@ function pickMeasuredDesignDetails(pageAnalysis: PageStyleAnalysis, aiDetails: D
       : aiDetails.cssShadow,
     layoutEn: pageAnalysis.layoutEvidence.length ? pageAnalysis.layoutEvidence.slice(0, 3).map(item => item.label).join(' | ') : aiDetails.layoutEn,
     spacingEn: pageAnalysis.spacingTokens.length ? pageAnalysis.spacingTokens.slice(0, 4).map(token => token.value).join(' | ') : aiDetails.spacingEn,
+    pageSections,
+    // Always preserve AI-generated visual/interaction style (no DOM equivalent)
+    visualStyle: aiDetails.visualStyle,
+    interactionStyle: aiDetails.interactionStyle,
   }
 }
 

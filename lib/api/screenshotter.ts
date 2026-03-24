@@ -30,6 +30,11 @@ function savePersistentCache(cache: Map<string, string>) {
 
 const screenshotCache = getPersistentCache()
 
+function isLikelyAuthNavigation(url: string): boolean {
+  const lower = url.toLowerCase()
+  return /\/(login|signin|sign-in|auth|session)(?:[/?#]|$)/.test(lower)
+}
+
 export async function captureScreenshot(targetUrl: string): Promise<ScreenshotResponse> {
   const normalizedUrl = targetUrl.toLowerCase().trim()
   let pageAnalysis = null
@@ -38,11 +43,34 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
     const browser = await chromium.launch({ headless: true })
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 960 } })
+
+      await page.route('**/*', route => {
+        const request = route.request()
+        if (request.isNavigationRequest() && isLikelyAuthNavigation(request.url())) {
+          console.warn('[Screenshotter] Blocking likely auth navigation during same-page capture:', request.url())
+          return route.abort('aborted')
+        }
+        return route.continue()
+      })
+
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 })
-      await page.waitForTimeout(3_000)
+      await page.waitForSelector('h1, main, [role="main"], [data-hero]', { state: 'visible', timeout: 5_000 }).catch(() => undefined)
+      await page.waitForTimeout(350)
+
+      const [buffer, analysis] = await Promise.all([
+        page.screenshot({
+          type: 'jpeg',
+          quality: 80,
+          fullPage: true,
+        }),
+        analyzePageStylesFromPage(page, targetUrl, {
+          pageAlreadySettled: true,
+          snapshotCount: 1,
+        }),
+      ])
 
       try {
-        pageAnalysis = await analyzePageStylesFromPage(page, targetUrl)
+        pageAnalysis = analysis
       } catch (analysisError) {
         console.warn(
           '[Screenshotter] Same-page DOM analysis failed; continuing with screenshot-only local capture:',
@@ -50,12 +78,6 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
         )
         pageAnalysis = null
       }
-
-      const buffer = await page.screenshot({
-        type: 'jpeg',
-        quality: 80,
-        fullPage: true,
-      })
       const dataUrl = `data:image/jpeg;base64,${buffer.toString('base64')}`
 
       screenshotCache.set(normalizedUrl, dataUrl)
