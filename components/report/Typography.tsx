@@ -25,6 +25,34 @@ export default function Typography({
     return Number.isFinite(parsed) ? parsed : fallback
   }
 
+  const splitFontStack = (value?: string) =>
+    (value || '')
+      .split(',')
+      .map(font => font.replace(/['"]/g, '').trim())
+      .filter(Boolean)
+
+  const isGenericFont = (value: string) =>
+    [
+      'sans-serif',
+      'serif',
+      'monospace',
+      'system-ui',
+      '-apple-system',
+      'blinkmacsystemfont',
+      'ui-sans-serif',
+      'ui-serif',
+      'ui-monospace',
+      'inherit',
+      'initial',
+      'unset',
+    ].includes(value.toLowerCase())
+
+  const getPrimaryFontName = (value?: string) => {
+    const fonts = splitFontStack(value)
+    const primary = fonts.find(font => !isGenericFont(font))
+    return primary || fonts[0] || 'System Font'
+  }
+
   const fontNames = data.fontFamily.split(',').map(f => {
     let clean = f.replace(/['"]/g, '').replace(/e\.g\.,/gi, '').trim()
     if (clean.includes(':')) clean = clean.split(':')[1]?.trim() || clean
@@ -132,6 +160,10 @@ export default function Typography({
             </div>
 
             {displayTypography.map((token, idx) => (
+              (() => {
+                const primaryFont = getPrimaryFontName(token.fontFamily)
+                const fullFontStack = splitFontStack(token.fontFamily).join(', ')
+                return (
               <div key={`${token.id}-${idx}`} style={{
                 display: 'flex',
                 alignItems: 'baseline',
@@ -149,8 +181,8 @@ export default function Typography({
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
-                }} title={token.fontFamily}>
-                  {token.fontFamily}
+                }} title={fullFontStack || token.fontFamily}>
+                  {primaryFont}
                 </div>
                 <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
                   {token.fontSize || '—'}
@@ -168,6 +200,8 @@ export default function Typography({
                   {token.sampleCount}
                 </div>
               </div>
+                )
+              })()
             ))}
           </>
         ) : (

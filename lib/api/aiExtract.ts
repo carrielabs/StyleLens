@@ -788,9 +788,41 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
   if (requestWithAnalysis.sourceType === 'url' && requestWithAnalysis.pageAnalysis && base64Data) {
     const mergedAnalysis = await mergeScreenshotColorSignals(requestWithAnalysis.pageAnalysis, base64Data)
     if (mergedAnalysis) {
+      const originalAnalysis = requestWithAnalysis.pageAnalysis
+      const recoveredAnalysis = recoverShellSemanticSlots(mergedAnalysis)
       requestWithAnalysis = {
         ...requestWithAnalysis,
-        pageAnalysis: recoverShellSemanticSlots(mergedAnalysis),
+        pageAnalysis: {
+          ...recoveredAnalysis,
+          typographyCandidates:
+            recoveredAnalysis.typographyCandidates?.length
+              ? recoveredAnalysis.typographyCandidates
+              : originalAnalysis?.typographyCandidates ?? [],
+          typographyTokens:
+            recoveredAnalysis.typographyTokens?.length
+              ? recoveredAnalysis.typographyTokens
+              : originalAnalysis?.typographyTokens ?? [],
+          radiusTokens:
+            recoveredAnalysis.radiusTokens?.length
+              ? recoveredAnalysis.radiusTokens
+              : originalAnalysis?.radiusTokens ?? [],
+          shadowTokens:
+            recoveredAnalysis.shadowTokens?.length
+              ? recoveredAnalysis.shadowTokens
+              : originalAnalysis?.shadowTokens ?? [],
+          spacingTokens:
+            recoveredAnalysis.spacingTokens?.length
+              ? recoveredAnalysis.spacingTokens
+              : originalAnalysis?.spacingTokens ?? [],
+          layoutEvidence:
+            recoveredAnalysis.layoutEvidence?.length
+              ? recoveredAnalysis.layoutEvidence
+              : originalAnalysis?.layoutEvidence ?? [],
+          stateTokens:
+            Object.keys(recoveredAnalysis.stateTokens ?? {}).length
+              ? recoveredAnalysis.stateTokens
+              : originalAnalysis?.stateTokens ?? {},
+        },
       }
     }
     writeUrlDebugSnapshot('url-after-merge', {
