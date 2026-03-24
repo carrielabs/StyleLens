@@ -684,11 +684,15 @@ export function applyMeasuredUrlSignals(
 
   debugSelectedPalette(compatibilityColors)
 
+  const hasMeasuredTypography =
+    pageAnalysis.typographyTokens.some(token => hasNumericTypographyValue(token.fontSize)) ||
+    pageAnalysis.typographyCandidates.some(candidate => hasNumericTypographyValue(candidate.fontSize))
+
   return {
     ...parsed,
     colors: colorSystem ? compatibilityColors : parsed.colors,
     colorSystem,
-    typography: pageAnalysis.typographyTokens.length ? pickMeasuredTypography(pageAnalysis, parsed.typography) : parsed.typography,
+    typography: hasMeasuredTypography ? pickMeasuredTypography(pageAnalysis, parsed.typography) : parsed.typography,
     designDetails: pickMeasuredDesignDetails(pageAnalysis, parsed.designDetails),
   }
 }

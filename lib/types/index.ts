@@ -85,6 +85,22 @@ export interface LayoutEvidence {
   evidenceScore: number
 }
 
+export interface BorderToken {
+  width: string          // '1px', '2px'
+  style: string          // 'solid', 'dashed'
+  color?: string         // '#E5E5E5'
+  sampleCount: number
+  componentKinds: ComponentKind[]
+}
+
+export interface TransitionToken {
+  property: string       // 'all', 'background-color', 'transform'
+  duration: string       // '150ms', '250ms'
+  easing: string         // 'ease', 'ease-in-out', 'cubic-bezier(...)'
+  sampleCount: number
+  componentKinds: ComponentKind[]
+}
+
 export type InteractionState = 'default' | 'hover' | 'focus' | 'active' | 'disabled' | 'selected'
 
 export interface StateTokenValue {
@@ -188,6 +204,10 @@ export interface PageStyleAnalysis {
   layoutHints: string[]
   layoutEvidence: LayoutEvidence[]
   stateTokens?: ComponentStateTokens
+  borderTokens?: BorderToken[]
+  transitionTokens?: TransitionToken[]
+  pageMaxWidth?: string     // e.g. '1200px', '1440px'
+  gridColumns?: string      // e.g. '12', 'repeat(3, 1fr)'
   cssTextExcerpt?: string
   sourceCount: {
     inlineStyleBlocks: number

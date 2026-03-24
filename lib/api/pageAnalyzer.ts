@@ -12,6 +12,8 @@ import type {
   ShadowToken,
   SpacingToken,
   TypographyToken,
+  BorderToken,
+  TransitionToken,
 } from '@/lib/types'
 import { chromium, type ElementHandle, type Page } from 'playwright'
 
@@ -86,6 +88,22 @@ type RawLayoutAccumulator = {
   evidenceScore: number
 }
 
+type RawBorderAccumulator = {
+  width: string
+  style: string
+  color?: string
+  count: number
+  componentKinds: ComponentKind[]
+}
+
+type RawTransitionAccumulator = {
+  property: string
+  duration: string
+  easing: string
+  count: number
+  componentKinds: ComponentKind[]
+}
+
 type RawDomSignals = {
   colorCandidates: RawDomColorCandidate[]
   typographyCandidates: RawDomTypographyCandidate[]
@@ -97,6 +115,10 @@ type RawDomSignals = {
   rawShadowTokens: RawValueAccumulator[]
   rawSpacingTokens: RawValueAccumulator[]
   rawLayoutEvidence: RawLayoutAccumulator[]
+  rawBorderTokens: RawBorderAccumulator[]
+  rawTransitionTokens: RawTransitionAccumulator[]
+  pageMaxWidth?: string
+  gridColumns?: string
   stateTokens?: ComponentStateTokens
 }
 
@@ -123,6 +145,10 @@ export function createEmptyPageAnalysis(sourceCount?: { inlineStyleBlocks: numbe
     layoutHints: [],
     layoutEvidence: [],
     stateTokens: {},
+    borderTokens: [],
+    transitionTokens: [],
+    pageMaxWidth: undefined,
+    gridColumns: undefined,
     cssTextExcerpt: '',
     sourceCount: sourceCount || {
       inlineStyleBlocks: 0,
@@ -143,7 +169,7 @@ function isLikelyAuthGate(targetUrl: string, content: string, finalUrl?: string)
   if (/\blog in with\b|\bsign in with\b|\bcontinue with\b/.test(lower)) score += 3
   if (/\bpasskey\b|\bsso\b|\boauth\b/.test(lower)) score += 2
   if (/\bforgot password\b|\buse an organization email\b/.test(lower)) score += 2
-  if (/\byour ai workspace\b|\bcreate account\b|\blog in to your\b/.test(lower)) score += 2
+  if (/\bcreate account\b|\blog in to your\b|\bmagic link\b|\bverification code\b/.test(lower)) score += 2
 
   const targetPath = new URL(targetUrl).pathname.toLowerCase()
   const targetLooksAuth = /\b(login|signin|sign-in|auth|account|session)\b/.test(targetPath)
@@ -161,16 +187,16 @@ export function isLikelyAuthAnalysis(analysis: Pick<PageStyleAnalysis, 'typograp
 
   let score = 0
   if (/\blog in with\b|\bsign in with\b|\bcontinue with\b/.test(textBlob)) score += 3
-  if (/\byour ai workspace\b|\blog in to your\b|\buse an organization email\b/.test(textBlob)) score += 3
+  if (/\blog in to your\b|\buse an organization email\b|\bmagic link\b|\bverification code\b/.test(textBlob)) score += 3
   if (/\bpasskey\b|\bsso\b|\boauth\b/.test(textBlob)) score += 2
-  if (/\blogin\b|\bsign in\b|\bforgot password\b|\bcontinue\b/.test(textBlob)) score += 1
+  if (/\bforgot password\b|\breset password\b/.test(textBlob)) score += 1
 
   return score >= 4
 }
 
 function isAuthArtifactText(value: string): boolean {
   const normalized = value.toLowerCase()
-  return /\blog in with\b|\bsign in with\b|\bcontinue with\b|\byour ai workspace\b|\blog in to your\b|\buse an organization email\b|\bforgot password\b|\bpasskey\b|\bsso\b|\boauth\b|\bpassword-reset\b|\breset password\b|\bcreate account\b|\bauth\b|\bsession\b/.test(normalized)
+  return /\blog in with\b|\bsign in with\b|\bcontinue with\b|\blog in to your\b|\buse an organization email\b|\bforgot password\b|\bpasskey\b|\bsso\b|\boauth\b|\bpassword-reset\b|\breset password\b|\bcreate account\b|\bmagic link\b|\bverification code\b/.test(normalized)
 }
 
 function stripAuthArtifacts(analysis: PageStyleAnalysis): PageStyleAnalysis {
@@ -551,6 +577,23 @@ function mergeColorCandidates(domGroup: PageColorCandidate[], cssGroup: PageColo
 function mergeTypographyCandidates(...groups: PageTypographyCandidate[][]): PageTypographyCandidate[] {
   const merged = new Map<string, TypographyAccumulator>()
 
+  const hasNumericSize = (value?: string) => {
+    if (!value) return false
+    const normalized = value.trim().toLowerCase()
+    if (!normalized || normalized === 'unknown' || normalized === 'inherit' || normalized.includes('nan')) return false
+    return /\d/.test(normalized)
+  }
+
+  const typographyRank = (candidate: TypographyAccumulator) => {
+    let score = candidate.evidenceScore
+    if (hasNumericSize(candidate.fontSize)) score += 100
+    if (candidate.sampleText && candidate.sampleText.trim().length >= 2) score += 30
+    if (candidate.fontFamily && candidate.fontFamily !== 'inherit') score += 10
+    if (candidate.lineHeight && candidate.lineHeight !== 'normal' && candidate.lineHeight !== 'inherit') score += 6
+    if (candidate.letterSpacing && candidate.letterSpacing !== 'normal' && candidate.letterSpacing !== 'inherit') score += 6
+    return score
+  }
+
   for (const group of groups) {
     for (const candidate of group) {
       const key = [candidate.fontFamily, candidate.fontSize || '', candidate.fontWeight || '', candidate.lineHeight || '', candidate.letterSpacing || ''].join('|')
@@ -575,7 +618,8 @@ function mergeTypographyCandidates(...groups: PageTypographyCandidate[][]): Page
   }
 
   return [...merged.values()]
-    .sort((a, b) => b.evidenceScore - a.evidenceScore)
+    .filter(candidate => candidate.fontFamily && candidate.fontFamily !== 'inherit')
+    .sort((a, b) => typographyRank(b) - typographyRank(a))
     .slice(0, 12)
     .map(item => ({
       fontFamily: item.fontFamily,
@@ -673,6 +717,14 @@ function toTypographyTokens(candidates: PageTypographyCandidate[]): TypographyTo
   })
 }
 
+function normalizeRadiusShorthand(value: string): string {
+  const parts = value.trim().split(/\s+/)
+  if (parts.length === 4 && parts[0] === parts[1] && parts[1] === parts[2] && parts[2] === parts[3]) return parts[0]
+  if (parts.length === 4 && parts[0] === parts[2] && parts[1] === parts[3]) return `${parts[0]} ${parts[1]}`
+  if (parts.length === 3 && parts[0] === parts[2]) return `${parts[0]} ${parts[1]}`
+  return value
+}
+
 function toRadiusTokens(values: ValueAccumulator[]): RadiusToken[] {
   return values.slice(0, 6).map((entry, index) => ({
     value: entry.value,
@@ -711,6 +763,50 @@ function toLayoutEvidence(values: LayoutAccumulator[]): LayoutEvidence[] {
     componentKinds: [...entry.componentKinds],
     evidenceScore: Math.round(entry.evidenceScore),
   }))
+}
+
+function toBorderTokens(values: RawBorderAccumulator[]): BorderToken[] {
+  // Merge by width+style key, pick highest count
+  const merged = new Map<string, RawBorderAccumulator>()
+  for (const v of values) {
+    const key = `${v.width}:${v.style}`
+    const existing = merged.get(key)
+    if (!existing || v.count > existing.count) merged.set(key, v)
+  }
+  return [...merged.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4)
+    .map(v => ({
+      width: v.width,
+      style: v.style,
+      color: v.color,
+      sampleCount: v.count,
+      componentKinds: v.componentKinds,
+    }))
+}
+
+function toTransitionTokens(values: RawTransitionAccumulator[]): TransitionToken[] {
+  const merged = new Map<string, RawTransitionAccumulator>()
+  for (const v of values) {
+    const key = `${v.duration}:${v.easing}`
+    const existing = merged.get(key)
+    if (!existing) {
+      merged.set(key, { ...v })
+    } else {
+      existing.count += v.count
+      existing.componentKinds = [...new Set([...existing.componentKinds, ...v.componentKinds])]
+    }
+  }
+  return [...merged.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4)
+    .map(v => ({
+      property: v.property,
+      duration: v.duration,
+      easing: v.easing,
+      sampleCount: v.count,
+      componentKinds: v.componentKinds,
+    }))
 }
 
 function parseInteractionState(selectorHint: string): InteractionState | null {
@@ -805,6 +901,8 @@ function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
       rawShadowTokens: [],
       rawSpacingTokens: [],
       rawLayoutEvidence: [],
+      rawBorderTokens: [],
+      rawTransitionTokens: [],
       stateTokens: emptyComponentStateTokens(),
     }
   }
@@ -841,6 +939,10 @@ function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
       componentKinds: [...entry.componentKinds],
       evidenceScore: entry.evidenceScore,
     })),
+    rawBorderTokens: available.flatMap(s => s.rawBorderTokens || []),
+    rawTransitionTokens: available.flatMap(s => s.rawTransitionTokens || []),
+    pageMaxWidth: available.map(s => s.pageMaxWidth).find(v => v),
+    gridColumns: available.map(s => s.gridColumns).find(v => v),
     stateTokens: mergeComponentStateTokens(...available.map(source => source.stateTokens)),
   }
 }
@@ -1420,15 +1522,16 @@ function extractCssSignals(cssText: string): {
       if (property === 'line-height') lineHeight = value
       if (property === 'letter-spacing') letterSpacing = value
 
-      if (property === 'border-radius' && value !== '0' && value !== '0px') {
-        const existing = radiusValues.get(value) || { value, count: 0, componentKinds: new Set<ComponentKind>(), evidenceScore: 0 }
+      if (property === 'border-radius' && value !== '0' && value !== '0px' && !value.includes('var(') && !value.includes('calc(')) {
+        const normalized = normalizeRadiusShorthand(value)
+        const existing = radiusValues.get(normalized) || { value: normalized, count: 0, componentKinds: new Set<ComponentKind>(), evidenceScore: 0 }
         existing.count += 1
         componentKinds.forEach(kind => existing.componentKinds.add(kind))
         existing.evidenceScore += 1
-        radiusValues.set(value, existing)
+        radiusValues.set(normalized, existing)
       }
 
-      if (property === 'box-shadow' && value !== 'none') {
+      if (property === 'box-shadow' && value !== 'none' && !value.includes('var(')) {
         const existing = shadowValues.get(value) || { value, count: 0, componentKinds: new Set<ComponentKind>(), evidenceScore: 0 }
         existing.count += 1
         componentKinds.forEach(kind => existing.componentKinds.add(kind))
@@ -1438,6 +1541,7 @@ function extractCssSignals(cssText: string): {
 
       if (property === 'gap' || property.startsWith('padding') || property.startsWith('margin')) {
         for (const item of value.match(/\d+(\.\d+)?px/g) || []) {
+          if (Number.parseFloat(item) < 4) continue
           const existing = spacingValues.get(item) || { value: item, count: 0, componentKinds: new Set<ComponentKind>(), evidenceScore: 0 }
           existing.count += 1
           componentKinds.forEach(kind => existing.componentKinds.add(kind))
@@ -1556,29 +1660,20 @@ function extractCssSignals(cssText: string): {
   }
 }
 
-async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
-  const browser = await chromium.launch({ headless: true })
-  try {
-    const page = await browser.newPage({
-      viewport: { width: 1440, height: 1200 },
-      deviceScaleFactor: 1,
-    })
+async function extractDomSignalsFromPage(page: Page, targetUrl: string): Promise<RawDomSignals> {
+  await page.waitForTimeout(1200)
+  const finalUrl = page.url()
+  const authProbeText = `${await page.title().catch(() => '')} ${(await page.textContent('body').catch(() => '') || '').slice(0, 1200)}`
+  if (isLikelyAuthGate(targetUrl, authProbeText, finalUrl)) {
+    console.warn(
+      '[pageAnalyzer] Auth-like DOM probe detected, continuing with measured DOM signals and relying on later sanitization:',
+      finalUrl
+    )
+  }
 
-    await page.goto(targetUrl, {
-      waitUntil: 'domcontentloaded',
-      timeout: PAGE_ANALYSIS_TIMEOUT,
-    })
+  const interactiveStateTokens = await collectInteractiveStateSignals(page)
 
-    await page.waitForTimeout(1200)
-    const finalUrl = page.url()
-    const authProbeText = `${await page.title().catch(() => '')} ${(await page.textContent('body').catch(() => '') || '').slice(0, 1200)}`
-    if (isLikelyAuthGate(targetUrl, authProbeText, finalUrl)) {
-      throw new Error(`Auth gate detected during DOM analysis: ${finalUrl}`)
-    }
-
-    const interactiveStateTokens = await collectInteractiveStateSignals(page)
-
-    const collectSnapshot = () => page.evaluate(({ maxVisibleElements }) => {
+  const collectSnapshot = () => page.evaluate(({ maxVisibleElements }) => {
       type ComponentKind = 'hero' | 'nav' | 'button' | 'card' | 'section' | 'input' | 'link' | 'text' | 'surface'
       type ValueAccumulator = { value: string; count: number; componentKinds: ComponentKind[]; evidenceScore: number }
       type LayoutAccumulator = { label: string; kind: 'hero' | 'grid' | 'flex' | 'navigation' | 'form' | 'section' | 'multi-column' | 'sticky' | 'stack'; count: number; componentKinds: ComponentKind[]; evidenceScore: number }
@@ -1848,6 +1943,9 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
       extractRootVariableEvidence()
       extractCtaEvidence()
 
+      const hasDirectText = (el: HTMLElement) =>
+        Array.from(el.childNodes).some(node => node.nodeType === Node.TEXT_NODE && (node.textContent || '').trim().length >= 2)
+
       const visibleElements = Array.from(document.querySelectorAll<HTMLElement>('body *'))
         .filter(el => {
           const style = window.getComputedStyle(el)
@@ -1861,6 +1959,31 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
         })
         .sort((a, b) => (b.getBoundingClientRect().width * b.getBoundingClientRect().height) - (a.getBoundingClientRect().width * a.getBoundingClientRect().height))
         .slice(0, maxVisibleElements)
+
+      const textElements = Array.from(document.querySelectorAll<HTMLElement>('body *'))
+        .filter(el => {
+          const style = window.getComputedStyle(el)
+          const rect = el.getBoundingClientRect()
+          if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false
+          if (rect.width < 4 || rect.height < 4) return false
+          if (rect.bottom < 0 || rect.top > window.innerHeight * 1.6) return false
+          const tag = el.tagName.toLowerCase()
+          if (['img', 'svg', 'video', 'canvas', 'picture'].includes(tag)) return false
+
+          const text = (el.textContent || '').trim().replace(/\s+/g, ' ')
+          if (text.length < 2 || text.length > 220) return false
+
+          const semanticTextTag = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'a', 'button', 'label', 'li', 'strong', 'em', 'small'].includes(tag)
+          return semanticTextTag || hasDirectText(el)
+        })
+        .sort((a, b) => {
+          const aRect = a.getBoundingClientRect()
+          const bRect = b.getBoundingClientRect()
+          const aArea = aRect.width * aRect.height
+          const bArea = bRect.width * bRect.height
+          return bArea - aArea
+        })
+        .slice(0, Math.max(24, Math.floor(maxVisibleElements * 0.6)))
 
       for (const el of visibleElements) {
         const style = window.getComputedStyle(el)
@@ -1896,32 +2019,119 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
         addColor(style.color, 'color', el, Math.max(1, Math.round(evidence * 0.65)), layerHints)
         addColor(style.borderColor, 'border-color', el, Math.max(1, Math.round(evidence * 0.5)), layerHints)
 
-        if (style.borderRadius && style.borderRadius !== '0px') addValueToken(radiusValues, style.borderRadius, componentKinds, evidence)
-        if (style.boxShadow && style.boxShadow !== 'none') addValueToken(shadowValues, style.boxShadow, componentKinds, evidence)
+        if (style.borderRadius && style.borderRadius !== '0px' && !style.borderRadius.startsWith('var(')) {
+          // Normalize shorthand: "4px 4px 4px 4px" → "4px"
+          const rParts = style.borderRadius.split(/\s+/)
+          const normalized = (rParts.length === 4 && rParts[0] === rParts[1] && rParts[1] === rParts[2] && rParts[2] === rParts[3])
+            ? rParts[0]
+            : (rParts.length === 4 && rParts[0] === rParts[2] && rParts[1] === rParts[3])
+              ? `${rParts[0]} ${rParts[1]}`
+              : style.borderRadius
+          addValueToken(radiusValues, normalized, componentKinds, evidence)
+        }
+        if (style.boxShadow && style.boxShadow !== 'none' && !style.boxShadow.startsWith('var(')) addValueToken(shadowValues, style.boxShadow, componentKinds, evidence)
 
         ;[style.gap, style.rowGap, style.columnGap, style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft, style.marginTop, style.marginBottom].forEach(value => {
           const match = value?.match(/\d+(\.\d+)?px/)
-          if (match) addValueToken(spacingValues, match[0], componentKinds, Math.max(1, Math.round(evidence * 0.5)))
+          if (match && parseFloat(match[0]) >= 4) addValueToken(spacingValues, match[0], componentKinds, Math.max(1, Math.round(evidence * 0.5)))
         })
 
-        if (text.length >= 2 && text.length <= 160) {
-          const key = [style.fontFamily, style.fontSize, style.fontWeight, style.lineHeight, style.letterSpacing].join('|')
-          const existing = typoMap.get(key) || {
-            fontFamily: style.fontFamily,
-            fontSize: style.fontSize,
-            fontWeight: style.fontWeight,
-            lineHeight: style.lineHeight,
-            letterSpacing: style.letterSpacing,
-            count: 0,
-            componentKinds: [],
-            sampleText: text,
-            evidenceScore: 0,
-          }
+      }
+
+      for (const el of textElements) {
+        const style = window.getComputedStyle(el)
+        const rect = el.getBoundingClientRect()
+        const selectorHint = selectorHintFor(el)
+        const componentKinds = classifyComponent(el, selectorHint)
+        const text = (el.textContent || '').trim().replace(/\s+/g, ' ')
+        if (text.length < 2 || text.length > 220) continue
+
+        const tag = el.tagName.toLowerCase()
+        const isHeading = /^h[1-6]$/.test(tag)
+        const isTopRegion = rect.top >= -8 && rect.top < window.innerHeight * 0.45
+        const textEvidence =
+          (isHeading ? 20 : 0)
+          + (isTopRegion ? 10 : 0)
+          + Math.max(1, Math.round(Math.min((rect.width * rect.height) / Math.max(window.innerWidth * window.innerHeight, 1) * 20, 10)))
+
+        const key = [style.fontFamily, style.fontSize, style.fontWeight, style.lineHeight, style.letterSpacing].join('|')
+        const existing = typoMap.get(key) || {
+          fontFamily: style.fontFamily,
+          fontSize: style.fontSize,
+          fontWeight: style.fontWeight,
+          lineHeight: style.lineHeight,
+          letterSpacing: style.letterSpacing,
+          count: 0,
+          componentKinds: [],
+          sampleText: text,
+          evidenceScore: 0,
+        }
+        existing.count += 1
+        existing.componentKinds = [...new Set([...(existing.componentKinds || []), ...componentKinds])]
+        existing.sampleText = existing.sampleText || text
+        existing.evidenceScore += textEvidence
+        typoMap.set(key, existing)
+      }
+
+      // ── Border tokens (from elements with visible borders) ────────────────
+      const borderMap = new Map<string, { width: string; style: string; color?: string; count: number; componentKinds: ComponentKind[] }>()
+      const borderTargets = Array.from(document.querySelectorAll<HTMLElement>('button, input, textarea, [class*="card"], [class*="panel"], article, section, aside'))
+      for (const el of borderTargets.slice(0, 40)) {
+        const style = window.getComputedStyle(el)
+        const bw = style.borderTopWidth
+        const bs = style.borderTopStyle
+        if (!bw || bw === '0px' || bs === 'none' || bs === 'hidden') continue
+        const key = `${bw}:${bs}`
+        const hex = (() => {
+          const m = style.borderTopColor.match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/)
+          if (!m) return undefined
+          return `#${[m[1], m[2], m[3]].map(v => Number(v).toString(16).padStart(2, '0')).join('').toUpperCase()}`
+        })()
+        const tag = el.tagName.toLowerCase()
+        const kinds: ComponentKind[] = tag === 'button' ? ['button'] : (tag === 'input' || tag === 'textarea') ? ['input'] : ['card']
+        const existing = borderMap.get(key) || { width: bw, style: bs, color: hex, count: 0, componentKinds: kinds }
+        existing.count += 1
+        borderMap.set(key, existing)
+      }
+
+      // ── Transition tokens (from interactive elements) ──────────────────────
+      const transitionMap = new Map<string, { property: string; duration: string; easing: string; count: number; componentKinds: ComponentKind[] }>()
+      const interactiveTargets = Array.from(document.querySelectorAll<HTMLElement>('button, a[href], input, [role="button"]'))
+      for (const el of interactiveTargets.slice(0, 30)) {
+        const style = window.getComputedStyle(el)
+        const t = style.transition
+        if (!t || t === 'none' || t === 'all 0s ease 0s' || t.includes('0s')) continue
+        // Parse "background-color 0.15s ease-in-out, color 0.15s ease-in-out"
+        const parts = t.split(',').map(s => s.trim())
+        for (const part of parts) {
+          const tokens = part.split(/\s+/)
+          if (tokens.length < 2) continue
+          const prop = tokens[0]
+          const dur = tokens.find(tk => /^\d+(\.\d+)?m?s$/.test(tk)) || ''
+          if (!dur || dur === '0s' || dur === '0ms') continue
+          const easingParts = tokens.filter(tk => /ease|linear|cubic-bezier|step/.test(tk))
+          const easing = easingParts.join(' ') || 'ease'
+          const key = `${dur}:${easing}`
+          const tag = el.tagName.toLowerCase()
+          const kinds: ComponentKind[] = tag === 'button' ? ['button'] : tag === 'a' ? ['link'] : ['input']
+          const existing = transitionMap.get(key) || { property: prop, duration: dur, easing, count: 0, componentKinds: kinds }
           existing.count += 1
-          existing.componentKinds = [...new Set([...(existing.componentKinds || []), ...componentKinds])]
-          existing.sampleText = existing.sampleText || text
-          existing.evidenceScore += evidence
-          typoMap.set(key, existing)
+          transitionMap.set(key, existing)
+        }
+      }
+
+      // ── Page max-width & grid columns ──────────────────────────────────────
+      let pageMaxWidth: string | undefined
+      let gridColumns: string | undefined
+      const containerCandidates = Array.from(document.querySelectorAll<HTMLElement>('main, #main, #content, .container, .wrapper, [class*="container"], [class*="wrapper"], [class*="content"]'))
+      for (const el of containerCandidates.slice(0, 12)) {
+        const style = window.getComputedStyle(el)
+        if (!pageMaxWidth && style.maxWidth && style.maxWidth !== 'none' && style.maxWidth !== '0px') {
+          const mw = parseFloat(style.maxWidth)
+          if (mw >= 600 && mw <= 2400) pageMaxWidth = style.maxWidth
+        }
+        if (!gridColumns && style.display === 'grid' && style.gridTemplateColumns && style.gridTemplateColumns !== 'none') {
+          gridColumns = style.gridTemplateColumns
         }
       }
 
@@ -1936,41 +2146,69 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
         rawShadowTokens: [...shadowValues.values()],
         rawSpacingTokens: [...spacingValues.values()],
         rawLayoutEvidence: [...layoutValues.values()],
+        rawBorderTokens: [...borderMap.values()],
+        rawTransitionTokens: [...transitionMap.values()],
+        pageMaxWidth,
+        gridColumns,
         stateTokens: {},
       }
     }, { maxVisibleElements: MAX_VISIBLE_ELEMENTS })
 
-    const snapshots: RawDomSignals[] = []
-    snapshots.push(await collectSnapshot())
+  const snapshots: RawDomSignals[] = []
+  snapshots.push(await collectSnapshot())
 
-    await page.waitForTimeout(900)
-    await page.evaluate(() => window.scrollTo(0, 0))
-    await page.waitForTimeout(250)
-    snapshots.push(await collectSnapshot())
+  await page.waitForTimeout(900)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(250)
+  snapshots.push(await collectSnapshot())
 
-    await page.waitForTimeout(900)
-    snapshots.push(await collectSnapshot())
+  await page.waitForTimeout(900)
+  snapshots.push(await collectSnapshot())
 
-    const domSignals = mergeRawDomSignals(...snapshots)
+  const domSignals = mergeRawDomSignals(...snapshots)
 
-    return {
-      ...domSignals,
-      stateTokens: mergeComponentStateTokens(domSignals.stateTokens, interactiveStateTokens),
-    }
+  return {
+    ...domSignals,
+    stateTokens: mergeComponentStateTokens(domSignals.stateTokens, interactiveStateTokens),
+  }
+}
+
+async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
+  const browser = await chromium.launch({ headless: true })
+  try {
+    const page = await browser.newPage({
+      viewport: { width: 1440, height: 1200 },
+      deviceScaleFactor: 1,
+    })
+
+    await page.goto(targetUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: PAGE_ANALYSIS_TIMEOUT,
+    })
+
+    return await extractDomSignalsFromPage(page, targetUrl)
   } finally {
     await browser.close()
   }
 }
 
-export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAnalysis> {
-  const html = await fetchText(targetUrl)
-  if (isLikelyAuthGate(targetUrl, html)) {
-    console.warn('[pageAnalyzer] Auth gate detected in fetched HTML, falling back to screenshot-only shell analysis:', targetUrl)
-    return createEmptyPageAnalysis()
+async function analyzePageStylesCore(
+  targetUrl: string,
+  options?: {
+    htmlOverride?: string
+    domSignalsOverride?: RawDomSignals | null
+    preserveMeasuredPageContext?: boolean
+  }
+): Promise<PageStyleAnalysis> {
+  const html = options?.htmlOverride ?? await fetchText(targetUrl)
+  const authLikeFetchedHtml = isLikelyAuthGate(targetUrl, html)
+  if (authLikeFetchedHtml) {
+    console.warn('[pageAnalyzer] Auth-like fetched HTML detected, ignoring fetched HTML/CSS signals and continuing with DOM analysis:', targetUrl)
   }
 
-  const inlineBlocks = extractStyleBlocks(html)
-  const stylesheetUrls = extractStylesheetHrefs(html, targetUrl)
+  const effectiveHtml = authLikeFetchedHtml ? '' : html
+  const inlineBlocks = extractStyleBlocks(effectiveHtml)
+  const stylesheetUrls = extractStylesheetHrefs(effectiveHtml, targetUrl)
 
   const stylesheetTexts = await Promise.all(
     stylesheetUrls.map(async url => {
@@ -1985,12 +2223,14 @@ export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAna
 
   const cssText = [...inlineBlocks, ...stylesheetTexts.filter(Boolean)].join('\n\n')
   const cssSignals = extractCssSignals(cssText)
-  let domSignals: RawDomSignals | null = null
+  let domSignals: RawDomSignals | null = options?.domSignalsOverride ?? null
 
-  try {
-    domSignals = await extractDomSignals(targetUrl)
-  } catch (error) {
-    console.warn('[pageAnalyzer] DOM analysis failed, using CSS-only signals:', error)
+  if (!domSignals) {
+    try {
+      domSignals = await extractDomSignals(targetUrl)
+    } catch (error) {
+      console.warn('[pageAnalyzer] DOM analysis failed, using CSS-only signals:', error)
+    }
   }
 
   const colorCandidates = mergeColorCandidates(domSignals?.colorCandidates || [], cssSignals.colorCandidates)
@@ -2006,8 +2246,6 @@ export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAna
 
   const analysis: PageStyleAnalysis = {
     colorCandidates,
-    // This preliminary stage only gathers raw shell evidence. Final semantic slots
-    // should be rebuilt later after Hero screenshot signals are merged in aiExtract.
     semanticColorSystem: undefined,
     typographyCandidates,
     typographyTokens: toTypographyTokens(typographyCandidates),
@@ -2020,11 +2258,19 @@ export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAna
     layoutHints: mergeUniqueValues(8, domSignals?.layoutHints || [], cssSignals.layoutHints),
     layoutEvidence: toLayoutEvidence(layoutValues),
     stateTokens,
+    borderTokens: toBorderTokens(domSignals?.rawBorderTokens || []),
+    transitionTokens: toTransitionTokens(domSignals?.rawTransitionTokens || []),
+    pageMaxWidth: domSignals?.pageMaxWidth,
+    gridColumns: domSignals?.gridColumns,
     cssTextExcerpt: cssText.slice(0, MAX_CSS_EXCERPT),
     sourceCount: {
       inlineStyleBlocks: inlineBlocks.length,
       linkedStylesheets: stylesheetTexts.filter(Boolean).length,
     },
+  }
+
+  if (options?.preserveMeasuredPageContext) {
+    return analysis
   }
 
   if (isLikelyAuthAnalysis(analysis)) {
@@ -2042,4 +2288,18 @@ export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAna
   }
 
   return analysis
+}
+
+export async function analyzePageStylesFromPage(page: Page, targetUrl: string): Promise<PageStyleAnalysis> {
+  const domSignals = await extractDomSignalsFromPage(page, targetUrl)
+  const html = (await page.content().catch(() => '')) || ''
+  return analyzePageStylesCore(targetUrl, {
+    htmlOverride: html,
+    domSignalsOverride: domSignals,
+    preserveMeasuredPageContext: true,
+  })
+}
+
+export async function analyzePageStyles(targetUrl: string): Promise<PageStyleAnalysis> {
+  return analyzePageStylesCore(targetUrl)
 }

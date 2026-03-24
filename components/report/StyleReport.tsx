@@ -77,6 +77,8 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
   const isV2 = report.id === 'preset_linear_v2'
   const isV3 = report.id === 'preset_linear_v3'
   const isElite = isV2 || isV3
+  const isDNA = report.id?.startsWith('preset_') || report.id === 'linear'
+  const showDNA = FLAGS.ENABLE_DESIGN_AUDITS || !isDNA
 
   const contentMap = {
     markdown: generateMarkdown(report, lang),
@@ -118,7 +120,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
       width: '100%'
     }}>
       
-      {!isElite && (
+      {!isElite && showDNA && (
         <>
           {/* 1. 风格描述 */}
           <section>
@@ -158,7 +160,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
       )}
 
       {/* 5. Elite 专属细节模块 (preset_linear / V2 / V3) */}
-      {FLAGS.ENABLE_DESIGN_AUDITS && isElite && (
+      {showDNA && FLAGS.ENABLE_DESIGN_AUDITS && isElite && (
         <section>
           {report.id === 'preset_linear' ? (
             <>

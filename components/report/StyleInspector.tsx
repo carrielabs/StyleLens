@@ -35,7 +35,7 @@ export default function StyleInspector({ report, lang }: Props) {
 
   // Find best radius for a component kind
   function getBestRadius(kind: string): { value: string; measured: boolean } {
-    const match = radiusTokens.find(t => t.componentKinds?.includes(kind))
+    const match = radiusTokens.find(t => (t.componentKinds as string[])?.includes(kind))
     if (match) return { value: match.value, measured: true }
     if (radiusTokens.length > 0) return { value: radiusTokens[0].value, measured: true }
     return { value: cssRadius, measured: false }
@@ -43,7 +43,7 @@ export default function StyleInspector({ report, lang }: Props) {
 
   // Find best shadow for a component kind
   function getBestShadow(kind: string): { value: string; measured: boolean } {
-    const match = shadowTokens.find(t => t.componentKinds?.includes(kind))
+    const match = shadowTokens.find(t => (t.componentKinds as string[])?.includes(kind))
     if (match) return { value: match.value, measured: true }
     if (shadowTokens.length > 0) return { value: shadowTokens[0].value, measured: false }
     return { value: cssShadow, measured: false }

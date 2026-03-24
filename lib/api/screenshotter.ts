@@ -1,7 +1,8 @@
 import fs from 'fs'
 import path from 'path'
+import { chromium } from 'playwright'
 import type { ScreenshotResponse } from '@/lib/types'
-import { analyzePageStyles, sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
+import { analyzePageStyles, analyzePageStylesFromPage, sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
 
 // Persistent file-based cache to survive server restarts (HMR/Next.js Dev)
 const CACHE_FILE = path.resolve(process.cwd(), '.screenshot_cache.json')
@@ -32,6 +33,47 @@ const screenshotCache = getPersistentCache()
 export async function captureScreenshot(targetUrl: string): Promise<ScreenshotResponse> {
   const normalizedUrl = targetUrl.toLowerCase().trim()
   let pageAnalysis = null
+
+  try {
+    const browser = await chromium.launch({ headless: true })
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 960 } })
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 })
+      await page.waitForTimeout(3_000)
+
+      try {
+        pageAnalysis = await analyzePageStylesFromPage(page, targetUrl)
+      } catch (analysisError) {
+        console.warn(
+          '[Screenshotter] Same-page DOM analysis failed; continuing with screenshot-only local capture:',
+          analysisError
+        )
+        pageAnalysis = null
+      }
+
+      const buffer = await page.screenshot({
+        type: 'jpeg',
+        quality: 80,
+        fullPage: true,
+      })
+      const dataUrl = `data:image/jpeg;base64,${buffer.toString('base64')}`
+
+      screenshotCache.set(normalizedUrl, dataUrl)
+      savePersistentCache(screenshotCache)
+      console.log(`[Screenshotter] Local Playwright capture successful and cached. Size: ${buffer.byteLength}`)
+
+      return {
+        success: true,
+        screenshotUrl: dataUrl,
+        extractedCss: pageAnalysis?.cssTextExcerpt || '',
+        pageAnalysis: pageAnalysis || undefined,
+      }
+    } finally {
+      await browser.close().catch(() => undefined)
+    }
+  } catch (error) {
+    console.warn('[Screenshotter] Local Playwright capture failed, falling back to split mode:', error)
+  }
 
   try {
     pageAnalysis = await analyzePageStyles(targetUrl)

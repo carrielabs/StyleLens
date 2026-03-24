@@ -203,7 +203,7 @@ export default function HomeSidebar({
         />
       </div>
 
-      {sidebarOpen && (
+      {sidebarOpen && FLAGS.ENABLE_DESIGN_AUDITS && (
         <>
           <SectionHeader 
             label="Featured Styles" 
@@ -212,9 +212,7 @@ export default function HomeSidebar({
           />
           {!featuredCollapsed && (
             <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-              {Object.values(BRAND_PRESETS)
-                .filter(p => FLAGS.ENABLE_DESIGN_AUDITS || (p.id !== 'preset_linear_v2' && p.id !== 'preset_linear_v3'))
-                .map(preset => (
+              {Object.values(BRAND_PRESETS).map(preset => (
                 <PresetItem
                   key={preset.id}
                   preset={preset}
