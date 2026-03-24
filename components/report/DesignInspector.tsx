@@ -14,6 +14,7 @@ interface Props {
 export default function DesignInspector({ report, lang }: Props) {
   const [mainTab, setMainTab] = useState<MainTab>('components')
   const [compTab, setCompTab] = useState<ComponentTab>('button')
+  const [isInjected, setIsInjected] = useState(false)
 
   const { colors, colorSystem, typography, designDetails } = report
   const analysis = report.pageAnalysis
@@ -38,6 +39,21 @@ export default function DesignInspector({ report, lang }: Props) {
   // ── Preview-safe derived colors (guards against saturated bg, invisible component text) ──
   const previewBg = safePreviewBg(bgHex, designDetails.colorMode)
   const { surface: previewSurface, text: previewText } = safeComponentColors(surfaceHex, textHex, designDetails.colorMode)
+
+  // ── Source name for inject button label ───────────────────────────────────
+  const sourceName = report.sourceLabel.replace(/https?:\/\/(www\.)?/, '').split('/')[0]
+
+  // ── Effective display values: neutral defaults when !isInjected, real tokens when isInjected ──
+  // This powers the "inject style" toggle — lets users compare site's design vs neutral baseline
+  const effBg        = isInjected ? previewBg      : (designDetails.colorMode === 'dark' ? '#2C2C2E' : '#F5F5F7')
+  const effSurface   = isInjected ? previewSurface : (designDetails.colorMode === 'dark' ? '#3A3A3C' : '#FFFFFF')
+  const effText      = isInjected ? previewText    : (designDetails.colorMode === 'dark' ? '#EBEBF5' : '#1D1D1F')
+  const effPrimary   = isInjected ? primaryHex     : (designDetails.colorMode === 'dark' ? '#FFFFFF' : '#1D1D1F')
+  const effPrimaryFg = isInjected ? primaryFgHex   : (designDetails.colorMode === 'dark' ? '#000000' : '#FFFFFF')
+  const effRadius    = (k: string) => isInjected ? bestRadius(k).value : '8px'
+  const effBorder    = (k: string) => isInjected ? bestBorder(k).value : `1px solid ${designDetails.colorMode === 'dark' ? '#48484A' : '#E5E5EA'}`
+  const effShadow    = (k: string) => isInjected ? bestShadow(k).value : 'none'
+  const effFont      = isInjected ? typography.fontFamily : 'system-ui, -apple-system, sans-serif'
 
   // ── Measured tokens ───────────────────────────────────────────────────────
   const radiusTokens: RadiusToken[]         = analysis?.radiusTokens     || []
@@ -142,6 +158,15 @@ export default function DesignInspector({ report, lang }: Props) {
     whiteSpace: 'nowrap' as const,
   }
 
+  // effBtnStyle switches between real extracted button style and neutral default
+  const effBtnStyle: React.CSSProperties = isInjected ? btnStyle : {
+    background: designDetails.colorMode === 'dark' ? '#FFFFFF' : '#1D1D1F',
+    color: designDetails.colorMode === 'dark' ? '#000000' : '#FFFFFF',
+    border: 'none', cursor: 'pointer', borderRadius: '8px',
+    padding: '10px 20px', fontSize: '14px', fontWeight: 600,
+    fontFamily: 'system-ui, -apple-system, sans-serif', whiteSpace: 'nowrap',
+  }
+
   // ── Styles ────────────────────────────────────────────────────────────────
   const outerWrap: React.CSSProperties = {
     background: '#FFFFFF', borderRadius: '16px',
@@ -205,6 +230,32 @@ export default function DesignInspector({ report, lang }: Props) {
         {/* ══════════════ 组件 COMPONENTS ══════════════ */}
         {mainTab === 'components' && (
           <>
+            {/* Inject toggle header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: '#8E8E93' }}>
+                {lang === 'zh'
+                  ? (isInjected ? `已注入 ${sourceName} 设计语言` : '点击「注入」将提取的 token 应用到通用组件')
+                  : (isInjected ? `${sourceName} style applied` : 'Click "Inject" to apply extracted tokens to generic components')}
+              </p>
+              <button
+                onClick={() => setIsInjected(v => !v)}
+                style={{
+                  flexShrink: 0, marginLeft: '16px',
+                  padding: '7px 18px',
+                  background: isInjected ? '#F5F5F7' : primaryHex,
+                  color: isInjected ? '#1D1D1F' : primaryFgHex,
+                  borderRadius: '100px',
+                  border: isInjected ? '1px solid #E5E5EA' : 'none',
+                  fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  transition: 'all 0.2s ease', whiteSpace: 'nowrap' as const,
+                }}
+              >
+                {isInjected
+                  ? (lang === 'zh' ? '重置' : 'Reset')
+                  : (lang === 'zh' ? `注入 ${sourceName} 风格` : `Apply ${sourceName} Style`)}
+              </button>
+            </div>
+
             <div style={subTabBar}>
               {(['button','input','card','badge'] as ComponentTab[]).map(k => (
                 <button key={k} style={subTabBtn(compTab === k)} onClick={() => setCompTab(k)}>
@@ -220,20 +271,20 @@ export default function DesignInspector({ report, lang }: Props) {
               {/* Left: component visual */}
               <div>
                 {compTab === 'button' && (
-                  <ComponentPreview bg={previewBg}>
+                  <ComponentPreview bg={effBg}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <button style={btnStyle}>
-                        {isValidButtonText(snap?.text) ? snap!.text : (lang === 'zh' ? '主要按钮' : 'Primary Button')}
+                      <button style={effBtnStyle}>
+                        {isInjected && isValidButtonText(snap?.text) ? snap!.text : (lang === 'zh' ? '主要按钮' : 'Primary Button')}
                       </button>
                       <button style={{
                         background: 'transparent',
-                        color: primaryHex,
-                        border: `1px solid ${primaryHex}`,
+                        color: effPrimary,
+                        border: `1px solid ${effPrimary}`,
                         cursor: 'pointer',
-                        borderRadius: snap?.borderRadius || bestRadius('button').value,
-                        padding: snap?.paddingV && snap?.paddingH ? `${snap.paddingV} ${snap.paddingH}` : '10px 20px',
-                        fontSize: snap?.fontSize || '14px',
-                        fontFamily: snap?.fontFamily || typography.fontFamily,
+                        borderRadius: effRadius('button'),
+                        padding: isInjected && snap?.paddingV && snap?.paddingH ? `${snap.paddingV} ${snap.paddingH}` : '10px 20px',
+                        fontSize: isInjected && snap?.fontSize ? snap.fontSize : '14px',
+                        fontFamily: effFont,
                         whiteSpace: 'nowrap',
                       }}>
                         {lang === 'zh' ? '次要按钮' : 'Secondary'}
@@ -242,17 +293,17 @@ export default function DesignInspector({ report, lang }: Props) {
                   </ComponentPreview>
                 )}
                 {compTab === 'input' && (
-                  <ComponentPreview bg={previewBg}>
+                  <ComponentPreview bg={effBg}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
                       <input
                         readOnly defaultValue=""
                         placeholder={lang === 'zh' ? '输入框示例' : 'Input placeholder'}
                         style={{
-                          background: previewSurface, color: previewText,
-                          border: bestBorder('input').value,
-                          borderRadius: bestRadius('input').value,
+                          background: effSurface, color: effText,
+                          border: effBorder('input'),
+                          borderRadius: effRadius('input'),
                           padding: '10px 14px', fontSize: '14px',
-                          fontFamily: typography.fontFamily, outline: 'none', width: '100%', boxSizing: 'border-box',
+                          fontFamily: effFont, outline: 'none', width: '100%', boxSizing: 'border-box',
                         }}
                       />
                       <input
@@ -260,11 +311,11 @@ export default function DesignInspector({ report, lang }: Props) {
                         placeholder={lang === 'zh' ? '禁用状态' : 'Disabled state'}
                         disabled
                         style={{
-                          background: previewSurface, color: previewText,
-                          border: bestBorder('input').value,
-                          borderRadius: bestRadius('input').value,
+                          background: effSurface, color: effText,
+                          border: effBorder('input'),
+                          borderRadius: effRadius('input'),
                           padding: '10px 14px', fontSize: '14px',
-                          fontFamily: typography.fontFamily, outline: 'none',
+                          fontFamily: effFont, outline: 'none',
                           width: '100%', boxSizing: 'border-box', opacity: 0.4,
                         }}
                       />
@@ -272,18 +323,18 @@ export default function DesignInspector({ report, lang }: Props) {
                   </ComponentPreview>
                 )}
                 {compTab === 'card' && (
-                  <ComponentPreview bg={previewBg}>
+                  <ComponentPreview bg={effBg}>
                     <div style={{
-                      background: previewSurface, color: previewText,
-                      border: bestBorder('card').value,
-                      borderRadius: bestRadius('card').value,
-                      boxShadow: bestShadow('card').value,
+                      background: effSurface, color: effText,
+                      border: effBorder('card'),
+                      borderRadius: effRadius('card'),
+                      boxShadow: effShadow('card'),
                       padding: '16px 20px', width: '100%', boxSizing: 'border-box',
                     }}>
-                      <div style={{ fontSize: '15px', fontWeight: typography.headingWeight || 600, fontFamily: typography.fontFamily, marginBottom: '6px' }}>
+                      <div style={{ fontSize: '15px', fontWeight: typography.headingWeight || 600, fontFamily: effFont, marginBottom: '6px' }}>
                         {lang === 'zh' ? '卡片标题' : 'Card Title'}
                       </div>
-                      <div style={{ fontSize: '13px', color: previewText, opacity: 0.6, fontFamily: typography.fontFamily }}>
+                      <div style={{ fontSize: '13px', color: effText, opacity: 0.6, fontFamily: effFont }}>
                         {lang === 'zh' ? '说明文字内容' : 'Description text content'}
                       </div>
                     </div>
@@ -294,16 +345,16 @@ export default function DesignInspector({ report, lang }: Props) {
                   <ComponentPreview bg={isLight(bgHex) ? '#E8E8ED' : '#3A3A3C'}>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                       {[
-                        { label: lang === 'zh' ? '标签' : 'Tag', bg: primaryHex, color: primaryFgHex },
-                        { label: lang === 'zh' ? '次要' : 'Secondary', bg: surfaceHex, color: textHex },
-                        { label: lang === 'zh' ? '边框' : 'Outline', bg: 'transparent', color: primaryHex, border: `1px solid ${primaryHex}` },
+                        { label: lang === 'zh' ? '标签' : 'Tag', bg: effPrimary, color: effPrimaryFg },
+                        { label: lang === 'zh' ? '次要' : 'Secondary', bg: effSurface, color: effText },
+                        { label: lang === 'zh' ? '边框' : 'Outline', bg: 'transparent', color: effPrimary, border: `1px solid ${effPrimary}` },
                       ].map((b, i) => (
                         <span key={i} style={{
                           background: b.bg, color: b.color,
                           border: b.border || 'none',
                           borderRadius: '999px',
                           padding: '4px 10px', fontSize: '12px', fontWeight: 500,
-                          fontFamily: typography.fontFamily,
+                          fontFamily: effFont,
                         }}>
                           {b.label}
                         </span>
