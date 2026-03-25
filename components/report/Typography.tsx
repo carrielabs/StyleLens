@@ -1,6 +1,7 @@
 'use client'
 
 import type { PageStyleAnalysis, Typography as TypoType } from '@/lib/types'
+import { useState } from 'react'
 
 export default function Typography({
   data,
@@ -15,52 +16,38 @@ export default function Typography({
   lang: 'zh' | 'en'
   fullWidth?: boolean
 }) {
+  const [typeView, setTypeView] = useState<'waterfall' | 'poster' | 'inspector' | 'editorial'>('waterfall')
+
+  // ── helpers ──────────────────────────────────────────────────────────
   const normalizeWeight = (value: unknown, fallback: number) => {
     const parsed = Number(value)
     return Number.isFinite(parsed) ? parsed : fallback
   }
 
-  const normalizeLineHeight = (value: unknown, fallback: number) => {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : fallback
-  }
-
-  const splitFontStack = (value?: string) =>
-    (value || '')
-      .split(',')
-      .map(font => font.replace(/['"]/g, '').trim())
-      .filter(Boolean)
-
   const isGenericFont = (value: string) =>
-    [
-      'sans-serif',
-      'serif',
-      'monospace',
-      'system-ui',
-      '-apple-system',
-      'blinkmacsystemfont',
-      'ui-sans-serif',
-      'ui-serif',
-      'ui-monospace',
-      'inherit',
-      'initial',
-      'unset',
-    ].includes(value.toLowerCase())
-
-  const getPrimaryFontName = (value?: string) => {
-    const fonts = splitFontStack(value)
-    const primary = fonts.find(font => !isGenericFont(font))
-    return primary || fonts[0] || 'System Font'
-  }
+    ['sans-serif', 'serif', 'monospace', 'system-ui', '-apple-system',
+     'blinkmacsystemfont', 'ui-sans-serif', 'ui-serif', 'ui-monospace',
+     'inherit', 'initial', 'unset'].includes(value.toLowerCase())
 
   const parseFontSize = (value?: string) => {
     if (!value) return 0
-    const normalized = value.trim().toLowerCase()
-    if (normalized === 'unknown') return 0
-    const parsed = Number.parseFloat(normalized)
-    return Number.isFinite(parsed) ? parsed : 0
+    const n = Number.parseFloat(value.trim().toLowerCase())
+    return Number.isFinite(n) ? n : 0
   }
 
+  const hasRealSize = (value?: string) => {
+    if (!value) return false
+    return !value.toLowerCase().includes('nan') && /\d/.test(value)
+  }
+
+  const hasRealMetric = (value?: string) => {
+    if (!value) return false
+    const n = value.trim().toLowerCase()
+    if (!n || n.includes('nan') || n === 'unknown') return false
+    return /\d/.test(n) || n === 'normal'
+  }
+
+  // ── font fallback display names ────────────────────────────────────
   const fontNames = data.fontFamily.split(',').map(f => {
     let clean = f.replace(/['"]/g, '').replace(/e\.g\.,/gi, '').trim()
     if (clean.includes(':')) clean = clean.split(':')[1]?.trim() || clean
@@ -68,168 +55,164 @@ export default function Typography({
     return clean
   }).filter(Boolean)
 
-  // Remove generic fallbacks unless it's the only one
-  let displayFonts = fontNames.filter(f => !['sans-serif', 'serif', 'system-ui', '-apple-system', 'blinkmacsystemfont'].includes(f.toLowerCase()))
+  let displayFonts = fontNames.filter(f =>
+    !['sans-serif','serif','system-ui','-apple-system','blinkmacsystemfont'].includes(f.toLowerCase()))
   if (displayFonts.length === 0) displayFonts = [fontNames[0] || 'System Font']
-  
-  // Cap at 4 to cover full hierarchy without breaking UI bounds
   displayFonts = displayFonts.slice(0, 4)
+  while (displayFonts.length < 3) displayFonts.push(displayFonts[0])
 
-  // Ensure we always have at least enough base levels for visual structure
-  while (displayFonts.length < 3) {
-    displayFonts.push(displayFonts[0])
-  }
-
-  const hasRealSize = (value?: string) => {
-    if (!value) return false
-    const normalized = value.trim().toLowerCase()
-    if (normalized.includes('nan')) return false
-    return /\d/.test(normalized)
-  }
-
-  const hasRealMetric = (value?: string) => {
-    if (!value) return false
-    const normalized = value.trim().toLowerCase()
-    if (!normalized || normalized.includes('nan') || normalized === 'unknown') return false
-    return /\d/.test(normalized) || normalized === 'normal'
-  }
-
+  // ── typography token list ─────────────────────────────────────────
   const recoveredTypography = sourceType === 'url'
     ? (analysis?.typographyCandidates || [])
-        .filter(candidate => hasRealSize(candidate.fontSize))
+        .filter(c => hasRealSize(c.fontSize))
         .slice(0, 8)
-        .map((candidate, index) => ({
-          id: `candidate-${index + 1}`,
-          fontFamily: candidate.fontFamily,
-          fontSize: candidate.fontSize || '—',
-          fontWeight: candidate.fontWeight || '—',
-          letterSpacing: hasRealMetric(candidate.letterSpacing) ? candidate.letterSpacing! : 'normal',
-          lineHeight: hasRealMetric(candidate.lineHeight) ? candidate.lineHeight! : '—',
-          sampleCount: candidate.count,
+        .map((c, i) => ({
+          id: `candidate-${i + 1}`,
+          label: undefined as string | undefined,
+          fontFamily: c.fontFamily,
+          fontSize: c.fontSize || '—',
+          fontWeight: c.fontWeight || '—',
+          letterSpacing: hasRealMetric(c.letterSpacing) ? c.letterSpacing! : 'normal',
+          lineHeight: hasRealMetric(c.lineHeight) ? c.lineHeight! : '—',
+          sampleCount: c.count,
+          sampleText: c.sampleText,
         }))
     : []
 
   const measuredTypography = sourceType === 'url'
-    ? (analysis?.typographyTokens || [])
-        .filter(token => hasRealSize(token.fontSize))
-        .slice(0, 8)
+    ? (analysis?.typographyTokens || []).filter(t => hasRealSize(t.fontSize)).slice(0, 8)
     : []
+
   const displayTypography = measuredTypography.length
-    ? measuredTypography.map(token => ({
-        id: token.id,
-        fontFamily: token.fontFamily,
-        fontSize: token.fontSize || '—',
-        fontWeight: token.fontWeight || '—',
-        letterSpacing: token.letterSpacing || 'normal',
-        lineHeight: token.lineHeight || '—',
-        sampleCount: token.sampleCount,
+    ? measuredTypography.map(t => ({
+        id: t.id,
+        label: t.label,
+        fontFamily: t.fontFamily,
+        fontSize: t.fontSize || '—',
+        fontWeight: t.fontWeight || '—',
+        letterSpacing: t.letterSpacing || 'normal',
+        lineHeight: t.lineHeight || '—',
+        sampleCount: t.sampleCount,
+        sampleText: t.sampleText,
       }))
     : recoveredTypography
+
   const sortedTypography = [...displayTypography].sort((a, b) => {
-    const sizeDelta = parseFontSize(b.fontSize) - parseFontSize(a.fontSize)
-    if (sizeDelta !== 0) return sizeDelta
-
-    const countDelta = (b.sampleCount || 0) - (a.sampleCount || 0)
-    if (countDelta !== 0) return countDelta
-
-    const weightDelta = normalizeWeight(b.fontWeight, 400) - normalizeWeight(a.fontWeight, 400)
-    if (weightDelta !== 0) return weightDelta
-
-    return getPrimaryFontName(a.fontFamily).localeCompare(getPrimaryFontName(b.fontFamily))
+    const sd = parseFontSize(b.fontSize) - parseFontSize(a.fontSize)
+    if (sd !== 0) return sd
+    const cd = (b.sampleCount || 0) - (a.sampleCount || 0)
+    if (cd !== 0) return cd
+    return normalizeWeight(b.fontWeight, 400) - normalizeWeight(a.fontWeight, 400)
   })
+
   const hasMeasuredTypography = displayTypography.length > 0
+
+  // ── map to Gemini token shape ──────────────────────────────────────
+  const geminiTokens: GeminiToken[] = sortedTypography.map((t, i) => {
+    const cleanPrimary = (t.fontFamily || '')
+      .split(',')[0].replace(/['"]/g, '').trim() || 'System Font'
+    const name = t.label
+      ? t.label.toUpperCase()
+      : `STYLE ${i + 1}`
+    const previewText = t.sampleText || cleanPrimary
+    return {
+      name,
+      previewText,
+      family: t.fontFamily || 'sans-serif',
+      size: t.fontSize,
+      weight: normalizeWeight(t.fontWeight, 400),
+      tracking: t.letterSpacing,
+      leading: t.lineHeight,
+      count: t.sampleCount ?? 0,
+    }
+  })
+
+  // ── view config ───────────────────────────────────────────────────
+  const views = [
+    { id: 'waterfall',  labelZh: '瀑布流',   labelEn: 'Waterfall' },
+    { id: 'poster',     labelZh: '海报画廊', labelEn: 'Poster' },
+    { id: 'inspector',  labelZh: '蓝图透视', labelEn: 'Blueprint' },
+    { id: 'editorial',  labelZh: '阅读流',   labelEn: 'Editorial' },
+  ] as const
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'auto', paddingBottom: '16px' }}>
       <div style={{ minWidth: fullWidth ? '100%' : '640px' }}>
         {hasMeasuredTypography ? (
           <>
+            {/* ── Header row (Gemini style) ── */}
             <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              paddingBottom: '16px',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              marginBottom: '24px', paddingBottom: '16px',
               borderBottom: '1px solid var(--border-subtle)'
             }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                {lang === 'zh' ? '基于页面测量的字体样式' : 'Measured page typography'}
-              </div>
-              <span style={{
-                fontSize: '11px',
-                color: 'var(--text-secondary)',
-                padding: '3px 8px',
-                borderRadius: '999px',
-                border: '1px solid rgba(0,0,0,0.08)'
-              }}>
-                {lang === 'zh' ? '真实页面样式' : 'Measured'}
-              </span>
-            </div>
-
-            <div style={{
-              display: 'flex', alignItems: 'baseline', padding: '16px 0',
-              borderBottom: '1px solid var(--border-subtle)',
-              fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600
-            }}>
-              <div style={{ flex: '0 0 28%' }}>{lang === 'zh' ? '字体' : 'Font'}</div>
-              <div style={{ flex: '0 0 14%', textAlign: 'right' }}>{lang === 'zh' ? '字号' : 'Size'}</div>
-              <div style={{ flex: '0 0 14%', textAlign: 'right' }}>{lang === 'zh' ? '字重' : 'Weight'}</div>
-              <div style={{ flex: '0 0 14%', textAlign: 'right' }}>{lang === 'zh' ? '字间距' : 'Spacing'}</div>
-              <div style={{ flex: '0 0 14%', textAlign: 'right' }}>{lang === 'zh' ? '行高' : 'Line Height'}</div>
-              <div style={{ flex: '0 0 16%', textAlign: 'right' }}>{lang === 'zh' ? '频次' : 'Count'}</div>
-            </div>
-
-            {sortedTypography.map((token, idx) => (
-              (() => {
-                const primaryFont = getPrimaryFontName(token.fontFamily)
-                return (
-              <div key={`${token.id}-${idx}`} style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                padding: '20px 0',
-                borderBottom: idx < sortedTypography.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none'
-              }}>
-                <div style={{
-                  flex: '0 0 28%',
-                  fontSize: `clamp(14px, ${token.fontSize || '18px'}, 32px)`,
-                  fontWeight: normalizeWeight(token.fontWeight, 500),
-                  color: 'var(--text-primary)',
-                  fontFamily: token.fontFamily || `"${displayFonts[0]}", var(--font-sans), sans-serif`,
-                  lineHeight: 1.2,
-                  paddingRight: '16px',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
-                }} title={primaryFont}>
-                  {primaryFont}
-                </div>
-                <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {token.fontSize || '—'}
-                </div>
-                <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {token.fontWeight || '—'}
-                </div>
-                <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {token.letterSpacing || 'normal'}
-                </div>
-                <div style={{ flex: '0 0 14%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {token.lineHeight || '—'}
-                </div>
-                <div style={{ flex: '0 0 16%', fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {token.sampleCount}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>
+                  {lang === 'zh' ? '微排版测量' : 'Measured'}
                 </div>
               </div>
-                )
-              })()
-            ))}
+
+              {/* 4-view switcher */}
+              <div style={{ display: 'flex', gap: '4px', backgroundColor: '#F3F3F4', padding: '4px', borderRadius: '6px' }}>
+                {views.map(v => (
+                  <button
+                    key={v.id}
+                    onClick={() => setTypeView(v.id)}
+                    style={{
+                      padding: '4px 12px', fontSize: '12px', fontWeight: 500,
+                      borderRadius: '4px', cursor: 'pointer', border: 'none',
+                      color: typeView === v.id ? '#111' : '#666',
+                      backgroundColor: typeView === v.id ? '#FFF' : 'transparent',
+                      boxShadow: typeView === v.id ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                      transition: 'all 0.2s ease',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    {lang === 'zh' ? v.labelZh : v.labelEn}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Waterfall view ── */}
+            {typeView === 'waterfall' && (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {geminiTokens.map((t, i) => (
+                  <div key={`${t.name}-${i}`} style={{ borderBottom: i !== geminiTokens.length - 1 ? '1px solid #F0F0F0' : 'none' }}>
+                    <TypeViewWaterfall token={t} lang={lang} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── Poster view ── */}
+            {typeView === 'poster' && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+                {geminiTokens.map((t, i) => (
+                  <TypeViewPoster key={`${t.name}-${i}`} token={t} lang={lang} />
+                ))}
+              </div>
+            )}
+
+            {/* ── Blueprint / Inspector view ── */}
+            {typeView === 'inspector' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {geminiTokens.map((t, i) => (
+                  <TypeViewBlueprint key={`${t.name}-${i}`} token={t} lang={lang} />
+                ))}
+              </div>
+            )}
+
+            {/* ── Editorial view ── */}
+            {typeView === 'editorial' && (
+              <TypeViewEditorial tokens={geminiTokens} lang={lang} />
+            )}
           </>
         ) : (
+          /* No data fallback */
           <div style={{
-            borderTop: '1px solid var(--border-subtle)',
-            paddingTop: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px'
+            borderTop: '1px solid var(--border-subtle)', paddingTop: '24px',
+            display: 'flex', flexDirection: 'column', gap: '10px'
           }}>
             <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
               {lang === 'zh' ? '暂未提取到可靠的字体尺寸数据' : 'Reliable typography measurements are not available yet'}
@@ -241,24 +224,257 @@ export default function Typography({
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
               {displayFonts.slice(0, 3).map((font, idx) => (
-                <span
-                  key={`${font}-${idx}`}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '999px',
-                    background: '#F5F5F7',
-                    border: '1px solid rgba(0,0,0,0.06)',
-                    fontSize: '12px',
-                    color: 'var(--text-secondary)'
-                  }}
-                >
+                <span key={`${font}-${idx}`} style={{
+                  padding: '6px 12px', borderRadius: '999px', background: '#F5F5F7',
+                  border: '1px solid rgba(0,0,0,0.06)', fontSize: '12px', color: 'var(--text-secondary)'
+                }}>
                   {font}
                 </span>
               ))}
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
 
+// ─────────────────────────────────────────────────────────────────────
+// Token shape
+// ─────────────────────────────────────────────────────────────────────
+type GeminiToken = {
+  name: string
+  previewText: string
+  family: string
+  size: string
+  weight: number
+  tracking: string
+  leading: string
+  count: number
+}
+
+function getCleanFamily(rawFamily: string) {
+  return rawFamily.split(',')[0].replace(/['"]/g, '').trim() || 'System Font'
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// View 1 — 瀑布流 (Waterfall)
+// ─────────────────────────────────────────────────────────────────────
+function TypeViewWaterfall({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en' }) {
+  const cleanFamily = getCleanFamily(token.family)
+  return (
+    <div style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ fontSize: '12px', color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {token.name}
+      </div>
+      <div style={{
+        fontFamily: token.family,
+        fontSize: `clamp(16px, ${token.size}, 56px)`,
+        fontWeight: token.weight,
+        letterSpacing: token.tracking,
+        lineHeight: token.leading,
+        color: '#111',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+      }}>
+        {token.previewText}
+      </div>
+      <div style={{ display: 'flex', gap: '20px', fontSize: '13px', color: '#666', marginTop: '8px', flexWrap: 'wrap' }}>
+        <span>
+          <span style={{ color: '#A1A1AA', marginRight: '6px' }}>{lang === 'zh' ? '字体' : 'Family'}</span>
+          <span style={{ fontWeight: 600, color: '#111' }}>{cleanFamily}</span>
+        </span>
+        <span>
+          <span style={{ color: '#A1A1AA', marginRight: '6px' }}>{lang === 'zh' ? '字号' : 'Size'}</span>
+          <span style={{ fontWeight: 600, color: '#111' }}>{token.size}</span>
+        </span>
+        <span>
+          <span style={{ color: '#A1A1AA', marginRight: '6px' }}>{lang === 'zh' ? '字重' : 'Weight'}</span>
+          <span style={{ fontWeight: 600, color: '#111' }}>{token.weight}</span>
+        </span>
+        <span>
+          <span style={{ color: '#A1A1AA', marginRight: '6px' }}>{lang === 'zh' ? '字间距' : 'Tracking'}</span>
+          <span style={{ fontWeight: 600, color: '#D97706' }}>{token.tracking}</span>
+        </span>
+        <span>
+          <span style={{ color: '#A1A1AA', marginRight: '6px' }}>{lang === 'zh' ? '行高' : 'Leading'}</span>
+          <span style={{ fontWeight: 600, color: '#111' }}>{token.leading}</span>
+        </span>
+        <span style={{ marginLeft: 'auto' }}>
+          <span style={{ color: '#A1A1AA', marginRight: '6px' }}>{lang === 'zh' ? '频次' : 'Usage'}</span>
+          <span style={{ fontWeight: 600, color: '#5E6AD2' }}>{token.count}×</span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// View 2 — 海报画廊 (Poster)
+// ─────────────────────────────────────────────────────────────────────
+function TypeViewPoster({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en' }) {
+  const cleanFamily = getCleanFamily(token.family)
+  return (
+    <div style={{
+      position: 'relative', border: '1px solid #EAEAEA', borderRadius: '16px', padding: '32px 24px',
+      backgroundColor: '#FAFAFA', overflow: 'hidden', flex: '1 1 280px',
+      display: 'flex', flexDirection: 'column', gap: '24px'
+    }}>
+      {/* Watermark */}
+      <div style={{
+        position: 'absolute', right: '-10px', bottom: '-20px',
+        fontSize: '160px', fontWeight: 700, color: '#111', opacity: 0.03,
+        lineHeight: 1, fontFamily: token.family, pointerEvents: 'none'
+      }}>Aa</div>
+
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{
+          display: 'inline-block', padding: '4px 10px', backgroundColor: '#111',
+          color: '#FFF', borderRadius: '100px', fontSize: '11px', fontWeight: 600, marginBottom: '24px'
+        }}>
+          {token.name}
+        </div>
+        <div style={{
+          fontFamily: token.family,
+          fontSize: `clamp(14px, ${token.size}, 40px)`,
+          fontWeight: token.weight, letterSpacing: token.tracking, lineHeight: token.leading,
+          color: '#111', wordBreak: 'break-word',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+        } as React.CSSProperties}>
+          {token.previewText}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: 'auto', position: 'relative', zIndex: 1 }}>
+        {[
+          { label: lang === 'zh' ? '字体'  : 'Family',  value: cleanFamily,          color: '#111'    },
+          { label: lang === 'zh' ? '字号'  : 'Size',    value: token.size,            color: '#111'    },
+          { label: lang === 'zh' ? '频次'  : 'Usage',   value: `${token.count}×`,     color: '#5E6AD2' },
+          { label: lang === 'zh' ? '字重'  : 'Weight',  value: String(token.weight),  color: '#111'    },
+          { label: lang === 'zh' ? '字间距': 'Tracking', value: token.tracking,        color: '#D97706' },
+          { label: lang === 'zh' ? '行高'  : 'Leading', value: token.leading,         color: '#111'    },
+        ].map(item => (
+          <div key={item.label} style={{ backgroundColor: '#FFF', border: '1px solid #EAEAEA', padding: '8px 12px', borderRadius: '8px' }}>
+            <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>{item.label}</div>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: item.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {item.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// View 3 — 蓝图透视 (Blueprint / Inspector)
+// ─────────────────────────────────────────────────────────────────────
+function TypeViewBlueprint({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en' }) {
+  const cleanFamily = getCleanFamily(token.family)
+  return (
+    <div style={{
+      position: 'relative', padding: '48px 32px', backgroundColor: '#F8FAFC',
+      border: '1px solid #E2E8F0', borderRadius: '12px',
+      backgroundImage: 'linear-gradient(to right, #E2E8F0 1px, transparent 1px), linear-gradient(to bottom, #E2E8F0 1px, transparent 1px)',
+      backgroundSize: '24px 24px',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      margin: '0',
+    }}>
+      {/* top-left label */}
+      <div style={{ position: 'absolute', top: '16px', left: '16px', fontSize: '11px', color: '#64748B', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+        {token.name}
+      </div>
+      {/* top-right usage badge */}
+      <div style={{ position: 'absolute', top: '16px', right: '16px', fontSize: '10px', color: '#5E6AD2', fontWeight: 600, backgroundColor: '#F0F4FF', padding: '2px 6px', borderRadius: '4px' }}>
+        {token.count}× {lang === 'zh' ? '频次' : 'USAGE'}
+      </div>
+
+      {/* Annotated text */}
+      <div style={{ position: 'relative', borderTop: '1px dashed #4F46E5', borderBottom: '1px dashed #4F46E5', display: 'inline-block' }}>
+        {/* line-height bracket */}
+        <div style={{ position: 'absolute', left: '-32px', top: '0', bottom: '0', width: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'absolute', width: '1px', backgroundColor: '#4F46E5', top: 0, bottom: 0 }} />
+          <div style={{ position: 'absolute', width: '6px', height: '1px', backgroundColor: '#4F46E5', top: 0, right: '11px' }} />
+          <div style={{ position: 'absolute', width: '6px', height: '1px', backgroundColor: '#4F46E5', bottom: 0, right: '11px' }} />
+          <div style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', fontSize: '10px', fontWeight: 600, padding: '2px 4px', borderRadius: '4px', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>
+            {token.leading}
+          </div>
+        </div>
+
+        {/* bottom metadata pills */}
+        <div style={{ position: 'absolute', bottom: '-30px', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '8px' }}>
+          {[
+            { label: lang === 'zh' ? '字体' : 'Fam',     value: cleanFamily,   color: '#0F172A' },
+            { label: lang === 'zh' ? '字间距' : 'Track',  value: token.tracking, color: '#D97706' },
+            { label: lang === 'zh' ? '字号' : 'Size',     value: token.size,    color: '#0F172A' },
+          ].map(p => (
+            <div key={p.label} style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#FFF', border: '1px solid #E2E8F0', padding: '4px 6px', borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+              <span style={{ fontSize: '10px', color: '#64748B' }}>{p.label}</span>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: p.color }}>{p.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* preview text */}
+        <div style={{
+          fontFamily: token.family,
+          fontSize: `clamp(14px, ${token.size}, 48px)`,
+          fontWeight: token.weight,
+          letterSpacing: token.tracking,
+          lineHeight: token.leading,
+          color: '#0F172A',
+          whiteSpace: 'nowrap',
+          padding: '0 12px'
+        }}>
+          {token.previewText}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// View 4 — 阅读流 (Editorial)
+// ─────────────────────────────────────────────────────────────────────
+function TypeViewEditorial({ tokens, lang }: { tokens: GeminiToken[]; lang: 'zh' | 'en' }) {
+  return (
+    <div style={{ display: 'flex', gap: '48px', padding: '32px', backgroundColor: '#FFF', border: '1px solid #EAEAEA', borderRadius: '12px' }}>
+      <div style={{ flex: 1, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        {tokens.map((token, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
+            {/* Sidebar metadata */}
+            <div style={{
+              flex: '0 0 120px', paddingTop: '6px',
+              textAlign: 'right', borderRight: '1px solid #EAEAEA', paddingRight: '16px'
+            }}>
+              <div style={{ fontSize: '10px', fontWeight: 600, color: '#111', textTransform: 'uppercase', marginBottom: '4px' }}>
+                {token.name}
+              </div>
+              <div style={{ fontSize: '11px', color: '#111', fontWeight: 500, marginBottom: '2px' }}>
+                {getCleanFamily(token.family)}
+              </div>
+              <div style={{ fontSize: '11px', color: '#888' }}>{token.size} / {token.leading}</div>
+              <div style={{ fontSize: '10px', color: '#D97706', marginTop: '2px' }}>{token.tracking}</div>
+              <div style={{
+                fontSize: '10px', color: '#5E6AD2', fontWeight: 600, marginTop: '8px',
+                backgroundColor: '#F0F4FF', padding: '2px 4px', borderRadius: '4px', display: 'inline-block'
+              }}>
+                {token.count}×
+              </div>
+            </div>
+            {/* Preview text */}
+            <div style={{
+              flex: 1,
+              fontFamily: token.family,
+              fontSize: `clamp(13px, ${token.size}, 40px)`,
+              fontWeight: token.weight,
+              letterSpacing: token.tracking,
+              lineHeight: token.leading,
+              color: '#111'
+            }}>
+              {token.previewText}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
