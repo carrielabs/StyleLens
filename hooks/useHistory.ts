@@ -12,7 +12,7 @@ import {
   getGuestMigrationSnapshot,
   saveGuestHistory,
 } from '@/lib/storage/guestStore'
-import type { DisplayStyleReport, HomeHistoryRecord, HomeUndoItem, PinnedStyleReport, StyleReport } from '@/lib/types'
+import type { DisplayStyleReport, HomeHistoryRecord, HomeUndoItem, PageStyleAnalysis, PinnedStyleReport, StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
 const GUEST_TRIAL_KEY = 'stylelens_trial_used'
@@ -177,6 +177,36 @@ function dedupeHistoryRecords(records: HomeHistoryRecord[]): HomeHistoryRecord[]
   return deduped
 }
 
+function compactPageAnalysisForStorage(pageAnalysis?: PageStyleAnalysis): PageStyleAnalysis | undefined {
+  if (!pageAnalysis) return undefined
+
+  return {
+    colorCandidates: [],
+    semanticColorSystem: pageAnalysis.semanticColorSystem,
+    typographyCandidates: pageAnalysis.typographyCandidates || [],
+    typographyTokens: pageAnalysis.typographyTokens || [],
+    radiusCandidates: [],
+    radiusTokens: pageAnalysis.radiusTokens || [],
+    shadowCandidates: [],
+    shadowTokens: pageAnalysis.shadowTokens || [],
+    spacingCandidates: [],
+    spacingTokens: pageAnalysis.spacingTokens || [],
+    layoutHints: pageAnalysis.layoutHints || [],
+    layoutEvidence: pageAnalysis.layoutEvidence || [],
+    stateTokens: pageAnalysis.stateTokens,
+    borderTokens: pageAnalysis.borderTokens,
+    transitionTokens: pageAnalysis.transitionTokens,
+    pageMaxWidth: pageAnalysis.pageMaxWidth,
+    gridColumns: pageAnalysis.gridColumns,
+    buttonSnapshot: pageAnalysis.buttonSnapshot,
+    pageSections: pageAnalysis.pageSections,
+    sourceCount: pageAnalysis.sourceCount || {
+      inlineStyleBlocks: 0,
+      linkedStylesheets: 0,
+    },
+  }
+}
+
 interface UseHistoryParams {
   user: User | null
   supabase: BrowserSupabaseClient
@@ -218,8 +248,8 @@ interface UseHistoryResult {
   migrateGuestHistoryToAccount: (userId: string) => Promise<void>
   syncHistoryForSession: (session: { user: User } | null) => Promise<void>
   togglePin: (itemId: string) => Promise<void>
-  deleteItem: (id: string) => void
-  undoDelete: () => void
+  deleteItem: (id: string) => Promise<void>
+  undoDelete: () => Promise<void>
   startRename: (id: string, currentLabel: string) => void
   submitRename: (id: string) => Promise<void>
   cancelRename: () => void
@@ -396,7 +426,7 @@ export function useHistory({
     const reportForStorage: StyleReport = {
       ...nextReport,
       thumbnailUrl: undefined,
-      pageAnalysis: undefined,
+      pageAnalysis: compactPageAnalysisForStorage(nextReport.pageAnalysis),
     }
 
     const record = {
@@ -528,8 +558,6 @@ export function useHistory({
       return
     }
 
-    setReport(fallbackReport)
-
     try {
       const { data, error } = await withTimeout(
         supabase
@@ -631,7 +659,7 @@ export function useHistory({
     }
   }
 
-  const deleteItem = (id: string) => {
+  const deleteItem = async (id: string) => {
     const record = extractions.find(e => e.id === id)
     if (!record) return
     const label = record.source_label || '未命名分析'
@@ -644,26 +672,80 @@ export function useHistory({
     setContextMenuId(null)
     setUndoItem({ id, label, record })
 
-    deleteTimerRef.current[id] = setTimeout(async () => {
+    try {
       if (user) {
-        await deleteFromLibrary(id, supabase)
+        const result = await deleteFromLibrary(id, supabase)
+        if (!result.success) throw new Error(result.error || 'Delete failed')
+      } else {
+        await clearGuestHistory()
+        localStorage.removeItem(GUEST_TRIAL_KEY)
       }
+    } catch (err) {
+      console.error('Delete history item error', err)
+      setExtractions(prev => {
+        const exists = prev.find(e => e.id === record.id)
+        if (exists) return prev
+        return [record, ...prev].sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+      })
+      if (activeItemId === id) {
+        setActiveItemId(record.id)
+        setReport(record.style_data as DisplayStyleReport)
+      }
+      setUndoItem(null)
+      setError('删除历史记录失败')
+      return
+    }
+
+    deleteTimerRef.current[id] = setTimeout(() => {
       setUndoItem(prev => (prev?.id === id ? null : prev))
     }, 5000)
   }
 
-  const undoDelete = () => {
+  const undoDelete = async () => {
     if (!undoItem) return
     clearTimeout(deleteTimerRef.current[undoItem.id])
     delete deleteTimerRef.current[undoItem.id]
-    setExtractions(prev => {
-      const exists = prev.find(e => e.id === undoItem.id)
-      if (exists) return prev
-      return [undoItem.record, ...prev].sort((a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )
-    })
-    setUndoItem(null)
+
+    try {
+      if (user) {
+        const payload = {
+          id: undoItem.record.id,
+          user_id: undoItem.record.user_id,
+          source_label: undoItem.record.source_label,
+          thumbnail_url: undoItem.record.thumbnail_url,
+          created_at: undoItem.record.created_at,
+          style_data: undoItem.record.style_data,
+        }
+
+        const { error } = await supabase
+          .from('style_records')
+          .upsert(payload)
+
+        if (error) throw error
+      } else {
+        await saveGuestHistory(buildGuestCacheRecord({
+          user_id: null,
+          source_label: undoItem.record.source_label,
+          style_data: undoItem.record.style_data,
+          thumbnail_url: undoItem.record.thumbnail_url,
+          created_at: undoItem.record.created_at,
+        }))
+      }
+
+      setExtractions(prev => {
+        const exists = prev.find(e => e.id === undoItem.id)
+        if (exists) return prev
+        return [undoItem.record, ...prev].sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+      })
+      setUndoItem(null)
+    } catch (err) {
+      console.error('Undo delete error', err)
+      setError('恢复历史记录失败')
+    }
   }
 
   const startRename = (id: string, currentLabel: string) => {
