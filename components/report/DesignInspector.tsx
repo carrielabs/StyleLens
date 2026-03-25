@@ -533,113 +533,38 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
 
         {/* ══════════════ 形态 SHAPE ══════════════ */}
         {zone === 'measured' && measuredTab === 'shape' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
 
-            {/* Radius + Shadow side by side */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
-              {/* Radius */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <p style={{ ...sectionLabel, margin: 0 }}>{lang === 'zh' ? '边框圆角' : 'Border Radius'}</p>
-                  {graded.radiusConfidence !== 'none' && (
-                    <span style={{ fontSize: '10px', color: graded.radiusConfidence === 'high' ? '#34C759' : '#AEAEB2', fontWeight: 500 }}>
-                      {confidenceLabel(graded.radiusConfidence, lang)}
-                    </span>
-                  )}
-                </div>
-                {graded.radius.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {graded.radius.map((t, i) => {
-                      const isGreen = sourceDotColor(t.meta) === '#34C759'
-                      return (
-                        <div key={i} style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '6px 4px', borderBottom: '1px solid #F3F3F3',
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '20px', height: '20px', background: '#1D1D1F', borderRadius: t.value, flexShrink: 0 }} />
-                            <code style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#1D1D1F' }}>{t.value}</code>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {t.componentKinds?.length > 0 && (
-                              <span style={{ fontSize: '11px', color: '#8E8E93' }}>{t.componentKinds.slice(0, 2).join(', ')}</span>
-                            )}
-                            <span style={{
-                              fontSize: '11px', fontWeight: 500, padding: '2px 6px', borderRadius: '4px',
-                              color: isGreen ? '#00A650' : '#8E8E93',
-                              background: isGreen ? '#E6F6ED' : '#F5F5F7',
-                            }}>{t.sampleCount}×</span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : <EmptyTab lang={lang} />}
+            {/* 边框圆角 */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>{lang === 'zh' ? '边框圆角' : 'Border Radius'}</div>
+                <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>{lang === 'zh' ? 'DOM 测量' : 'DOM Measured'}</div>
               </div>
-
-              {/* Shadow */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <p style={{ ...sectionLabel, margin: 0 }}>{lang === 'zh' ? '阴影层级' : 'Shadow Elevation'}</p>
-                  {graded.shadowConfidence !== 'none' && (
-                    <span style={{ fontSize: '10px', color: graded.shadowConfidence === 'high' ? '#34C759' : '#AEAEB2', fontWeight: 500 }}>
-                      {confidenceLabel(graded.shadowConfidence, lang)}
-                    </span>
-                  )}
+              {graded.radius.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px' }}>
+                  {graded.radius.map((t, i) => (
+                    <RadiusGalleryItem key={i} token={{ value: t.value, count: t.sampleCount }} />
+                  ))}
                 </div>
-                {graded.shadow.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {graded.shadow.map((t, i) => {
-                      const isGreen = sourceDotColor(t.meta) === '#34C759'
-                      const expanded = expandedShadows.has(i)
-                      return (
-                        <div key={i} style={{ borderBottom: '1px solid #F3F3F3' }}>
-                          {/* Header row — always visible, click to expand */}
-                          <div
-                            onClick={() => toggleShadow(i)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer' }}
-                          >
-                            <div style={{
-                              width: '24px', height: '24px', borderRadius: '4px', flexShrink: 0,
-                              background: '#FFFFFF', border: '1px solid #EAEAEA', boxShadow: t.value,
-                            }} />
-                            <code style={{
-                              flex: 1, fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#3C3C43',
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            }}>{t.value}</code>
-                            <span style={{
-                              fontSize: '11px', fontWeight: 500, padding: '2px 6px', borderRadius: '4px', flexShrink: 0,
-                              color: isGreen ? '#00A650' : '#8E8E93',
-                              background: isGreen ? '#E6F6ED' : '#F5F5F7',
-                            }}>{t.sampleCount}×</span>
-                            <span style={{ fontSize: '10px', color: '#AEAEB2', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
-                          </div>
-                          {/* Expanded: full value in copyable pre block */}
-                          {expanded && (
-                            <div style={{ padding: '8px', margin: '0 4px 6px', background: '#F9F9F9', borderRadius: '6px' }}>
-                              <pre style={{
-                                margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-                                fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#555', lineHeight: 1.5,
-                              }}>{`box-shadow: ${t.value};`}</pre>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(`box-shadow: ${t.value};`) }}
-                                style={{
-                                  marginTop: '6px', padding: '3px 8px', fontSize: '11px',
-                                  background: 'transparent', border: '1px solid #E5E5EA',
-                                  borderRadius: '4px', cursor: 'pointer', color: '#8E8E93',
-                                }}
-                              >{lang === 'zh' ? '复制' : 'Copy'}</button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : <EmptyTab lang={lang} />}
-              </div>
+              ) : <EmptyTab lang={lang} />}
             </div>
 
-            {/* Border tokens */}
+            {/* 阴影层级 */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>{lang === 'zh' ? '阴影层级 & 深度' : 'Shadow Elevation'}</div>
+              </div>
+              {graded.shadow.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {graded.shadow.map((t, i) => (
+                    <ShadowGalleryItem key={i} token={{ value: t.value, count: t.sampleCount }} />
+                  ))}
+                </div>
+              ) : <EmptyTab lang={lang} />}
+            </div>
+
+            {/* 边框样式 */}
             {borderTokens.length > 0 && (
               <div>
                 <p style={sectionLabel}>{lang === 'zh' ? '边框样式' : 'Border Style'}</p>
@@ -1193,6 +1118,58 @@ function StateRow({ state, prop, value }: { state: string; prop: string; value: 
 }
 
 // ── Wireframe preview for layout gallery ────────────────────────────────────
+// ── Gemini: useCopy hook + CopyToast ────────────────────────────────────────
+function useCopy(): [boolean, (text: string) => void] {
+  const [copied, setCopied] = useState(false)
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return [copied, copy]
+}
+
+function CopyToast({ show }: { show: boolean }) {
+  return (
+    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#111', color: '#fff', fontSize: '12px', padding: '6px 12px', borderRadius: '100px', opacity: show ? 1 : 0, pointerEvents: 'none', transition: 'all 0.2s ease', zIndex: 10 }}>已复制</div>
+  )
+}
+
+function RadiusGalleryItem({ token }: { token: { value: string; count: number } }) {
+  const [copied, copy] = useCopy()
+  return (
+    <div onClick={() => copy(`border-radius: ${token.value};`)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', cursor: 'pointer', position: 'relative' }}>
+      <div style={{ width: '64px', height: '64px', backgroundColor: '#F7F7F8', border: '1px solid #E5E5E5', borderRadius: token.value, display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'all 0.2s ease' }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = '#111'}
+        onMouseLeave={e => e.currentTarget.style.borderColor = '#E5E5E5'}>
+        <CopyToast show={copied} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '13px', color: '#111', fontWeight: 500 }}>{token.value}</span>
+        <span style={{ fontSize: '11px', color: '#AEAEB2' }}>{token.count}×</span>
+      </div>
+    </div>
+  )
+}
+
+function ShadowGalleryItem({ token }: { token: { value: string; count: number } }) {
+  const [copied, copy] = useCopy()
+  return (
+    <div onClick={() => copy(`box-shadow: ${token.value};`)} style={{ display: 'flex', alignItems: 'center', gap: '24px', padding: '16px', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.2s ease', position: 'relative' }}
+      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9F9FA'}
+      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+      <CopyToast show={copied} />
+      <div style={{ width: '80px', height: '80px', borderRadius: '8px', flexShrink: 0, background: 'radial-gradient(#E5E5E5 1px, transparent 1px)', backgroundSize: '8px 8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ width: '40px', height: '40px', backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #F0F0F0', boxShadow: token.value }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '12px', color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{token.value}</span>
+        <span style={{ fontSize: '11px', color: '#AEAEB2' }}>{token.count}×</span>
+      </div>
+    </div>
+  )
+}
+
 function purposeLabel(purpose: string): string {
   const map: Record<string, string> = {
     hero: '主视觉', features: '功能区', pricing: '定价', testimonials: '评价',
