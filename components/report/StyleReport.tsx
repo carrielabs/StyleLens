@@ -153,7 +153,6 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false, on
 
           {/* 4. 字体排版 */}
           <section>
-             <SectionLabel>{t.typo}</SectionLabel>
              <Typography data={report.typography} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
           </section>
         </>
