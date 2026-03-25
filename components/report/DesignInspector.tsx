@@ -4,11 +4,9 @@ import { useState } from 'react'
 import type { StyleReport, RadiusToken, ShadowToken, BorderToken, TransitionToken, ButtonSnapshot, PageSection, VisualStyleAnalysis, InteractionStyleAI } from '@/lib/types'
 import { gradeTokens, confidenceLabel } from '@/lib/design-details/gradeTokens'
 import type { GradedTokenSet } from '@/lib/design-details/gradeTokens'
+import Typography from './Typography'
 
-// Zone = physical separation between measured data and AI impressions
-type Zone = 'measured' | 'impression'
-type MeasuredTab = 'components' | 'shape' | 'space'
-type ImpressionTab = 'interaction' | 'style'
+type MeasuredTab = 'components' | 'shape' | 'space' | 'typography'
 type ComponentTab = 'button' | 'input' | 'card' | 'badge'
 
 interface Props {
@@ -18,9 +16,7 @@ interface Props {
 }
 
 export default function DesignInspector({ report, lang, onSectionHover }: Props) {
-  const [zone, setZone] = useState<Zone>('measured')
   const [measuredTab, setMeasuredTab] = useState<MeasuredTab>('components')
-  const [impressionTab, setImpressionTab] = useState<ImpressionTab>('interaction')
   const [compTab, setCompTab] = useState<ComponentTab>('button')
   const [expandedShadows, setExpandedShadows] = useState<Set<number>>(new Set())
   function toggleShadow(i: number) {
@@ -251,108 +247,56 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
     transition: 'all 0.12s ease',
   })
 
-  // Zone-specific accent colors
-  const measuredAccent = '#34C759'  // green — DOM evidence
-  const impressionAccent = '#AEAEB2' // gray — AI inferred
-
   const MEASURED_TABS: [MeasuredTab, string][] = [
     ['components', lang === 'zh' ? '组件' : 'Components'],
     ['shape',      lang === 'zh' ? '形态' : 'Shape'],
     ['space',      lang === 'zh' ? '布局' : 'Layout'],
-  ]
-  const IMPRESSION_TABS: [ImpressionTab, string][] = [
-    ['interaction', lang === 'zh' ? '交互感' : 'Interaction'],
-    ['style',       lang === 'zh' ? '视觉性格' : 'Personality'],
+    ['typography', lang === 'zh' ? '字体' : 'Typography'],
   ]
 
   return (
-    <div style={outerWrap}>
-
-      {/* ── Zone selector ─────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-        {/* Measured zone pill */}
-        <button
-          onClick={() => setZone('measured')}
-          style={{
-            flex: 1, padding: '14px 20px', border: 'none', cursor: 'pointer',
-            background: zone === 'measured' ? '#FFFFFF' : '#FAFAFA',
-            borderBottom: zone === 'measured' ? `2px solid ${measuredAccent}` : '2px solid transparent',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{
-            width: '7px', height: '7px', borderRadius: '50%',
-            background: zone === 'measured' ? measuredAccent : '#D1D1D6',
-            transition: 'background 0.15s ease',
-          }} />
-          <span style={{
-            fontSize: '13px', fontWeight: zone === 'measured' ? 600 : 400,
-            color: zone === 'measured' ? '#1D1D1F' : '#8E8E93',
-          }}>
-            {lang === 'zh' ? 'DOM 测量' : 'DOM Measured'}
-          </span>
-        </button>
-
-        {/* Divider */}
-        <div style={{ width: '1px', background: 'rgba(0,0,0,0.06)', margin: '8px 0' }} />
-
-        {/* AI impression zone pill */}
-        <button
-          onClick={() => setZone('impression')}
-          style={{
-            flex: 1, padding: '14px 20px', border: 'none', cursor: 'pointer',
-            background: zone === 'impression' ? '#FFFFFF' : '#FAFAFA',
-            borderBottom: zone === 'impression' ? `2px solid ${impressionAccent}` : '2px solid transparent',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{
-            width: '7px', height: '7px', borderRadius: '50%',
-            background: zone === 'impression' ? impressionAccent : '#D1D1D6',
-            transition: 'background 0.15s ease',
-          }} />
-          <span style={{
-            fontSize: '13px', fontWeight: zone === 'impression' ? 600 : 400,
-            color: zone === 'impression' ? '#1D1D1F' : '#8E8E93',
-          }}>
-            {lang === 'zh' ? 'AI 印象' : 'AI Impression'}
-          </span>
-        </button>
+    <div>
+      {/* ── Tab bar (same style as export code panel) ── */}
+      <div style={{
+        display: 'flex',
+        gap: '24px',
+        borderBottom: '1px solid rgba(0,0,0,0.04)',
+        paddingBottom: '0',
+        alignItems: 'baseline',
+        marginBottom: '24px',
+      }}>
+        {MEASURED_TABS.map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setMeasuredTab(id)}
+            style={{
+              padding: '8px 0 12px 0',
+              fontSize: '13px',
+              fontWeight: measuredTab === id ? 600 : 500,
+              background: 'none',
+              border: 'none',
+              color: measuredTab === id ? '#1D1D1F' : '#AEAEB2',
+              cursor: 'pointer',
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              position: 'relative',
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            {label}
+            {measuredTab === id && (
+              <div style={{
+                position: 'absolute', bottom: '-1px', left: '0', right: '0',
+                height: '1.5px', background: '#1D1D1F', borderRadius: '1px'
+              }} />
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* ── Sub-tab bar (zone-specific) ──────────────────────────────── */}
-      <div style={{ ...tabBar, borderBottom: '1px solid rgba(0,0,0,0.04)', background: zone === 'measured' ? 'rgba(52,199,89,0.03)' : 'rgba(174,174,178,0.06)' }}>
-        {zone === 'measured'
-          ? MEASURED_TABS.map(([id, label]) => (
-              <button key={id} style={tabBtn(measuredTab === id)} onClick={() => setMeasuredTab(id)}>{label}</button>
-            ))
-          : IMPRESSION_TABS.map(([id, label]) => (
-              <button key={id} style={tabBtn(impressionTab === id)} onClick={() => setImpressionTab(id)}>{label}</button>
-            ))
-        }
-      </div>
-
-      {/* ── AI disclaimer banner (impression zone only) ──────────────── */}
-      {zone === 'impression' && (
-        <div style={{
-          padding: '8px 24px', background: 'rgba(174,174,178,0.08)',
-          borderBottom: '1px solid rgba(0,0,0,0.04)',
-          display: 'flex', alignItems: 'center', gap: '8px',
-        }}>
-          <span style={{ fontSize: '11px', color: '#8E8E93' }}>
-            {lang === 'zh'
-              ? '⚠️ 以下内容由 AI 从截图推断，无法通过 DOM 测量验证，仅供设计参考'
-              : '⚠️ Inferred by AI from screenshot — not DOM-measurable, for design reference only'}
-          </span>
-        </div>
-      )}
-
-      <div style={tabContent}>
+      <div>
 
         {/* ══════════════ 组件 COMPONENTS ══════════════ */}
-        {zone === 'measured' && measuredTab === 'components' && (
+        {measuredTab === 'components' && (
           <>
             {/* Source label */}
             <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#8E8E93' }}>
@@ -532,7 +476,7 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
         )}
 
         {/* ══════════════ 形态 SHAPE ══════════════ */}
-        {zone === 'measured' && measuredTab === 'shape' && (
+        {measuredTab === 'shape' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
 
             {/* 边框圆角 */}
@@ -585,7 +529,7 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
         )}
 
         {/* ══════════════ 布局 LAYOUT ══════════════ */}
-        {zone === 'measured' && measuredTab === 'space' && (
+        {measuredTab === 'space' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
 
             {/* ── 1. 布局参考画廊 ── */}
@@ -757,318 +701,17 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
           </div>
         )}
 
-        {/* ══════════════ 交互 INTERACTION ══════════════ */}
-        {zone === 'impression' && impressionTab === 'interaction' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-
-            {/* AI motion character — always show if available */}
-            {(interactionStyle || designDetails.motionEn || designDetails.animationTendency) && (
-              <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '动效性格' : 'Motion Character'}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {interactionStyle?.transitionFeel && isUsefulAiValue(interactionStyle.transitionFeel) && (
-                    <InteractionChip
-                      label={lang === 'zh' ? '过渡感' : 'Transition Feel'}
-                      value={interactionStyle.transitionFeel}
-                      measured={false}
-                    />
-                  )}
-                  {interactionStyle?.hoverEffect && isUsefulAiValue(interactionStyle.hoverEffect) && (
-                    <InteractionChip
-                      label={lang === 'zh' ? '悬停效果' : 'Hover Effect'}
-                      value={interactionStyle.hoverEffect}
-                      measured={false}
-                    />
-                  )}
-                  {interactionStyle?.animationCharacter && isUsefulAiValue(interactionStyle.animationCharacter) && (
-                    <InteractionChip
-                      label={lang === 'zh' ? '动画风格' : 'Animation Character'}
-                      value={interactionStyle.animationCharacter}
-                      measured={false}
-                    />
-                  )}
-                  {!interactionStyle && (() => {
-                    const raw = lang === 'zh'
-                      ? (designDetails.motionZh || designDetails.motionEn || designDetails.animationTendency || '')
-                      : (designDetails.motionEn || designDetails.animationTendency || '')
-                    const parts = raw.split('|').map(v => v.trim()).filter(Boolean)
-                    const labels = lang === 'zh'
-                      ? ['过渡感', '动效', '风格']
-                      : ['Transition', 'Motion', 'Character']
-                    return parts.map((part, i) => (
-                      <InteractionChip
-                        key={i}
-                        label={labels[i] || (lang === 'zh' ? '动效' : 'Motion')}
-                        value={part}
-                        measured={false}
-                      />
-                    ))
-                  })()}
-                </div>
-              </div>
-            )}
-
-            {/* Transition timing cards */}
-            <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '过渡时长' : 'Transition Timing'}</p>
-              {transitionTokens.length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {transitionTokens.map((t, i) => (
-                    <div key={i} style={{ padding: '10px 14px', background: '#F5F5F7', borderRadius: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <span style={dot(true)} />
-                        <code style={{ fontSize: '14px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#1D1D1F' }}>{t.duration}</code>
-                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#8E8E93' }}>{t.easing}</code>
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#AEAEB2' }}>
-                        {t.property} · {t.sampleCount}×
-                        {t.componentKinds?.length ? ' · ' + t.componentKinds.join(', ') : ''}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                  {sourceIsUrl
-                    ? (lang === 'zh' ? '未检测到过渡属性' : 'No transition data detected')
-                    : (lang === 'zh' ? '需要 URL 才能测量' : 'Requires URL analysis')}
-                </p>
-              )}
-            </div>
-
-            {/* State diffs */}
-            <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '状态变化' : 'State Changes'}</p>
-              {hasStateData ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {Object.entries(stateTokens as Record<string, Array<{ state: string; property: string; value: string }>>)
-                    .map(([component, values]) => {
-                      const nonDefault = values.filter(v => v.state !== 'default')
-                      if (!nonDefault.length) return null
-                      // Group by pseudo-class state
-                      const byState = nonDefault.reduce((acc, item) => {
-                        if (!acc[item.state]) acc[item.state] = []
-                        acc[item.state].push(item)
-                        return acc
-                      }, {} as Record<string, typeof nonDefault>)
-                      return (
-                        <div key={component}>
-                          <p style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', textTransform: 'capitalize', borderBottom: '1px solid #1D1D1F', paddingBottom: '4px' }}>{component}</p>
-                          {Object.entries(byState).map(([state, props]) => (
-                            <div key={state} style={{ marginBottom: '10px' }}>
-                              <div style={{ fontSize: '11px', fontWeight: 600, color: '#8E8E93', marginBottom: '4px', paddingLeft: '8px', borderLeft: '2px solid #E5E5EA' }}>:{state}</div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '12px' }}>
-                                {props.map((s, i) => {
-                                  const swatch = extractColorFromCssValue(s.value)
-                                  return (
-                                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', padding: '2px 0' }}>
-                                      <span style={{ color: '#8E8E93', fontFamily: 'var(--font-mono)', minWidth: '120px', flexShrink: 0 }}>{s.property}</span>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        {swatch && (
-                                          <span style={{ display: 'inline-block', width: '11px', height: '11px', borderRadius: '2px', border: '1px solid rgba(0,0,0,0.12)', background: swatch, flexShrink: 0 }} />
-                                        )}
-                                        <code style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#1D1D1F', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.value}</code>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    })}
-                </div>
-              ) : (
-                <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                  {sourceIsUrl
-                    ? (lang === 'zh' ? '未检测到状态变化' : 'No state changes detected')
-                    : (lang === 'zh' ? '需要 URL 才能测量交互状态' : 'Requires URL analysis')}
-                </p>
-              )}
-            </div>
-
-          </div>
+        {/* ══════════════ 字体 TYPOGRAPHY ══════════════ */}
+        {measuredTab === 'typography' && (
+          <Typography
+            data={report.typography}
+            analysis={report.pageAnalysis}
+            sourceType={report.sourceType}
+            lang={lang}
+            fullWidth={false}
+          />
         )}
 
-        {/* ══════════════ 风格 STYLE ══════════════ */}
-        {zone === 'impression' && impressionTab === 'style' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-
-            {/* ── Brand Fingerprint card — styled with the site's own colors ── */}
-            <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '品牌指纹' : 'Brand Fingerprint'}</p>
-              <div style={{
-                borderRadius: '14px',
-                border: `1px solid rgba(${hexToRgbParts(primaryHex)},0.22)`,
-                background: `rgba(${hexToRgbParts(primaryHex)},0.04)`,
-                padding: '20px 22px',
-                display: 'flex', flexDirection: 'column', gap: '18px',
-              }}>
-
-                {/* Color swatches row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '48px', fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>
-                    {lang === 'zh' ? '色彩' : 'Color'}
-                  </span>
-                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                    {[
-                      { hex: primaryHex,  title: lang === 'zh' ? '主色' : 'Primary' },
-                      { hex: bgHex,       title: lang === 'zh' ? '背景' : 'Background' },
-                      { hex: surfaceHex,  title: lang === 'zh' ? '表面' : 'Surface' },
-                      { hex: textHex,     title: lang === 'zh' ? '文字' : 'Text' },
-                      ...(colorSystem?.heroAccentColors?.slice(0, 2).map(c => ({ hex: c.hex, title: c.name })) || []),
-                    ].map((c, i) => (
-                      <div key={i} title={`${c.title}: ${c.hex}`} style={{
-                        width: '22px', height: '22px', borderRadius: '5px',
-                        background: c.hex, border: '1px solid rgba(0,0,0,0.09)',
-                        flexShrink: 0,
-                      }} />
-                    ))}
-                  </div>
-                  <code style={{ fontSize: '11px', color: '#8E8E93', fontFamily: 'var(--font-mono)', marginLeft: '2px' }}>
-                    {primaryHex}
-                  </code>
-                </div>
-
-                {/* Typography specimen */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '14px' }}>
-                  <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '48px', fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>
-                    {lang === 'zh' ? '字体' : 'Font'}
-                  </span>
-                  <span style={{
-                    fontSize: '18px', fontWeight: typography.headingWeight || 600,
-                    fontFamily: typography.fontFamily, color: '#1D1D1F', lineHeight: 1,
-                  }}>
-                    {typography.fontFamily.split(',')[0].replace(/["']/g, '').trim()}
-                  </span>
-                  <span style={{ fontSize: '12px', color: '#8E8E93' }}>
-                    {lang === 'zh'
-                      ? `标题 ${typography.headingWeight || '—'} · 正文 ${typography.bodyWeight || '—'}`
-                      : `H: ${typography.headingWeight || '—'} · B: ${typography.bodyWeight || '—'}`}
-                  </span>
-                </div>
-
-                {/* Style character tags — personality tags merged from report tags */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '48px', fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>
-                    {lang === 'zh' ? '气质' : 'Style'}
-                  </span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                    {(visualStyle?.personality?.length
-                      ? visualStyle.personality
-                      : (lang === 'zh' ? (report.tagsZh || report.tags) : (report.tagsEn || report.tags))
-                    ).slice(0, 6).map((tag, i) => (
-                      <span key={i} style={{
-                        padding: '3px 10px', borderRadius: '99px', fontSize: '12px', fontWeight: 500,
-                        background: i === 0 ? primaryHex : `rgba(${hexToRgbParts(primaryHex)},0.12)`,
-                        color: i === 0 ? (isLight(primaryHex) ? '#000000' : '#FFFFFF') : primaryHex,
-                      }}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── AI 印象 ── visual inferences from screenshot, all translated ── */}
-            {(visualStyle?.iconStyle || visualStyle?.density || visualStyle?.colorTemperature ||
-              (visualStyle?.imageStyle && visualStyle.imageStyle !== 'none')) && (
-              <div>
-                <p style={sectionLabel}>{lang === 'zh' ? 'AI 印象' : 'AI Impressions'}</p>
-                <p style={{ margin: '-8px 0 12px 0', fontSize: '11px', color: '#AEAEB2' }}>
-                  {lang === 'zh'
-                    ? '来自截图的视觉推断，无法 DOM 测量'
-                    : 'Visually inferred from screenshot — not DOM-measurable'}
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
-                  {visualStyle?.iconStyle && (
-                    <StyleFactCard
-                      label={lang === 'zh' ? '图标风格' : 'Icon Style'}
-                      value={lang === 'zh' ? translateIconStyle(visualStyle.iconStyle) : visualStyle.iconStyle}
-                      sub={visualStyle.iconLibrary}
-                      measured={false}
-                      lang={lang}
-                    />
-                  )}
-                  {visualStyle?.density && (
-                    <StyleFactCard
-                      label={lang === 'zh' ? '内容密度' : 'Density'}
-                      value={lang === 'zh' ? translateDensity(visualStyle.density) : visualStyle.density}
-                      measured={false}
-                      lang={lang}
-                    />
-                  )}
-                  {visualStyle?.colorTemperature && (
-                    <StyleFactCard
-                      label={lang === 'zh' ? '色温' : 'Color Temp'}
-                      value={lang === 'zh' ? translateColorTemp(visualStyle.colorTemperature) : visualStyle.colorTemperature}
-                      measured={false}
-                      lang={lang}
-                      accent={visualStyle.colorTemperature === 'warm' ? '#FF9F0A' : visualStyle.colorTemperature === 'cool' ? '#007AFF' : undefined}
-                    />
-                  )}
-                  {visualStyle?.imageStyle && visualStyle.imageStyle !== 'none' && (
-                    <StyleFactCard
-                      label={lang === 'zh' ? '图片风格' : 'Image Style'}
-                      value={lang === 'zh' ? translateImageStyle(visualStyle.imageStyle) : visualStyle.imageStyle}
-                      measured={false}
-                      lang={lang}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ── 色彩模式 — iOS-style segmented control ── */}
-            <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '色彩模式' : 'Color Mode'}</p>
-              <div style={{
-                display: 'inline-flex', borderRadius: '10px', overflow: 'hidden',
-                border: '1px solid rgba(0,0,0,0.08)', background: '#F5F5F7',
-              }}>
-                {([
-                  { id: 'light',  zh: '浅色', en: 'Light' },
-                  { id: 'dark',   zh: '深色', en: 'Dark' },
-                  { id: 'system', zh: '跟随系统', en: 'Adaptive' },
-                ] as const).map((m, i) => {
-                  const active = designDetails.colorMode === m.id
-                  return (
-                    <div key={m.id} style={{
-                      padding: '8px 16px', fontSize: '13px',
-                      fontWeight: active ? 600 : 400,
-                      background: active ? '#FFFFFF' : 'transparent',
-                      color: active ? '#1D1D1F' : '#8E8E93',
-                      borderRight: i < 2 ? '1px solid rgba(0,0,0,0.07)' : 'none',
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      boxShadow: active ? '0 1px 3px rgba(0,0,0,0.09)' : 'none',
-                    }}>
-                      <span style={{
-                        width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
-                        background: m.id === 'dark' ? '#3A3A3C' : m.id === 'system' ? 'linear-gradient(135deg,#F5F5F7 50%,#3A3A3C 50%)' : '#E5E5EA',
-                        border: '1px solid rgba(0,0,0,0.12)',
-                      }} />
-                      {lang === 'zh' ? m.zh : m.en}
-                    </div>
-                  )
-                })}
-              </div>
-              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={dot(false)} />
-                {lang === 'zh' ? 'AI 推断' : 'AI inferred'}
-              </p>
-            </div>
-
-          </div>
-        )}
-
-      </div>
-
-      {/* ── Legend ──────────────────────────────────────────────────────── */}
-      <div style={{ borderTop: '1px solid rgba(0,0,0,0.05)', padding: '10px 24px', display: 'flex', gap: '16px' }}>
-        <LegendItem color="#34C759" label={lang === 'zh' ? '测量值' : 'Measured'} />
-        <LegendItem color="#AEAEB2" label={lang === 'zh' ? 'AI 推断' : 'AI inferred'} />
       </div>
     </div>
   )

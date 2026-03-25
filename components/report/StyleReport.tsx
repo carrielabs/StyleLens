@@ -3,7 +3,6 @@
 import type { StyleReport as ReportType } from '@/lib/types'
 import { useState } from 'react'
 import ColorSystem from './ColorSystem'
-import Typography from './Typography'
 import DesignDetails from './DesignDetails'
 import DesignDetailsElite from './DesignDetailsElite'
 import DesignDetailsEliteV2 from './DesignDetailsEliteV2'
@@ -151,10 +150,6 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false, on
             <ColorSystem colors={report.colors} colorSystem={report.colorSystem} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} />
           </section>
 
-          {/* 4. 字体排版 */}
-          <section>
-             <Typography data={report.typography} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
-          </section>
         </>
       )}
 
