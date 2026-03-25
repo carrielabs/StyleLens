@@ -2815,7 +2815,7 @@ async function extractDomSignalsFromPage(
       // ── Page sections (DOM-measured structural layout) ─────────────────────
       const pageSections: Array<{
         index: number; purpose: string; layout: string; columns: number
-        hasCTA: boolean; hasImage: boolean; heading?: string; measured: boolean
+        hasCTA: boolean; hasImage: boolean; heading?: string; yStartPct?: number; yEndPct?: number; measured: boolean
       }> = []
       const sectionEls = Array.from(document.querySelectorAll<HTMLElement>(
         'section, [class*="section"], [class*="hero"], [class*="feature"], [class*="pricing"], [class*="testimonial"], [class*="cta"], footer'
@@ -2829,6 +2829,11 @@ async function extractDomSignalsFromPage(
         const headingText = ((headingEl?.textContent) || '').trim().slice(0, 60) || undefined
         const hasCTA = !!el.querySelector('button, [role="button"], a[class*="btn"], a[class*="button"]')
         const hasImage = !!el.querySelector('img, video, picture, [class*="image"], [class*="img"]')
+        const pageHeight = Math.max(document.documentElement.scrollHeight || 0, document.body?.scrollHeight || 0, 1)
+        const yStartRaw = ((el.offsetTop || 0) / pageHeight) * 100
+        const yEndRaw = (((el.offsetTop || 0) + (el.offsetHeight || 0)) / pageHeight) * 100
+        const yStartPct = Number(Math.max(0, Math.min(100, yStartRaw)).toFixed(1))
+        const yEndPct = Number(Math.max(0, Math.min(100, yEndRaw)).toFixed(1))
         let columns = 1
         let layout = 'full-width'
         if (style.display === 'grid' && style.gridTemplateColumns && style.gridTemplateColumns !== 'none') {
@@ -2854,7 +2859,7 @@ async function extractDomSignalsFromPage(
           : cls.includes('cta') || cls.includes('call-to-action') ? 'cta'
           : tag === 'footer' ? 'footer'
           : 'section'
-        pageSections.push({ index: si++, purpose, layout, columns, hasCTA, hasImage, heading: headingText, measured: true })
+        pageSections.push({ index: si++, purpose, layout, columns, hasCTA, hasImage, heading: headingText, yStartPct, yEndPct, measured: true })
         if (si >= 8) break
       }
 
