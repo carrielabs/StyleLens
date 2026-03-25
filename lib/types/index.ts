@@ -191,6 +191,8 @@ export interface PageSection {
   hasCTA: boolean
   hasImage: boolean
   heading?: string
+  yStartPct?: number
+  yEndPct?: number
   measured: boolean          // true = DOM-measured, false = AI-inferred
 }
 
