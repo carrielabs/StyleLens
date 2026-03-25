@@ -253,12 +253,23 @@ export function useHistory({
   const lastGuestMigrationKeyRef = useRef<string | null>(null)
   const lastSavedFingerprintRef = useRef<{ key: string; at: number } | null>(null)
   const deleteTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const loadHistoryInFlightRef = useRef<Promise<void> | null>(null)
+  const loadHistoryKeyRef = useRef<string | null>(null)
+  const syncHistoryInFlightRef = useRef<Promise<void> | null>(null)
+  const syncHistoryKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     hasLoadedExtractionsRef.current = extractions.length > 0
   }, [extractions.length])
 
   const loadHistory = async (userId: string) => {
+    const requestKey = userId || '__guest__'
+    if (loadHistoryInFlightRef.current && loadHistoryKeyRef.current === requestKey) {
+      await loadHistoryInFlightRef.current
+      return
+    }
+
+    const task = (async () => {
     if (!hasLoadedExtractionsRef.current) {
       setIsLoadingHistory(true)
     }
@@ -294,9 +305,23 @@ export function useHistory({
       setExtractions(dedupeHistoryRecords(list))
     } catch (err: unknown) {
       console.warn('Failed to load history:', getErrorMessage(err))
-      setExtractions([])
+      if (!hasLoadedExtractionsRef.current) {
+        setExtractions([])
+      }
     } finally {
       setIsLoadingHistory(false)
+    }
+    })()
+
+    loadHistoryInFlightRef.current = task
+    loadHistoryKeyRef.current = requestKey
+    try {
+      await task
+    } finally {
+      if (loadHistoryInFlightRef.current === task) {
+        loadHistoryInFlightRef.current = null
+        loadHistoryKeyRef.current = null
+      }
     }
   }
 
@@ -548,6 +573,13 @@ export function useHistory({
   }
 
   const syncHistoryForSession = async (session: { user: User } | null) => {
+    const requestKey = session?.user?.id || '__guest__'
+    if (syncHistoryInFlightRef.current && syncHistoryKeyRef.current === requestKey) {
+      await syncHistoryInFlightRef.current
+      return
+    }
+
+    const task = (async () => {
     if (session) {
       const sameUser = currentHistoryUserIdRef.current === session.user.id
       const shouldSkipRefresh = sameUser && historyLoadedRef.current && hasLoadedExtractionsRef.current
@@ -565,8 +597,20 @@ export function useHistory({
     const trialValue = localStorage.getItem(GUEST_TRIAL_KEY) === 'true'
     setGuestTrialUsed(trialValue)
     historyLoadedRef.current = false
-    currentHistoryUserIdRef.current = null
-    await loadHistory('')
+      currentHistoryUserIdRef.current = null
+      await loadHistory('')
+    })()
+
+    syncHistoryInFlightRef.current = task
+    syncHistoryKeyRef.current = requestKey
+    try {
+      await task
+    } finally {
+      if (syncHistoryInFlightRef.current === task) {
+        syncHistoryInFlightRef.current = null
+        syncHistoryKeyRef.current = null
+      }
+    }
   }
 
   const togglePin = async (itemId: string) => {
