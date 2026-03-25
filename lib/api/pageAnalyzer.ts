@@ -1314,7 +1314,44 @@ function pickSlot(candidates: PageColorCandidate[], predicate: (candidate: PageC
 export function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticColorSystem | undefined {
   if (!candidates.length) return undefined
 
-  const toToken = (candidate?: PageColorCandidate, forcedRole?: SemanticColorSystem[keyof SemanticColorSystem] extends infer T ? T extends { role: infer R } ? R : never : never) => {
+  const semanticContextForSlot = (slot?: string) => {
+    switch (slot) {
+      case 'heroBackground':
+        return 'hero background'
+      case 'heroTextPrimary':
+        return 'hero text'
+      case 'heroPrimaryAction':
+        return 'hero primary action'
+      case 'heroSecondaryAction':
+        return 'hero secondary action'
+      case 'heroAccent':
+        return 'hero accent'
+      case 'pageBackground':
+        return 'page shell background'
+      case 'surface':
+        return 'page shell surface'
+      case 'textPrimary':
+        return 'primary text'
+      case 'textSecondary':
+        return 'secondary text'
+      case 'border':
+        return 'border color'
+      case 'primaryAction':
+        return 'primary action'
+      case 'secondaryAction':
+        return 'secondary action'
+      case 'contentAccent':
+        return 'content accent'
+      default:
+        return undefined
+    }
+  }
+
+  const toToken = (
+    candidate?: PageColorCandidate,
+    forcedRole?: SemanticColorSystem[keyof SemanticColorSystem] extends infer T ? T extends { role: infer R } ? R : never : never,
+    slotName?: string
+  ) => {
     if (!candidate) return undefined
     const hex = candidate.hex.toUpperCase()
     const role = forcedRole || (candidate.roleHints.includes('text') ? 'text'
@@ -1332,8 +1369,38 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       hsl: '',
       name: candidate.roleHints.includes('hero') ? 'Hero Background' : 'Measured Color',
       description: `Measured from ${candidate.property}${candidate.selectorHint ? ` on ${candidate.selectorHint}` : ''}`,
-      meta: candidate.meta,
+      meta: candidate.meta
+        ? {
+            ...candidate.meta,
+            context: semanticContextForSlot(slotName) || candidate.meta.context,
+          }
+        : undefined,
     }
+  }
+
+  const isSemanticBackgroundBase = (candidate: PageColorCandidate) => {
+    if (
+      candidate.property === 'background-color'
+      || candidate.property === 'background-image'
+      || candidate.property === 'screenshot-hero'
+      || candidate.property === 'screenshot-content'
+      || candidate.property === 'visual-hero'
+      || candidate.property === 'visual-page'
+      || candidate.property === 'visual-content'
+    ) {
+      return true
+    }
+
+    if (candidate.property === 'css-variable') {
+      return candidate.roleHints.includes('background')
+        && !candidate.roleHints.includes('text')
+        && !candidate.roleHints.includes('border')
+        && !candidate.roleHints.includes('primary')
+        && !candidate.roleHints.includes('secondary')
+        && !candidate.roleHints.includes('accent')
+    }
+
+    return false
   }
 
   const ranked = [...candidates].sort((a, b) => (b.evidenceScore || b.count) - (a.evidenceScore || a.count))
@@ -1359,7 +1426,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
   const globalBackgroundCandidates = ranked.filter(candidate =>
     candidate.layerHints.includes('global') &&
     !candidate.layerHints.includes('content') &&
-    isLikelyBackgroundCandidate(candidate) &&
+    isSemanticBackgroundBase(candidate) &&
     isContainerBackgroundCandidate(candidate) &&
     !isLikelyUtilityNavBackground(candidate) &&
     !isLikelyTextCandidate(candidate) &&
@@ -1370,8 +1437,10 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
   )
   const heroBackgroundCandidates = ranked.filter(candidate =>
     candidate.layerHints.includes('hero') &&
-    isLikelyBackgroundCandidate(candidate) &&
+    isSemanticBackgroundBase(candidate) &&
     isContainerBackgroundCandidate(candidate) &&
+    !candidate.roleHints.includes('text') &&
+    !candidate.roleHints.includes('border') &&
     !isLikelyEmbeddedHeroMedia(candidate)
   )
   const backgroundMode = (() => {
@@ -1409,6 +1478,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
   const heroActionCandidates = ranked.filter(candidate =>
     isLikelyActionCandidate(candidate) &&
     candidate.layerHints.includes('hero') &&
+    candidate.property !== 'cta-foreground' &&
     getColorChroma(candidate.hex) >= 18
   )
 
@@ -1537,11 +1607,22 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
 
   const heroTextPrimary = heroTextCandidates
     .filter(candidate => candidate.hex.toUpperCase() !== textPrimary?.hex.toUpperCase())
+    .filter(candidate => {
+      if (!heroBackground) return true
+      return getColorDistance(candidate.hex, heroBackground.hex) >= 36
+    })
     .sort((a, b) => {
+      if (heroBackground) {
+        const heroBrightness = getColorBrightness(heroBackground.hex)
+        const aContrast = Math.abs(getColorBrightness(a.hex) - heroBrightness)
+        const bContrast = Math.abs(getColorBrightness(b.hex) - heroBrightness)
+        if (aContrast !== bContrast) return bContrast - aContrast
+      }
+
       const aBrightness = getColorBrightness(a.hex)
       const bBrightness = getColorBrightness(b.hex)
-      if (backgroundMode === 'dark' && aBrightness !== bBrightness) return bBrightness - aBrightness
-      if (backgroundMode === 'light' && aBrightness !== bBrightness) return aBrightness - bBrightness
+      if (heroBackgroundMode === 'dark' && aBrightness !== bBrightness) return bBrightness - aBrightness
+      if (heroBackgroundMode === 'light' && aBrightness !== bBrightness) return aBrightness - bBrightness
       return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
     })[0]
 
@@ -1569,6 +1650,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
   const actionCandidates = ranked.filter(candidate =>
     isLikelyActionCandidate(candidate) &&
     !used.has(candidate.hex.toUpperCase()) &&
+    candidate.property !== 'cta-foreground' &&
     getColorChroma(candidate.hex) >= 18
   )
 
@@ -1658,7 +1740,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       candidate.hex.toUpperCase() !== heroSecondaryAction?.hex.toUpperCase()
     )
     .slice(0, 4)
-    .map(candidate => toToken(candidate, 'accent'))
+    .map(candidate => toToken(candidate, 'accent', 'heroAccent'))
     .filter((value): value is NonNullable<typeof value> => Boolean(value))
 
   const contentColors = ranked
@@ -1668,22 +1750,22 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       getColorChroma(candidate.hex) >= 12
     )
     .slice(0, 6)
-    .map(candidate => toToken(candidate, 'accent'))
+    .map(candidate => toToken(candidate, 'accent', 'contentAccent'))
     .filter((value): value is NonNullable<typeof value> => Boolean(value))
 
   return {
-    heroBackground: toToken(heroBackground, 'background'),
-    heroTextPrimary: toToken(heroTextPrimary, 'text'),
-    heroPrimaryAction: toToken(heroPrimaryAction, 'primary'),
-    heroSecondaryAction: toToken(heroSecondaryAction, 'secondary'),
+    heroBackground: toToken(heroBackground, 'background', 'heroBackground'),
+    heroTextPrimary: toToken(heroTextPrimary, 'text', 'heroTextPrimary'),
+    heroPrimaryAction: toToken(heroPrimaryAction, 'primary', 'heroPrimaryAction'),
+    heroSecondaryAction: toToken(heroSecondaryAction, 'secondary', 'heroSecondaryAction'),
     heroAccentColors: heroAccentColors.length ? heroAccentColors : undefined,
-    pageBackground: toToken(pageBackground, 'background'),
-    surface: toToken(surface, 'surface'),
-    textPrimary: toToken(textPrimary, 'text'),
-    textSecondary: toToken(textSecondary, 'text'),
-    border: toToken(border, 'border'),
-    primaryAction: toToken(primaryAction, 'primary'),
-    secondaryAction: toToken(secondaryAction, 'secondary'),
+    pageBackground: toToken(pageBackground, 'background', 'pageBackground'),
+    surface: toToken(surface, 'surface', 'surface'),
+    textPrimary: toToken(textPrimary, 'text', 'textPrimary'),
+    textSecondary: toToken(textSecondary, 'text', 'textSecondary'),
+    border: toToken(border, 'border', 'border'),
+    primaryAction: toToken(primaryAction, 'primary', 'primaryAction'),
+    secondaryAction: toToken(secondaryAction, 'secondary', 'secondaryAction'),
     contentColors: contentColors.length ? contentColors : undefined,
   }
 }
