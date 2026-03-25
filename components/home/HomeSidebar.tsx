@@ -127,8 +127,8 @@ export default function HomeSidebar({
         justifyContent: 'space-between',
         flexShrink: 0, minWidth: sidebarOpen ? '270px' : '48px'
       }}>
-        {sidebarOpen ? (
-          <div 
+        {sidebarOpen && (
+          <div
             onClick={() => {
               setActiveItemId(null)
               setIsSearchOpen(false)
@@ -143,13 +143,6 @@ export default function HomeSidebar({
             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}
           >
             <img src="/logo-text.png" alt="StyleLens" style={{ height: '22px', width: 'auto', display: 'block' }} />
-          </div>
-        ) : (
-          <div 
-            onClick={() => setSidebarOpen(true)}
-            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center', width: '100%' }}
-          >
-            <img src="/logo-graphic.png" alt="StyleLens" style={{ width: '24px', height: '24px' }} />
           </div>
         )}
         <button
