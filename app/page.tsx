@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import HomeOverlays from '@/components/home/HomeOverlays'
 import HomeSidebar from '@/components/home/HomeSidebar'
 import HomeWorkspace from '@/components/home/HomeWorkspace'
+import SettingsView from '@/components/settings/SettingsView'
 import { useExtraction } from '@/hooks/useExtraction'
 import { useHistory } from '@/hooks/useHistory'
 import { createClient } from '@/lib/storage/supabaseClient'
@@ -26,6 +27,7 @@ export default function Home() {
 
   // ── Sidebar state ──
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState('')
 
@@ -34,6 +36,7 @@ export default function Home() {
 
   // ── Dynamic Greeting state ──
   const [greeting, setGreeting] = useState<GreetingData | null>(null)
+  const lastSessionUserIdRef = useRef<string | null>(null)
 
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [supabase] = useState(() => createClient())
@@ -141,6 +144,9 @@ export default function Home() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') return
+      const nextUserId = session?.user?.id ?? null
+      if (event === 'SIGNED_IN' && nextUserId && lastSessionUserIdRef.current === nextUserId) return
+      lastSessionUserIdRef.current = nextUserId
       void syncSession(session)
     })
 
@@ -271,43 +277,49 @@ export default function Home() {
           cancelRename={cancelRename}
           supabase={supabase}
           setIsAuthVisible={setIsAuthVisible}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onCloseSettings={() => setIsSettingsOpen(false)}
         />
 
-        <HomeWorkspace
-          activeItemId={activeItemId}
-          report={report}
-          isExtracting={isExtracting}
-          isUrlExtracting={isUrlExtracting}
-          isImageExtracting={isImageExtracting}
-          extractions={extractions}
-          reportLang={reportLang}
-          setReportLang={setReportLang}
-          setLightboxUrl={setLightboxUrl}
-          setIsLightboxOpen={setIsLightboxOpen}
-          error={error}
-          setError={setError}
-          greeting={greeting}
-          handleUrlSubmit={handleUrlSubmit}
-          urlInputRef={urlInputRef}
-          url={url}
-          setUrl={setUrl}
-          pendingFile={pendingFile}
-          pendingPreviewUrl={pendingPreviewUrl}
-          uploadState={uploadState}
-          isDragging={isDragging}
-          setIsDragging={setIsDragging}
-          setUploadZoneHovered={setUploadZoneHovered}
-          handleDrop={handleDrop}
-          user={user}
-          guestTrialUsed={guestTrialUsed}
-          fileInputRef={fileInputRef}
-          setIsAuthVisible={setIsAuthVisible}
-          handlePaste={handlePaste}
-          handleExtractFile={handleExtractFile}
-          clearPendingFile={clearPendingFile}
-          cancelExtraction={cancelExtraction}
-          handleFilePreview={handleFilePreview}
-        />
+        {isSettingsOpen ? (
+          <SettingsView onClose={() => setIsSettingsOpen(false)} />
+        ) : (
+          <HomeWorkspace
+            activeItemId={activeItemId}
+            report={report}
+            isExtracting={isExtracting}
+            isUrlExtracting={isUrlExtracting}
+            isImageExtracting={isImageExtracting}
+            extractions={extractions}
+            reportLang={reportLang}
+            setReportLang={setReportLang}
+            setLightboxUrl={setLightboxUrl}
+            setIsLightboxOpen={setIsLightboxOpen}
+            error={error}
+            setError={setError}
+            greeting={greeting}
+            handleUrlSubmit={handleUrlSubmit}
+            urlInputRef={urlInputRef}
+            url={url}
+            setUrl={setUrl}
+            pendingFile={pendingFile}
+            pendingPreviewUrl={pendingPreviewUrl}
+            uploadState={uploadState}
+            isDragging={isDragging}
+            setIsDragging={setIsDragging}
+            setUploadZoneHovered={setUploadZoneHovered}
+            handleDrop={handleDrop}
+            user={user}
+            guestTrialUsed={guestTrialUsed}
+            fileInputRef={fileInputRef}
+            setIsAuthVisible={setIsAuthVisible}
+            handlePaste={handlePaste}
+            handleExtractFile={handleExtractFile}
+            clearPendingFile={clearPendingFile}
+            cancelExtraction={cancelExtraction}
+            handleFilePreview={handleFilePreview}
+          />
+        )}
 
         <HomeOverlays
           report={report}

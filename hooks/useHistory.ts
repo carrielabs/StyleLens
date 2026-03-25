@@ -344,6 +344,7 @@ export function useHistory({
   const loadHistoryKeyRef = useRef<string | null>(null)
   const syncHistoryInFlightRef = useRef<Promise<void> | null>(null)
   const syncHistoryKeyRef = useRef<string | null>(null)
+  const pendingHistoryRecordsRef = useRef<HomeHistoryRecord[]>([])
 
   useEffect(() => {
     hasLoadedExtractionsRef.current = extractions.length > 0
@@ -357,7 +358,7 @@ export function useHistory({
     }
 
     const task = (async () => {
-    if (!hasLoadedExtractionsRef.current) {
+    if (!hasLoadedExtractionsRef.current && pendingHistoryRecordsRef.current.length === 0) {
       setIsLoadingHistory(true)
     }
 
@@ -370,9 +371,12 @@ export function useHistory({
         })
 
         if (guestRecord && !guestDeleteIds.has(guestRecord.id)) {
-          setExtractions([guestRecord as HomeHistoryRecord])
+          setExtractions(dedupeHistoryRecords([
+            guestRecord as HomeHistoryRecord,
+            ...pendingHistoryRecordsRef.current,
+          ]))
         } else {
-          setExtractions([])
+          setExtractions([...pendingHistoryRecordsRef.current])
         }
 
         if (guestDeleteIds.size > 0) {
@@ -405,7 +409,10 @@ export function useHistory({
       const list = (((data as unknown) as HistoryListRow[]) || [])
         .map(buildHistoryListRecord)
         .filter(item => !pendingDeletedIds.has(item.id))
-      setExtractions(dedupeHistoryRecords(list))
+      setExtractions(dedupeHistoryRecords([
+        ...pendingHistoryRecordsRef.current,
+        ...list,
+      ]))
 
       if (pendingDeletedIds.size > 0) {
         void Promise.allSettled(
@@ -419,7 +426,7 @@ export function useHistory({
       }
     } catch (err: unknown) {
       console.warn('Failed to load history:', getErrorMessage(err))
-      if (!hasLoadedExtractionsRef.current) {
+      if (!hasLoadedExtractionsRef.current && pendingHistoryRecordsRef.current.length === 0) {
         setExtractions([])
       }
     } finally {
@@ -533,28 +540,8 @@ export function useHistory({
     if (
       lastSavedFingerprintRef.current &&
       lastSavedFingerprintRef.current.key === fingerprint &&
-      now - lastSavedFingerprintRef.current.at < 15000
+      now - lastSavedFingerprintRef.current.at < 2000
     ) {
-      return
-    }
-
-    const localDuplicate = extractions.find(existing =>
-      Math.abs(new Date(existing.created_at).getTime() - now) < 2 * 60 * 1000 &&
-      isSameHistorySignature(
-        {
-          sourceLabel: existing.source_label,
-          thumbnailUrl: existing.thumbnail_url,
-          colors: existing.style_data?.colors,
-        },
-        {
-          sourceLabel: record.source_label,
-          thumbnailUrl: record.thumbnail_url,
-          colors: reportForStorage.colors,
-        }
-      )
-    )
-    if (localDuplicate) {
-      lastSavedFingerprintRef.current = { key: fingerprint, at: now }
       return
     }
 
@@ -580,51 +567,40 @@ export function useHistory({
       return
     }
 
+    const optimisticId = `pending_${now}`
+    const optimisticRecord: HomeHistoryRecord = {
+      ...record,
+      id: optimisticId,
+      style_data: {
+        ...(record.style_data as PinnedStyleReport),
+        __pinned: (record.style_data as PinnedStyleReport).__pinned ?? false,
+      },
+    }
+    pendingHistoryRecordsRef.current = [optimisticRecord, ...pendingHistoryRecordsRef.current]
+    setExtractions(prev => dedupeHistoryRecords([optimisticRecord, ...prev]))
+
     try {
-      const { data: existingRows, error: existingError } = await withTimeout(
+      const { data: insertedRow, error } = await withTimeout(
         supabase
           .from('style_records')
-          .select('id,source_label,thumbnail_url,created_at,colors:style_data->colors')
-          .eq('user_id', user.id)
-          .eq('source_label', record.source_label)
-          .order('created_at', { ascending: false })
-          .limit(5),
-        8000,
-        'History duplicate lookup'
-      )
-      if (existingError) throw existingError
-
-      const serverDuplicate = (((existingRows as unknown) as HistoryListRow[]) || []).find(existing =>
-        Math.abs(new Date(existing.created_at).getTime() - now) < 2 * 60 * 1000 &&
-        isSameHistorySignature(
-          {
-            sourceLabel: existing.source_label,
-            thumbnailUrl: existing.thumbnail_url,
-            colors: Array.isArray(existing.colors) ? existing.colors as Array<{ hex?: string | null }> : [],
-          },
-          {
-            sourceLabel: record.source_label,
-            thumbnailUrl: record.thumbnail_url,
-            colors: reportForStorage.colors,
-          }
-        )
-      )
-      if (serverDuplicate) {
-        await loadHistory(user.id)
-        return
-      }
-
-      const { error } = await withTimeout(
-        supabase
-          .from('style_records')
-          .insert([record]),
+          .insert([record])
+          .select('id,user_id,source_label,thumbnail_url,created_at,colors:style_data->colors,pinned:style_data->__pinned')
+          .single(),
         8000,
         'History save'
       )
       if (error) throw error
+      pendingHistoryRecordsRef.current = pendingHistoryRecordsRef.current.filter(item => item.id !== optimisticId)
+      const hydratedListItem = buildHistoryListRecord((insertedRow as unknown) as HistoryListRow)
+      setExtractions(prev => dedupeHistoryRecords([
+        hydratedListItem,
+        ...prev.filter(item => item.id !== optimisticId),
+      ]))
       await loadHistory(user.id)
     } catch (err: unknown) {
+      pendingHistoryRecordsRef.current = pendingHistoryRecordsRef.current.filter(item => item.id !== optimisticId)
       console.warn('Failed to save extraction:', getErrorMessage(err))
+      void loadHistory(user.id)
     }
   }
 
