@@ -608,10 +608,9 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
                         style={{ display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', padding: '8px', borderRadius: '12px', transition: 'background 0.2s', backgroundColor: isHov ? '#FAFAFA' : 'transparent' }}
                         onMouseEnter={() => {
                           setHoveredWireframe(key)
-                          const yStart = sec.screenStartPct ?? sec.yStartPct
-                          const yEnd = sec.screenEndPct ?? sec.yEndPct
-                          if (onSectionHover && yStart != null && yEnd != null) {
-                            onSectionHover({ yStart, yEnd })
+                          if (onSectionHover) {
+                            const highlight = resolveHighlight(sec, analysis?.viewportSlices)
+                            if (highlight) onSectionHover(highlight)
                           }
                         }}
                         onMouseLeave={() => {
@@ -1170,6 +1169,31 @@ function ShadowGalleryItem({ token }: { token: { value: string; count: number } 
       </div>
     </div>
   )
+}
+
+// ── Resolve which portion of the screenshot to highlight on hover ─────────
+// Priority: viewportSlices (geometric, per-screen) → screenStartPct → yStartPct
+function resolveHighlight(
+  sec: PageSection,
+  viewportSlices?: Array<{ index: number; yStartPct: number; yEndPct: number; dominantSectionId?: string }>
+): { yStart: number; yEnd: number } | null {
+  // 1. Use viewportSlices — find slices that overlap this section's Y range
+  if (viewportSlices && viewportSlices.length > 0 && sec.yStartPct != null && sec.yEndPct != null) {
+    const overlapping = viewportSlices.filter(
+      s => s.yStartPct < sec.yEndPct! && s.yEndPct > sec.yStartPct!
+    )
+    if (overlapping.length > 0) {
+      return {
+        yStart: overlapping[0].yStartPct,
+        yEnd: overlapping[overlapping.length - 1].yEndPct,
+      }
+    }
+  }
+  // 2. Fall back to screen-mapped coords if available
+  const yStart = sec.screenStartPct ?? sec.yStartPct
+  const yEnd   = sec.screenEndPct   ?? sec.yEndPct
+  if (yStart != null && yEnd != null) return { yStart, yEnd }
+  return null
 }
 
 function purposeLabel(purpose: string): string {
