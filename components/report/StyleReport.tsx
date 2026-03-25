@@ -68,7 +68,7 @@ const i18n = {
   }
 }
 
-export default function StyleReport({ report, lang = 'zh', fullWidth = false }: { report: ReportType, lang?: 'zh' | 'en', fullWidth?: boolean }) {
+export default function StyleReport({ report, lang = 'zh', fullWidth = false, onSectionHover }: { report: ReportType, lang?: 'zh' | 'en', fullWidth?: boolean, onSectionHover?: (section: { yStart: number; yEnd: number } | null) => void }) {
   const [activeCode, setActiveCode] = useState<'markdown' | 'css' | 'json' | 'prompt' | 'tailwind'>('markdown')
   const [copied, setCopied] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
@@ -184,7 +184,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
       {!isElite && (
         <section>
           <SectionLabel>{t.inspector}</SectionLabel>
-          <DesignInspector report={report} lang={lang} />
+          <DesignInspector report={report} lang={lang} onSectionHover={onSectionHover} />
         </section>
       )}
 

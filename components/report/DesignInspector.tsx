@@ -14,9 +14,10 @@ type ComponentTab = 'button' | 'input' | 'card' | 'badge'
 interface Props {
   report: StyleReport
   lang: 'zh' | 'en'
+  onSectionHover?: (section: { yStart: number; yEnd: number } | null) => void
 }
 
-export default function DesignInspector({ report, lang }: Props) {
+export default function DesignInspector({ report, lang, onSectionHover }: Props) {
   const [zone, setZone] = useState<Zone>('measured')
   const [measuredTab, setMeasuredTab] = useState<MeasuredTab>('components')
   const [impressionTab, setImpressionTab] = useState<ImpressionTab>('interaction')
@@ -32,6 +33,7 @@ export default function DesignInspector({ report, lang }: Props) {
   const [btnHovered, setBtnHovered] = useState(false)
   const [btnActive, setBtnActive] = useState(false)
   const [showTokens, setShowTokens] = useState(false)
+  const [hoveredWireframe, setHoveredWireframe] = useState<string | null>(null)
 
   const { colors, colorSystem, typography, designDetails } = report
   const analysis = report.pageAnalysis
@@ -659,16 +661,50 @@ export default function DesignInspector({ report, lang }: Props) {
 
         {/* ══════════════ 布局 LAYOUT ══════════════ */}
         {zone === 'measured' && measuredTab === 'space' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
 
-            {/* Page sections wireframe */}
+            {/* ── 1. 布局参考画廊 ── */}
             <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '页面结构' : 'Page Structure'}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                  {lang === 'zh' ? '布局参考画廊' : 'Layout Gallery'}
+                </div>
+                <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>
+                  {lang === 'zh' ? '悬停联动' : 'Hover'}
+                </div>
+              </div>
               {pageSections.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {pageSections.map((sec, i) => (
-                    <SectionRow key={i} section={sec} measured={pageSecsMeasured} lang={lang} primaryHex={primaryHex} />
-                  ))}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+                  {pageSections.map((sec, idx) => {
+                    const key = `sec-${idx}`
+                    const isHov = hoveredWireframe === key
+                    return (
+                      <div key={idx}
+                        style={{ display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', padding: '8px', borderRadius: '12px', transition: 'background 0.2s', backgroundColor: isHov ? '#FAFAFA' : 'transparent' }}
+                        onMouseEnter={() => {
+                          setHoveredWireframe(key)
+                          if (onSectionHover && sec.yStartPct != null && sec.yEndPct != null) {
+                            onSectionHover({ yStart: sec.yStartPct, yEnd: sec.yEndPct })
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredWireframe(null)
+                          onSectionHover?.(null)
+                        }}
+                      >
+                        <WireframePreview purpose={sec.purpose} layout={sec.layout} isHovered={isHov} />
+                        <div style={{ paddingLeft: '4px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: isHov ? '#3B82F6' : '#111', transition: 'color 0.2s' }}>
+                            {lang === 'zh' ? purposeLabel(sec.purpose) : (sec.heading || sec.purpose)}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                            <code style={{ fontSize: '11px', color: '#888', fontFamily: 'ui-monospace, monospace' }}>{sec.layout}</code>
+                            {pageSecsMeasured && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#34C759', flexShrink: 0 }} />}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
@@ -679,65 +715,104 @@ export default function DesignInspector({ report, lang }: Props) {
               )}
             </div>
 
-            {/* Spacing (high-freq measurements) + max-width */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+            {/* ── 2. 宏观结构特征 ── */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                  {lang === 'zh' ? '宏观结构特征' : 'Technical Traits'}
+                </div>
+                <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>
+                  {lang === 'zh' ? 'DOM 验证' : 'DOM Verified'}
+                </div>
+              </div>
+              {(() => {
+                const hasLayout = graded.layout.length > 0 || !!gridColumns
+                if (!hasLayout && !designDetails.layoutEn) {
+                  return (
+                    <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
+                      {sourceIsUrl ? (lang === 'zh' ? '未检测到' : 'Not detected') : (lang === 'zh' ? '需要 URL' : 'Requires URL')}
+                    </p>
+                  )
+                }
+                return (
+                  <>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      {gridColumns && (
+                        <span style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderRadius: '8px', fontSize: '13px', color: '#111', border: '1px solid #EAEAEA', fontWeight: 500 }}>
+                          {lang === 'zh' ? `列数: ${gridColumns}` : `Columns: ${gridColumns}`}
+                        </span>
+                      )}
+                      {graded.layout.length > 0
+                        ? graded.layout.map((item, i) => (
+                            <span key={i} style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderRadius: '8px', fontSize: '13px', color: '#111', border: '1px solid #EAEAEA', fontWeight: 500 }}>
+                              {item.label}
+                            </span>
+                          ))
+                        : (lang === 'zh' ? designDetails.layoutZh || designDetails.layoutEn : designDetails.layoutEn)
+                            ?.split('|').map((v, i) => (
+                              <span key={i} style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderRadius: '8px', fontSize: '13px', color: '#AEAEB2', border: '1px solid #EAEAEA', fontWeight: 500 }}>
+                                {v.trim()}
+                              </span>
+                            ))
+                      }
+                    </div>
+                    <p style={{ margin: '12px 0 0 0', fontSize: '12px', color: '#888' }}>
+                      {lang === 'zh' ? '这些是构建该网页底层宏观框架时使用的核心 CSS 技术栈。' : 'Core CSS techniques used to build the page structure.'}
+                    </p>
+                  </>
+                )
+              })()}
+            </div>
+
+            {/* ── 3. 间距系统 + 页面宽度 ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+
               {/* Spacing */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <p style={{ ...sectionLabel, margin: 0 }}>
-                    {lang === 'zh' ? '常用测量值' : 'Common Spacing Values'}
-                  </p>
-                  {graded.spacingConfidence !== 'none' && (
-                    <span style={{ fontSize: '10px', color: graded.spacingConfidence === 'high' ? '#34C759' : '#AEAEB2', fontWeight: 500 }}>
-                      {lang === 'zh' ? `前 ${graded.spacing.length} 高频` : `Top ${graded.spacing.length}`}
-                    </span>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                    {lang === 'zh' ? '间距系统' : 'Spacing Scale'}
+                  </div>
+                  <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>
+                    {lang === 'zh' ? '高频测量' : 'High-freq'}
+                  </div>
                 </div>
                 {graded.spacing.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ border: '1px solid #EAEAEA', borderRadius: '12px', padding: '4px 20px' }}>
                     {graded.spacing.map((t, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', minWidth: '44px' }}>{t.value}</code>
-                        <div style={{ flex: 1, height: '5px', borderRadius: '999px', background: '#EFEFEF', overflow: 'hidden' }}>
-                          <div style={{
-                            width: `${Math.max(4, t.freqRatio * 100)}%`,
-                            height: '100%', borderRadius: '999px',
-                            background: t.grade === 'A' ? '#1D1D1F' : '#AEAEB2',
-                            transition: 'width 0.3s ease',
-                          }} />
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '9px 0' }}>
+                        <code style={{ width: '40px', fontFamily: 'ui-monospace, monospace', fontSize: '13px', fontWeight: 500, color: '#111', flexShrink: 0 }}>{t.value}</code>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ height: '14px', backgroundColor: '#E0E0E0', borderRadius: '2px', width: `${Math.max(4, t.freqRatio * 160)}px`, transition: 'width 0.3s ease' }} />
+                          {t.sampleCount > 100 && (
+                            <span style={{ fontSize: '10px', backgroundColor: '#FEF08A', color: '#854D0E', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                              {lang === 'zh' ? '高频核心' : 'Top hit'}
+                            </span>
+                          )}
                         </div>
-                        <span style={{ fontSize: '11px', color: '#AEAEB2', minWidth: '28px', textAlign: 'right', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <span style={dot(t.grade !== 'C')} />
-                          {t.sampleCount}×
-                        </span>
+                        <div style={{ fontSize: '12px', color: '#888', flexShrink: 0 }}>{t.sampleCount}× usage</div>
                       </div>
                     ))}
-                    <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#C7C7CC' }}>
-                      {lang === 'zh'
-                        ? '基于 DOM 测量频次，不代表设计规范中的 spacing scale'
-                        : 'Based on DOM measurement frequency — not a designed spacing scale'}
-                    </p>
                   </div>
                 ) : (
                   <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                    {sourceIsUrl
-                      ? (lang === 'zh' ? '暂未检测到间距数据' : 'No spacing data detected')
-                      : (lang === 'zh' ? '需要 URL 才能测量间距' : 'Requires URL analysis')}
+                    {sourceIsUrl ? (lang === 'zh' ? '暂未检测到间距数据' : 'No spacing data') : (lang === 'zh' ? '需要 URL' : 'Requires URL')}
                   </p>
                 )}
               </div>
 
-              {/* Max width */}
+              {/* Page width */}
               <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '页面宽度' : 'Page Max-Width'}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                    {lang === 'zh' ? '页面宽度' : 'Page Width'}
+                  </div>
+                </div>
                 {pageMaxWidth ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ flex: 1, height: '20px', background: '#F5F5F7', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{
-                          position: 'absolute', inset: 0, background: '#1D1D1F', borderRadius: '4px',
-                          width: `${Math.min(100, (parseFloat(pageMaxWidth) / 1920) * 100)}%`
-                        }} />
+                        <div style={{ position: 'absolute', inset: 0, background: '#1D1D1F', borderRadius: '4px', width: `${Math.min(100, (parseFloat(pageMaxWidth) / 1920) * 100)}%` }} />
                       </div>
                       <code style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', flexShrink: 0 }}>{pageMaxWidth}</code>
                     </div>
@@ -751,61 +826,7 @@ export default function DesignInspector({ report, lang }: Props) {
                   </p>
                 )}
               </div>
-            </div>
 
-            {/* Layout evidence: structural parameters only (C-grade) */}
-            <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '结构参数' : 'Structural Parameters'}</p>
-              {(() => {
-                // Kind → icon mapping (text emoji icons, no external dep)
-                const kindIcon: Record<string, string> = {
-                  hero: '⬛', grid: '⊞', flex: '↔', navigation: '≡',
-                  form: '⊟', section: '▤', 'multi-column': '⊟⊟', sticky: '📌', stack: '↕',
-                }
-                const hasLayout = graded.layout.length > 0 || !!gridColumns || !!pageMaxWidth
-                if (!hasLayout && !designDetails.layoutEn) {
-                  return (
-                    <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                      {sourceIsUrl ? (lang === 'zh' ? '未检测到' : 'Not detected') : (lang === 'zh' ? '需要 URL' : 'Requires URL')}
-                    </p>
-                  )
-                }
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {/* Measured structural params */}
-                    {gridColumns && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', background: '#F5F5F7', borderRadius: '8px' }}>
-                        <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '80px' }}>{lang === 'zh' ? '列数' : 'Columns'}</span>
-                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#1D1D1F', flex: 1 }}>{gridColumns}</code>
-                        <span style={dot(true)} />
-                      </div>
-                    )}
-                    {/* Layout pattern evidence chips */}
-                    {graded.layout.length > 0 ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
-                        {graded.layout.map((item, i) => (
-                          <div key={i} style={{ ...chip, fontSize: '12px' }}>
-                            <span style={{ fontSize: '10px', opacity: 0.6 }}>{kindIcon[item.kind] || '·'}</span>
-                            <span style={dot(item.grade !== 'C')} />
-                            {item.label}
-                            <span style={{ color: '#AEAEB2', fontSize: '10px' }}>{item.sampleCount}×</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : designDetails.layoutEn ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
-                        {(lang === 'zh' ? designDetails.layoutZh || designDetails.layoutEn : designDetails.layoutEn)
-                          .split('|').map((v, i) => (
-                            <div key={i} style={{ ...chip, fontSize: '12px' }}>
-                              <span style={dot(false)} />
-                              {v.trim()}
-                            </div>
-                          ))}
-                      </div>
-                    ) : null}
-                  </div>
-                )
-              })()}
             </div>
           </div>
         )}
@@ -1167,6 +1188,70 @@ function StateRow({ state, prop, value }: { state: string; prop: string; value: 
       <code style={{ fontSize: '11px', color: '#1D1D1F', fontFamily: 'var(--font-mono)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {value}
       </code>
+    </div>
+  )
+}
+
+// ── Wireframe preview for layout gallery ────────────────────────────────────
+function purposeLabel(purpose: string): string {
+  const map: Record<string, string> = {
+    hero: '主视觉', features: '功能区', pricing: '定价', testimonials: '评价',
+    cta: '行动区', footer: '页脚', section: '内容区',
+  }
+  return map[purpose] || purpose
+}
+
+function WireframePreview({ purpose, layout, isHovered }: {
+  purpose: string; layout: string; isHovered: boolean
+}) {
+  const containerStyle: React.CSSProperties = {
+    width: '100%', height: '100px', backgroundColor: isHovered ? '#EFF6FF' : '#F9F9FA',
+    borderRadius: '8px', border: isHovered ? '1px solid rgba(59,130,246,0.6)' : '1px solid #EAEAEA',
+    display: 'flex', boxSizing: 'border-box', overflow: 'hidden',
+    transition: 'all 0.2s ease', boxShadow: isHovered ? '0 4px 12px rgba(59,130,246,0.12)' : 'none',
+  }
+  const accent = isHovered ? '#3B82F6' : '#D1D1D1'
+  const secondary = isHovered ? 'rgba(59,130,246,0.2)' : '#E5E5E5'
+  const block = isHovered ? 'rgba(59,130,246,0.1)' : '#EAEAEA'
+
+  if (purpose === 'hero' || layout === 'full-width') {
+    return (
+      <div style={{ ...containerStyle, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '16px' }}>
+        <div style={{ width: '60%', height: '14px', backgroundColor: accent, borderRadius: '3px', transition: 'all 0.2s' }} />
+        <div style={{ width: '40%', height: '8px', backgroundColor: secondary, borderRadius: '3px', transition: 'all 0.2s' }} />
+        <div style={{ width: '64px', height: '20px', backgroundColor: isHovered ? '#3B82F6' : '#A1A1AA', borderRadius: '3px', marginTop: '4px', transition: 'all 0.2s' }} />
+      </div>
+    )
+  }
+  if (layout === '2-column' || layout === 'asymmetric') {
+    return (
+      <div style={{ ...containerStyle, padding: '14px', gap: '12px', alignItems: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ width: '80%', height: '12px', backgroundColor: accent, borderRadius: '3px' }} />
+          <div style={{ width: '100%', height: '7px', backgroundColor: secondary, borderRadius: '3px' }} />
+          <div style={{ width: '90%', height: '7px', backgroundColor: secondary, borderRadius: '3px' }} />
+        </div>
+        <div style={{ flex: 1, height: '100%', backgroundColor: block, borderRadius: '5px' }} />
+      </div>
+    )
+  }
+  if (layout === '3-column-grid' || layout === '4-column-grid' || layout === 'grid') {
+    const cols = layout === '4-column-grid' ? 4 : 3
+    return (
+      <div style={{ ...containerStyle, padding: '12px', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '6px' }}>
+        {Array.from({ length: cols }).map((_, i) => (
+          <div key={i} style={{ backgroundColor: block, borderRadius: '5px' }} />
+        ))}
+      </div>
+    )
+  }
+  // Default: footer / section / other
+  return (
+    <div style={{ ...containerStyle, flexDirection: 'column', gap: '6px', padding: '14px' }}>
+      <div style={{ width: '40%', height: '10px', backgroundColor: accent, borderRadius: '3px' }} />
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginTop: '4px' }}>
+        {[0, 1, 2].map(i => <div key={i} style={{ backgroundColor: block, borderRadius: '4px' }} />)}
+      </div>
     </div>
   )
 }
