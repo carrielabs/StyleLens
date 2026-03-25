@@ -10,6 +10,7 @@ import {
   PinOff,
   Plus,
   Search,
+  Settings,
   Trash2,
   UserIcon,
 } from 'lucide-react'
@@ -17,6 +18,7 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/storage/supabaseClient'
 import type { ColorToken, DisplayStyleReport, HomeHistoryRecord, StyleReport } from '@/lib/types'
 import { getTopColors } from './viewUtils'
+import SettingsView from '@/components/settings/SettingsView'
 
 type SidebarRecord = HomeHistoryRecord
 type BrowserSupabaseClient = ReturnType<typeof createClient>
@@ -60,6 +62,8 @@ interface HomeSidebarProps {
   cancelRename: () => void
   supabase: BrowserSupabaseClient
   setIsAuthVisible: Dispatch<SetStateAction<boolean>>
+  onOpenSettings: () => void
+  onCloseSettings: () => void
 }
 
 export default function HomeSidebar({
@@ -101,6 +105,8 @@ export default function HomeSidebar({
   cancelRename,
   supabase,
   setIsAuthVisible,
+  onOpenSettings,
+  onCloseSettings,
 }: HomeSidebarProps) {
   const identityAvatarSources = (user?.identities ?? [])
     .flatMap(identity => [
@@ -115,7 +121,9 @@ export default function HomeSidebar({
     ...identityAvatarSources,
   ].filter(Boolean) as string[]
 
+
   return (
+    <>
     <aside style={{
       width: sidebarOpen ? '270px' : '48px', flexShrink: 0, display: 'flex', flexDirection: 'column',
       backgroundColor: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.06)',
@@ -138,6 +146,7 @@ export default function HomeSidebar({
               clearPendingFile()
               setShowUserMenu(false)
               setContextMenuId(null)
+              onCloseSettings()
               setTimeout(() => urlInputRef.current?.focus(), 50)
             }}
             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}
@@ -186,6 +195,7 @@ export default function HomeSidebar({
             clearPendingFile()
             setShowUserMenu(false)
             setContextMenuId(null)
+            onCloseSettings()
             setTimeout(() => urlInputRef.current?.focus(), 50)
           }}
         />
@@ -285,12 +295,13 @@ export default function HomeSidebar({
         </div>
       </div>
 
-      <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(0,0,0,0.06)', position: 'relative' }}>
+      <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(0,0,0,0.06)', position: 'relative', display: 'flex', gap: '4px', alignItems: 'center' }}>
         {showUserMenu && user && (
           <div style={{
             position: 'absolute', bottom: '100%', left: '10px', right: '10px', marginBottom: '6px',
             backgroundColor: '#FFFFFF', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
-            border: '1px solid rgba(0,0,0,0.06)', padding: '6px', zIndex: 50, animation: 'slideUp 0.15s ease-out'
+            border: '1px solid rgba(0,0,0,0.06)', padding: '6px', zIndex: 50, animation: 'slideUp 0.15s ease-out',
+            width: 'calc(100% - 20px)'
           }}>
             <div style={{ padding: '8px 12px 6px', fontSize: '11px', color: '#8E8E93', borderBottom: '1px solid rgba(0,0,0,0.04)', marginBottom: '4px' }}>
               {user.email}
@@ -324,6 +335,7 @@ export default function HomeSidebar({
             gap: '8px', padding: sidebarOpen ? '6px 10px' : '8px 0',
             borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s',
             backgroundColor: showUserMenu ? 'rgba(0,0,0,0.04)' : 'transparent',
+            flex: 1, minWidth: 0
           }}
           onMouseEnter={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)')}
           onMouseLeave={e => !showUserMenu && (e.currentTarget.style.backgroundColor = 'transparent')}
@@ -339,8 +351,34 @@ export default function HomeSidebar({
             </span>
           )}
         </div>
+
+        {user && sidebarOpen && (
+        <button
+          onClick={() => onOpenSettings()}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#8E8E93',
+            transition: 'all 0.15s',
+            flexShrink: 0
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#1D1D1F' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8E8E93' }}
+          title="设置"
+        >
+          <Settings size={16} strokeWidth={2} />
+        </button>
+        )}
       </div>
     </aside>
+    </>
   )
 }
 
