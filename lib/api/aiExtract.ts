@@ -397,6 +397,15 @@ function normalizeSemanticColorSystem(colorSystem?: SemanticColorSystem): Semant
 
   if (
     normalized.pageBackground &&
+    normalized.border &&
+    brightness(normalized.pageBackground.hex) >= 620 &&
+    brightness(normalized.border.hex) <= 120
+  ) {
+    normalized.border = undefined
+  }
+
+  if (
+    normalized.pageBackground &&
     normalized.surface &&
     brightness(normalized.pageBackground.hex) >= 620 &&
     brightness(normalized.surface.hex) <= 180
@@ -673,6 +682,7 @@ export function deriveDomShellFallback(
   const textSecondaryItem = shellText.find(item => item.candidate.hex !== textPrimaryItem?.candidate.hex)
   const borderItem = shellBorders.find(item => {
     if (!pageBackgroundItem) return true
+    if (pageBackgroundItem.brightness >= 600 && item.brightness <= 32) return false
     const delta = Math.abs(item.brightness - pageBackgroundItem.brightness)
     return delta >= 8 && delta <= 90
   })

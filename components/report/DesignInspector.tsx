@@ -21,7 +21,17 @@ export default function DesignInspector({ report, lang }: Props) {
   const [measuredTab, setMeasuredTab] = useState<MeasuredTab>('components')
   const [impressionTab, setImpressionTab] = useState<ImpressionTab>('interaction')
   const [compTab, setCompTab] = useState<ComponentTab>('button')
-  const [isInjected, setIsInjected] = useState(false)
+  const [expandedShadows, setExpandedShadows] = useState<Set<number>>(new Set())
+  function toggleShadow(i: number) {
+    setExpandedShadows(prev => {
+      const next = new Set(prev)
+      next.has(i) ? next.delete(i) : next.add(i)
+      return next
+    })
+  }
+  const [btnHovered, setBtnHovered] = useState(false)
+  const [btnActive, setBtnActive] = useState(false)
+  const [showTokens, setShowTokens] = useState(false)
 
   const { colors, colorSystem, typography, designDetails } = report
   const analysis = report.pageAnalysis
@@ -47,20 +57,19 @@ export default function DesignInspector({ report, lang }: Props) {
   const previewBg = safePreviewBg(bgHex, designDetails.colorMode)
   const { surface: previewSurface, text: previewText } = safeComponentColors(surfaceHex, textHex, designDetails.colorMode)
 
-  // ── Source name for inject button label ───────────────────────────────────
+  // ── Source name label ─────────────────────────────────────────────────────
   const sourceName = report.sourceLabel.replace(/https?:\/\/(www\.)?/, '').split('/')[0]
 
-  // ── Effective display values: neutral defaults when !isInjected, real tokens when isInjected ──
-  // This powers the "inject style" toggle — lets users compare site's design vs neutral baseline
-  const effBg        = isInjected ? previewBg      : (designDetails.colorMode === 'dark' ? '#2C2C2E' : '#F5F5F7')
-  const effSurface   = isInjected ? previewSurface : (designDetails.colorMode === 'dark' ? '#3A3A3C' : '#FFFFFF')
-  const effText      = isInjected ? previewText    : (designDetails.colorMode === 'dark' ? '#EBEBF5' : '#1D1D1F')
-  const effPrimary   = isInjected ? primaryHex     : (designDetails.colorMode === 'dark' ? '#FFFFFF' : '#1D1D1F')
-  const effPrimaryFg = isInjected ? primaryFgHex   : (designDetails.colorMode === 'dark' ? '#000000' : '#FFFFFF')
-  const effRadius    = (k: string) => isInjected ? bestRadius(k).value : '8px'
-  const effBorder    = (k: string) => isInjected ? bestBorder(k).value : `1px solid ${designDetails.colorMode === 'dark' ? '#48484A' : '#E5E5EA'}`
-  const effShadow    = (k: string) => isInjected ? bestShadow(k).value : 'none'
-  const effFont      = isInjected ? typography.fontFamily : 'system-ui, -apple-system, sans-serif'
+  // ── Always show extracted styles directly — no neutral baseline toggle ────
+  const effBg        = previewBg
+  const effSurface   = previewSurface
+  const effText      = previewText
+  const effPrimary   = primaryHex
+  const effPrimaryFg = primaryFgHex
+  const effRadius    = (k: string) => bestRadius(k).value
+  const effBorder    = (k: string) => bestBorder(k).value
+  const effShadow    = (k: string) => bestShadow(k).value
+  const effFont      = typography.fontFamily
 
   // ── Measured tokens ───────────────────────────────────────────────────────
   const radiusTokens: RadiusToken[]         = analysis?.radiusTokens     || []
@@ -98,7 +107,6 @@ export default function DesignInspector({ report, lang }: Props) {
     cssShadow.split('|').map(v => v.trim()).filter(v => v && v !== 'none' && !v.includes('var('))
   // For UI components, 50%/100% means avatar/icon circles — exclude them from button/card/input radius
   const componentRadiusFallback = radiusFallbackValues.find(v => !v.includes('%')) || '6px'
-  const primaryRadius = radiusFallbackValues[0] || '4px'
   const primaryShadow = shadowFallbackValues[0] || 'none'
 
   // ── meta.source → friendly label ──────────────────────────────────────────
@@ -152,6 +160,22 @@ export default function DesignInspector({ report, lang }: Props) {
     return entries.filter(e => e.state !== 'default' && e.value).slice(0, 6)
   }
 
+  // Convert stateTokens for a given kind+state into React inline style (camelCase keys).
+  // Skips border sub-properties (borderColor etc.) to avoid React shorthand/longhand conflict.
+  function getStateStyle(kind: string, state: 'hover' | 'focus' | 'active'): React.CSSProperties {
+    const entries = (stateTokens as Record<string, Array<{ state: string; property: string; value: string }>>)[kind] || []
+    const result: Record<string, string> = {}
+    // These conflict with the `border` shorthand used in btnStyle
+    const skipProps = new Set(['borderColor', 'borderTopColor', 'borderBottomColor', 'borderLeftColor', 'borderRightColor', 'borderWidth', 'borderStyle'])
+    entries
+      .filter(e => e.state === state && e.value)
+      .forEach(e => {
+        const key = e.property.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+        if (!skipProps.has(key)) result[key] = e.value
+      })
+    return result as React.CSSProperties
+  }
+
   // ── Button style (uses exact snapshot if available) ───────────────────────
   const btnStyle: React.CSSProperties = snap ? {
     backgroundColor: snap.backgroundColor,
@@ -181,14 +205,8 @@ export default function DesignInspector({ report, lang }: Props) {
     whiteSpace: 'nowrap' as const,
   }
 
-  // effBtnStyle switches between real extracted button style and neutral default
-  const effBtnStyle: React.CSSProperties = isInjected ? btnStyle : {
-    background: designDetails.colorMode === 'dark' ? '#FFFFFF' : '#1D1D1F',
-    color: designDetails.colorMode === 'dark' ? '#000000' : '#FFFFFF',
-    border: 'none', cursor: 'pointer', borderRadius: '8px',
-    padding: '10px 20px', fontSize: '14px', fontWeight: 600,
-    fontFamily: 'system-ui, -apple-system, sans-serif', whiteSpace: 'nowrap',
-  }
+  // Always use real extracted button style
+  const effBtnStyle = btnStyle
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const outerWrap: React.CSSProperties = {
@@ -334,31 +352,10 @@ export default function DesignInspector({ report, lang }: Props) {
         {/* ══════════════ 组件 COMPONENTS ══════════════ */}
         {zone === 'measured' && measuredTab === 'components' && (
           <>
-            {/* Inject toggle header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <p style={{ margin: 0, fontSize: '13px', color: '#8E8E93' }}>
-                {lang === 'zh'
-                  ? (isInjected ? `已注入 ${sourceName} 设计语言` : '点击「注入」将提取的 token 应用到通用组件')
-                  : (isInjected ? `${sourceName} style applied` : 'Click "Inject" to apply extracted tokens to generic components')}
-              </p>
-              <button
-                onClick={() => setIsInjected(v => !v)}
-                style={{
-                  flexShrink: 0, marginLeft: '16px',
-                  padding: '7px 18px',
-                  background: isInjected ? '#F5F5F7' : primaryHex,
-                  color: isInjected ? '#1D1D1F' : primaryFgHex,
-                  borderRadius: '100px',
-                  border: isInjected ? '1px solid #E5E5EA' : 'none',
-                  fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                  transition: 'all 0.2s ease', whiteSpace: 'nowrap' as const,
-                }}
-              >
-                {isInjected
-                  ? (lang === 'zh' ? '重置' : 'Reset')
-                  : (lang === 'zh' ? `注入 ${sourceName} 风格` : `Apply ${sourceName} Style`)}
-              </button>
-            </div>
+            {/* Source label */}
+            <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#8E8E93' }}>
+              {lang === 'zh' ? `来自 ${sourceName} 的提取样式` : `Extracted from ${sourceName}`}
+            </p>
 
             <div style={subTabBar}>
               {(['button','input','card','badge'] as ComponentTab[]).map(k => (
@@ -371,120 +368,128 @@ export default function DesignInspector({ report, lang }: Props) {
               ))}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', alignItems: 'start' }}>
-              {/* Left: component visual */}
-              <div>
-                {compTab === 'button' && (
-                  <ComponentPreview bg={effBg}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <button style={effBtnStyle}>
-                        {isInjected && isValidButtonText(snap?.text) ? snap!.text : (lang === 'zh' ? '主要按钮' : 'Primary Button')}
+            {/* ── Full-width component preview ── */}
+            <div>
+              {compTab === 'button' && (
+                <ComponentPreview bg={effBg}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', width: '100%' }}>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {/* Primary button — hover/active states from stateTokens */}
+                      <button
+                        style={{
+                          ...effBtnStyle,
+                          transition: 'all 0.15s ease',
+                          ...(btnHovered && !btnActive ? getStateStyle('button', 'hover') : {}),
+                          ...(btnActive ? { ...getStateStyle('button', 'active'), transform: 'scale(0.98)' } : {}),
+                        }}
+                        onMouseEnter={() => setBtnHovered(true)}
+                        onMouseLeave={() => { setBtnHovered(false); setBtnActive(false) }}
+                        onMouseDown={() => setBtnActive(true)}
+                        onMouseUp={() => setBtnActive(false)}
+                      >
+                        {isValidButtonText(snap?.text) ? snap!.text : (lang === 'zh' ? '主要按钮' : 'Primary Button')}
                       </button>
+                      {/* Secondary button */}
                       <button style={{
-                        background: 'transparent',
-                        color: effPrimary,
-                        border: `1px solid ${effPrimary}`,
-                        cursor: 'pointer',
+                        background: 'transparent', color: effPrimary,
+                        border: `1px solid ${effPrimary}`, cursor: 'pointer',
                         borderRadius: effRadius('button'),
-                        padding: isInjected && snap?.paddingV && snap?.paddingH ? `${snap.paddingV} ${snap.paddingH}` : '10px 20px',
-                        fontSize: isInjected && snap?.fontSize ? snap.fontSize : '14px',
-                        fontFamily: effFont,
-                        whiteSpace: 'nowrap',
+                        padding: snap?.paddingV && snap?.paddingH ? `${snap.paddingV} ${snap.paddingH}` : '10px 20px',
+                        fontSize: snap?.fontSize || '14px',
+                        fontFamily: effFont, whiteSpace: 'nowrap' as const,
+                        transition: 'all 0.15s ease',
                       }}>
                         {lang === 'zh' ? '次要按钮' : 'Secondary'}
                       </button>
                     </div>
-                  </ComponentPreview>
-                )}
-                {compTab === 'input' && (
-                  <ComponentPreview bg={effBg}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
-                      <input
-                        readOnly defaultValue=""
-                        placeholder={lang === 'zh' ? '输入框示例' : 'Input placeholder'}
-                        style={{
-                          background: effSurface, color: effText,
-                          border: effBorder('input'),
-                          borderRadius: effRadius('input'),
-                          padding: '10px 14px', fontSize: '14px',
-                          fontFamily: effFont, outline: 'none', width: '100%', boxSizing: 'border-box',
-                        }}
-                      />
-                      <input
-                        readOnly defaultValue=""
-                        placeholder={lang === 'zh' ? '禁用状态' : 'Disabled state'}
-                        disabled
-                        style={{
-                          background: effSurface, color: effText,
-                          border: effBorder('input'),
-                          borderRadius: effRadius('input'),
-                          padding: '10px 14px', fontSize: '14px',
-                          fontFamily: effFont, outline: 'none',
-                          width: '100%', boxSizing: 'border-box', opacity: 0.4,
-                        }}
-                      />
+                    {getStates('button').length > 0 && (
+                      <p style={{ margin: 0, fontSize: '11px', color: '#AEAEB2' }}>
+                        {lang === 'zh' ? '↑ 悬停 / 点击感受真实交互效果' : '↑ Hover & click to feel real interaction states'}
+                      </p>
+                    )}
+                  </div>
+                </ComponentPreview>
+              )}
+              {compTab === 'input' && (
+                <ComponentPreview bg={effBg}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+                    <input readOnly defaultValue="" placeholder={lang === 'zh' ? '输入框示例' : 'Input placeholder'} style={{
+                      background: effSurface, color: effText, border: effBorder('input'),
+                      borderRadius: effRadius('input'), padding: '10px 14px', fontSize: '14px',
+                      fontFamily: effFont, outline: 'none', width: '100%', boxSizing: 'border-box' as const,
+                    }} />
+                    <input readOnly defaultValue="" placeholder={lang === 'zh' ? '禁用状态' : 'Disabled state'} disabled style={{
+                      background: effSurface, color: effText, border: effBorder('input'),
+                      borderRadius: effRadius('input'), padding: '10px 14px', fontSize: '14px',
+                      fontFamily: effFont, outline: 'none', width: '100%', boxSizing: 'border-box' as const, opacity: 0.4,
+                    }} />
+                  </div>
+                </ComponentPreview>
+              )}
+              {compTab === 'card' && (
+                <ComponentPreview bg={effBg}>
+                  <div style={{
+                    background: effSurface, color: effText, border: effBorder('card'),
+                    borderRadius: effRadius('card'), boxShadow: effShadow('card'),
+                    padding: '16px 20px', width: '100%', boxSizing: 'border-box' as const,
+                  }}>
+                    <div style={{ fontSize: '15px', fontWeight: typography.headingWeight || 600, fontFamily: effFont, marginBottom: '6px' }}>
+                      {lang === 'zh' ? '卡片标题' : 'Card Title'}
                     </div>
-                  </ComponentPreview>
-                )}
-                {compTab === 'card' && (
-                  <ComponentPreview bg={effBg}>
-                    <div style={{
-                      background: effSurface, color: effText,
-                      border: effBorder('card'),
-                      borderRadius: effRadius('card'),
-                      boxShadow: effShadow('card'),
-                      padding: '16px 20px', width: '100%', boxSizing: 'border-box',
-                    }}>
-                      <div style={{ fontSize: '15px', fontWeight: typography.headingWeight || 600, fontFamily: effFont, marginBottom: '6px' }}>
-                        {lang === 'zh' ? '卡片标题' : 'Card Title'}
-                      </div>
-                      <div style={{ fontSize: '13px', color: effText, opacity: 0.6, fontFamily: effFont }}>
-                        {lang === 'zh' ? '说明文字内容' : 'Description text content'}
-                      </div>
+                    <div style={{ fontSize: '13px', color: effText, opacity: 0.6, fontFamily: effFont }}>
+                      {lang === 'zh' ? '说明文字内容' : 'Description text content'}
                     </div>
-                  </ComponentPreview>
-                )}
-                {compTab === 'badge' && (
-                  // Use a neutral mid-grey preview bg so both dark and light badges are visible
-                  <ComponentPreview bg={isLight(bgHex) ? '#E8E8ED' : '#3A3A3C'}>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                      {[
-                        { label: lang === 'zh' ? '标签' : 'Tag', bg: effPrimary, color: effPrimaryFg },
-                        { label: lang === 'zh' ? '次要' : 'Secondary', bg: effSurface, color: effText },
-                        { label: lang === 'zh' ? '边框' : 'Outline', bg: 'transparent', color: effPrimary, border: `1px solid ${effPrimary}` },
-                      ].map((b, i) => (
-                        <span key={i} style={{
-                          background: b.bg, color: b.color,
-                          border: b.border || 'none',
-                          borderRadius: '999px',
-                          padding: '4px 10px', fontSize: '12px', fontWeight: 500,
-                          fontFamily: effFont,
-                        }}>
-                          {b.label}
-                        </span>
-                      ))}
-                    </div>
-                  </ComponentPreview>
-                )}
-              </div>
+                  </div>
+                </ComponentPreview>
+              )}
+              {compTab === 'badge' && (
+                <ComponentPreview bg={isLight(bgHex) ? '#E8E8ED' : '#3A3A3C'}>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {[
+                      { label: lang === 'zh' ? '标签' : 'Tag', bg: effPrimary, color: effPrimaryFg },
+                      { label: lang === 'zh' ? '次要' : 'Secondary', bg: effSurface, color: effText },
+                      { label: lang === 'zh' ? '边框' : 'Outline', bg: 'transparent', color: effPrimary, border: `1px solid ${effPrimary}` },
+                    ].map((b, i) => (
+                      <span key={i} style={{
+                        background: b.bg, color: b.color, border: b.border || 'none',
+                        borderRadius: '999px', padding: '4px 10px', fontSize: '12px',
+                        fontWeight: 500, fontFamily: effFont,
+                      }}>{b.label}</span>
+                    ))}
+                  </div>
+                </ComponentPreview>
+              )}
+            </div>
 
-              {/* Right: token list */}
-              <div>
+            {/* ── Disclosure: CSS values ── */}
+            <button
+              onClick={() => setShowTokens(v => !v)}
+              style={{
+                marginTop: '10px', background: 'none', border: 'none',
+                color: '#8E8E93', cursor: 'pointer', fontSize: '12px',
+                padding: '4px 0', display: 'flex', alignItems: 'center', gap: '4px',
+              }}
+            >
+              {showTokens
+                ? (lang === 'zh' ? '收起数值 ▲' : 'Hide values ▲')
+                : (lang === 'zh' ? '查看数值 ▼' : 'Show values ▼')}
+            </button>
+
+            {showTokens && (
+              <div style={{ marginTop: '8px' }}>
                 {compTab === 'button' && <>
                   <TokenRow label="background"     value={snap?.backgroundColor || primaryHex}              measured={!!snap?.backgroundColor} />
                   <TokenRow label="color"          value={snap?.color || primaryFgHex}                      measured={!!snap?.color} />
                   <TokenRow label="border-radius"  value={snap?.borderRadius || bestRadius('button').value} measured={!!(snap?.borderRadius) || bestRadius('button').measured} />
-                  <TokenRow label="padding"        value={snap?.paddingV && snap?.paddingH ? `${snap.paddingV} ${snap.paddingH}` : '10px 20px'} measured={!!(snap?.paddingV)} />
-                  <TokenRow label="font-size"      value={snap?.fontSize || '14px'}                        measured={!!snap?.fontSize} />
+                  {snap?.paddingV && snap?.paddingH && <TokenRow label="padding" value={`${snap.paddingV} ${snap.paddingH}`} measured={true} />}
+                  {snap?.fontSize && <TokenRow label="font-size" value={snap.fontSize} measured={true} />}
                   <TokenRow label="font-weight"    value={snap?.fontWeight || String(typography.headingWeight || 600)} measured={!!snap?.fontWeight} />
                   <TokenRow label="font-family"    value={snap?.fontFamily || typography.fontFamily}       measured={!!snap?.fontFamily} />
                   <TokenRow label="box-shadow"     value={snap?.boxShadow || bestShadow('button').value}   measured={!!(snap?.boxShadow) || (bestShadow('button').measured && sourceIsUrl)} />
                   {snap?.letterSpacing && <TokenRow label="letter-spacing" value={snap.letterSpacing} measured={true} />}
-                  {snap?.width && snap?.height && (
-                    <TokenRow label="size" value={`${snap.width} × ${snap.height}`} measured={true} />
-                  )}
+                  {snap?.width && snap?.height && <TokenRow label="size" value={`${snap.width} × ${snap.height}`} measured={true} />}
                   {getStates('button').length > 0 && (
-                    <div style={{ marginTop: '16px' }}>
+                    <div style={{ marginTop: '12px' }}>
                       <p style={{ ...sectionLabel, marginBottom: '8px' }}>{lang === 'zh' ? '交互状态' : 'States'}</p>
                       {getStates('button').map((s, i) => (
                         <StateRow key={i} state={s.state} prop={s.property} value={s.value} />
@@ -499,7 +504,7 @@ export default function DesignInspector({ report, lang }: Props) {
                   <TokenRow label="color"         value={textHex}                               measured={true} />
                   <TokenRow label="font-family"   value={typography.fontFamily}                 measured={true} />
                   {getStates('input').length > 0 && (
-                    <div style={{ marginTop: '16px' }}>
+                    <div style={{ marginTop: '12px' }}>
                       <p style={{ ...sectionLabel, marginBottom: '8px' }}>{lang === 'zh' ? '交互状态' : 'States'}</p>
                       {getStates('input').map((s, i) => (
                         <StateRow key={i} state={s.state} prop={s.property} value={s.value} />
@@ -518,11 +523,9 @@ export default function DesignInspector({ report, lang }: Props) {
                   <TokenRow label="border-radius" value="999px (pill)"                          measured={false} />
                   <TokenRow label="background"    value={primaryHex}                            measured={true} />
                   <TokenRow label="color"         value={primaryFgHex}                          measured={true} />
-                  <TokenRow label="font-size"     value="12px"                                  measured={false} />
-                  <TokenRow label="padding"       value="4px 10px"                              measured={false} />
                 </>}
               </div>
-            </div>
+            )}
           </>
         )}
 
@@ -543,46 +546,31 @@ export default function DesignInspector({ report, lang }: Props) {
                   )}
                 </div>
                 {graded.radius.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {graded.radius.map((t, i) => (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: '12px',
-                        padding: '10px 12px', borderRadius: '10px',
-                        background: t.grade === 'A' ? '#F5F5F7' : '#FAFAFA',
-                        border: `1px solid ${t.grade === 'A' ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.04)'}`,
-                      }}>
-                        <div style={{ width: '36px', height: '36px', background: '#1D1D1F', borderRadius: t.value, flexShrink: 0 }} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <code style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', display: 'block' }}>{t.value}</code>
-                          <span style={{ fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                            <span style={{ ...dot(t.grade !== 'C'), background: sourceDotColor(t.meta) }} />
-                            {sourceLabel(t.meta) || (t.grade !== 'C' ? (lang === 'zh' ? '测量' : 'measured') : (lang === 'zh' ? '推断' : 'inferred'))}
-                            {' · '}{t.sampleCount}×
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {graded.radius.map((t, i) => {
+                      const isGreen = sourceDotColor(t.meta) === '#34C759'
+                      return (
+                        <div key={i} style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '6px 4px', borderBottom: '1px solid #F3F3F3',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '20px', height: '20px', background: '#1D1D1F', borderRadius: t.value, flexShrink: 0 }} />
+                            <code style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#1D1D1F' }}>{t.value}</code>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {t.componentKinds?.length > 0 && (
-                              <span style={{ color: '#C7C7CC' }}> · {t.componentKinds.slice(0, 2).join(', ')}</span>
+                              <span style={{ fontSize: '11px', color: '#8E8E93' }}>{t.componentKinds.slice(0, 2).join(', ')}</span>
                             )}
-                          </span>
+                            <span style={{
+                              fontSize: '11px', fontWeight: 500, padding: '2px 6px', borderRadius: '4px',
+                              color: isGreen ? '#00A650' : '#8E8E93',
+                              background: isGreen ? '#E6F6ED' : '#F5F5F7',
+                            }}>{t.sampleCount}×</span>
+                          </div>
                         </div>
-                        {t.grade === 'A' && (
-                          <span style={{ fontSize: '10px', color: '#34C759', fontWeight: 600, flexShrink: 0 }}>A</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : radiusFallbackValues.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {radiusFallbackValues.map((v, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', background: '#FAFAFA', border: '1px solid rgba(0,0,0,0.04)' }}>
-                        <div style={{ width: '36px', height: '36px', background: '#AEAEB2', borderRadius: v, flexShrink: 0 }} />
-                        <div>
-                          <code style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#AEAEB2', display: 'block' }}>{v}</code>
-                          <span style={{ fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                            <span style={dot(false)} />
-                            {lang === 'zh' ? 'AI 推断' : 'AI inferred'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : <EmptyTab lang={lang} />}
               </div>
@@ -598,50 +586,52 @@ export default function DesignInspector({ report, lang }: Props) {
                   )}
                 </div>
                 {graded.shadow.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {graded.shadow.map((t, i) => (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: '12px',
-                        padding: '10px 12px', borderRadius: '10px',
-                        background: t.grade === 'A' ? '#F5F5F7' : '#FAFAFA',
-                        border: `1px solid ${t.grade === 'A' ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.04)'}`,
-                      }}>
-                        <div style={{
-                          width: '48px', height: '32px', background: '#FFFFFF', borderRadius: '6px',
-                          boxShadow: t.value, flexShrink: 0, border: '0.5px solid rgba(0,0,0,0.06)',
-                        }} />
-                        <div style={{ overflow: 'hidden', flex: 1 }}>
-                          <code style={{ fontSize: '11px', color: '#3C3C43', fontFamily: 'var(--font-mono)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {t.value}
-                          </code>
-                          <span style={{ fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                            <span style={{ ...dot(t.grade !== 'C'), background: sourceDotColor(t.meta) }} />
-                            {sourceLabel(t.meta) || (t.grade !== 'C' ? (lang === 'zh' ? '测量' : 'measured') : (lang === 'zh' ? '推断' : 'inferred'))}
-                            {' · '}{t.sampleCount}×
-                            {t.componentKinds?.length > 0 && (
-                              <span style={{ color: '#C7C7CC' }}> · {t.componentKinds.slice(0, 2).join(', ')}</span>
-                            )}
-                          </span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {graded.shadow.map((t, i) => {
+                      const isGreen = sourceDotColor(t.meta) === '#34C759'
+                      const expanded = expandedShadows.has(i)
+                      return (
+                        <div key={i} style={{ borderBottom: '1px solid #F3F3F3' }}>
+                          {/* Header row — always visible, click to expand */}
+                          <div
+                            onClick={() => toggleShadow(i)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer' }}
+                          >
+                            <div style={{
+                              width: '24px', height: '24px', borderRadius: '4px', flexShrink: 0,
+                              background: '#FFFFFF', border: '1px solid #EAEAEA', boxShadow: t.value,
+                            }} />
+                            <code style={{
+                              flex: 1, fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#3C3C43',
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>{t.value}</code>
+                            <span style={{
+                              fontSize: '11px', fontWeight: 500, padding: '2px 6px', borderRadius: '4px', flexShrink: 0,
+                              color: isGreen ? '#00A650' : '#8E8E93',
+                              background: isGreen ? '#E6F6ED' : '#F5F5F7',
+                            }}>{t.sampleCount}×</span>
+                            <span style={{ fontSize: '10px', color: '#AEAEB2', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
+                          </div>
+                          {/* Expanded: full value in copyable pre block */}
+                          {expanded && (
+                            <div style={{ padding: '8px', margin: '0 4px 6px', background: '#F9F9F9', borderRadius: '6px' }}>
+                              <pre style={{
+                                margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                                fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#555', lineHeight: 1.5,
+                              }}>{`box-shadow: ${t.value};`}</pre>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(`box-shadow: ${t.value};`) }}
+                                style={{
+                                  marginTop: '6px', padding: '3px 8px', fontSize: '11px',
+                                  background: 'transparent', border: '1px solid #E5E5EA',
+                                  borderRadius: '4px', cursor: 'pointer', color: '#8E8E93',
+                                }}
+                              >{lang === 'zh' ? '复制' : 'Copy'}</button>
+                            </div>
+                          )}
                         </div>
-                        {t.grade === 'A' && (
-                          <span style={{ fontSize: '10px', color: '#34C759', fontWeight: 600, flexShrink: 0 }}>A</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : shadowFallbackValues.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {shadowFallbackValues.map((v, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', background: '#FAFAFA', border: '1px solid rgba(0,0,0,0.04)' }}>
-                        <div style={{ width: '48px', height: '32px', background: '#FFFFFF', borderRadius: '6px', boxShadow: v, flexShrink: 0, border: '0.5px solid rgba(0,0,0,0.06)' }} />
-                        <div style={{ overflow: 'hidden', flex: 1 }}>
-                          <code style={{ fontSize: '11px', color: '#AEAEB2', fontFamily: 'var(--font-mono)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</code>
-                          <span style={{ fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                            <span style={dot(false)} />{lang === 'zh' ? 'AI 推断' : 'AI inferred'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : <EmptyTab lang={lang} />}
               </div>
@@ -903,19 +893,41 @@ export default function DesignInspector({ report, lang }: Props) {
             <div>
               <p style={sectionLabel}>{lang === 'zh' ? '状态变化' : 'State Changes'}</p>
               {hasStateData ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {Object.entries(stateTokens as Record<string, Array<{ state: string; property: string; value: string }>>)
                     .map(([component, values]) => {
                       const nonDefault = values.filter(v => v.state !== 'default')
                       if (!nonDefault.length) return null
+                      // Group by pseudo-class state
+                      const byState = nonDefault.reduce((acc, item) => {
+                        if (!acc[item.state]) acc[item.state] = []
+                        acc[item.state].push(item)
+                        return acc
+                      }, {} as Record<string, typeof nonDefault>)
                       return (
                         <div key={component}>
-                          <p style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600, color: '#3C3C43', textTransform: 'capitalize' }}>{component}</p>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {nonDefault.map((s, i) => (
-                              <StateRow key={i} state={s.state} prop={s.property} value={s.value} />
-                            ))}
-                          </div>
+                          <p style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', textTransform: 'capitalize', borderBottom: '1px solid #1D1D1F', paddingBottom: '4px' }}>{component}</p>
+                          {Object.entries(byState).map(([state, props]) => (
+                            <div key={state} style={{ marginBottom: '10px' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 600, color: '#8E8E93', marginBottom: '4px', paddingLeft: '8px', borderLeft: '2px solid #E5E5EA' }}>:{state}</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '12px' }}>
+                                {props.map((s, i) => {
+                                  const swatch = extractColorFromCssValue(s.value)
+                                  return (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', padding: '2px 0' }}>
+                                      <span style={{ color: '#8E8E93', fontFamily: 'var(--font-mono)', minWidth: '120px', flexShrink: 0 }}>{s.property}</span>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        {swatch && (
+                                          <span style={{ display: 'inline-block', width: '11px', height: '11px', borderRadius: '2px', border: '1px solid rgba(0,0,0,0.12)', background: swatch, flexShrink: 0 }} />
+                                        )}
+                                        <code style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#1D1D1F', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.value}</code>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )
                     })}
@@ -1333,6 +1345,12 @@ function inferRadius(d: string): string {
   if (s.includes('medium')) return '8px'
   if (s.includes('small')) return '4px'
   return '6px'
+}
+
+/** Extract a color value (rgb/rgba/hex) from a CSS value string, for swatch rendering */
+function extractColorFromCssValue(v: string): string | null {
+  const m = v.match(/rgba?\([^)]+\)|#[0-9a-fA-F]{3,8}\b/)
+  return m ? m[0] : null
 }
 
 /** Filter out useless AI non-answers like "None observed in provided data." */
