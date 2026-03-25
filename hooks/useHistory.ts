@@ -263,6 +263,7 @@ function getHistoryDeleteIdsForScope(scope: string): string[] {
     .filter(item => item.scope === scope)
     .map(item => item.id)
 }
+
 interface UseHistoryParams {
   user: User | null
   supabase: BrowserSupabaseClient
@@ -801,7 +802,9 @@ export function useHistory({
           created_at: undoItem.record.created_at,
         }))
       }
+
       clearHistoryDeleteTombstone(undoItem.id, deleteScope)
+
       setExtractions(prev => {
         const exists = prev.find(e => e.id === undoItem.id)
         if (exists) return prev
