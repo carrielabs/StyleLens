@@ -608,8 +608,10 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
                         style={{ display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', padding: '8px', borderRadius: '12px', transition: 'background 0.2s', backgroundColor: isHov ? '#FAFAFA' : 'transparent' }}
                         onMouseEnter={() => {
                           setHoveredWireframe(key)
-                          if (onSectionHover && sec.yStartPct != null && sec.yEndPct != null) {
-                            onSectionHover({ yStart: sec.yStartPct, yEnd: sec.yEndPct })
+                          const yStart = sec.screenStartPct ?? sec.yStartPct
+                          const yEnd = sec.screenEndPct ?? sec.yEndPct
+                          if (onSectionHover && yStart != null && yEnd != null) {
+                            onSectionHover({ yStart, yEnd })
                           }
                         }}
                         onMouseLeave={() => {
@@ -617,7 +619,7 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
                           onSectionHover?.(null)
                         }}
                       >
-                        <WireframePreview purpose={sec.purpose} layout={sec.layout} isHovered={isHov} />
+                        <WireframePreview purpose={sec.purpose} layout={sec.layout} isHovered={isHov} hasCTA={sec.hasCTA} hasImage={sec.hasImage} />
                         <div style={{ paddingLeft: '4px' }}>
                           <div style={{ fontSize: '13px', fontWeight: 600, color: isHov ? '#3B82F6' : '#111', transition: 'color 0.2s' }}>
                             {lang === 'zh' ? purposeLabel(sec.purpose) : (sec.heading || sec.purpose)}
@@ -1178,57 +1180,185 @@ function purposeLabel(purpose: string): string {
   return map[purpose] || purpose
 }
 
-function WireframePreview({ purpose, layout, isHovered }: {
-  purpose: string; layout: string; isHovered: boolean
+function WireframePreview({ purpose, layout, isHovered, hasCTA, hasImage }: {
+  purpose: string
+  layout: string
+  isHovered: boolean
+  hasCTA?: boolean
+  hasImage?: boolean
 }) {
-  const containerStyle: React.CSSProperties = {
-    width: '100%', height: '100px', backgroundColor: isHovered ? '#EFF6FF' : '#F9F9FA',
-    borderRadius: '8px', border: isHovered ? '1px solid rgba(59,130,246,0.6)' : '1px solid #EAEAEA',
-    display: 'flex', boxSizing: 'border-box', overflow: 'hidden',
-    transition: 'all 0.2s ease', boxShadow: isHovered ? '0 4px 12px rgba(59,130,246,0.12)' : 'none',
+  const accent    = isHovered ? '#3B82F6' : '#C8C8CC'
+  const secondary = isHovered ? 'rgba(59,130,246,0.22)' : '#E2E2E7'
+  const block     = isHovered ? 'rgba(59,130,246,0.10)' : '#EBEBF0'
+  const box: React.CSSProperties = {
+    width: '100%', height: '96px',
+    backgroundColor: isHovered ? '#EFF6FF' : '#F7F7F8',
+    borderRadius: '8px',
+    border: isHovered ? '1.5px solid rgba(59,130,246,0.55)' : '1px solid #E2E2E7',
+    overflow: 'hidden', boxSizing: 'border-box',
+    transition: 'all 0.2s ease',
+    boxShadow: isHovered ? '0 4px 12px rgba(59,130,246,0.10)' : 'none',
   }
-  const accent = isHovered ? '#3B82F6' : '#D1D1D1'
-  const secondary = isHovered ? 'rgba(59,130,246,0.2)' : '#E5E5E5'
-  const block = isHovered ? 'rgba(59,130,246,0.1)' : '#EAEAEA'
 
-  if (purpose === 'hero' || layout === 'full-width') {
+  // ── layout is the primary driver ──────────────────────────────────────────
+
+  if (layout === '2-column') {
     return (
-      <div style={{ ...containerStyle, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '16px' }}>
-        <div style={{ width: '60%', height: '14px', backgroundColor: accent, borderRadius: '3px', transition: 'all 0.2s' }} />
-        <div style={{ width: '40%', height: '8px', backgroundColor: secondary, borderRadius: '3px', transition: 'all 0.2s' }} />
-        <div style={{ width: '64px', height: '20px', backgroundColor: isHovered ? '#3B82F6' : '#A1A1AA', borderRadius: '3px', marginTop: '4px', transition: 'all 0.2s' }} />
-      </div>
-    )
-  }
-  if (layout === '2-column' || layout === 'asymmetric') {
-    return (
-      <div style={{ ...containerStyle, padding: '14px', gap: '12px', alignItems: 'center' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ width: '80%', height: '12px', backgroundColor: accent, borderRadius: '3px' }} />
-          <div style={{ width: '100%', height: '7px', backgroundColor: secondary, borderRadius: '3px' }} />
-          <div style={{ width: '90%', height: '7px', backgroundColor: secondary, borderRadius: '3px' }} />
+      <div style={{ ...box, display: 'flex', padding: '12px', gap: '10px', alignItems: 'stretch' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '5px' }}>
+          <div style={{ width: '75%', height: '10px', backgroundColor: accent, borderRadius: '2px' }} />
+          <div style={{ width: '100%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+          <div style={{ width: '85%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+          {hasCTA && <div style={{ width: '48px', height: '14px', backgroundColor: accent, borderRadius: '3px', marginTop: '2px', opacity: 0.85 }} />}
         </div>
-        <div style={{ flex: 1, height: '100%', backgroundColor: block, borderRadius: '5px' }} />
+        <div style={{ flex: 1, backgroundColor: block, borderRadius: '5px' }} />
       </div>
     )
   }
-  if (layout === '3-column-grid' || layout === '4-column-grid' || layout === 'grid') {
-    const cols = layout === '4-column-grid' ? 4 : 3
+
+  if (layout === 'asymmetric') {
+    // 60 / 40 split — visually distinct from 2-column
     return (
-      <div style={{ ...containerStyle, padding: '12px', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '6px' }}>
-        {Array.from({ length: cols }).map((_, i) => (
+      <div style={{ ...box, display: 'flex', padding: '12px', gap: '10px', alignItems: 'stretch' }}>
+        <div style={{ flex: 3, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '5px' }}>
+          <div style={{ width: '70%', height: '10px', backgroundColor: accent, borderRadius: '2px' }} />
+          <div style={{ width: '100%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+          <div style={{ width: '80%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+          <div style={{ width: '55%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+        </div>
+        <div style={{ flex: 2, backgroundColor: block, borderRadius: '5px' }} />
+      </div>
+    )
+  }
+
+  if (layout === '3-column-grid') {
+    return (
+      <div style={{ ...box, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', padding: '10px' }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{ backgroundColor: block, borderRadius: '5px', display: 'flex', flexDirection: 'column', padding: '6px', gap: '4px' }}>
+            <div style={{ width: '14px', height: '14px', backgroundColor: secondary, borderRadius: '3px' }} />
+            <div style={{ width: '80%', height: '5px', backgroundColor: accent, borderRadius: '2px', marginTop: '2px' }} />
+            <div style={{ width: '100%', height: '4px', backgroundColor: secondary, borderRadius: '2px' }} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (layout === '4-column-grid') {
+    return (
+      <div style={{ ...box, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px', padding: '10px' }}>
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} style={{ backgroundColor: block, borderRadius: '4px', display: 'flex', flexDirection: 'column', padding: '5px', gap: '3px' }}>
+            <div style={{ width: '12px', height: '12px', backgroundColor: secondary, borderRadius: '2px' }} />
+            <div style={{ width: '90%', height: '4px', backgroundColor: accent, borderRadius: '2px', marginTop: '2px' }} />
+            <div style={{ width: '100%', height: '3px', backgroundColor: secondary, borderRadius: '2px' }} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (layout === 'grid') {
+    return (
+      <div style={{ ...box, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '8px', padding: '10px' }}>
+        {[0, 1, 2, 3].map(i => (
           <div key={i} style={{ backgroundColor: block, borderRadius: '5px' }} />
         ))}
       </div>
     )
   }
-  // Default: footer / section / other
-  return (
-    <div style={{ ...containerStyle, flexDirection: 'column', gap: '6px', padding: '14px' }}>
-      <div style={{ width: '40%', height: '10px', backgroundColor: accent, borderRadius: '3px' }} />
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginTop: '4px' }}>
-        {[0, 1, 2].map(i => <div key={i} style={{ backgroundColor: block, borderRadius: '4px' }} />)}
+
+  // ── full-width: purpose as secondary discriminator ────────────────────────
+
+  if (purpose === 'footer') {
+    return (
+      <div style={{ ...box, display: 'flex', flexDirection: 'column', padding: '10px 12px', gap: '6px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', flex: 1 }}>
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ width: '60%', height: '6px', backgroundColor: accent, borderRadius: '2px' }} />
+              <div style={{ width: '100%', height: '4px', backgroundColor: secondary, borderRadius: '2px' }} />
+              <div style={{ width: '80%', height: '4px', backgroundColor: secondary, borderRadius: '2px' }} />
+              <div style={{ width: '90%', height: '4px', backgroundColor: secondary, borderRadius: '2px' }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ height: '1px', backgroundColor: secondary }} />
       </div>
+    )
+  }
+
+  if (purpose === 'pricing') {
+    return (
+      <div style={{ ...box, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px', gap: '7px' }}>
+        <div style={{ width: '35%', height: '8px', backgroundColor: accent, borderRadius: '2px' }} />
+        <div style={{ display: 'flex', gap: '6px', flex: 1, width: '100%' }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              flex: 1, backgroundColor: i === 1 ? (isHovered ? 'rgba(59,130,246,0.18)' : 'rgba(0,0,0,0.06)') : block,
+              borderRadius: '5px',
+              border: i === 1 ? `1.5px solid ${accent}` : '1px solid transparent',
+              display: 'flex', flexDirection: 'column', gap: '3px', padding: '5px',
+            }}>
+              <div style={{ width: '50%', height: '5px', backgroundColor: i === 1 ? accent : secondary, borderRadius: '2px' }} />
+              <div style={{ width: '65%', height: '8px', backgroundColor: i === 1 ? accent : secondary, borderRadius: '2px', opacity: 0.6 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (purpose === 'testimonials') {
+    return (
+      <div style={{ ...box, display: 'flex', flexDirection: 'column', padding: '8px 14px', gap: '5px', justifyContent: 'center' }}>
+        <div style={{ fontSize: '22px', lineHeight: 1, color: accent, fontFamily: 'Georgia, serif', opacity: 0.55 }}>"</div>
+        <div style={{ width: '90%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+        <div style={{ width: '72%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+        <div style={{ display: 'flex', gap: '5px', marginTop: '5px', alignItems: 'center' }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{ width: '14px', height: '14px', borderRadius: '50%', backgroundColor: i === 0 ? accent : block, border: `1px solid ${secondary}`, opacity: i === 0 ? 0.7 : 1 }} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (purpose === 'cta') {
+    return (
+      <div style={{ ...box, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px', gap: '7px' }}>
+        <div style={{ width: '55%', height: '11px', backgroundColor: accent, borderRadius: '2px' }} />
+        <div style={{ width: '38%', height: '7px', backgroundColor: secondary, borderRadius: '2px' }} />
+        <div style={{ width: '80px', height: '20px', backgroundColor: accent, borderRadius: '4px', marginTop: '3px', opacity: 0.85 }} />
+      </div>
+    )
+  }
+
+  if (purpose === 'features') {
+    return (
+      <div style={{ ...box, display: 'flex', flexDirection: 'column', padding: '10px 14px', gap: '5px', justifyContent: 'center' }}>
+        <div style={{ width: '40%', height: '9px', backgroundColor: accent, borderRadius: '2px' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '3px' }}>
+          {[1, 0.9, 0.75].map((w, i) => (
+            <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: accent, flexShrink: 0 }} />
+              <div style={{ width: `${w * 100}%`, height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // hero / default full-width
+  return (
+    <div style={{ ...box, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px', gap: '6px' }}>
+      <div style={{ width: '65%', height: '14px', backgroundColor: accent, borderRadius: '3px' }} />
+      <div style={{ width: '45%', height: '8px', backgroundColor: secondary, borderRadius: '3px' }} />
+      {hasCTA !== false && (
+        <div style={{ width: '64px', height: '18px', backgroundColor: accent, borderRadius: '3px', marginTop: '4px', opacity: 0.8 }} />
+      )}
     </div>
   )
 }
