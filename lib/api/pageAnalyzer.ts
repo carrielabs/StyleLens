@@ -2829,10 +2829,19 @@ async function extractDomSignalsFromPage(
         if (rect.bottom < 0 || rect.top > window.innerHeight * 1.8) return false
         return true
       }
-      const collectDistinctSnapshots = <T extends { backgroundColor?: string; border?: string; borderRadius?: string }>(
+      const collectDistinctSnapshots = <T extends {
+        backgroundColor?: string
+        border?: string
+        borderRadius?: string
+        paddingH?: string
+        paddingV?: string
+        fontSize?: string
+        fontWeight?: string
+      }>(
         elements: HTMLElement[],
         maxCount: number,
-        mapper: (el: HTMLElement, style: CSSStyleDeclaration, rect: DOMRect) => T | undefined
+        mapper: (el: HTMLElement, style: CSSStyleDeclaration, rect: DOMRect) => T | undefined,
+        signatureBuilder?: (mapped: T, el: HTMLElement) => string
       ) => {
         const items: T[] = []
         const seen = new Set<string>()
@@ -2841,7 +2850,17 @@ async function extractDomSignalsFromPage(
           const rect = el.getBoundingClientRect()
           const mapped = mapper(el, style, rect)
           if (!mapped) continue
-          const signature = `${mapped.backgroundColor || ''}|${mapped.border || ''}|${mapped.borderRadius || ''}`
+          const signature = signatureBuilder
+            ? signatureBuilder(mapped, el)
+            : [
+                mapped.backgroundColor || '',
+                mapped.border || '',
+                mapped.borderRadius || '',
+                mapped.paddingH || '',
+                mapped.paddingV || '',
+                mapped.fontSize || '',
+                mapped.fontWeight || '',
+              ].join('|')
           if (seen.has(signature)) continue
           seen.add(signature)
           items.push(mapped)
@@ -2851,12 +2870,54 @@ async function extractDomSignalsFromPage(
       }
 
       let buttonSnapshot: ButtonSnapshot | undefined
+      const getButtonCandidateScore = (el: HTMLElement) => {
+        const s = window.getComputedStyle(el)
+        const text = (el.textContent || el.getAttribute('value') || '').trim().replace(/\s+/g, ' ')
+        const selector = selectorHintFor(el).toLowerCase()
+        const inNav = !!el.closest('nav, header')
+        const href = (el.getAttribute('href') || '').toLowerCase()
+        const hasBorder = !!toBorder(s)
+        const hasSolidFill = !!normalizeColor(s.backgroundColor) && !/rgba?\(\s*0[\s,]+0[\s,]+0(?:[\s,\/]+0)?\s*\)/i.test(s.backgroundColor)
+        const looksLikePrimaryAction = /request|demo|get|free|download|start|sign\s*up|contact\s*sales|try|book/i.test(text)
+          || /demo|free|download|get-started|signup|sign-up|start|contact-sales|request/.test(href)
+        let score = 0
+        if (looksLikePrimaryAction) score += 10
+        if (hasSolidFill) score += 6
+        if (hasBorder) score += 4
+        if (inNav) score += 2
+        if (/primary|cta|button|btn/.test(selector)) score += 4
+        if (/get notion free|request a demo/i.test(text)) score += 8
+        return score
+      }
       const buttonElements = Array.from(document.querySelectorAll<HTMLElement>(
-        'button, [role="button"], a[class*="btn"], a[class*="button"], a[class*="cta"], ' +
-        'a[href*="sign-up"], a[href*="signup"], a[href*="get-started"], a[href*="pricing"], ' +
-        'a[href*="free"], a[href*="download"], a[href*="start"], nav a, header a'
+        'button, input[type="button"], input[type="submit"], [role="button"], ' +
+        'a[class*="btn"], a[class*="button"], a[class*="cta"], ' +
+        'a[href*="sign-up"], a[href*="signup"], a[href*="get-started"], a[href*="free"], a[href*="download"], a[href*="start"]'
       ))
         .filter(el => isVisibleSnapshotCandidate(el, 60, 24))
+        .filter(el => {
+          const s = window.getComputedStyle(el)
+          const text = (el.textContent || el.getAttribute('value') || '').trim().replace(/\s+/g, ' ')
+          if (!text || text.length > 28) return false
+          const tag = el.tagName.toLowerCase()
+          const selector = selectorHintFor(el).toLowerCase()
+          const inNav = !!el.closest('nav, header')
+          const href = (el.getAttribute('href') || '').toLowerCase()
+          const hasButtonSemantics = tag === 'button' || el.getAttribute('role') === 'button' || /btn|button|cta|primary/.test(selector)
+          const hasVisualChrome = !!normalizeColor(s.backgroundColor) || !!toBorder(s) || s.borderRadius !== '0px'
+          const hasSolidFill = !!normalizeColor(s.backgroundColor) && !/rgba?\(\s*0[\s,]+0[\s,]+0(?:[\s,\/]+0)?\s*\)/i.test(s.backgroundColor)
+          const hasPadding = (parseFloat(s.paddingLeft || '0') >= 8 || parseFloat(s.paddingRight || '0') >= 8)
+            && (parseFloat(s.paddingTop || '0') >= 4 || parseFloat(s.paddingBottom || '0') >= 4)
+          const looksLikePrimaryAction = /request|demo|get|free|download|start|sign\s*up|contact\s*sales|try|book/i.test(text)
+            || /demo|free|download|get-started|signup|sign-up|start|contact-sales|request/.test(href)
+          if (!hasPadding) return false
+          if (inNav && !looksLikePrimaryAction && !hasSolidFill) return false
+          if (inNav && /^(product|ai|solutions|resources|enterprise|pricing|login|log in)$/i.test(text)) return false
+          if (!hasSolidFill && !looksLikePrimaryAction && text.split(/\s+/).length <= 2) return false
+          if (inNav && !hasButtonSemantics && !hasVisualChrome) return false
+          return hasButtonSemantics || hasVisualChrome
+        })
+        .sort((a, b) => getButtonCandidateScore(b) - getButtonCandidateScore(a))
         .slice(0, 20)
       const buttonSnapshots = collectDistinctSnapshots<ButtonSnapshot>(buttonElements, 3, (el, s, rect) => {
         const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30)
@@ -2877,13 +2938,28 @@ async function extractDomSignalsFromPage(
           height: `${Math.round(rect.height)}px`,
           text,
         }
+      }, (mapped) => {
+        const filled = mapped.backgroundColor && mapped.backgroundColor !== 'transparent' ? 'filled' : (mapped.border && mapped.border !== 'none' ? 'outlined' : 'ghost')
+        return [
+          filled,
+          mapped.backgroundColor || '',
+          mapped.color || '',
+          mapped.border || '',
+          mapped.borderRadius || '',
+          mapped.paddingH || '',
+          mapped.paddingV || '',
+        ].join('|')
       })
       buttonSnapshot = buttonSnapshots[0]
 
       const inputElements = Array.from(document.querySelectorAll<HTMLElement>(
-        'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, [role="textbox"], [contenteditable="true"], [class*="input"], [class*="search"]'
+        'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]), textarea, select, [role="textbox"]'
       ))
         .filter(el => isVisibleSnapshotCandidate(el, 120, 28))
+        .filter(el => {
+          const tag = el.tagName.toLowerCase()
+          return tag === 'input' || tag === 'textarea' || tag === 'select' || el.getAttribute('role') === 'textbox'
+        })
         .slice(0, 20)
       const inputSnapshots = collectDistinctSnapshots<InputSnapshot>(inputElements, 3, (el, s, rect) => {
         const placeholder =
@@ -2905,14 +2981,29 @@ async function extractDomSignalsFromPage(
       })
 
       const cardElements = Array.from(document.querySelectorAll<HTMLElement>(
-        '[class*="card"], [class*="panel"], [class*="surface"], article, aside, li, [role="article"], [data-card], [data-testid*="card"], main section div'
+        '[class*="card"], [class*="panel"], [class*="surface"], [class*="feature"], [class*="tile"], article, aside, li, [role="article"], [data-card], [data-testid*="card"]'
       ))
         .filter(el => isVisibleSnapshotCandidate(el, 140, 100))
         .filter(el => {
           const s = window.getComputedStyle(el)
-          const hasCardVisual = !!normalizeColor(s.backgroundColor) || !!toBorder(s) || (s.boxShadow && s.boxShadow !== 'none')
+          const visualCount = [
+            !!normalizeColor(s.backgroundColor),
+            !!toBorder(s),
+            !!(s.boxShadow && s.boxShadow !== 'none'),
+            s.borderRadius !== '0px',
+          ].filter(Boolean).length
+          const hasCardVisual = visualCount >= 2
           const textLen = (el.textContent || '').trim().length
-          return hasCardVisual && textLen >= 12
+          const paddingCount = [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft]
+            .filter(v => v && v !== '0px')
+            .length
+          const rect = el.getBoundingClientRect()
+          const notHugeWrapper = rect.height < window.innerHeight * 0.72 && rect.width < window.innerWidth * 0.9 && (rect.width * rect.height) < (window.innerWidth * window.innerHeight * 0.24)
+          const hasHeading = !!el.querySelector('h1, h2, h3, h4, strong, [class*="title"], [class*="heading"]')
+          const childCount = Array.from(el.children).length
+          const inChrome = !!el.closest('nav, header, footer')
+          const structuredContent = hasHeading && childCount >= 1 && childCount <= 18
+          return (hasCardVisual || structuredContent) && paddingCount >= 2 && textLen >= 12 && hasHeading && notHugeWrapper && childCount <= 18 && !inChrome
         })
         .slice(0, 20)
       const cardSnapshots = collectDistinctSnapshots<CardSnapshot>(cardElements, 3, (el, s) => {
@@ -2932,13 +3023,19 @@ async function extractDomSignalsFromPage(
       })
 
       const tagElements = Array.from(document.querySelectorAll<HTMLElement>(
-        '[class*="tag"], [class*="badge"], [class*="chip"], [class*="pill"], [data-badge], [data-chip], span, a, button'
+        '[class*="tag"], [class*="badge"], [class*="chip"], [class*="pill"], [data-badge], [data-chip], [data-tag], [data-testid*="badge"]'
       ))
         .filter(el => isVisibleSnapshotCandidate(el, 28, 18))
         .filter(el => {
           const text = (el.textContent || '').trim().replace(/\s+/g, ' ')
           const rect = el.getBoundingClientRect()
-          return text.length > 0 && text.length <= 24 && rect.width <= 220 && rect.height <= 56
+          const s = window.getComputedStyle(el)
+          const pillLike = parseFloat(s.borderRadius || '0') >= 10 || (s.borderRadius || '').includes('999')
+          const hasChrome = !!normalizeColor(s.backgroundColor) || !!toBorder(s)
+          const hasPadding = (parseFloat(s.paddingLeft || '0') >= 8 || parseFloat(s.paddingRight || '0') >= 8)
+            && (parseFloat(s.paddingTop || '0') >= 2 || parseFloat(s.paddingBottom || '0') >= 2)
+          const inChrome = !!el.closest('nav, header')
+          return text.length > 0 && text.length <= 16 && rect.width <= 120 && rect.height <= 36 && hasChrome && pillLike && hasPadding && !inChrome
         })
         .slice(0, 20)
       const tagSnapshots = collectDistinctSnapshots<TagSnapshot>(tagElements, 3, (el, s) => {
