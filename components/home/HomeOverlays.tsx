@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { Search, X } from 'lucide-react'
 import AuthOverlay from '@/components/auth/AuthOverlay'
@@ -180,19 +181,11 @@ export default function HomeOverlays({
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
-                      <div style={{ width: '40px', height: '42px', borderRadius: '5px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(0,0,0,0.06)' }}>
-                        {item.thumbnail_url ? (
-                          <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{
-                            width: '100%', height: '100%',
-                            background: (() => {
-                              const tc = getTopColors(item.style_data?.colors || [])
-                              return tc.length >= 2 ? `linear-gradient(135deg, ${tc[0]?.hex || '#F0F0F0'}, ${tc[1]?.hex || '#E0E0E0'})` : '#F0F0F0'
-                            })()
-                          }} />
-                        )}
-                      </div>
+                      <SearchThumbnail
+                        thumbnailUrl={item.thumbnail_url}
+                        colors={item.style_data?.colors || []}
+                        sourceType={item.style_data?.sourceType}
+                      />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
                         <span style={{ fontSize: '14px', color: '#1D1D1F', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {item.source_label}
@@ -274,5 +267,58 @@ export default function HomeOverlays({
 
       {isAuthVisible && <AuthOverlay onClose={() => setIsAuthVisible(false)} />}
     </>
+  )
+}
+
+// ── Search modal thumbnail — mirrors HomeSidebar HistoryItem logic exactly ──
+function SearchThumbnail({
+  thumbnailUrl,
+  colors,
+  sourceType,
+}: {
+  thumbnailUrl?: string | null
+  colors: Array<{ hex: string; role?: string }>
+  sourceType?: 'image' | 'url'
+}) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const [imgPosition, setImgPosition] = useState<'top center' | 'center'>(
+    sourceType === 'url' ? 'top center' : 'center'
+  )
+
+  const handleImgLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    if (sourceType === 'image') {
+      const img = e.currentTarget
+      const ratio = img.naturalHeight / img.naturalWidth
+      setImgPosition(ratio > 2.5 ? 'top center' : 'center')
+    }
+  }
+
+  const topColors = getTopColors(colors)
+
+  return (
+    <div style={{
+      width: '40px', height: '42px', borderRadius: '5px',
+      backgroundColor: '#F0F0F0', overflow: 'hidden', flexShrink: 0,
+      border: '1px solid rgba(0,0,0,0.06)',
+    }}>
+      {thumbnailUrl && !imageFailed ? (
+        <img
+          src={thumbnailUrl}
+          alt=""
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: imgPosition }}
+          onLoad={handleImgLoad}
+          onError={() => setImageFailed(true)}
+        />
+      ) : topColors.length > 0 ? (
+        <div style={{
+          width: '100%', height: '100%',
+          background: topColors.length >= 2
+            ? `linear-gradient(135deg, ${topColors[0]?.hex || '#F0F0F0'}, ${topColors[1]?.hex || '#E0E0E0'})`
+            : topColors[0]?.hex || '#F0F0F0'
+        }} />
+      ) : (
+        <div style={{ width: '100%', height: '100%', backgroundColor: '#F0F0F0' }} />
+      )}
+    </div>
   )
 }
