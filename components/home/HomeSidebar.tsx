@@ -122,13 +122,13 @@ export default function HomeSidebar({
       overflow: 'hidden', transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
     }}>
       <div style={{
-        padding: sidebarOpen ? '22px 16px 14px' : '18px 10px 14px',
+        padding: sidebarOpen ? '24px 20px 16px' : '20px 10px 16px',
         display: 'flex', alignItems: 'center',
-        justifyContent: sidebarOpen ? 'space-between' : 'center',
+        justifyContent: 'space-between',
         flexShrink: 0, minWidth: sidebarOpen ? '270px' : '48px'
       }}>
-        {sidebarOpen && (
-          <span
+        {sidebarOpen ? (
+          <div 
             onClick={() => {
               setActiveItemId(null)
               setIsSearchOpen(false)
@@ -140,10 +140,17 @@ export default function HomeSidebar({
               setContextMenuId(null)
               setTimeout(() => urlInputRef.current?.focus(), 50)
             }}
-            style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', letterSpacing: '-0.025em', whiteSpace: 'nowrap', cursor: 'pointer' }}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}
           >
-            StyleLens
-          </span>
+            <img src="/logo-text.png" alt="StyleLens" style={{ height: '28px', width: 'auto', display: 'block' }} />
+          </div>
+        ) : (
+          <div 
+            onClick={() => setSidebarOpen(true)}
+            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center', width: '100%' }}
+          >
+            <img src="/logo-graphic.png" alt="StyleLens" style={{ width: '24px', height: '24px' }} />
+          </div>
         )}
         <button
           onClick={() => setSidebarOpen(v => !v)}
@@ -240,48 +247,48 @@ export default function HomeSidebar({
         {sidebarOpen && <SectionHeader label="History" collapsed={historyCollapsed} onToggle={() => setHistoryCollapsed(v => !v)} />}
 
         <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-        {!sidebarOpen ? null : historyCollapsed ? null : isLoadingHistory ? (
-          <div style={{ padding: '8px 4px' }}>
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} style={{
-                height: '50px', borderRadius: '8px', marginBottom: '2px',
-                backgroundColor: 'rgba(0,0,0,0.04)', animation: 'pulse 1.5s infinite'
-              }} />
-            ))}
-          </div>
-        ) : !isAuthResolved && recentList.length === 0 ? (
-          <EmptyState>正在加载历史记录...</EmptyState>
-        ) : !user && recentList.length === 0 ? (
-          <EmptyState>登录后查看历史记录</EmptyState>
-        ) : recentList.length === 0 ? (
-          <EmptyState>
-            {searchQuery ? '未找到匹配记录' : '暂无历史记录'}
-          </EmptyState>
-        ) : (
-          recentList.map(item => (
-            <HistoryItem
-              key={item.id}
-              id={item.id}
-              label={item.source_label || '未命名分析'}
-              thumbnailUrl={item.thumbnail_url}
-              colors={item.style_data?.colors || []}
-              sourceType={item.style_data?.sourceType}
-              isActive={activeItemId === item.id}
-              isPinned={false}
-              contextMenuOpen={contextMenuId === item.id}
-              renamingId={renamingId}
-              renameValue={renameValue}
-              onRenameChange={setRenameValue}
-              onClick={() => { setShowUserMenu(false); void openHistoryItem(item) }}
-              onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
-              onPin={() => togglePin(item.id)}
-              onDelete={() => deleteItem(item.id)}
-              onStartRename={() => startRename(item.id, item.source_label || '未命名分析')}
-              onRenameSubmit={() => submitRename(item.id)}
-              onRenameCancel={cancelRename}
-            />
-          ))
-        )}
+          {!sidebarOpen ? null : historyCollapsed ? null : isLoadingHistory && recentList.length === 0 ? (
+            <div style={{ padding: '8px 4px' }}>
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} style={{
+                  height: '50px', borderRadius: '8px', marginBottom: '2px',
+                  backgroundColor: 'rgba(0,0,0,0.04)', animation: 'pulse 1.5s infinite'
+                }} />
+              ))}
+            </div>
+          ) : !isAuthResolved && recentList.length === 0 ? (
+            <EmptyState>正在加载历史记录...</EmptyState>
+          ) : !user && recentList.length === 0 ? (
+            <EmptyState>登录后查看历史记录</EmptyState>
+          ) : recentList.length === 0 ? (
+            <EmptyState>
+              {searchQuery ? '未找到匹配记录' : '暂无历史记录'}
+            </EmptyState>
+          ) : (
+            recentList.map(item => (
+              <HistoryItem
+                key={item.id}
+                id={item.id}
+                label={item.source_label || '未命名分析'}
+                thumbnailUrl={item.thumbnail_url}
+                colors={item.style_data?.colors || []}
+                sourceType={item.style_data?.sourceType}
+                isActive={activeItemId === item.id}
+                isPinned={false}
+                contextMenuOpen={contextMenuId === item.id}
+                renamingId={renamingId}
+                renameValue={renameValue}
+                onRenameChange={setRenameValue}
+                onClick={() => { setShowUserMenu(false); void openHistoryItem(item) }}
+                onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
+                onPin={() => togglePin(item.id)}
+                onDelete={() => deleteItem(item.id)}
+                onStartRename={() => startRename(item.id, item.source_label || '未命名分析')}
+                onRenameSubmit={() => submitRename(item.id)}
+                onRenameCancel={cancelRename}
+              />
+            ))
+          )}
         </div>
       </div>
 
