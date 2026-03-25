@@ -5,6 +5,7 @@ import type { ClipboardEvent, Dispatch, DragEvent, FormEvent, RefObject, SetStat
 import type { User } from '@supabase/supabase-js'
 import { ArrowUp, HelpCircle, Link2, Upload, X } from 'lucide-react'
 import StyleReportView from '@/components/report/StyleReport'
+import MagicalHeroLogo from './MagicalHeroLogo'
 import type { DisplayStyleReport, HomeHistoryRecord } from '@/lib/types'
 import type { UploadState } from '@/hooks/useExtraction'
 
@@ -82,15 +83,31 @@ export default function HomeWorkspace({
   const [hoveredSection, setHoveredSection] = useState<{ yStart: number; yEnd: number } | null>(null)
 
   return (
-    <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FFFFFF', overflow: 'hidden', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-      <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
-        <HelpCircle size={18} strokeWidth={1} style={{ color: '#C7C7CC', cursor: 'pointer', transition: 'color 0.2s' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#8E8E93'}
-          onMouseLeave={e => e.currentTarget.style.color = '#C7C7CC'}
-        />
-      </div>
+    <>
+      <style>{`
+        @keyframes heroFloat {
+          0%, 100% { transform: translateY(0) rotate(0deg); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+          50% { transform: translateY(-8px) rotate(3deg); filter: drop-shadow(0 15px 30px rgba(0,0,0,0.08)); }
+        }
+        .hero-logo-animate {
+          animation: heroFloat 6s ease-in-out infinite;
+          transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          cursor: pointer;
+        }
+        .hero-logo-animate:hover {
+          transform: scale(1.15) rotate(7deg);
+          filter: drop-shadow(0 20px 40px rgba(0,0,0,0.12));
+        }
+      `}</style>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FFFFFF', overflow: 'hidden', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+          <HelpCircle size={18} strokeWidth={1} style={{ color: '#C7C7CC', cursor: 'pointer', transition: 'color 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#8E8E93'}
+            onMouseLeave={e => e.currentTarget.style.color = '#C7C7CC'}
+          />
+        </div>
 
-      {report && !isExtracting && (
+        {report && !isExtracting && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
           {!(report.id === 'preset_linear_v2' || report.id === 'preset_linear_v3') && (
             <div className="no-scrollbar" style={{
@@ -192,6 +209,8 @@ export default function HomeWorkspace({
               textAlign: 'left', marginBottom: '56px', display: 'flex', flexDirection: 'column',
               alignItems: 'flex-start', gap: '0', animation: 'fadeIn 0.6s ease-out'
             }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '32px', width: '100%' }}>
+              <MagicalHeroLogo />
               <h1 style={{
                 fontSize: '52px', color: '#4B4B4B', fontWeight: 300,
                 fontFamily: 'var(--font-sans)', letterSpacing: '-0.04em',
@@ -201,6 +220,7 @@ export default function HomeWorkspace({
                 <span>{greeting?.prefix}</span>
                 <span style={{ opacity: 1.0 }}>{greeting?.name}</span>
               </h1>
+            </div>
             </div>
 
             <form onSubmit={handleUrlSubmit} style={{ position: 'relative', marginBottom: '28px' }}>
@@ -447,5 +467,6 @@ export default function HomeWorkspace({
         </div>
       )}
     </main>
+    </>
   )
 }

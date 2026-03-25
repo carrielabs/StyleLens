@@ -142,7 +142,7 @@ export default function HomeSidebar({
             }}
             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}
           >
-            <img src="/logo-text.png" alt="StyleLens" style={{ height: '28px', width: 'auto', display: 'block' }} />
+            <img src="/logo-text.png" alt="StyleLens" style={{ height: '22px', width: 'auto', display: 'block' }} />
           </div>
         ) : (
           <div 
