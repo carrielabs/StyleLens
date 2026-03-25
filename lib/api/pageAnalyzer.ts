@@ -1669,6 +1669,14 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       !used.has(candidate.hex.toUpperCase()) &&
       (candidate.roleHints.includes('border') || candidate.property === 'border-color')
     )
+    .filter(candidate => {
+      if (!pageBackground) return true
+      const pageBrightness = getColorBrightness(pageBackground.hex)
+      const borderBrightness = getColorBrightness(candidate.hex)
+      const isNearBlack = borderBrightness <= 32
+      if (pageBrightness >= 600 && isNearBlack) return false
+      return true
+    })
     .sort((a, b) => {
       const anchorDiff = anchorBoost(b) - anchorBoost(a)
       if (anchorDiff !== 0) return anchorDiff
@@ -1676,6 +1684,10 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       const aBorderProp = Number(a.property === 'border-color' || a.property === 'cta-border')
       const bBorderProp = Number(b.property === 'border-color' || b.property === 'cta-border')
       if (aBorderProp !== bBorderProp) return bBorderProp - aBorderProp
+
+      const aShellAnchor = Number((a.selectorHint || '').toLowerCase().includes('[anchor:body]') || (a.selectorHint || '').toLowerCase().includes('[anchor:main]') || (a.selectorHint || '').toLowerCase().includes('[anchor:nav]'))
+      const bShellAnchor = Number((b.selectorHint || '').toLowerCase().includes('[anchor:body]') || (b.selectorHint || '').toLowerCase().includes('[anchor:main]') || (b.selectorHint || '').toLowerCase().includes('[anchor:nav]'))
+      if (aShellAnchor !== bShellAnchor) return bShellAnchor - aShellAnchor
 
       const aBrightness = getColorBrightness(a.hex)
       const bBrightness = getColorBrightness(b.hex)
