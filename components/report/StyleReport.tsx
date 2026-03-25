@@ -3,7 +3,6 @@
 import type { StyleReport as ReportType } from '@/lib/types'
 import { useState } from 'react'
 import ColorSystem from './ColorSystem'
-import Typography from './Typography'
 import DesignDetails from './DesignDetails'
 import DesignDetailsElite from './DesignDetailsElite'
 import DesignDetailsEliteV2 from './DesignDetailsEliteV2'
@@ -68,7 +67,7 @@ const i18n = {
   }
 }
 
-export default function StyleReport({ report, lang = 'zh', fullWidth = false }: { report: ReportType, lang?: 'zh' | 'en', fullWidth?: boolean }) {
+export default function StyleReport({ report, lang = 'zh', fullWidth = false, onSectionHover }: { report: ReportType, lang?: 'zh' | 'en', fullWidth?: boolean, onSectionHover?: (section: { yStart: number; yEnd: number } | null) => void }) {
   const [activeCode, setActiveCode] = useState<'markdown' | 'css' | 'json' | 'prompt' | 'tailwind'>('markdown')
   const [copied, setCopied] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
@@ -151,11 +150,6 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
             <ColorSystem colors={report.colors} colorSystem={report.colorSystem} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} />
           </section>
 
-          {/* 4. 字体排版 */}
-          <section>
-             <SectionLabel>{t.typo}</SectionLabel>
-             <Typography data={report.typography} analysis={report.pageAnalysis} sourceType={report.sourceType} lang={lang} fullWidth={fullWidth} />
-          </section>
         </>
       )}
 
@@ -184,7 +178,7 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false }: 
       {!isElite && (
         <section>
           <SectionLabel>{t.inspector}</SectionLabel>
-          <DesignInspector report={report} lang={lang} />
+          <DesignInspector report={report} lang={lang} onSectionHover={onSectionHover} />
         </section>
       )}
 

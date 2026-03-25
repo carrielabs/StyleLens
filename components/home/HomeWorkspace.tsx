@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { ClipboardEvent, Dispatch, DragEvent, FormEvent, RefObject, SetStateAction } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { ArrowUp, HelpCircle, Link2, Upload, X } from 'lucide-react'
@@ -78,6 +79,8 @@ export default function HomeWorkspace({
   cancelExtraction,
   handleFilePreview,
 }: HomeWorkspaceProps) {
+  const [hoveredSection, setHoveredSection] = useState<{ yStart: number; yEnd: number } | null>(null)
+
   return (
     <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FFFFFF', overflow: 'hidden', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
       <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
@@ -100,7 +103,8 @@ export default function HomeWorkspace({
                 onClick={() => { setLightboxUrl(report.screenshotUrl || report.thumbnailUrl || ''); setIsLightboxOpen(true) }}
                 style={{
                   cursor: 'zoom-in', borderRadius: '16px', overflow: 'hidden',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.06)', transition: 'transform 0.2s'
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.06)', transition: 'transform 0.2s',
+                  position: 'relative'
                 }}
                 onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'}
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
@@ -110,6 +114,20 @@ export default function HomeWorkspace({
                   alt="Source"
                   style={{ width: '100%', display: 'block' }}
                 />
+                {hoveredSection && (
+                  <div style={{
+                    position: 'absolute',
+                    left: 0, right: 0,
+                    top: `${hoveredSection.yStart}%`,
+                    height: `${hoveredSection.yEnd - hoveredSection.yStart}%`,
+                    backgroundColor: 'rgba(59,130,246,0.12)',
+                    border: '2px solid rgba(59,130,246,0.6)',
+                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3)',
+                    pointerEvents: 'none',
+                    transition: 'top 0.25s ease, height 0.25s ease',
+                    zIndex: 5,
+                  }} />
+                )}
               </div>
             </div>
           </div>
@@ -144,7 +162,7 @@ export default function HomeWorkspace({
                   {extractions.find(e => e.id === activeItemId)?.source_label || report.sourceLabel}
                 </h1>
               )}
-              <StyleReportView report={report} lang={reportLang} fullWidth={true} />
+              <StyleReportView report={report} lang={reportLang} fullWidth={true} onSectionHover={setHoveredSection} />
             </div>
           </div>
         </div>

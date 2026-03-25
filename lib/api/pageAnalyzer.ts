@@ -2,6 +2,9 @@ import type {
   StateTokenValue,
   ComponentStateTokens,
   ComponentKind,
+  InputSnapshot,
+  CardSnapshot,
+  TagSnapshot,
   InteractionState,
   LayoutEvidence,
   PageColorCandidate,
@@ -17,6 +20,7 @@ import type {
   ButtonSnapshot,
   PageSection,
   TokenMeta,
+  ViewportSlice,
 } from '@/lib/types'
 import { chromium, type ElementHandle, type Page } from 'playwright'
 
@@ -136,7 +140,12 @@ type RawDomSignals = {
   gridColumns?: string
   stateTokens?: ComponentStateTokens
   buttonSnapshot?: ButtonSnapshot
+  buttonSnapshots?: ButtonSnapshot[]
+  inputSnapshots?: InputSnapshot[]
+  cardSnapshots?: CardSnapshot[]
+  tagSnapshots?: TagSnapshot[]
   pageSections?: PageSection[]
+  viewportSlices?: ViewportSlice[]
 }
 
 type StateAccumulator = {
@@ -167,6 +176,11 @@ export function createEmptyPageAnalysis(sourceCount?: { inlineStyleBlocks: numbe
     transitionTokens: [],
     pageMaxWidth: undefined,
     gridColumns: undefined,
+    buttonSnapshots: [],
+    inputSnapshots: [],
+    cardSnapshots: [],
+    tagSnapshots: [],
+    viewportSlices: [],
     cssTextExcerpt: '',
     sourceCount: sourceCount || {
       inlineStyleBlocks: 0,
@@ -1096,8 +1110,32 @@ function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
       rawTransitionTokens: [],
       stateTokens: emptyComponentStateTokens(),
       buttonSnapshot: undefined,
+      buttonSnapshots: [],
+      inputSnapshots: [],
+      cardSnapshots: [],
+      tagSnapshots: [],
       pageSections: [],
+      viewportSlices: [],
     }
+  }
+
+  const mergeSnapshotArrays = <T extends { backgroundColor?: string; border?: string; borderRadius?: string }>(
+    arrays: T[][] | undefined,
+    limit = 3
+  ): T[] => {
+    const merged: T[] = []
+    const seen = new Set<string>()
+    for (const array of arrays || []) {
+      for (const item of array || []) {
+        if (!item) continue
+        const key = `${item.backgroundColor || ''}|${item.border || ''}|${item.borderRadius || ''}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        merged.push(item)
+        if (merged.length >= limit) return merged
+      }
+    }
+    return merged
   }
 
   return {
@@ -1178,10 +1216,18 @@ function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
     gridColumns: available.map(s => s.gridColumns).find(v => v),
     stateTokens: mergeComponentStateTokens(...available.map(source => source.stateTokens)),
     buttonSnapshot: available.map(s => s.buttonSnapshot).find(v => v),
+    buttonSnapshots: mergeSnapshotArrays<ButtonSnapshot>(available.map(s => s.buttonSnapshots || []), 3),
+    inputSnapshots: mergeSnapshotArrays<InputSnapshot>(available.map(s => s.inputSnapshots || []), 3),
+    cardSnapshots: mergeSnapshotArrays<CardSnapshot>(available.map(s => s.cardSnapshots || []), 3),
+    tagSnapshots: mergeSnapshotArrays<TagSnapshot>(available.map(s => s.tagSnapshots || []), 3),
     pageSections: (() => {
       // Use sections from the snapshot with the most sections found
       const allSections = available.map(s => s.pageSections || [])
       return allSections.reduce((best, cur) => cur.length > best.length ? cur : best, [])
+    })(),
+    viewportSlices: (() => {
+      const allSlices = available.map(s => s.viewportSlices || [])
+      return allSlices.reduce((best, cur) => cur.length > best.length ? cur : best, [])
     })(),
   }
 }
@@ -2762,65 +2808,254 @@ async function extractDomSignalsFromPage(
         }
       }
 
-      // ── Button snapshot (exact CSS from real primary button) ───────────────
-      let buttonSnapshot: Record<string, string | undefined> | undefined
-      // Cast wide net: <button>, role=button, CTA-named links, any styled <a> in hero/nav
-      const allBtns = Array.from(document.querySelectorAll<HTMLElement>(
+      // ── Component snapshots (multi-variant DOM-measured CSS) ───────────────
+      const normalizeColor = (value: string | null | undefined) => {
+        if (!value) return undefined
+        if (value === 'transparent' || value === 'rgba(0, 0, 0, 0)' || value === 'rgba(255, 255, 255, 0)') return undefined
+        return rgbToHex(value) || value
+      }
+      const toBorder = (style: CSSStyleDeclaration) => {
+        const width = style.borderTopWidth
+        const borderStyle = style.borderTopStyle
+        if (!width || width === '0px' || borderStyle === 'none' || borderStyle === 'hidden') return undefined
+        const color = normalizeColor(style.borderTopColor)
+        return `${width} ${borderStyle}${color ? ` ${color}` : ''}`
+      }
+      const isVisibleSnapshotCandidate = (el: HTMLElement, minWidth: number, minHeight: number) => {
+        const style = window.getComputedStyle(el)
+        const rect = el.getBoundingClientRect()
+        if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false
+        if (rect.width < minWidth || rect.height < minHeight) return false
+        if (rect.bottom < 0 || rect.top > window.innerHeight * 1.8) return false
+        return true
+      }
+      const collectDistinctSnapshots = <T extends { backgroundColor?: string; border?: string; borderRadius?: string }>(
+        elements: HTMLElement[],
+        maxCount: number,
+        mapper: (el: HTMLElement, style: CSSStyleDeclaration, rect: DOMRect) => T | undefined
+      ) => {
+        const items: T[] = []
+        const seen = new Set<string>()
+        for (const el of elements) {
+          const style = window.getComputedStyle(el)
+          const rect = el.getBoundingClientRect()
+          const mapped = mapper(el, style, rect)
+          if (!mapped) continue
+          const signature = `${mapped.backgroundColor || ''}|${mapped.border || ''}|${mapped.borderRadius || ''}`
+          if (seen.has(signature)) continue
+          seen.add(signature)
+          items.push(mapped)
+          if (items.length >= maxCount) break
+        }
+        return items
+      }
+
+      let buttonSnapshot: ButtonSnapshot | undefined
+      const buttonElements = Array.from(document.querySelectorAll<HTMLElement>(
         'button, [role="button"], a[class*="btn"], a[class*="button"], a[class*="cta"], ' +
         'a[href*="sign-up"], a[href*="signup"], a[href*="get-started"], a[href*="pricing"], ' +
         'a[href*="free"], a[href*="download"], a[href*="start"], nav a, header a'
       ))
-      // Score each candidate: prefer non-transparent bg, proper size, has text, not a nav link
-      const scoredBtns = allBtns.map(btn => {
-        const rect = btn.getBoundingClientRect()
-        const style = window.getComputedStyle(btn)
-        const bg = style.backgroundColor
-        const text = (btn.textContent || '').trim()
-        const isTransparentBg = !bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent'
-        let score = 0
-        if (rect.width >= 80 && rect.height >= 32) score += 3
-        if (!isTransparentBg) score += 4
-        if (text.length > 0 && text.length <= 30) score += 2
-        if (rect.top < window.innerHeight * 0.5) score += 2  // above fold
-        if (rect.width < 60 || rect.height < 24) score -= 10  // too small
-        if (text.length > 50) score -= 3  // too long = nav paragraph
-        return { btn, score, rect, isTransparentBg }
-      }).filter(item => item.score > 0 && item.rect.width > 0)
-      scoredBtns.sort((a, b) => b.score - a.score)
-      const primaryBtn = scoredBtns[0]?.btn
-      if (primaryBtn) {
-        const s = window.getComputedStyle(primaryBtn)
-        const rect = primaryBtn.getBoundingClientRect()
-        const bgHex = rgbToHex(s.backgroundColor) || s.backgroundColor
-        const colorHex = rgbToHex(s.color) || s.color
-        const borderColorHex = s.borderWidth !== '0px' ? (rgbToHex(s.borderColor) || s.borderColor) : undefined
-        buttonSnapshot = {
-          backgroundColor: bgHex,
-          color: colorHex,
+        .filter(el => isVisibleSnapshotCandidate(el, 60, 24))
+        .slice(0, 20)
+      const buttonSnapshots = collectDistinctSnapshots<ButtonSnapshot>(buttonElements, 3, (el, s, rect) => {
+        const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30)
+        if (!text) return undefined
+        return {
+          backgroundColor: normalizeColor(s.backgroundColor),
+          color: normalizeColor(s.color),
           borderRadius: s.borderRadius !== '0px' ? s.borderRadius : undefined,
           paddingH: s.paddingLeft !== '0px' ? s.paddingLeft : (s.paddingRight !== '0px' ? s.paddingRight : undefined),
           paddingV: s.paddingTop !== '0px' ? s.paddingTop : (s.paddingBottom !== '0px' ? s.paddingBottom : undefined),
           fontSize: s.fontSize,
           fontWeight: s.fontWeight,
           fontFamily: s.fontFamily,
-          border: s.borderWidth !== '0px' ? `${s.borderWidth} ${s.borderStyle} ${borderColorHex}` : 'none',
+          border: toBorder(s) || 'none',
           boxShadow: s.boxShadow !== 'none' ? s.boxShadow : undefined,
           letterSpacing: s.letterSpacing !== 'normal' && s.letterSpacing !== '0px' ? s.letterSpacing : undefined,
           width: `${Math.round(rect.width)}px`,
           height: `${Math.round(rect.height)}px`,
-          text: (primaryBtn.textContent || '').trim().slice(0, 30),
+          text,
         }
-      }
+      })
+      buttonSnapshot = buttonSnapshots[0]
+
+      const inputElements = Array.from(document.querySelectorAll<HTMLElement>(
+        'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, [role="textbox"], [contenteditable="true"], [class*="input"], [class*="search"]'
+      ))
+        .filter(el => isVisibleSnapshotCandidate(el, 120, 28))
+        .slice(0, 20)
+      const inputSnapshots = collectDistinctSnapshots<InputSnapshot>(inputElements, 3, (el, s, rect) => {
+        const placeholder =
+          (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)
+            ? (el.getAttribute('placeholder') || undefined)
+            : (el.getAttribute('aria-label') || undefined)
+        return {
+          backgroundColor: normalizeColor(s.backgroundColor),
+          color: normalizeColor(s.color),
+          borderRadius: s.borderRadius !== '0px' ? s.borderRadius : undefined,
+          border: toBorder(s),
+          paddingH: s.paddingLeft !== '0px' ? s.paddingLeft : (s.paddingRight !== '0px' ? s.paddingRight : undefined),
+          paddingV: s.paddingTop !== '0px' ? s.paddingTop : (s.paddingBottom !== '0px' ? s.paddingBottom : undefined),
+          fontSize: s.fontSize,
+          fontFamily: s.fontFamily,
+          placeholder,
+          width: `${Math.round(rect.width)}px`,
+        }
+      })
+
+      const cardElements = Array.from(document.querySelectorAll<HTMLElement>(
+        '[class*="card"], [class*="panel"], [class*="surface"], article, aside, li, [role="article"], [data-card], [data-testid*="card"], main section div'
+      ))
+        .filter(el => isVisibleSnapshotCandidate(el, 140, 100))
+        .filter(el => {
+          const s = window.getComputedStyle(el)
+          const hasCardVisual = !!normalizeColor(s.backgroundColor) || !!toBorder(s) || (s.boxShadow && s.boxShadow !== 'none')
+          const textLen = (el.textContent || '').trim().length
+          return hasCardVisual && textLen >= 12
+        })
+        .slice(0, 20)
+      const cardSnapshots = collectDistinctSnapshots<CardSnapshot>(cardElements, 3, (el, s) => {
+        const headingEl = el.querySelector<HTMLElement>('h1, h2, h3, h4, strong, [class*="title"], [class*="heading"]')
+        const headingStyle = headingEl ? window.getComputedStyle(headingEl) : undefined
+        const paddingCandidates = [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].filter(v => v && v !== '0px')
+        return {
+          backgroundColor: normalizeColor(s.backgroundColor),
+          borderRadius: s.borderRadius !== '0px' ? s.borderRadius : undefined,
+          border: toBorder(s),
+          boxShadow: s.boxShadow !== 'none' ? s.boxShadow : undefined,
+          padding: paddingCandidates.length ? `${s.paddingTop} ${s.paddingRight} ${s.paddingBottom} ${s.paddingLeft}` : undefined,
+          headingText: headingEl?.textContent?.trim().replace(/\s+/g, ' ').slice(0, 60),
+          headingFontSize: headingStyle?.fontSize,
+          headingFontWeight: headingStyle?.fontWeight,
+        }
+      })
+
+      const tagElements = Array.from(document.querySelectorAll<HTMLElement>(
+        '[class*="tag"], [class*="badge"], [class*="chip"], [class*="pill"], [data-badge], [data-chip], span, a, button'
+      ))
+        .filter(el => isVisibleSnapshotCandidate(el, 28, 18))
+        .filter(el => {
+          const text = (el.textContent || '').trim().replace(/\s+/g, ' ')
+          const rect = el.getBoundingClientRect()
+          return text.length > 0 && text.length <= 24 && rect.width <= 220 && rect.height <= 56
+        })
+        .slice(0, 20)
+      const tagSnapshots = collectDistinctSnapshots<TagSnapshot>(tagElements, 3, (el, s) => {
+        const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 24)
+        if (!text) return undefined
+        return {
+          backgroundColor: normalizeColor(s.backgroundColor),
+          color: normalizeColor(s.color),
+          borderRadius: s.borderRadius !== '0px' ? s.borderRadius : undefined,
+          border: toBorder(s),
+          paddingH: s.paddingLeft !== '0px' ? s.paddingLeft : (s.paddingRight !== '0px' ? s.paddingRight : undefined),
+          paddingV: s.paddingTop !== '0px' ? s.paddingTop : (s.paddingBottom !== '0px' ? s.paddingBottom : undefined),
+          fontSize: s.fontSize,
+          fontWeight: s.fontWeight,
+          text,
+        }
+      })
 
       // ── Page sections (DOM-measured structural layout) ─────────────────────
       const pageSections: Array<{
         index: number; purpose: string; layout: string; columns: number
-        hasCTA: boolean; hasImage: boolean; heading?: string; yStartPct?: number; yEndPct?: number; measured: boolean
+        hasCTA: boolean; hasImage: boolean; heading?: string; yStartPct?: number; yEndPct?: number; screenStartPct?: number; screenEndPct?: number; measured: boolean
       }> = []
-      const sectionEls = Array.from(document.querySelectorAll<HTMLElement>(
-        'section, [class*="section"], [class*="hero"], [class*="feature"], [class*="pricing"], [class*="testimonial"], [class*="cta"], footer'
-      ))
+      const viewportSlices: Array<{
+        index: number
+        yStartPct: number
+        yEndPct: number
+        dominantSectionId?: string
+      }> = []
+
+      const getVisibleChildren = (root: HTMLElement, rootRect: DOMRect) => {
+        return Array.from(root.children)
+          .map(child => child as HTMLElement)
+          .map(child => ({ el: child, rect: child.getBoundingClientRect() }))
+          .filter(({ rect }) => {
+            if (rect.width < 80 || rect.height < 40) return false
+            if (rect.width < rootRect.width * 0.12 && rect.height < 80) return false
+            return true
+          })
+      }
+
+      const groupRowCounts = (items: Array<{ rect: DOMRect }>) => {
+        const rows: number[] = []
+        const sorted = [...items].sort((a, b) => a.rect.top - b.rect.top || a.rect.left - b.rect.left)
+        for (const item of sorted) {
+          const rowIndex = rows.findIndex((_, idx) => {
+            const rowTop = sorted.filter((_, i) => i < sorted.length)[0]
+            return rowTop ? Math.abs(item.rect.top - rowTop.rect.top) < 28 : false
+          })
+          if (rowIndex === -1) {
+            rows.push(1)
+          } else {
+            rows[rowIndex] += 1
+          }
+        }
+        if (!rows.length) return 1
+
+        const grouped: Array<{ top: number; count: number }> = []
+        for (const item of sorted) {
+          const hit = grouped.find(row => Math.abs(row.top - item.rect.top) < 28)
+          if (hit) {
+            hit.count += 1
+          } else {
+            grouped.push({ top: item.rect.top, count: 1 })
+          }
+        }
+        return Math.max(...grouped.map(row => row.count))
+      }
+
+      const detectLayoutRoot = (sectionEl: HTMLElement, sectionRect: DOMRect) => {
+        const descendants = Array.from(sectionEl.querySelectorAll<HTMLElement>(':scope > *, :scope > * > *, :scope > * > * > *'))
+          .filter(el => el !== sectionEl)
+          .map(el => ({ el, rect: el.getBoundingClientRect(), style: window.getComputedStyle(el) }))
+          .filter(({ rect, style }) => {
+            if (rect.width < sectionRect.width * 0.55 || rect.height < 60) return false
+            const isGrid = style.display === 'grid' && style.gridTemplateColumns && style.gridTemplateColumns !== 'none'
+            const isRowFlex = style.display === 'flex' && style.flexDirection !== 'column'
+            return isGrid || isRowFlex
+          })
+          .sort((a, b) => {
+            const aArea = a.rect.width * a.rect.height
+            const bArea = b.rect.width * b.rect.height
+            return bArea - aArea
+          })
+
+        return descendants[0]?.el || sectionEl
+      }
+      const candidateSectionEls = Array.from(new Set([
+        ...Array.from(document.querySelectorAll<HTMLElement>(
+          'section, [class*="section"], [class*="hero"], [class*="feature"], [class*="pricing"], [class*="testimonial"], [class*="cta"], footer'
+        )),
+        ...Array.from(document.querySelectorAll<HTMLElement>(
+          'main > div, main > article, [role="main"] > div, [role="main"] > article'
+        )),
+      ]))
+      const sectionEls = candidateSectionEls
+        .map(el => ({ el, rect: el.getBoundingClientRect() }))
+        .filter(({ rect, el }) => {
+          if (rect.height < 120 || rect.width < 240) return false
+          if (rect.width < window.innerWidth * 0.45) return false
+          const textLen = (el.textContent || '').trim().length
+          const hasHeading = !!el.querySelector('h1, h2, h3')
+          const childCount = el.children.length
+          return hasHeading || textLen > 80 || childCount >= 2
+        })
+        .sort((a, b) => a.rect.top - b.rect.top || b.rect.height - a.rect.height)
+        .map(item => item.el)
+
+      const overlapRatio = (a: DOMRect, b: DOMRect) => {
+        const top = Math.max(a.top, b.top)
+        const bottom = Math.min(a.bottom, b.bottom)
+        const overlap = Math.max(0, bottom - top)
+        const base = Math.max(1, Math.min(a.height, b.height))
+        return overlap / base
+      }
       let si = 0
+      const accepted: Array<{ rect: DOMRect; heading?: string; screenStartPct?: number; screenEndPct?: number }> = []
       for (const el of sectionEls.slice(0, 12)) {
         const rect = el.getBoundingClientRect()
         if (rect.height < 80 || rect.width < 200) continue
@@ -2834,20 +3069,55 @@ async function extractDomSignalsFromPage(
         const yEndRaw = (((el.offsetTop || 0) + (el.offsetHeight || 0)) / pageHeight) * 100
         const yStartPct = Number(Math.max(0, Math.min(100, yStartRaw)).toFixed(1))
         const yEndPct = Number(Math.max(0, Math.min(100, yEndRaw)).toFixed(1))
+        const viewportPct = ((window.innerHeight || 1) / pageHeight) * 100
+        const screenStartRaw = viewportPct > 0 ? Math.floor(yStartRaw / viewportPct) * viewportPct : yStartRaw
+        const screenEndRaw = viewportPct > 0 ? Math.ceil(yEndRaw / viewportPct) * viewportPct : yEndRaw
+        const screenStartPct = Number(Math.max(0, Math.min(100, screenStartRaw)).toFixed(1))
+        const screenEndPct = Number(Math.max(screenStartPct, Math.min(100, screenEndRaw))).toFixed(1)
+        const duplicate = accepted.find(existing => {
+          const sameHeading = headingText && existing.heading && headingText === existing.heading
+          const sameScreen = existing.screenStartPct === screenStartPct && existing.screenEndPct === Number(screenEndPct)
+          const heavyOverlap = overlapRatio(existing.rect, rect) >= 0.72
+          return sameHeading || (sameScreen && heavyOverlap) || (heavyOverlap && Math.abs(existing.rect.width - rect.width) < 80)
+        })
+        if (duplicate) continue
+        const layoutRoot = detectLayoutRoot(el, rect)
+        const layoutRect = layoutRoot.getBoundingClientRect()
+        const layoutStyle = window.getComputedStyle(layoutRoot)
+        const visibleChildren = getVisibleChildren(layoutRoot, layoutRect)
+        const maxRowCount = groupRowCounts(visibleChildren)
         let columns = 1
         let layout = 'full-width'
-        if (style.display === 'grid' && style.gridTemplateColumns && style.gridTemplateColumns !== 'none') {
-          const colCount = style.gridTemplateColumns.split(/\s+(?=[^\(]*(?:\(|$))/).filter(Boolean).length
+        if (layoutStyle.display === 'grid' && layoutStyle.gridTemplateColumns && layoutStyle.gridTemplateColumns !== 'none') {
+          const colCount = layoutStyle.gridTemplateColumns.split(/\s+(?=[^\(]*(?:\(|$))/).filter(Boolean).length
           columns = colCount
           layout = colCount === 2 ? '2-column' : colCount === 3 ? '3-column-grid' : colCount === 4 ? '4-column-grid' : 'grid'
-        } else if (style.display === 'flex' && style.flexDirection !== 'column') {
-          const visChildren = Array.from(el.children).filter(c => {
-            const cr = (c as HTMLElement).getBoundingClientRect()
-            return cr.width > 50 && cr.height > 20
-          })
-          if (visChildren.length >= 2 && visChildren.length <= 4) {
-            columns = visChildren.length
-            layout = columns === 2 ? '2-column' : `${columns}-column-grid`
+        } else if (layoutStyle.display === 'flex' && layoutStyle.flexDirection !== 'column' && visibleChildren.length >= 2) {
+          columns = Math.max(2, Math.min(visibleChildren.length, maxRowCount))
+          if (columns >= 3) {
+            layout = columns === 3 ? '3-column-grid' : columns === 4 ? '4-column-grid' : 'grid'
+          } else {
+            const sortedByArea = [...visibleChildren].sort((a, b) => (b.rect.width * b.rect.height) - (a.rect.width * a.rect.height))
+            const first = sortedByArea[0]?.rect
+            const second = sortedByArea[1]?.rect
+            if (first && second) {
+              const widthRatio = Math.max(first.width, second.width) / Math.max(1, Math.min(first.width, second.width))
+              layout = widthRatio >= 1.45 ? 'asymmetric' : '2-column'
+            } else {
+              layout = '2-column'
+            }
+          }
+        } else if (maxRowCount >= 3) {
+          columns = maxRowCount
+          layout = maxRowCount === 3 ? '3-column-grid' : maxRowCount === 4 ? '4-column-grid' : 'grid'
+        } else if (visibleChildren.length >= 2) {
+          const sortedByArea = [...visibleChildren].sort((a, b) => (b.rect.width * b.rect.height) - (a.rect.width * a.rect.height))
+          const first = sortedByArea[0]?.rect
+          const second = sortedByArea[1]?.rect
+          if (first && second && Math.abs(first.top - second.top) < 40) {
+            columns = 2
+            const widthRatio = Math.max(first.width, second.width) / Math.max(1, Math.min(first.width, second.width))
+            layout = widthRatio >= 1.45 ? 'asymmetric' : '2-column'
           }
         }
         const cls = (el.className || '').toString().toLowerCase()
@@ -2859,8 +3129,48 @@ async function extractDomSignalsFromPage(
           : cls.includes('cta') || cls.includes('call-to-action') ? 'cta'
           : tag === 'footer' ? 'footer'
           : 'section'
-        pageSections.push({ index: si++, purpose, layout, columns, hasCTA, hasImage, heading: headingText, yStartPct, yEndPct, measured: true })
+        pageSections.push({
+          index: si++,
+          purpose,
+          layout,
+          columns,
+          hasCTA,
+          hasImage,
+          heading: headingText,
+          yStartPct,
+          yEndPct,
+          screenStartPct,
+          screenEndPct: Number(screenEndPct),
+          measured: true,
+        })
+        accepted.push({ rect, heading: headingText, screenStartPct, screenEndPct: Number(screenEndPct) })
         if (si >= 8) break
+      }
+
+      {
+        const pageHeight = Math.max(document.documentElement.scrollHeight || 0, document.body?.scrollHeight || 0, 1)
+        const viewportHeight = Math.max(window.innerHeight || 0, 1)
+        const sliceCount = Math.max(1, Math.ceil(pageHeight / viewportHeight))
+        const slicePct = 100 / sliceCount
+
+        for (let i = 0; i < sliceCount; i += 1) {
+          const yStartPct = Number((i * slicePct).toFixed(1))
+          const yEndPct = Number(Math.min(100, ((i + 1) * slicePct)).toFixed(1))
+
+          const dominantSection = pageSections.find(section => {
+            const start = section.yStartPct ?? 0
+            const end = section.yEndPct ?? 0
+            const overlap = Math.max(0, Math.min(end, yEndPct) - Math.max(start, yStartPct))
+            return overlap >= slicePct * 0.35
+          })
+
+          viewportSlices.push({
+            index: i,
+            yStartPct,
+            yEndPct,
+            dominantSectionId: dominantSection ? `sec-${dominantSection.index}` : undefined,
+          })
+        }
       }
 
       return {
@@ -2880,7 +3190,12 @@ async function extractDomSignalsFromPage(
         gridColumns,
         stateTokens: {},
         buttonSnapshot: buttonSnapshot as ButtonSnapshot | undefined,
+        buttonSnapshots: buttonSnapshots as ButtonSnapshot[],
+        inputSnapshots: inputSnapshots as InputSnapshot[],
+        cardSnapshots: cardSnapshots as CardSnapshot[],
+        tagSnapshots: tagSnapshots as TagSnapshot[],
         pageSections: pageSections as PageSection[],
+        viewportSlices,
       }
     }, { maxVisibleElements: MAX_VISIBLE_ELEMENTS })
 
@@ -3137,7 +3452,12 @@ async function analyzePageStylesCore(
     pageMaxWidth: domSignals?.pageMaxWidth,
     gridColumns: domSignals?.gridColumns,
     buttonSnapshot: domSignals?.buttonSnapshot,
+    buttonSnapshots: domSignals?.buttonSnapshots || [],
+    inputSnapshots: domSignals?.inputSnapshots || [],
+    cardSnapshots: domSignals?.cardSnapshots || [],
+    tagSnapshots: domSignals?.tagSnapshots || [],
     pageSections: domSignals?.pageSections || [],
+    viewportSlices: domSignals?.viewportSlices || [],
     cssTextExcerpt: cssText.slice(0, MAX_CSS_EXCERPT),
     sourceCount: {
       inlineStyleBlocks: inlineBlocks.length,

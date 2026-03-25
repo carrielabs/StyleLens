@@ -182,6 +182,42 @@ export interface ButtonSnapshot {
   text?: string              // button label text e.g. 'Get Notion free'
 }
 
+export interface InputSnapshot {
+  backgroundColor?: string
+  color?: string
+  borderRadius?: string
+  border?: string
+  paddingH?: string
+  paddingV?: string
+  fontSize?: string
+  fontFamily?: string
+  placeholder?: string
+  width?: string
+}
+
+export interface CardSnapshot {
+  backgroundColor?: string
+  borderRadius?: string
+  border?: string
+  boxShadow?: string
+  padding?: string
+  headingText?: string
+  headingFontSize?: string
+  headingFontWeight?: string
+}
+
+export interface TagSnapshot {
+  backgroundColor?: string
+  color?: string
+  borderRadius?: string
+  border?: string
+  paddingH?: string
+  paddingV?: string
+  fontSize?: string
+  fontWeight?: string
+  text?: string
+}
+
 // ── Page section (one visible section of the page) ────────────────────────────
 export interface PageSection {
   index: number
@@ -193,7 +229,16 @@ export interface PageSection {
   heading?: string
   yStartPct?: number
   yEndPct?: number
+  screenStartPct?: number
+  screenEndPct?: number
   measured: boolean          // true = DOM-measured, false = AI-inferred
+}
+
+export interface ViewportSlice {
+  index: number
+  yStartPct: number
+  yEndPct: number
+  dominantSectionId?: string
 }
 
 // ── Visual style (AI-inferred from screenshot) ────────────────────────────────
@@ -291,7 +336,12 @@ export interface PageStyleAnalysis {
   pageMaxWidth?: string
   gridColumns?: string
   buttonSnapshot?: ButtonSnapshot
+  buttonSnapshots?: ButtonSnapshot[]
+  inputSnapshots?: InputSnapshot[]
+  cardSnapshots?: CardSnapshot[]
+  tagSnapshots?: TagSnapshot[]
   pageSections?: PageSection[]
+  viewportSlices?: ViewportSlice[]
   cssTextExcerpt?: string
   sourceCount: {
     inlineStyleBlocks: number

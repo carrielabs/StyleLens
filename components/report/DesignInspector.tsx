@@ -4,22 +4,19 @@ import { useState } from 'react'
 import type { StyleReport, RadiusToken, ShadowToken, BorderToken, TransitionToken, ButtonSnapshot, PageSection, VisualStyleAnalysis, InteractionStyleAI } from '@/lib/types'
 import { gradeTokens, confidenceLabel } from '@/lib/design-details/gradeTokens'
 import type { GradedTokenSet } from '@/lib/design-details/gradeTokens'
+import Typography from './Typography'
 
-// Zone = physical separation between measured data and AI impressions
-type Zone = 'measured' | 'impression'
-type MeasuredTab = 'components' | 'shape' | 'space'
-type ImpressionTab = 'interaction' | 'style'
+type MeasuredTab = 'components' | 'shape' | 'space' | 'typography'
 type ComponentTab = 'button' | 'input' | 'card' | 'badge'
 
 interface Props {
   report: StyleReport
   lang: 'zh' | 'en'
+  onSectionHover?: (section: { yStart: number; yEnd: number } | null) => void
 }
 
-export default function DesignInspector({ report, lang }: Props) {
-  const [zone, setZone] = useState<Zone>('measured')
+export default function DesignInspector({ report, lang, onSectionHover }: Props) {
   const [measuredTab, setMeasuredTab] = useState<MeasuredTab>('components')
-  const [impressionTab, setImpressionTab] = useState<ImpressionTab>('interaction')
   const [compTab, setCompTab] = useState<ComponentTab>('button')
   const [expandedShadows, setExpandedShadows] = useState<Set<number>>(new Set())
   function toggleShadow(i: number) {
@@ -32,6 +29,7 @@ export default function DesignInspector({ report, lang }: Props) {
   const [btnHovered, setBtnHovered] = useState(false)
   const [btnActive, setBtnActive] = useState(false)
   const [showTokens, setShowTokens] = useState(false)
+  const [hoveredWireframe, setHoveredWireframe] = useState<string | null>(null)
 
   const { colors, colorSystem, typography, designDetails } = report
   const analysis = report.pageAnalysis
@@ -249,108 +247,56 @@ export default function DesignInspector({ report, lang }: Props) {
     transition: 'all 0.12s ease',
   })
 
-  // Zone-specific accent colors
-  const measuredAccent = '#34C759'  // green — DOM evidence
-  const impressionAccent = '#AEAEB2' // gray — AI inferred
-
   const MEASURED_TABS: [MeasuredTab, string][] = [
     ['components', lang === 'zh' ? '组件' : 'Components'],
     ['shape',      lang === 'zh' ? '形态' : 'Shape'],
     ['space',      lang === 'zh' ? '布局' : 'Layout'],
-  ]
-  const IMPRESSION_TABS: [ImpressionTab, string][] = [
-    ['interaction', lang === 'zh' ? '交互感' : 'Interaction'],
-    ['style',       lang === 'zh' ? '视觉性格' : 'Personality'],
+    ['typography', lang === 'zh' ? '字体' : 'Typography'],
   ]
 
   return (
-    <div style={outerWrap}>
-
-      {/* ── Zone selector ─────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-        {/* Measured zone pill */}
-        <button
-          onClick={() => setZone('measured')}
-          style={{
-            flex: 1, padding: '14px 20px', border: 'none', cursor: 'pointer',
-            background: zone === 'measured' ? '#FFFFFF' : '#FAFAFA',
-            borderBottom: zone === 'measured' ? `2px solid ${measuredAccent}` : '2px solid transparent',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{
-            width: '7px', height: '7px', borderRadius: '50%',
-            background: zone === 'measured' ? measuredAccent : '#D1D1D6',
-            transition: 'background 0.15s ease',
-          }} />
-          <span style={{
-            fontSize: '13px', fontWeight: zone === 'measured' ? 600 : 400,
-            color: zone === 'measured' ? '#1D1D1F' : '#8E8E93',
-          }}>
-            {lang === 'zh' ? 'DOM 测量' : 'DOM Measured'}
-          </span>
-        </button>
-
-        {/* Divider */}
-        <div style={{ width: '1px', background: 'rgba(0,0,0,0.06)', margin: '8px 0' }} />
-
-        {/* AI impression zone pill */}
-        <button
-          onClick={() => setZone('impression')}
-          style={{
-            flex: 1, padding: '14px 20px', border: 'none', cursor: 'pointer',
-            background: zone === 'impression' ? '#FFFFFF' : '#FAFAFA',
-            borderBottom: zone === 'impression' ? `2px solid ${impressionAccent}` : '2px solid transparent',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{
-            width: '7px', height: '7px', borderRadius: '50%',
-            background: zone === 'impression' ? impressionAccent : '#D1D1D6',
-            transition: 'background 0.15s ease',
-          }} />
-          <span style={{
-            fontSize: '13px', fontWeight: zone === 'impression' ? 600 : 400,
-            color: zone === 'impression' ? '#1D1D1F' : '#8E8E93',
-          }}>
-            {lang === 'zh' ? 'AI 印象' : 'AI Impression'}
-          </span>
-        </button>
+    <div>
+      {/* ── Tab bar (same style as export code panel) ── */}
+      <div style={{
+        display: 'flex',
+        gap: '24px',
+        borderBottom: '1px solid rgba(0,0,0,0.04)',
+        paddingBottom: '0',
+        alignItems: 'baseline',
+        marginBottom: '24px',
+      }}>
+        {MEASURED_TABS.map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setMeasuredTab(id)}
+            style={{
+              padding: '8px 0 12px 0',
+              fontSize: '13px',
+              fontWeight: measuredTab === id ? 600 : 500,
+              background: 'none',
+              border: 'none',
+              color: measuredTab === id ? '#1D1D1F' : '#AEAEB2',
+              cursor: 'pointer',
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              position: 'relative',
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            {label}
+            {measuredTab === id && (
+              <div style={{
+                position: 'absolute', bottom: '-1px', left: '0', right: '0',
+                height: '1.5px', background: '#1D1D1F', borderRadius: '1px'
+              }} />
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* ── Sub-tab bar (zone-specific) ──────────────────────────────── */}
-      <div style={{ ...tabBar, borderBottom: '1px solid rgba(0,0,0,0.04)', background: zone === 'measured' ? 'rgba(52,199,89,0.03)' : 'rgba(174,174,178,0.06)' }}>
-        {zone === 'measured'
-          ? MEASURED_TABS.map(([id, label]) => (
-              <button key={id} style={tabBtn(measuredTab === id)} onClick={() => setMeasuredTab(id)}>{label}</button>
-            ))
-          : IMPRESSION_TABS.map(([id, label]) => (
-              <button key={id} style={tabBtn(impressionTab === id)} onClick={() => setImpressionTab(id)}>{label}</button>
-            ))
-        }
-      </div>
-
-      {/* ── AI disclaimer banner (impression zone only) ──────────────── */}
-      {zone === 'impression' && (
-        <div style={{
-          padding: '8px 24px', background: 'rgba(174,174,178,0.08)',
-          borderBottom: '1px solid rgba(0,0,0,0.04)',
-          display: 'flex', alignItems: 'center', gap: '8px',
-        }}>
-          <span style={{ fontSize: '11px', color: '#8E8E93' }}>
-            {lang === 'zh'
-              ? '⚠️ 以下内容由 AI 从截图推断，无法通过 DOM 测量验证，仅供设计参考'
-              : '⚠️ Inferred by AI from screenshot — not DOM-measurable, for design reference only'}
-          </span>
-        </div>
-      )}
-
-      <div style={tabContent}>
+      <div>
 
         {/* ══════════════ 组件 COMPONENTS ══════════════ */}
-        {zone === 'measured' && measuredTab === 'components' && (
+        {measuredTab === 'components' && (
           <>
             {/* Source label */}
             <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#8E8E93' }}>
@@ -530,114 +476,39 @@ export default function DesignInspector({ report, lang }: Props) {
         )}
 
         {/* ══════════════ 形态 SHAPE ══════════════ */}
-        {zone === 'measured' && measuredTab === 'shape' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        {measuredTab === 'shape' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
 
-            {/* Radius + Shadow side by side */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
-              {/* Radius */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <p style={{ ...sectionLabel, margin: 0 }}>{lang === 'zh' ? '边框圆角' : 'Border Radius'}</p>
-                  {graded.radiusConfidence !== 'none' && (
-                    <span style={{ fontSize: '10px', color: graded.radiusConfidence === 'high' ? '#34C759' : '#AEAEB2', fontWeight: 500 }}>
-                      {confidenceLabel(graded.radiusConfidence, lang)}
-                    </span>
-                  )}
-                </div>
-                {graded.radius.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {graded.radius.map((t, i) => {
-                      const isGreen = sourceDotColor(t.meta) === '#34C759'
-                      return (
-                        <div key={i} style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '6px 4px', borderBottom: '1px solid #F3F3F3',
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '20px', height: '20px', background: '#1D1D1F', borderRadius: t.value, flexShrink: 0 }} />
-                            <code style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#1D1D1F' }}>{t.value}</code>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {t.componentKinds?.length > 0 && (
-                              <span style={{ fontSize: '11px', color: '#8E8E93' }}>{t.componentKinds.slice(0, 2).join(', ')}</span>
-                            )}
-                            <span style={{
-                              fontSize: '11px', fontWeight: 500, padding: '2px 6px', borderRadius: '4px',
-                              color: isGreen ? '#00A650' : '#8E8E93',
-                              background: isGreen ? '#E6F6ED' : '#F5F5F7',
-                            }}>{t.sampleCount}×</span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : <EmptyTab lang={lang} />}
+            {/* 边框圆角 */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>{lang === 'zh' ? '边框圆角' : 'Border Radius'}</div>
+                <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>{lang === 'zh' ? 'DOM 测量' : 'DOM Measured'}</div>
               </div>
-
-              {/* Shadow */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <p style={{ ...sectionLabel, margin: 0 }}>{lang === 'zh' ? '阴影层级' : 'Shadow Elevation'}</p>
-                  {graded.shadowConfidence !== 'none' && (
-                    <span style={{ fontSize: '10px', color: graded.shadowConfidence === 'high' ? '#34C759' : '#AEAEB2', fontWeight: 500 }}>
-                      {confidenceLabel(graded.shadowConfidence, lang)}
-                    </span>
-                  )}
+              {graded.radius.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px' }}>
+                  {graded.radius.map((t, i) => (
+                    <RadiusGalleryItem key={i} token={{ value: t.value, count: t.sampleCount }} />
+                  ))}
                 </div>
-                {graded.shadow.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {graded.shadow.map((t, i) => {
-                      const isGreen = sourceDotColor(t.meta) === '#34C759'
-                      const expanded = expandedShadows.has(i)
-                      return (
-                        <div key={i} style={{ borderBottom: '1px solid #F3F3F3' }}>
-                          {/* Header row — always visible, click to expand */}
-                          <div
-                            onClick={() => toggleShadow(i)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer' }}
-                          >
-                            <div style={{
-                              width: '24px', height: '24px', borderRadius: '4px', flexShrink: 0,
-                              background: '#FFFFFF', border: '1px solid #EAEAEA', boxShadow: t.value,
-                            }} />
-                            <code style={{
-                              flex: 1, fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#3C3C43',
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            }}>{t.value}</code>
-                            <span style={{
-                              fontSize: '11px', fontWeight: 500, padding: '2px 6px', borderRadius: '4px', flexShrink: 0,
-                              color: isGreen ? '#00A650' : '#8E8E93',
-                              background: isGreen ? '#E6F6ED' : '#F5F5F7',
-                            }}>{t.sampleCount}×</span>
-                            <span style={{ fontSize: '10px', color: '#AEAEB2', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
-                          </div>
-                          {/* Expanded: full value in copyable pre block */}
-                          {expanded && (
-                            <div style={{ padding: '8px', margin: '0 4px 6px', background: '#F9F9F9', borderRadius: '6px' }}>
-                              <pre style={{
-                                margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-                                fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#555', lineHeight: 1.5,
-                              }}>{`box-shadow: ${t.value};`}</pre>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(`box-shadow: ${t.value};`) }}
-                                style={{
-                                  marginTop: '6px', padding: '3px 8px', fontSize: '11px',
-                                  background: 'transparent', border: '1px solid #E5E5EA',
-                                  borderRadius: '4px', cursor: 'pointer', color: '#8E8E93',
-                                }}
-                              >{lang === 'zh' ? '复制' : 'Copy'}</button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : <EmptyTab lang={lang} />}
-              </div>
+              ) : <EmptyTab lang={lang} />}
             </div>
 
-            {/* Border tokens */}
+            {/* 阴影层级 */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>{lang === 'zh' ? '阴影层级 & 深度' : 'Shadow Elevation'}</div>
+              </div>
+              {graded.shadow.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {graded.shadow.map((t, i) => (
+                    <ShadowGalleryItem key={i} token={{ value: t.value, count: t.sampleCount }} />
+                  ))}
+                </div>
+              ) : <EmptyTab lang={lang} />}
+            </div>
+
+            {/* 边框样式 */}
             {borderTokens.length > 0 && (
               <div>
                 <p style={sectionLabel}>{lang === 'zh' ? '边框样式' : 'Border Style'}</p>
@@ -658,17 +529,52 @@ export default function DesignInspector({ report, lang }: Props) {
         )}
 
         {/* ══════════════ 布局 LAYOUT ══════════════ */}
-        {zone === 'measured' && measuredTab === 'space' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        {measuredTab === 'space' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
 
-            {/* Page sections wireframe */}
+            {/* ── 1. 布局参考画廊 ── */}
             <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '页面结构' : 'Page Structure'}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                  {lang === 'zh' ? '布局参考画廊' : 'Layout Gallery'}
+                </div>
+                <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>
+                  {lang === 'zh' ? '悬停联动' : 'Hover'}
+                </div>
+              </div>
               {pageSections.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {pageSections.map((sec, i) => (
-                    <SectionRow key={i} section={sec} measured={pageSecsMeasured} lang={lang} primaryHex={primaryHex} />
-                  ))}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+                  {pageSections.map((sec, idx) => {
+                    const key = `sec-${idx}`
+                    const isHov = hoveredWireframe === key
+                    return (
+                      <div key={idx}
+                        style={{ display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', padding: '8px', borderRadius: '12px', transition: 'background 0.2s', backgroundColor: isHov ? '#FAFAFA' : 'transparent' }}
+                        onMouseEnter={() => {
+                          setHoveredWireframe(key)
+                          if (onSectionHover) {
+                            const highlight = resolveHighlight(sec, analysis?.viewportSlices)
+                            if (highlight) onSectionHover(highlight)
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredWireframe(null)
+                          onSectionHover?.(null)
+                        }}
+                      >
+                        <WireframePreview purpose={sec.purpose} layout={sec.layout} isHovered={isHov} hasCTA={sec.hasCTA} hasImage={sec.hasImage} />
+                        <div style={{ paddingLeft: '4px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: isHov ? '#3B82F6' : '#111', transition: 'color 0.2s' }}>
+                            {lang === 'zh' ? purposeLabel(sec.purpose) : (sec.heading || sec.purpose)}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                            <code style={{ fontSize: '11px', color: '#888', fontFamily: 'ui-monospace, monospace' }}>{sec.layout}</code>
+                            {pageSecsMeasured && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#34C759', flexShrink: 0 }} />}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
@@ -679,65 +585,104 @@ export default function DesignInspector({ report, lang }: Props) {
               )}
             </div>
 
-            {/* Spacing (high-freq measurements) + max-width */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+            {/* ── 2. 宏观结构特征 ── */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                  {lang === 'zh' ? '宏观结构特征' : 'Technical Traits'}
+                </div>
+                <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>
+                  {lang === 'zh' ? 'DOM 验证' : 'DOM Verified'}
+                </div>
+              </div>
+              {(() => {
+                const hasLayout = graded.layout.length > 0 || !!gridColumns
+                if (!hasLayout && !designDetails.layoutEn) {
+                  return (
+                    <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
+                      {sourceIsUrl ? (lang === 'zh' ? '未检测到' : 'Not detected') : (lang === 'zh' ? '需要 URL' : 'Requires URL')}
+                    </p>
+                  )
+                }
+                return (
+                  <>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      {gridColumns && (
+                        <span style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderRadius: '8px', fontSize: '13px', color: '#111', border: '1px solid #EAEAEA', fontWeight: 500 }}>
+                          {lang === 'zh' ? `列数: ${gridColumns}` : `Columns: ${gridColumns}`}
+                        </span>
+                      )}
+                      {graded.layout.length > 0
+                        ? graded.layout.map((item, i) => (
+                            <span key={i} style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderRadius: '8px', fontSize: '13px', color: '#111', border: '1px solid #EAEAEA', fontWeight: 500 }}>
+                              {item.label}
+                            </span>
+                          ))
+                        : (lang === 'zh' ? designDetails.layoutZh || designDetails.layoutEn : designDetails.layoutEn)
+                            ?.split('|').map((v, i) => (
+                              <span key={i} style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderRadius: '8px', fontSize: '13px', color: '#AEAEB2', border: '1px solid #EAEAEA', fontWeight: 500 }}>
+                                {v.trim()}
+                              </span>
+                            ))
+                      }
+                    </div>
+                    <p style={{ margin: '12px 0 0 0', fontSize: '12px', color: '#888' }}>
+                      {lang === 'zh' ? '这些是构建该网页底层宏观框架时使用的核心 CSS 技术栈。' : 'Core CSS techniques used to build the page structure.'}
+                    </p>
+                  </>
+                )
+              })()}
+            </div>
+
+            {/* ── 3. 间距系统 + 页面宽度 ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+
               {/* Spacing */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <p style={{ ...sectionLabel, margin: 0 }}>
-                    {lang === 'zh' ? '常用测量值' : 'Common Spacing Values'}
-                  </p>
-                  {graded.spacingConfidence !== 'none' && (
-                    <span style={{ fontSize: '10px', color: graded.spacingConfidence === 'high' ? '#34C759' : '#AEAEB2', fontWeight: 500 }}>
-                      {lang === 'zh' ? `前 ${graded.spacing.length} 高频` : `Top ${graded.spacing.length}`}
-                    </span>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                    {lang === 'zh' ? '间距系统' : 'Spacing Scale'}
+                  </div>
+                  <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>
+                    {lang === 'zh' ? '高频测量' : 'High-freq'}
+                  </div>
                 </div>
                 {graded.spacing.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ border: '1px solid #EAEAEA', borderRadius: '12px', padding: '4px 20px' }}>
                     {graded.spacing.map((t, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', minWidth: '44px' }}>{t.value}</code>
-                        <div style={{ flex: 1, height: '5px', borderRadius: '999px', background: '#EFEFEF', overflow: 'hidden' }}>
-                          <div style={{
-                            width: `${Math.max(4, t.freqRatio * 100)}%`,
-                            height: '100%', borderRadius: '999px',
-                            background: t.grade === 'A' ? '#1D1D1F' : '#AEAEB2',
-                            transition: 'width 0.3s ease',
-                          }} />
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '9px 0' }}>
+                        <code style={{ width: '40px', fontFamily: 'ui-monospace, monospace', fontSize: '13px', fontWeight: 500, color: '#111', flexShrink: 0 }}>{t.value}</code>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ height: '14px', backgroundColor: '#E0E0E0', borderRadius: '2px', width: `${Math.max(4, t.freqRatio * 160)}px`, transition: 'width 0.3s ease' }} />
+                          {t.sampleCount > 100 && (
+                            <span style={{ fontSize: '10px', backgroundColor: '#FEF08A', color: '#854D0E', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                              {lang === 'zh' ? '高频核心' : 'Top hit'}
+                            </span>
+                          )}
                         </div>
-                        <span style={{ fontSize: '11px', color: '#AEAEB2', minWidth: '28px', textAlign: 'right', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <span style={dot(t.grade !== 'C')} />
-                          {t.sampleCount}×
-                        </span>
+                        <div style={{ fontSize: '12px', color: '#888', flexShrink: 0 }}>{t.sampleCount}× usage</div>
                       </div>
                     ))}
-                    <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#C7C7CC' }}>
-                      {lang === 'zh'
-                        ? '基于 DOM 测量频次，不代表设计规范中的 spacing scale'
-                        : 'Based on DOM measurement frequency — not a designed spacing scale'}
-                    </p>
                   </div>
                 ) : (
                   <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                    {sourceIsUrl
-                      ? (lang === 'zh' ? '暂未检测到间距数据' : 'No spacing data detected')
-                      : (lang === 'zh' ? '需要 URL 才能测量间距' : 'Requires URL analysis')}
+                    {sourceIsUrl ? (lang === 'zh' ? '暂未检测到间距数据' : 'No spacing data') : (lang === 'zh' ? '需要 URL' : 'Requires URL')}
                   </p>
                 )}
               </div>
 
-              {/* Max width */}
+              {/* Page width */}
               <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '页面宽度' : 'Page Max-Width'}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                    {lang === 'zh' ? '页面宽度' : 'Page Width'}
+                  </div>
+                </div>
                 {pageMaxWidth ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ flex: 1, height: '20px', background: '#F5F5F7', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{
-                          position: 'absolute', inset: 0, background: '#1D1D1F', borderRadius: '4px',
-                          width: `${Math.min(100, (parseFloat(pageMaxWidth) / 1920) * 100)}%`
-                        }} />
+                        <div style={{ position: 'absolute', inset: 0, background: '#1D1D1F', borderRadius: '4px', width: `${Math.min(100, (parseFloat(pageMaxWidth) / 1920) * 100)}%` }} />
                       </div>
                       <code style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#1D1D1F', flexShrink: 0 }}>{pageMaxWidth}</code>
                     </div>
@@ -751,377 +696,22 @@ export default function DesignInspector({ report, lang }: Props) {
                   </p>
                 )}
               </div>
-            </div>
 
-            {/* Layout evidence: structural parameters only (C-grade) */}
-            <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '结构参数' : 'Structural Parameters'}</p>
-              {(() => {
-                // Kind → icon mapping (text emoji icons, no external dep)
-                const kindIcon: Record<string, string> = {
-                  hero: '⬛', grid: '⊞', flex: '↔', navigation: '≡',
-                  form: '⊟', section: '▤', 'multi-column': '⊟⊟', sticky: '📌', stack: '↕',
-                }
-                const hasLayout = graded.layout.length > 0 || !!gridColumns || !!pageMaxWidth
-                if (!hasLayout && !designDetails.layoutEn) {
-                  return (
-                    <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                      {sourceIsUrl ? (lang === 'zh' ? '未检测到' : 'Not detected') : (lang === 'zh' ? '需要 URL' : 'Requires URL')}
-                    </p>
-                  )
-                }
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {/* Measured structural params */}
-                    {gridColumns && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', background: '#F5F5F7', borderRadius: '8px' }}>
-                        <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '80px' }}>{lang === 'zh' ? '列数' : 'Columns'}</span>
-                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#1D1D1F', flex: 1 }}>{gridColumns}</code>
-                        <span style={dot(true)} />
-                      </div>
-                    )}
-                    {/* Layout pattern evidence chips */}
-                    {graded.layout.length > 0 ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
-                        {graded.layout.map((item, i) => (
-                          <div key={i} style={{ ...chip, fontSize: '12px' }}>
-                            <span style={{ fontSize: '10px', opacity: 0.6 }}>{kindIcon[item.kind] || '·'}</span>
-                            <span style={dot(item.grade !== 'C')} />
-                            {item.label}
-                            <span style={{ color: '#AEAEB2', fontSize: '10px' }}>{item.sampleCount}×</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : designDetails.layoutEn ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
-                        {(lang === 'zh' ? designDetails.layoutZh || designDetails.layoutEn : designDetails.layoutEn)
-                          .split('|').map((v, i) => (
-                            <div key={i} style={{ ...chip, fontSize: '12px' }}>
-                              <span style={dot(false)} />
-                              {v.trim()}
-                            </div>
-                          ))}
-                      </div>
-                    ) : null}
-                  </div>
-                )
-              })()}
             </div>
           </div>
         )}
 
-        {/* ══════════════ 交互 INTERACTION ══════════════ */}
-        {zone === 'impression' && impressionTab === 'interaction' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-
-            {/* AI motion character — always show if available */}
-            {(interactionStyle || designDetails.motionEn || designDetails.animationTendency) && (
-              <div>
-                <p style={sectionLabel}>{lang === 'zh' ? '动效性格' : 'Motion Character'}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {interactionStyle?.transitionFeel && isUsefulAiValue(interactionStyle.transitionFeel) && (
-                    <InteractionChip
-                      label={lang === 'zh' ? '过渡感' : 'Transition Feel'}
-                      value={interactionStyle.transitionFeel}
-                      measured={false}
-                    />
-                  )}
-                  {interactionStyle?.hoverEffect && isUsefulAiValue(interactionStyle.hoverEffect) && (
-                    <InteractionChip
-                      label={lang === 'zh' ? '悬停效果' : 'Hover Effect'}
-                      value={interactionStyle.hoverEffect}
-                      measured={false}
-                    />
-                  )}
-                  {interactionStyle?.animationCharacter && isUsefulAiValue(interactionStyle.animationCharacter) && (
-                    <InteractionChip
-                      label={lang === 'zh' ? '动画风格' : 'Animation Character'}
-                      value={interactionStyle.animationCharacter}
-                      measured={false}
-                    />
-                  )}
-                  {!interactionStyle && (() => {
-                    const raw = lang === 'zh'
-                      ? (designDetails.motionZh || designDetails.motionEn || designDetails.animationTendency || '')
-                      : (designDetails.motionEn || designDetails.animationTendency || '')
-                    const parts = raw.split('|').map(v => v.trim()).filter(Boolean)
-                    const labels = lang === 'zh'
-                      ? ['过渡感', '动效', '风格']
-                      : ['Transition', 'Motion', 'Character']
-                    return parts.map((part, i) => (
-                      <InteractionChip
-                        key={i}
-                        label={labels[i] || (lang === 'zh' ? '动效' : 'Motion')}
-                        value={part}
-                        measured={false}
-                      />
-                    ))
-                  })()}
-                </div>
-              </div>
-            )}
-
-            {/* Transition timing cards */}
-            <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '过渡时长' : 'Transition Timing'}</p>
-              {transitionTokens.length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {transitionTokens.map((t, i) => (
-                    <div key={i} style={{ padding: '10px 14px', background: '#F5F5F7', borderRadius: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <span style={dot(true)} />
-                        <code style={{ fontSize: '14px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#1D1D1F' }}>{t.duration}</code>
-                        <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#8E8E93' }}>{t.easing}</code>
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#AEAEB2' }}>
-                        {t.property} · {t.sampleCount}×
-                        {t.componentKinds?.length ? ' · ' + t.componentKinds.join(', ') : ''}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                  {sourceIsUrl
-                    ? (lang === 'zh' ? '未检测到过渡属性' : 'No transition data detected')
-                    : (lang === 'zh' ? '需要 URL 才能测量' : 'Requires URL analysis')}
-                </p>
-              )}
-            </div>
-
-            {/* State diffs */}
-            <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '状态变化' : 'State Changes'}</p>
-              {hasStateData ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {Object.entries(stateTokens as Record<string, Array<{ state: string; property: string; value: string }>>)
-                    .map(([component, values]) => {
-                      const nonDefault = values.filter(v => v.state !== 'default')
-                      if (!nonDefault.length) return null
-                      // Group by pseudo-class state
-                      const byState = nonDefault.reduce((acc, item) => {
-                        if (!acc[item.state]) acc[item.state] = []
-                        acc[item.state].push(item)
-                        return acc
-                      }, {} as Record<string, typeof nonDefault>)
-                      return (
-                        <div key={component}>
-                          <p style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', textTransform: 'capitalize', borderBottom: '1px solid #1D1D1F', paddingBottom: '4px' }}>{component}</p>
-                          {Object.entries(byState).map(([state, props]) => (
-                            <div key={state} style={{ marginBottom: '10px' }}>
-                              <div style={{ fontSize: '11px', fontWeight: 600, color: '#8E8E93', marginBottom: '4px', paddingLeft: '8px', borderLeft: '2px solid #E5E5EA' }}>:{state}</div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '12px' }}>
-                                {props.map((s, i) => {
-                                  const swatch = extractColorFromCssValue(s.value)
-                                  return (
-                                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', padding: '2px 0' }}>
-                                      <span style={{ color: '#8E8E93', fontFamily: 'var(--font-mono)', minWidth: '120px', flexShrink: 0 }}>{s.property}</span>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        {swatch && (
-                                          <span style={{ display: 'inline-block', width: '11px', height: '11px', borderRadius: '2px', border: '1px solid rgba(0,0,0,0.12)', background: swatch, flexShrink: 0 }} />
-                                        )}
-                                        <code style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#1D1D1F', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.value}</code>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    })}
-                </div>
-              ) : (
-                <p style={{ margin: 0, fontSize: '13px', color: '#AEAEB2' }}>
-                  {sourceIsUrl
-                    ? (lang === 'zh' ? '未检测到状态变化' : 'No state changes detected')
-                    : (lang === 'zh' ? '需要 URL 才能测量交互状态' : 'Requires URL analysis')}
-                </p>
-              )}
-            </div>
-
-          </div>
+        {/* ══════════════ 字体 TYPOGRAPHY ══════════════ */}
+        {measuredTab === 'typography' && (
+          <Typography
+            data={report.typography}
+            analysis={report.pageAnalysis}
+            sourceType={report.sourceType}
+            lang={lang}
+            fullWidth={false}
+          />
         )}
 
-        {/* ══════════════ 风格 STYLE ══════════════ */}
-        {zone === 'impression' && impressionTab === 'style' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-
-            {/* ── Brand Fingerprint card — styled with the site's own colors ── */}
-            <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '品牌指纹' : 'Brand Fingerprint'}</p>
-              <div style={{
-                borderRadius: '14px',
-                border: `1px solid rgba(${hexToRgbParts(primaryHex)},0.22)`,
-                background: `rgba(${hexToRgbParts(primaryHex)},0.04)`,
-                padding: '20px 22px',
-                display: 'flex', flexDirection: 'column', gap: '18px',
-              }}>
-
-                {/* Color swatches row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '48px', fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>
-                    {lang === 'zh' ? '色彩' : 'Color'}
-                  </span>
-                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                    {[
-                      { hex: primaryHex,  title: lang === 'zh' ? '主色' : 'Primary' },
-                      { hex: bgHex,       title: lang === 'zh' ? '背景' : 'Background' },
-                      { hex: surfaceHex,  title: lang === 'zh' ? '表面' : 'Surface' },
-                      { hex: textHex,     title: lang === 'zh' ? '文字' : 'Text' },
-                      ...(colorSystem?.heroAccentColors?.slice(0, 2).map(c => ({ hex: c.hex, title: c.name })) || []),
-                    ].map((c, i) => (
-                      <div key={i} title={`${c.title}: ${c.hex}`} style={{
-                        width: '22px', height: '22px', borderRadius: '5px',
-                        background: c.hex, border: '1px solid rgba(0,0,0,0.09)',
-                        flexShrink: 0,
-                      }} />
-                    ))}
-                  </div>
-                  <code style={{ fontSize: '11px', color: '#8E8E93', fontFamily: 'var(--font-mono)', marginLeft: '2px' }}>
-                    {primaryHex}
-                  </code>
-                </div>
-
-                {/* Typography specimen */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '14px' }}>
-                  <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '48px', fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>
-                    {lang === 'zh' ? '字体' : 'Font'}
-                  </span>
-                  <span style={{
-                    fontSize: '18px', fontWeight: typography.headingWeight || 600,
-                    fontFamily: typography.fontFamily, color: '#1D1D1F', lineHeight: 1,
-                  }}>
-                    {typography.fontFamily.split(',')[0].replace(/["']/g, '').trim()}
-                  </span>
-                  <span style={{ fontSize: '12px', color: '#8E8E93' }}>
-                    {lang === 'zh'
-                      ? `标题 ${typography.headingWeight || '—'} · 正文 ${typography.bodyWeight || '—'}`
-                      : `H: ${typography.headingWeight || '—'} · B: ${typography.bodyWeight || '—'}`}
-                  </span>
-                </div>
-
-                {/* Style character tags — personality tags merged from report tags */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <span style={{ fontSize: '11px', color: '#8E8E93', minWidth: '48px', fontWeight: 600, letterSpacing: '0.04em', flexShrink: 0 }}>
-                    {lang === 'zh' ? '气质' : 'Style'}
-                  </span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                    {(visualStyle?.personality?.length
-                      ? visualStyle.personality
-                      : (lang === 'zh' ? (report.tagsZh || report.tags) : (report.tagsEn || report.tags))
-                    ).slice(0, 6).map((tag, i) => (
-                      <span key={i} style={{
-                        padding: '3px 10px', borderRadius: '99px', fontSize: '12px', fontWeight: 500,
-                        background: i === 0 ? primaryHex : `rgba(${hexToRgbParts(primaryHex)},0.12)`,
-                        color: i === 0 ? (isLight(primaryHex) ? '#000000' : '#FFFFFF') : primaryHex,
-                      }}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── AI 印象 ── visual inferences from screenshot, all translated ── */}
-            {(visualStyle?.iconStyle || visualStyle?.density || visualStyle?.colorTemperature ||
-              (visualStyle?.imageStyle && visualStyle.imageStyle !== 'none')) && (
-              <div>
-                <p style={sectionLabel}>{lang === 'zh' ? 'AI 印象' : 'AI Impressions'}</p>
-                <p style={{ margin: '-8px 0 12px 0', fontSize: '11px', color: '#AEAEB2' }}>
-                  {lang === 'zh'
-                    ? '来自截图的视觉推断，无法 DOM 测量'
-                    : 'Visually inferred from screenshot — not DOM-measurable'}
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
-                  {visualStyle?.iconStyle && (
-                    <StyleFactCard
-                      label={lang === 'zh' ? '图标风格' : 'Icon Style'}
-                      value={lang === 'zh' ? translateIconStyle(visualStyle.iconStyle) : visualStyle.iconStyle}
-                      sub={visualStyle.iconLibrary}
-                      measured={false}
-                      lang={lang}
-                    />
-                  )}
-                  {visualStyle?.density && (
-                    <StyleFactCard
-                      label={lang === 'zh' ? '内容密度' : 'Density'}
-                      value={lang === 'zh' ? translateDensity(visualStyle.density) : visualStyle.density}
-                      measured={false}
-                      lang={lang}
-                    />
-                  )}
-                  {visualStyle?.colorTemperature && (
-                    <StyleFactCard
-                      label={lang === 'zh' ? '色温' : 'Color Temp'}
-                      value={lang === 'zh' ? translateColorTemp(visualStyle.colorTemperature) : visualStyle.colorTemperature}
-                      measured={false}
-                      lang={lang}
-                      accent={visualStyle.colorTemperature === 'warm' ? '#FF9F0A' : visualStyle.colorTemperature === 'cool' ? '#007AFF' : undefined}
-                    />
-                  )}
-                  {visualStyle?.imageStyle && visualStyle.imageStyle !== 'none' && (
-                    <StyleFactCard
-                      label={lang === 'zh' ? '图片风格' : 'Image Style'}
-                      value={lang === 'zh' ? translateImageStyle(visualStyle.imageStyle) : visualStyle.imageStyle}
-                      measured={false}
-                      lang={lang}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ── 色彩模式 — iOS-style segmented control ── */}
-            <div>
-              <p style={sectionLabel}>{lang === 'zh' ? '色彩模式' : 'Color Mode'}</p>
-              <div style={{
-                display: 'inline-flex', borderRadius: '10px', overflow: 'hidden',
-                border: '1px solid rgba(0,0,0,0.08)', background: '#F5F5F7',
-              }}>
-                {([
-                  { id: 'light',  zh: '浅色', en: 'Light' },
-                  { id: 'dark',   zh: '深色', en: 'Dark' },
-                  { id: 'system', zh: '跟随系统', en: 'Adaptive' },
-                ] as const).map((m, i) => {
-                  const active = designDetails.colorMode === m.id
-                  return (
-                    <div key={m.id} style={{
-                      padding: '8px 16px', fontSize: '13px',
-                      fontWeight: active ? 600 : 400,
-                      background: active ? '#FFFFFF' : 'transparent',
-                      color: active ? '#1D1D1F' : '#8E8E93',
-                      borderRight: i < 2 ? '1px solid rgba(0,0,0,0.07)' : 'none',
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      boxShadow: active ? '0 1px 3px rgba(0,0,0,0.09)' : 'none',
-                    }}>
-                      <span style={{
-                        width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
-                        background: m.id === 'dark' ? '#3A3A3C' : m.id === 'system' ? 'linear-gradient(135deg,#F5F5F7 50%,#3A3A3C 50%)' : '#E5E5EA',
-                        border: '1px solid rgba(0,0,0,0.12)',
-                      }} />
-                      {lang === 'zh' ? m.zh : m.en}
-                    </div>
-                  )
-                })}
-              </div>
-              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#AEAEB2', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={dot(false)} />
-                {lang === 'zh' ? 'AI 推断' : 'AI inferred'}
-              </p>
-            </div>
-
-          </div>
-        )}
-
-      </div>
-
-      {/* ── Legend ──────────────────────────────────────────────────────── */}
-      <div style={{ borderTop: '1px solid rgba(0,0,0,0.05)', padding: '10px 24px', display: 'flex', gap: '16px' }}>
-        <LegendItem color="#34C759" label={lang === 'zh' ? '测量值' : 'Measured'} />
-        <LegendItem color="#AEAEB2" label={lang === 'zh' ? 'AI 推断' : 'AI inferred'} />
       </div>
     </div>
   )
@@ -1167,6 +757,275 @@ function StateRow({ state, prop, value }: { state: string; prop: string; value: 
       <code style={{ fontSize: '11px', color: '#1D1D1F', fontFamily: 'var(--font-mono)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {value}
       </code>
+    </div>
+  )
+}
+
+// ── Wireframe preview for layout gallery ────────────────────────────────────
+// ── Gemini: useCopy hook + CopyToast ────────────────────────────────────────
+function useCopy(): [boolean, (text: string) => void] {
+  const [copied, setCopied] = useState(false)
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return [copied, copy]
+}
+
+function CopyToast({ show }: { show: boolean }) {
+  return (
+    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#111', color: '#fff', fontSize: '12px', padding: '6px 12px', borderRadius: '100px', opacity: show ? 1 : 0, pointerEvents: 'none', transition: 'all 0.2s ease', zIndex: 10 }}>已复制</div>
+  )
+}
+
+function RadiusGalleryItem({ token }: { token: { value: string; count: number } }) {
+  const [copied, copy] = useCopy()
+  return (
+    <div onClick={() => copy(`border-radius: ${token.value};`)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', cursor: 'pointer', position: 'relative' }}>
+      <div style={{ width: '64px', height: '64px', backgroundColor: '#F7F7F8', border: '1px solid #E5E5E5', borderRadius: token.value, display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'all 0.2s ease' }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = '#111'}
+        onMouseLeave={e => e.currentTarget.style.borderColor = '#E5E5E5'}>
+        <CopyToast show={copied} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '13px', color: '#111', fontWeight: 500 }}>{token.value}</span>
+        <span style={{ fontSize: '11px', color: '#AEAEB2' }}>{token.count}×</span>
+      </div>
+    </div>
+  )
+}
+
+function ShadowGalleryItem({ token }: { token: { value: string; count: number } }) {
+  const [copied, copy] = useCopy()
+  return (
+    <div onClick={() => copy(`box-shadow: ${token.value};`)} style={{ display: 'flex', alignItems: 'center', gap: '24px', padding: '16px', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.2s ease', position: 'relative' }}
+      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9F9FA'}
+      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+      <CopyToast show={copied} />
+      <div style={{ width: '80px', height: '80px', borderRadius: '8px', flexShrink: 0, background: 'radial-gradient(#E5E5E5 1px, transparent 1px)', backgroundSize: '8px 8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ width: '40px', height: '40px', backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #F0F0F0', boxShadow: token.value }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '12px', color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{token.value}</span>
+        <span style={{ fontSize: '11px', color: '#AEAEB2' }}>{token.count}×</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Resolve which portion of the screenshot to highlight on hover ─────────
+// Priority: viewportSlices (geometric, per-screen) → screenStartPct → yStartPct
+function resolveHighlight(
+  sec: PageSection,
+  viewportSlices?: Array<{ index: number; yStartPct: number; yEndPct: number; dominantSectionId?: string }>
+): { yStart: number; yEnd: number } | null {
+  // 1. Use viewportSlices — find slices that overlap this section's Y range
+  if (viewportSlices && viewportSlices.length > 0 && sec.yStartPct != null && sec.yEndPct != null) {
+    const overlapping = viewportSlices.filter(
+      s => s.yStartPct < sec.yEndPct! && s.yEndPct > sec.yStartPct!
+    )
+    if (overlapping.length > 0) {
+      return {
+        yStart: overlapping[0].yStartPct,
+        yEnd: overlapping[overlapping.length - 1].yEndPct,
+      }
+    }
+  }
+  // 2. Fall back to screen-mapped coords if available
+  const yStart = sec.screenStartPct ?? sec.yStartPct
+  const yEnd   = sec.screenEndPct   ?? sec.yEndPct
+  if (yStart != null && yEnd != null) return { yStart, yEnd }
+  return null
+}
+
+function purposeLabel(purpose: string): string {
+  const map: Record<string, string> = {
+    hero: '主视觉', features: '功能区', pricing: '定价', testimonials: '评价',
+    cta: '行动区', footer: '页脚', section: '内容区',
+  }
+  return map[purpose] || purpose
+}
+
+function WireframePreview({ purpose, layout, isHovered, hasCTA, hasImage }: {
+  purpose: string
+  layout: string
+  isHovered: boolean
+  hasCTA?: boolean
+  hasImage?: boolean
+}) {
+  const accent    = isHovered ? '#3B82F6' : '#C8C8CC'
+  const secondary = isHovered ? 'rgba(59,130,246,0.22)' : '#E2E2E7'
+  const block     = isHovered ? 'rgba(59,130,246,0.10)' : '#EBEBF0'
+  const box: React.CSSProperties = {
+    width: '100%', height: '96px',
+    backgroundColor: isHovered ? '#EFF6FF' : '#F7F7F8',
+    borderRadius: '8px',
+    border: isHovered ? '1.5px solid rgba(59,130,246,0.55)' : '1px solid #E2E2E7',
+    overflow: 'hidden', boxSizing: 'border-box',
+    transition: 'all 0.2s ease',
+    boxShadow: isHovered ? '0 4px 12px rgba(59,130,246,0.10)' : 'none',
+  }
+
+  // ── layout is the primary driver ──────────────────────────────────────────
+
+  if (layout === '2-column') {
+    return (
+      <div style={{ ...box, display: 'flex', padding: '12px', gap: '10px', alignItems: 'stretch' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '5px' }}>
+          <div style={{ width: '75%', height: '10px', backgroundColor: accent, borderRadius: '2px' }} />
+          <div style={{ width: '100%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+          <div style={{ width: '85%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+          {hasCTA && <div style={{ width: '48px', height: '14px', backgroundColor: accent, borderRadius: '3px', marginTop: '2px', opacity: 0.85 }} />}
+        </div>
+        <div style={{ flex: 1, backgroundColor: block, borderRadius: '5px' }} />
+      </div>
+    )
+  }
+
+  if (layout === 'asymmetric') {
+    // 60 / 40 split — visually distinct from 2-column
+    return (
+      <div style={{ ...box, display: 'flex', padding: '12px', gap: '10px', alignItems: 'stretch' }}>
+        <div style={{ flex: 3, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '5px' }}>
+          <div style={{ width: '70%', height: '10px', backgroundColor: accent, borderRadius: '2px' }} />
+          <div style={{ width: '100%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+          <div style={{ width: '80%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+          <div style={{ width: '55%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+        </div>
+        <div style={{ flex: 2, backgroundColor: block, borderRadius: '5px' }} />
+      </div>
+    )
+  }
+
+  if (layout === '3-column-grid') {
+    return (
+      <div style={{ ...box, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', padding: '10px' }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{ backgroundColor: block, borderRadius: '5px', display: 'flex', flexDirection: 'column', padding: '6px', gap: '4px' }}>
+            <div style={{ width: '14px', height: '14px', backgroundColor: secondary, borderRadius: '3px' }} />
+            <div style={{ width: '80%', height: '5px', backgroundColor: accent, borderRadius: '2px', marginTop: '2px' }} />
+            <div style={{ width: '100%', height: '4px', backgroundColor: secondary, borderRadius: '2px' }} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (layout === '4-column-grid') {
+    return (
+      <div style={{ ...box, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px', padding: '10px' }}>
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} style={{ backgroundColor: block, borderRadius: '4px', display: 'flex', flexDirection: 'column', padding: '5px', gap: '3px' }}>
+            <div style={{ width: '12px', height: '12px', backgroundColor: secondary, borderRadius: '2px' }} />
+            <div style={{ width: '90%', height: '4px', backgroundColor: accent, borderRadius: '2px', marginTop: '2px' }} />
+            <div style={{ width: '100%', height: '3px', backgroundColor: secondary, borderRadius: '2px' }} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (layout === 'grid') {
+    return (
+      <div style={{ ...box, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '8px', padding: '10px' }}>
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} style={{ backgroundColor: block, borderRadius: '5px' }} />
+        ))}
+      </div>
+    )
+  }
+
+  // ── full-width: purpose as secondary discriminator ────────────────────────
+
+  if (purpose === 'footer') {
+    return (
+      <div style={{ ...box, display: 'flex', flexDirection: 'column', padding: '10px 12px', gap: '6px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', flex: 1 }}>
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ width: '60%', height: '6px', backgroundColor: accent, borderRadius: '2px' }} />
+              <div style={{ width: '100%', height: '4px', backgroundColor: secondary, borderRadius: '2px' }} />
+              <div style={{ width: '80%', height: '4px', backgroundColor: secondary, borderRadius: '2px' }} />
+              <div style={{ width: '90%', height: '4px', backgroundColor: secondary, borderRadius: '2px' }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ height: '1px', backgroundColor: secondary }} />
+      </div>
+    )
+  }
+
+  if (purpose === 'pricing') {
+    return (
+      <div style={{ ...box, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px', gap: '7px' }}>
+        <div style={{ width: '35%', height: '8px', backgroundColor: accent, borderRadius: '2px' }} />
+        <div style={{ display: 'flex', gap: '6px', flex: 1, width: '100%' }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              flex: 1, backgroundColor: i === 1 ? (isHovered ? 'rgba(59,130,246,0.18)' : 'rgba(0,0,0,0.06)') : block,
+              borderRadius: '5px',
+              border: i === 1 ? `1.5px solid ${accent}` : '1px solid transparent',
+              display: 'flex', flexDirection: 'column', gap: '3px', padding: '5px',
+            }}>
+              <div style={{ width: '50%', height: '5px', backgroundColor: i === 1 ? accent : secondary, borderRadius: '2px' }} />
+              <div style={{ width: '65%', height: '8px', backgroundColor: i === 1 ? accent : secondary, borderRadius: '2px', opacity: 0.6 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (purpose === 'testimonials') {
+    return (
+      <div style={{ ...box, display: 'flex', flexDirection: 'column', padding: '8px 14px', gap: '5px', justifyContent: 'center' }}>
+        <div style={{ fontSize: '22px', lineHeight: 1, color: accent, fontFamily: 'Georgia, serif', opacity: 0.55 }}>"</div>
+        <div style={{ width: '90%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+        <div style={{ width: '72%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+        <div style={{ display: 'flex', gap: '5px', marginTop: '5px', alignItems: 'center' }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{ width: '14px', height: '14px', borderRadius: '50%', backgroundColor: i === 0 ? accent : block, border: `1px solid ${secondary}`, opacity: i === 0 ? 0.7 : 1 }} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (purpose === 'cta') {
+    return (
+      <div style={{ ...box, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px', gap: '7px' }}>
+        <div style={{ width: '55%', height: '11px', backgroundColor: accent, borderRadius: '2px' }} />
+        <div style={{ width: '38%', height: '7px', backgroundColor: secondary, borderRadius: '2px' }} />
+        <div style={{ width: '80px', height: '20px', backgroundColor: accent, borderRadius: '4px', marginTop: '3px', opacity: 0.85 }} />
+      </div>
+    )
+  }
+
+  if (purpose === 'features') {
+    return (
+      <div style={{ ...box, display: 'flex', flexDirection: 'column', padding: '10px 14px', gap: '5px', justifyContent: 'center' }}>
+        <div style={{ width: '40%', height: '9px', backgroundColor: accent, borderRadius: '2px' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '3px' }}>
+          {[1, 0.9, 0.75].map((w, i) => (
+            <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: accent, flexShrink: 0 }} />
+              <div style={{ width: `${w * 100}%`, height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // hero / default full-width
+  return (
+    <div style={{ ...box, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px', gap: '6px' }}>
+      <div style={{ width: '65%', height: '14px', backgroundColor: accent, borderRadius: '3px' }} />
+      <div style={{ width: '45%', height: '8px', backgroundColor: secondary, borderRadius: '3px' }} />
+      {hasCTA !== false && (
+        <div style={{ width: '64px', height: '18px', backgroundColor: accent, borderRadius: '3px', marginTop: '4px', opacity: 0.8 }} />
+      )}
     </div>
   )
 }

@@ -19,9 +19,6 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/storage/supabaseClient'
 import type { ColorToken, DisplayStyleReport, HomeHistoryRecord, StyleReport } from '@/lib/types'
 import { getTopColors } from './viewUtils'
-import { BRAND_PRESETS } from '@/lib/presets/brandPresets'
-import PresetItem from './PresetItem'
-import { FLAGS } from '@/lib/flags'
 
 type SidebarRecord = HomeHistoryRecord
 type BrowserSupabaseClient = ReturnType<typeof createClient>
@@ -65,8 +62,6 @@ interface HomeSidebarProps {
   cancelRename: () => void
   supabase: BrowserSupabaseClient
   setIsAuthVisible: Dispatch<SetStateAction<boolean>>
-  featuredCollapsed: boolean
-  setFeaturedCollapsed: Dispatch<SetStateAction<boolean>>
 }
 
 export default function HomeSidebar({
@@ -108,8 +103,6 @@ export default function HomeSidebar({
   cancelRename,
   supabase,
   setIsAuthVisible,
-  featuredCollapsed,
-  setFeaturedCollapsed,
 }: HomeSidebarProps) {
   const identityAvatarSources = (user?.identities ?? [])
     .flatMap(identity => [
@@ -203,35 +196,6 @@ export default function HomeSidebar({
         />
       </div>
 
-      {sidebarOpen && FLAGS.ENABLE_DESIGN_AUDITS && (
-        <>
-          <SectionHeader 
-            label="Featured Styles" 
-            collapsed={featuredCollapsed} 
-            onToggle={() => setFeaturedCollapsed(v => !v)} 
-          />
-          {!featuredCollapsed && (
-            <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-              {Object.values(BRAND_PRESETS).map(preset => (
-                <PresetItem
-                  key={preset.id}
-                  preset={preset}
-                  isActive={activeItemId === preset.id}
-                  collapsed={!sidebarOpen}
-                  onClick={() => {
-                    setActiveItemId(preset.id!)
-                    setReport(preset)
-                    setError(null)
-                    setShowUserMenu(false)
-                    setContextMenuId(null)
-                    setIsSearchOpen(false)
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
 
       {sidebarOpen && pinnedList.length > 0 && (
         <>
@@ -245,6 +209,7 @@ export default function HomeSidebar({
                   label={item.source_label || 'Untitled'}
                   thumbnailUrl={item.thumbnail_url}
                   colors={item.style_data?.colors || []}
+                  sourceType={item.style_data?.sourceType}
                   isActive={activeItemId === item.id}
                   isPinned={true}
                   contextMenuOpen={contextMenuId === item.id}
@@ -293,6 +258,7 @@ export default function HomeSidebar({
               label={item.source_label || '未命名分析'}
               thumbnailUrl={item.thumbnail_url}
               colors={item.style_data?.colors || []}
+              sourceType={item.style_data?.sourceType}
               isActive={activeItemId === item.id}
               isPinned={false}
               contextMenuOpen={contextMenuId === item.id}
@@ -436,7 +402,7 @@ function SidebarBtn({ icon, label, onClick, active = false, collapsed = false }:
 }
 
 function HistoryItem({
-  id, label, thumbnailUrl, colors, isActive, isPinned,
+  id, label, thumbnailUrl, colors, sourceType, isActive, isPinned,
   contextMenuOpen, renamingId, renameValue, onRenameChange,
   onClick, onContextMenu, onPin, onDelete, onStartRename,
   onRenameSubmit, onRenameCancel
@@ -445,6 +411,7 @@ function HistoryItem({
   label: string
   thumbnailUrl?: string | null
   colors: ColorToken[]
+  sourceType?: 'image' | 'url'
   isActive: boolean
   isPinned: boolean
   contextMenuOpen: boolean
@@ -461,11 +428,30 @@ function HistoryItem({
 }) {
   const [hovered, setHovered] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
+  // URL extractions are always full-page → show top (hero section)
+  // Image uploads: detect on load — long screenshots (h/w > 2.5) also show top
+  const [imgPosition, setImgPosition] = useState<'top center' | 'center'>(
+    sourceType === 'url' ? 'top center' : 'center'
+  )
   const isRenaming = renamingId === id
   const topColors = getTopColors(colors)
 
+  const handleImgLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    if (sourceType === 'image') {
+      const img = e.currentTarget
+      const ratio = img.naturalHeight / img.naturalWidth
+      setImgPosition(ratio > 2.5 ? 'top center' : 'center')
+    }
+  }
+
   const thumbnailContent = thumbnailUrl && !imageFailed ? (
-    <img src={thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setImageFailed(true)} />
+    <img
+      src={thumbnailUrl}
+      alt=""
+      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: imgPosition }}
+      onLoad={handleImgLoad}
+      onError={() => setImageFailed(true)}
+    />
   ) : topColors.length > 0 ? (
     <div style={{
       width: '100%', height: '100%',
@@ -496,8 +482,8 @@ function HistoryItem({
         }}
       >
         <div style={{
-          width: '40px', height: '42px', borderRadius: '5px', overflow: 'hidden',
-          flexShrink: 0, backgroundColor: '#F0F0F0'
+          width: '56px', height: '38px', borderRadius: '5px', overflow: 'hidden',
+          flexShrink: 0, backgroundColor: '#F0F0F0', border: '1px solid rgba(0,0,0,0.06)'
         }}>
           {thumbnailContent}
         </div>
