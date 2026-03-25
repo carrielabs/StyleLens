@@ -374,9 +374,11 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
                 display: 'flex', gap: '32px', flexWrap: 'wrap',
                 justifyContent: 'center', alignItems: 'center',
               }}>
-                {compTab === 'button' && effectiveButtonSnaps.map((s, i) => (
-                  <ButtonVariantCard key={i} snap={s} index={i} lang={lang} getStateStyle={getStateStyle} dark={false} />
-                ))}
+                {compTab === 'button' && (
+                  buttonSnaps.length > 0
+                    ? buttonSnaps.map((s, i) => <ButtonVariantCard key={i} snap={s} index={i} lang={lang} getStateStyle={getStateStyle} dark={false} />)
+                    : <PlaygroundEmpty lang={lang} kind={lang === 'zh' ? '按钮' : 'Button'} dark={false} />
+                )}
                 {compTab === 'input' && (
                   inputSnaps.length > 0
                     ? inputSnaps.map((s, i) => <InputVariantCard key={i} snap={s} index={i} lang={lang} dark={false} />)
