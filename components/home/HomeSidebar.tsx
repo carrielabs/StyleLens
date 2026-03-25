@@ -10,8 +10,6 @@ import {
   PinOff,
   Plus,
   Search,
-  SidebarClose,
-  SidebarOpen,
   Trash2,
   UserIcon,
 } from 'lucide-react'
@@ -158,10 +156,18 @@ export default function HomeSidebar({
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = 'rgba(0,0,0,0.75)' }}
           onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'rgba(0,0,0,0.5)' }}
         >
-          {sidebarOpen
-            ? <SidebarClose size={16} strokeWidth={1.6} />
-            : <SidebarOpen size={16} strokeWidth={1.6} />
-          }
+          {sidebarOpen ? (
+            <svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'none', transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+              <rect x="0.5" y="0.5" width="14" height="13" rx="2.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M5.5 1V13" stroke="currentColor" strokeWidth="1.2" />
+              <rect x="1.5" y="1.5" width="3.5" height="11" rx="1.5" fill="currentColor" fillOpacity="0.25" />
+            </svg>
+          ) : (
+            <svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'none', transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+              <rect x="0.5" y="0.5" width="14" height="13" rx="2.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M5.5 1V13" stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+          )}
         </button>
       </div>
 
@@ -197,42 +203,43 @@ export default function HomeSidebar({
       </div>
 
 
-      {sidebarOpen && pinnedList.length > 0 && (
-        <>
-          <SectionHeader label="Pinned" collapsed={pinnedCollapsed} onToggle={() => setPinnedCollapsed(v => !v)} />
-          {!pinnedCollapsed && (
-            <div className="no-scrollbar" style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-              {pinnedList.map(item => (
-                <HistoryItem
-                  key={item.id}
-                  id={item.id}
-                  label={item.source_label || 'Untitled'}
-                  thumbnailUrl={item.thumbnail_url}
-                  colors={item.style_data?.colors || []}
-                  sourceType={item.style_data?.sourceType}
-                  isActive={activeItemId === item.id}
-                  isPinned={true}
-                  contextMenuOpen={contextMenuId === item.id}
-                  renamingId={renamingId}
-                  renameValue={renameValue}
-                  onRenameChange={setRenameValue}
-                  onClick={() => { setShowUserMenu(false); void openHistoryItem(item) }}
-                  onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
-                  onPin={() => togglePin(item.id)}
-                  onDelete={() => deleteItem(item.id)}
-                  onStartRename={() => startRename(item.id, item.source_label || 'Untitled')}
-                  onRenameSubmit={() => submitRename(item.id)}
-                  onRenameCancel={cancelRename}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: sidebarOpen ? 'auto' : 'hidden' }}>
+        {sidebarOpen && pinnedList.length > 0 && (
+          <>
+            <SectionHeader label="Pinned" collapsed={pinnedCollapsed} onToggle={() => setPinnedCollapsed(v => !v)} />
+            {!pinnedCollapsed && (
+              <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                {pinnedList.map(item => (
+                  <HistoryItem
+                    key={item.id}
+                    id={item.id}
+                    label={item.source_label || 'Untitled'}
+                    thumbnailUrl={item.thumbnail_url}
+                    colors={item.style_data?.colors || []}
+                    sourceType={item.style_data?.sourceType}
+                    isActive={activeItemId === item.id}
+                    isPinned={true}
+                    contextMenuOpen={contextMenuId === item.id}
+                    renamingId={renamingId}
+                    renameValue={renameValue}
+                    onRenameChange={setRenameValue}
+                    onClick={() => { setShowUserMenu(false); void openHistoryItem(item) }}
+                    onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
+                    onPin={() => togglePin(item.id)}
+                    onDelete={() => deleteItem(item.id)}
+                    onStartRename={() => startRename(item.id, item.source_label || 'Untitled')}
+                    onRenameSubmit={() => submitRename(item.id)}
+                    onRenameCancel={cancelRename}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
-      {sidebarOpen && <SectionHeader label="History" collapsed={historyCollapsed} onToggle={() => setHistoryCollapsed(v => !v)} />}
+        {sidebarOpen && <SectionHeader label="History" collapsed={historyCollapsed} onToggle={() => setHistoryCollapsed(v => !v)} />}
 
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: sidebarOpen ? 'auto' : 'hidden', padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
         {!sidebarOpen ? null : historyCollapsed ? null : isLoadingHistory ? (
           <div style={{ padding: '8px 4px' }}>
             {[1, 2, 3, 4].map(i => (
@@ -275,6 +282,7 @@ export default function HomeSidebar({
             />
           ))
         )}
+        </div>
       </div>
 
       <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(0,0,0,0.06)', position: 'relative' }}>
@@ -482,7 +490,7 @@ function HistoryItem({
         }}
       >
         <div style={{
-          width: '56px', height: '38px', borderRadius: '5px', overflow: 'hidden',
+          width: '40px', height: '42px', borderRadius: '5px', overflow: 'hidden',
           flexShrink: 0, backgroundColor: '#F0F0F0', border: '1px solid rgba(0,0,0,0.06)'
         }}>
           {thumbnailContent}

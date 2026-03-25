@@ -137,54 +137,36 @@ export default function Typography({
   const sectionTitle = lang === 'zh' ? '字体排版' : 'Typography'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'auto', paddingBottom: '16px' }}>
-      <div style={{ minWidth: fullWidth ? '100%' : '640px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden', paddingBottom: '16px' }}>
+      <div style={{ width: '100%' }}>
 
-        {/* ── Unified title + tabs header ── */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginBottom: hasMeasuredTypography ? '24px' : '16px',
-          paddingBottom: '16px',
-          borderBottom: '1px solid var(--border-subtle)',
-        }}>
-          {/* Left: section title */}
-          <h3 style={{
-            fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)',
-            letterSpacing: '-0.01em', margin: 0
-          }}>
-            {sectionTitle}
-          </h3>
-
-          {/* Right: 4-view tab switcher (only when data exists) */}
-          {hasMeasuredTypography && (
+        {/* ── View switcher (title removed — "字体" tab label above already identifies this section) ── */}
+        {hasMeasuredTypography && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', marginBottom: '24px' }}>
             <div style={{ display: 'flex', gap: '4px', backgroundColor: '#F3F3F4', padding: '4px', borderRadius: '6px' }}>
               {views.map(v => (
-                <button
-                  key={v.id}
-                  onClick={() => setTypeView(v.id)}
-                  style={{
-                    padding: '4px 12px', fontSize: '12px', fontWeight: 500,
-                    borderRadius: '4px', cursor: 'pointer', border: 'none',
-                    color: typeView === v.id ? '#111' : '#666',
-                    backgroundColor: typeView === v.id ? '#FFF' : 'transparent',
-                    boxShadow: typeView === v.id ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                    transition: 'all 0.2s ease',
-                    fontFamily: 'var(--font-sans)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+                <button key={v.id} onClick={() => setTypeView(v.id)} style={{
+                  padding: '4px 12px', fontSize: '12px', fontWeight: 500,
+                  borderRadius: '4px', cursor: 'pointer', border: 'none',
+                  color: typeView === v.id ? '#111' : '#666',
+                  backgroundColor: typeView === v.id ? '#FFF' : 'transparent',
+                  boxShadow: typeView === v.id ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'var(--font-sans)',
+                  whiteSpace: 'nowrap' as const,
+                }}>
                   {lang === 'zh' ? v.labelZh : v.labelEn}
                 </button>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {hasMeasuredTypography ? (
           <>
             {/* ── Blueprint / Inspector view ── */}
             {typeView === 'inspector' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {geminiTokens.map((t, i) => (
                   <TypeViewBlueprint key={`${t.name}-${i}`} token={t} lang={lang} />
                 ))}
@@ -193,7 +175,7 @@ export default function Typography({
 
             {/* ── Poster view ── */}
             {typeView === 'poster' && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
                 {geminiTokens.map((t, i) => (
                   <TypeViewPoster key={`${t.name}-${i}`} token={t} lang={lang} />
                 ))}
@@ -267,15 +249,23 @@ function getCleanFamily(rawFamily: string) {
 // ─────────────────────────────────────────────────────────────────────
 function TypeViewBlueprint({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en' }) {
   const cleanFamily = getCleanFamily(token.family)
+  const [hovered, setHovered] = useState(false)
   return (
-    <div style={{
-      position: 'relative', padding: '48px 48px 60px',
-      backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px',
-      backgroundImage: 'linear-gradient(to right, #E2E8F0 1px, transparent 1px), linear-gradient(to bottom, #E2E8F0 1px, transparent 1px)',
-      backgroundSize: '24px 24px',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      overflow: 'hidden',
-    }}>
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative', padding: '32px 36px 44px',
+        backgroundColor: hovered ? '#F0F4FA' : '#F8FAFC',
+        border: `1px solid ${hovered ? '#C8D6E8' : '#E2E8F0'}`,
+        borderRadius: '12px',
+        backgroundImage: 'linear-gradient(to right, #E2E8F0 1px, transparent 1px), linear-gradient(to bottom, #E2E8F0 1px, transparent 1px)',
+        backgroundSize: '20px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease',
+        cursor: 'default',
+      }}>
       {/* top-left label */}
       <div style={{
         position: 'absolute', top: '16px', left: '16px',
@@ -362,12 +352,18 @@ function TypeViewBlueprint({ token, lang }: { token: GeminiToken; lang: 'zh' | '
 // ─────────────────────────────────────────────────────────────────────
 function TypeViewPoster({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en' }) {
   const cleanFamily = getCleanFamily(token.family)
+  const [hovered, setHovered] = useState(false)
   return (
-    <div style={{
-      position: 'relative', border: '1px solid #EAEAEA', borderRadius: '16px', padding: '32px 24px',
-      backgroundColor: '#FAFAFA', overflow: 'hidden', flex: '1 1 280px',
-      display: 'flex', flexDirection: 'column', gap: '24px'
-    }}>
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative', border: `1px solid ${hovered ? '#D0D0D0' : '#EAEAEA'}`, borderRadius: '14px', padding: '20px 18px',
+        backgroundColor: hovered ? '#F4F4F6' : '#FAFAFA', overflow: 'hidden', flex: '1 1 240px',
+        display: 'flex', flexDirection: 'column', gap: '16px',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease',
+        cursor: 'default',
+      }}>
       {/* Watermark */}
       <div style={{
         position: 'absolute', right: '-10px', bottom: '-20px',
@@ -377,8 +373,8 @@ function TypeViewPoster({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en'
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{
-          display: 'inline-block', padding: '4px 10px', backgroundColor: '#111',
-          color: '#FFF', borderRadius: '100px', fontSize: '11px', fontWeight: 600, marginBottom: '24px'
+          display: 'inline-block', padding: '3px 8px', backgroundColor: '#111',
+          color: '#FFF', borderRadius: '100px', fontSize: '10px', fontWeight: 600, marginBottom: '12px'
         }}>
           {token.name}
         </div>
@@ -393,7 +389,7 @@ function TypeViewPoster({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en'
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: 'auto', position: 'relative', zIndex: 1 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginTop: 'auto', position: 'relative', zIndex: 1 }}>
         {[
           { label: lang === 'zh' ? '字体'   : 'Family',  value: cleanFamily,          color: '#111'    },
           { label: lang === 'zh' ? '字号'   : 'Size',    value: token.size,            color: '#111'    },
@@ -402,9 +398,9 @@ function TypeViewPoster({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en'
           { label: lang === 'zh' ? '字间距' : 'Tracking', value: token.tracking,        color: '#D97706' },
           { label: lang === 'zh' ? '行高'   : 'Leading', value: token.leading,         color: '#111'    },
         ].map(item => (
-          <div key={item.label} style={{ backgroundColor: '#FFF', border: '1px solid #EAEAEA', padding: '8px 12px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px', whiteSpace: 'nowrap' }}>{item.label}</div>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: item.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div key={item.label} style={{ backgroundColor: '#FFF', border: '1px solid #EAEAEA', padding: '6px 8px', borderRadius: '6px' }}>
+            <div style={{ fontSize: '9px', color: '#888', marginBottom: '2px', whiteSpace: 'nowrap' }}>{item.label}</div>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: item.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {item.value}
             </div>
           </div>
@@ -419,8 +415,19 @@ function TypeViewPoster({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en'
 // ─────────────────────────────────────────────────────────────────────
 function TypeViewWaterfall({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en' }) {
   const cleanFamily = getCleanFamily(token.family)
+  const [hovered, setHovered] = useState(false)
   return (
-    <div style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '16px 12px', margin: '0 -12px',
+        display: 'flex', flexDirection: 'column', gap: '8px',
+        borderRadius: '8px',
+        backgroundColor: hovered ? '#F5F5F7' : 'transparent',
+        transition: 'background-color 0.15s ease',
+        cursor: 'default',
+      }}>
       <div style={{ fontSize: '12px', color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {token.name}
       </div>
@@ -435,7 +442,7 @@ function TypeViewWaterfall({ token, lang }: { token: GeminiToken; lang: 'zh' | '
       }}>
         {token.previewText}
       </div>
-      <div style={{ display: 'flex', gap: '20px', fontSize: '13px', color: '#666', marginTop: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#666', marginTop: '4px', flexWrap: 'wrap' }}>
         {[
           { label: lang === 'zh' ? 'Family'   : 'Family',   value: cleanFamily,    color: '#111'    },
           { label: lang === 'zh' ? 'Size'     : 'Size',     value: token.size,     color: '#111'    },
@@ -462,14 +469,34 @@ function TypeViewWaterfall({ token, lang }: { token: GeminiToken; lang: 'zh' | '
 // ─────────────────────────────────────────────────────────────────────
 function TypeViewEditorial({ tokens, lang }: { tokens: GeminiToken[]; lang: 'zh' | 'en' }) {
   return (
-    <div style={{ display: 'flex', gap: '48px', padding: '32px', backgroundColor: '#FFF', border: '1px solid #EAEAEA', borderRadius: '12px' }}>
-      <div style={{ flex: 1, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div style={{ display: 'flex', gap: '32px', padding: '20px', backgroundColor: '#FFF', border: '1px solid #EAEAEA', borderRadius: '12px' }}>
+      <div style={{ flex: 1, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: '0' }}>
         {tokens.map((token, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
+          <EditorialRow key={i} token={token} lang={lang} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function EditorialRow({ token, lang }: { token: GeminiToken; lang: 'zh' | 'en' }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: '16px',
+        padding: '12px 10px', margin: '0 -10px',
+        borderRadius: '8px',
+        backgroundColor: hovered ? '#F5F5F7' : 'transparent',
+        transition: 'background-color 0.15s ease',
+        cursor: 'default',
+      }}>
             {/* Sidebar metadata */}
             <div style={{
-              flex: '0 0 120px', paddingTop: '6px',
-              textAlign: 'right', borderRight: '1px solid #EAEAEA', paddingRight: '16px'
+              flex: '0 0 100px', paddingTop: '4px',
+              textAlign: 'right', borderRight: '1px solid #EAEAEA', paddingRight: '12px'
             }}>
               <div style={{ fontSize: '10px', fontWeight: 600, color: '#111', textTransform: 'uppercase', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {token.name}
@@ -499,9 +526,6 @@ function TypeViewEditorial({ tokens, lang }: { tokens: GeminiToken[]; lang: 'zh'
             }}>
               {token.previewText}
             </div>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }

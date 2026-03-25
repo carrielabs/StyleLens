@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { StyleReport, RadiusToken, ShadowToken, BorderToken, TransitionToken, ButtonSnapshot, PageSection, VisualStyleAnalysis, InteractionStyleAI } from '@/lib/types'
+import type { StyleReport, RadiusToken, ShadowToken, BorderToken, TransitionToken, ButtonSnapshot, InputSnapshot, CardSnapshot, TagSnapshot, PageSection, VisualStyleAnalysis, InteractionStyleAI } from '@/lib/types'
 import { gradeTokens, confidenceLabel } from '@/lib/design-details/gradeTokens'
 import type { GradedTokenSet } from '@/lib/design-details/gradeTokens'
 import Typography from './Typography'
@@ -37,6 +37,11 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
 
   // ── Snapshot data (DOM-measured button) ──────────────────────────────────
   const snap: ButtonSnapshot | undefined = analysis?.buttonSnapshot
+  // ── Multi-variant snapshot arrays (Codex upstream, defensive access) ─────
+  const buttonSnaps: ButtonSnapshot[] = ((analysis as any)?.buttonSnapshots as ButtonSnapshot[] | undefined)?.slice(0, 3) || (snap ? [snap] : [])
+  const inputSnaps: InputSnapshot[]   = ((analysis as any)?.inputSnapshots  as InputSnapshot[]  | undefined)?.slice(0, 3) || []
+  const cardSnaps:  CardSnapshot[]    = ((analysis as any)?.cardSnapshots   as CardSnapshot[]   | undefined)?.slice(0, 3) || []
+  const tagSnaps:   TagSnapshot[]     = ((analysis as any)?.tagSnapshots    as TagSnapshot[]    | undefined)?.slice(0, 3) || []
 
   // ── Color tokens (fallback chain: colorSystem → colors array → defaults) ──
   const primaryHex   = snap?.backgroundColor
@@ -106,6 +111,26 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
   // For UI components, 50%/100% means avatar/icon circles — exclude them from button/card/input radius
   const componentRadiusFallback = radiusFallbackValues.find(v => !v.includes('%')) || '6px'
   const primaryShadow = shadowFallbackValues[0] || 'none'
+
+  // ── Effective snap arrays (real data preferred, synthesized fallback) ─────
+  const effectiveButtonSnaps: ButtonSnapshot[] = buttonSnaps.length > 0 ? buttonSnaps : [{
+    backgroundColor: primaryHex, color: primaryFgHex,
+    borderRadius: componentRadiusFallback, paddingH: '20px', paddingV: '10px',
+    fontSize: '14px', fontWeight: String(typography.headingWeight || 600),
+    fontFamily: typography.fontFamily, border: 'none',
+  }]
+  const effectiveInputSnaps: InputSnapshot[] = inputSnaps.length > 0 ? inputSnaps : [{
+    backgroundColor: surfaceHex, color: textHex, border: `1px solid ${borderHex}`,
+    borderRadius: componentRadiusFallback, paddingH: '14px', paddingV: '10px',
+    fontSize: '14px', fontFamily: typography.fontFamily,
+  }]
+  const effectiveCardSnaps: CardSnapshot[] = cardSnaps.length > 0 ? cardSnaps : [{
+    backgroundColor: surfaceHex, border: `1px solid ${borderHex}`,
+    borderRadius: componentRadiusFallback,
+    boxShadow: primaryShadow !== 'none' ? primaryShadow : undefined,
+    padding: '16px 20px',
+  }]
+  const effectiveTagSnaps: TagSnapshot[] = tagSnaps
 
   // ── meta.source → friendly label ──────────────────────────────────────────
   function sourceLabel(meta?: { source?: string; confidence?: string; evidenceCount?: number }): string {
@@ -271,8 +296,9 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
             onClick={() => setMeasuredTab(id)}
             style={{
               padding: '8px 0 12px 0',
-              fontSize: '13px',
+              fontSize: '15px',
               fontWeight: measuredTab === id ? 600 : 500,
+              letterSpacing: '0',
               background: 'none',
               border: 'none',
               color: measuredTab === id ? '#1D1D1F' : '#AEAEB2',
@@ -298,180 +324,137 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
         {/* ══════════════ 组件 COMPONENTS ══════════════ */}
         {measuredTab === 'components' && (
           <>
-            {/* Source label */}
-            <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#8E8E93' }}>
-              {lang === 'zh' ? `来自 ${sourceName} 的提取样式` : `Extracted from ${sourceName}`}
-            </p>
-
-            <div style={subTabBar}>
-              {(['button','input','card','badge'] as ComponentTab[]).map(k => (
-                <button key={k} style={subTabBtn(compTab === k)} onClick={() => setCompTab(k)}>
-                  {k === 'button' ? (lang === 'zh' ? '按钮' : 'Button')
-                    : k === 'input' ? (lang === 'zh' ? '输入框' : 'Input')
-                    : k === 'card' ? (lang === 'zh' ? '卡片' : 'Card')
-                    : (lang === 'zh' ? '标签' : 'Badge')}
-                </button>
-              ))}
-            </div>
-
-            {/* ── Full-width component preview ── */}
-            <div>
-              {compTab === 'button' && (
-                <ComponentPreview bg={effBg}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', width: '100%' }}>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                      {/* Primary button — hover/active states from stateTokens */}
-                      <button
-                        style={{
-                          ...effBtnStyle,
-                          transition: 'all 0.15s ease',
-                          ...(btnHovered && !btnActive ? getStateStyle('button', 'hover') : {}),
-                          ...(btnActive ? { ...getStateStyle('button', 'active'), transform: 'scale(0.98)' } : {}),
-                        }}
-                        onMouseEnter={() => setBtnHovered(true)}
-                        onMouseLeave={() => { setBtnHovered(false); setBtnActive(false) }}
-                        onMouseDown={() => setBtnActive(true)}
-                        onMouseUp={() => setBtnActive(false)}
-                      >
-                        {isValidButtonText(snap?.text) ? snap!.text : (lang === 'zh' ? '主要按钮' : 'Primary Button')}
-                      </button>
-                      {/* Secondary button */}
-                      <button style={{
-                        background: 'transparent', color: effPrimary,
-                        border: `1px solid ${effPrimary}`, cursor: 'pointer',
-                        borderRadius: effRadius('button'),
-                        padding: snap?.paddingV && snap?.paddingH ? `${snap.paddingV} ${snap.paddingH}` : '10px 20px',
-                        fontSize: snap?.fontSize || '14px',
-                        fontFamily: effFont, whiteSpace: 'nowrap' as const,
-                        transition: 'all 0.15s ease',
-                      }}>
-                        {lang === 'zh' ? '次要按钮' : 'Secondary'}
-                      </button>
-                    </div>
-                    {getStates('button').length > 0 && (
-                      <p style={{ margin: 0, fontSize: '11px', color: '#AEAEB2' }}>
-                        {lang === 'zh' ? '↑ 悬停 / 点击感受真实交互效果' : '↑ Hover & click to feel real interaction states'}
-                      </p>
-                    )}
-                  </div>
-                </ComponentPreview>
-              )}
-              {compTab === 'input' && (
-                <ComponentPreview bg={effBg}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
-                    <input readOnly defaultValue="" placeholder={lang === 'zh' ? '输入框示例' : 'Input placeholder'} style={{
-                      background: effSurface, color: effText, border: effBorder('input'),
-                      borderRadius: effRadius('input'), padding: '10px 14px', fontSize: '14px',
-                      fontFamily: effFont, outline: 'none', width: '100%', boxSizing: 'border-box' as const,
-                    }} />
-                    <input readOnly defaultValue="" placeholder={lang === 'zh' ? '禁用状态' : 'Disabled state'} disabled style={{
-                      background: effSurface, color: effText, border: effBorder('input'),
-                      borderRadius: effRadius('input'), padding: '10px 14px', fontSize: '14px',
-                      fontFamily: effFont, outline: 'none', width: '100%', boxSizing: 'border-box' as const, opacity: 0.4,
-                    }} />
-                  </div>
-                </ComponentPreview>
-              )}
-              {compTab === 'card' && (
-                <ComponentPreview bg={effBg}>
-                  <div style={{
-                    background: effSurface, color: effText, border: effBorder('card'),
-                    borderRadius: effRadius('card'), boxShadow: effShadow('card'),
-                    padding: '16px 20px', width: '100%', boxSizing: 'border-box' as const,
+            {/* Component type selector — identical to Typography tab segmented control */}
+            <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '4px', backgroundColor: '#F3F3F4', padding: '4px', borderRadius: '6px' }}>
+                {(['button','input','card','badge'] as ComponentTab[]).map(k => (
+                  <button key={k} onClick={() => setCompTab(k)} style={{
+                    padding: '4px 12px', fontSize: '12px', fontWeight: 500,
+                    borderRadius: '4px', cursor: 'pointer', border: 'none',
+                    color: compTab === k ? '#111' : '#666',
+                    backgroundColor: compTab === k ? '#FFF' : 'transparent',
+                    boxShadow: compTab === k ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                    transition: 'all 0.2s ease',
+                    fontFamily: 'var(--font-sans)',
+                    whiteSpace: 'nowrap' as const,
                   }}>
-                    <div style={{ fontSize: '15px', fontWeight: typography.headingWeight || 600, fontFamily: effFont, marginBottom: '6px' }}>
-                      {lang === 'zh' ? '卡片标题' : 'Card Title'}
-                    </div>
-                    <div style={{ fontSize: '13px', color: effText, opacity: 0.6, fontFamily: effFont }}>
-                      {lang === 'zh' ? '说明文字内容' : 'Description text content'}
-                    </div>
-                  </div>
-                </ComponentPreview>
-              )}
-              {compTab === 'badge' && (
-                <ComponentPreview bg={isLight(bgHex) ? '#E8E8ED' : '#3A3A3C'}>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    {[
-                      { label: lang === 'zh' ? '标签' : 'Tag', bg: effPrimary, color: effPrimaryFg },
-                      { label: lang === 'zh' ? '次要' : 'Secondary', bg: effSurface, color: effText },
-                      { label: lang === 'zh' ? '边框' : 'Outline', bg: 'transparent', color: effPrimary, border: `1px solid ${effPrimary}` },
-                    ].map((b, i) => (
-                      <span key={i} style={{
-                        background: b.bg, color: b.color, border: b.border || 'none',
-                        borderRadius: '999px', padding: '4px 10px', fontSize: '12px',
-                        fontWeight: 500, fontFamily: effFont,
-                      }}>{b.label}</span>
-                    ))}
-                  </div>
-                </ComponentPreview>
-              )}
+                    {k === 'button' ? (lang === 'zh' ? '按钮' : 'Button')
+                      : k === 'input' ? (lang === 'zh' ? '输入框' : 'Input')
+                      : k === 'card' ? (lang === 'zh' ? '卡片' : 'Card')
+                      : (lang === 'zh' ? '标签' : 'Badge')}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* ── Disclosure: CSS values ── */}
-            <button
-              onClick={() => setShowTokens(v => !v)}
-              style={{
-                marginTop: '10px', background: 'none', border: 'none',
-                color: '#8E8E93', cursor: 'pointer', fontSize: '12px',
-                padding: '4px 0', display: 'flex', alignItems: 'center', gap: '4px',
-              }}
-            >
-              {showTokens
-                ? (lang === 'zh' ? '收起数值 ▲' : 'Hide values ▲')
-                : (lang === 'zh' ? '查看数值 ▼' : 'Show values ▼')}
-            </button>
-
-            {showTokens && (
-              <div style={{ marginTop: '8px' }}>
-                {compTab === 'button' && <>
-                  <TokenRow label="background"     value={snap?.backgroundColor || primaryHex}              measured={!!snap?.backgroundColor} />
-                  <TokenRow label="color"          value={snap?.color || primaryFgHex}                      measured={!!snap?.color} />
-                  <TokenRow label="border-radius"  value={snap?.borderRadius || bestRadius('button').value} measured={!!(snap?.borderRadius) || bestRadius('button').measured} />
-                  {snap?.paddingV && snap?.paddingH && <TokenRow label="padding" value={`${snap.paddingV} ${snap.paddingH}`} measured={true} />}
-                  {snap?.fontSize && <TokenRow label="font-size" value={snap.fontSize} measured={true} />}
-                  <TokenRow label="font-weight"    value={snap?.fontWeight || String(typography.headingWeight || 600)} measured={!!snap?.fontWeight} />
-                  <TokenRow label="font-family"    value={snap?.fontFamily || typography.fontFamily}       measured={!!snap?.fontFamily} />
-                  <TokenRow label="box-shadow"     value={snap?.boxShadow || bestShadow('button').value}   measured={!!(snap?.boxShadow) || (bestShadow('button').measured && sourceIsUrl)} />
-                  {snap?.letterSpacing && <TokenRow label="letter-spacing" value={snap.letterSpacing} measured={true} />}
-                  {snap?.width && snap?.height && <TokenRow label="size" value={`${snap.width} × ${snap.height}`} measured={true} />}
-                  {getStates('button').length > 0 && (
-                    <div style={{ marginTop: '12px' }}>
-                      <p style={{ ...sectionLabel, marginBottom: '8px' }}>{lang === 'zh' ? '交互状态' : 'States'}</p>
-                      {getStates('button').map((s, i) => (
-                        <StateRow key={i} state={s.state} prop={s.property} value={s.value} />
-                      ))}
-                    </div>
-                  )}
-                </>}
-                {compTab === 'input' && <>
-                  <TokenRow label="background"    value={surfaceHex}                            measured={true} />
-                  <TokenRow label="border"        value={bestBorder('input').value}             measured={bestBorder('input').measured && sourceIsUrl} />
-                  <TokenRow label="border-radius" value={bestRadius('input').value}             measured={bestRadius('input').measured} />
-                  <TokenRow label="color"         value={textHex}                               measured={true} />
-                  <TokenRow label="font-family"   value={typography.fontFamily}                 measured={true} />
-                  {getStates('input').length > 0 && (
-                    <div style={{ marginTop: '12px' }}>
-                      <p style={{ ...sectionLabel, marginBottom: '8px' }}>{lang === 'zh' ? '交互状态' : 'States'}</p>
-                      {getStates('input').map((s, i) => (
-                        <StateRow key={i} state={s.state} prop={s.property} value={s.value} />
-                      ))}
-                    </div>
-                  )}
-                </>}
-                {compTab === 'card' && <>
-                  <TokenRow label="background"    value={surfaceHex}                            measured={true} />
-                  <TokenRow label="border"        value={bestBorder('card').value}              measured={bestBorder('card').measured && sourceIsUrl} />
-                  <TokenRow label="border-radius" value={bestRadius('card').value}              measured={bestRadius('card').measured} />
-                  <TokenRow label="box-shadow"    value={bestShadow('card').value}              measured={bestShadow('card').measured && sourceIsUrl} />
-                  <TokenRow label="color"         value={textHex}                               measured={true} />
-                </>}
-                {compTab === 'badge' && <>
-                  <TokenRow label="border-radius" value="999px (pill)"                          measured={false} />
-                  <TokenRow label="background"    value={primaryHex}                            measured={true} />
-                  <TokenRow label="color"         value={primaryFgHex}                          measured={true} />
-                </>}
+            {/* ── Playground canvas — Gemini-style light (#FAFAFA + dot grid + white card variants) ── */}
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              minHeight: '160px',
+              borderRadius: '12px',
+              border: '1px solid rgba(0,0,0,0.06)',
+              backgroundColor: '#FAFAFA',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '32px 24px 48px',
+            }}>
+              {/* Dot grid layer */}
+              <div style={{
+                position: 'absolute', inset: 0, pointerEvents: 'none',
+                backgroundImage: 'radial-gradient(rgba(0,0,0,0.06) 1px, transparent 1px)',
+                backgroundSize: '16px 16px',
+              }} />
+              {/* Variant content — above dot grid */}
+              <div style={{
+                position: 'relative', zIndex: 1,
+                display: 'flex', gap: '32px', flexWrap: 'wrap',
+                justifyContent: 'center', alignItems: 'center',
+              }}>
+                {compTab === 'button' && effectiveButtonSnaps.map((s, i) => (
+                  <ButtonVariantCard key={i} snap={s} index={i} lang={lang} getStateStyle={getStateStyle} dark={false} />
+                ))}
+                {compTab === 'input' && (
+                  inputSnaps.length > 0
+                    ? inputSnaps.map((s, i) => <InputVariantCard key={i} snap={s} index={i} lang={lang} dark={false} />)
+                    : <PlaygroundEmpty lang={lang} kind={lang === 'zh' ? '输入框' : 'Input'} dark={false} />
+                )}
+                {compTab === 'card' && (
+                  cardSnaps.length > 0
+                    ? cardSnaps.map((s, i) => <CardVariantCard key={i} snap={s} index={i} lang={lang} typographyWeight={typography.headingWeight || 600} dark={false} />)
+                    : <PlaygroundEmpty lang={lang} kind={lang === 'zh' ? '卡片' : 'Card'} dark={false} />
+                )}
+                {compTab === 'badge' && (
+                  tagSnaps.length > 0
+                    ? <TagPlayground snaps={tagSnaps} lang={lang} primaryHex={effPrimary} primaryFgHex={effPrimaryFg} surfaceHex={effSurface} textHex={effText} dark={false} />
+                    : <PlaygroundEmpty lang={lang} kind={lang === 'zh' ? '标签' : 'Badge'} dark={false} />
+                )}
               </div>
-            )}
+            </div>
+
+            {/* ── Disclosure: CSS values — only show when real data exists for the current tab ── */}
+            {(() => {
+              const hasData =
+                compTab === 'button' ? buttonSnaps.length > 0 :
+                compTab === 'input'  ? inputSnaps.length > 0 :
+                compTab === 'card'   ? cardSnaps.length > 0 :
+                tagSnaps.length > 0
+              if (!hasData) return null
+              return (
+                <>
+                  <button
+                    onClick={() => setShowTokens(v => !v)}
+                    style={{
+                      marginTop: '10px', background: 'none', border: 'none',
+                      color: '#8E8E93', cursor: 'pointer', fontSize: '12px',
+                      padding: '4px 0', display: 'flex', alignItems: 'center', gap: '4px',
+                    }}
+                  >
+                    {showTokens
+                      ? (lang === 'zh' ? '收起数值 ▲' : 'Hide values ▲')
+                      : (lang === 'zh' ? '查看数值 ▼' : 'Show values ▼')}
+                  </button>
+
+                  {showTokens && (
+                    <div style={{ marginTop: '8px' }}>
+                      {compTab === 'button' && <>
+                        <TokenRow label="background"     value={effectiveButtonSnaps[0]?.backgroundColor || primaryHex}              measured={!!effectiveButtonSnaps[0]?.backgroundColor} />
+                        <TokenRow label="color"          value={effectiveButtonSnaps[0]?.color || primaryFgHex}                      measured={!!effectiveButtonSnaps[0]?.color} />
+                        <TokenRow label="border-radius"  value={effectiveButtonSnaps[0]?.borderRadius || bestRadius('button').value} measured={!!(effectiveButtonSnaps[0]?.borderRadius) || bestRadius('button').measured} />
+                        {effectiveButtonSnaps[0]?.paddingV && effectiveButtonSnaps[0]?.paddingH && <TokenRow label="padding" value={`${effectiveButtonSnaps[0].paddingV} ${effectiveButtonSnaps[0].paddingH}`} measured={true} />}
+                        {effectiveButtonSnaps[0]?.fontSize && <TokenRow label="font-size" value={effectiveButtonSnaps[0].fontSize!} measured={true} />}
+                        <TokenRow label="font-weight"    value={effectiveButtonSnaps[0]?.fontWeight || String(typography.headingWeight || 600)} measured={!!effectiveButtonSnaps[0]?.fontWeight} />
+                        <TokenRow label="font-family"    value={effectiveButtonSnaps[0]?.fontFamily || typography.fontFamily}        measured={!!effectiveButtonSnaps[0]?.fontFamily} />
+                        {effectiveButtonSnaps[0]?.boxShadow && <TokenRow label="box-shadow" value={effectiveButtonSnaps[0].boxShadow!} measured={true} />}
+                        {effectiveButtonSnaps[0]?.letterSpacing && <TokenRow label="letter-spacing" value={effectiveButtonSnaps[0].letterSpacing!} measured={true} />}
+                        {effectiveButtonSnaps[0]?.width && effectiveButtonSnaps[0]?.height && <TokenRow label="size" value={`${effectiveButtonSnaps[0].width} × ${effectiveButtonSnaps[0].height}`} measured={true} />}
+                      </>}
+                      {compTab === 'input' && <>
+                        <TokenRow label="background"    value={inputSnaps[0]?.backgroundColor || ''}            measured={!!inputSnaps[0]?.backgroundColor} />
+                        <TokenRow label="border"        value={inputSnaps[0]?.border || ''}                     measured={!!inputSnaps[0]?.border} />
+                        <TokenRow label="border-radius" value={inputSnaps[0]?.borderRadius || ''}               measured={!!inputSnaps[0]?.borderRadius} />
+                        <TokenRow label="color"         value={inputSnaps[0]?.color || ''}                      measured={!!inputSnaps[0]?.color} />
+                        <TokenRow label="font-family"   value={inputSnaps[0]?.fontFamily || ''}                 measured={!!inputSnaps[0]?.fontFamily} />
+                      </>}
+                      {compTab === 'card' && <>
+                        <TokenRow label="background"    value={cardSnaps[0]?.backgroundColor || ''}  measured={!!cardSnaps[0]?.backgroundColor} />
+                        <TokenRow label="border"        value={cardSnaps[0]?.border || ''}            measured={!!cardSnaps[0]?.border} />
+                        <TokenRow label="border-radius" value={cardSnaps[0]?.borderRadius || ''}      measured={!!cardSnaps[0]?.borderRadius} />
+                        <TokenRow label="box-shadow"    value={cardSnaps[0]?.boxShadow || ''}         measured={!!cardSnaps[0]?.boxShadow} />
+                      </>}
+                      {compTab === 'badge' && <>
+                        <TokenRow label="border-radius" value={tagSnaps[0]?.borderRadius || ''}      measured={!!tagSnaps[0]?.borderRadius} />
+                        <TokenRow label="background"    value={tagSnaps[0]?.backgroundColor || ''}   measured={!!tagSnaps[0]?.backgroundColor} />
+                        <TokenRow label="color"         value={tagSnaps[0]?.color || ''}             measured={!!tagSnaps[0]?.color} />
+                      </>}
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </>
         )}
 
@@ -482,11 +465,11 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
             {/* 边框圆角 */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '18px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>{lang === 'zh' ? '边框圆角' : 'Border Radius'}</div>
-                <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>{lang === 'zh' ? 'DOM 测量' : 'DOM Measured'}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#111', letterSpacing: '-0.01em' }}>{lang === 'zh' ? '边框圆角' : 'Border Radius'}</div>
+                <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: 500 }}>· {lang === 'zh' ? 'DOM 测量' : 'DOM measured'}</div>
               </div>
               {graded.radius.length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
                   {graded.radius.map((t, i) => (
                     <RadiusGalleryItem key={i} token={{ value: t.value, count: t.sampleCount }} />
                   ))}
@@ -497,10 +480,10 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
             {/* 阴影层级 */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '18px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>{lang === 'zh' ? '阴影层级 & 深度' : 'Shadow Elevation'}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#111', letterSpacing: '-0.01em' }}>{lang === 'zh' ? '阴影层级 & 深度' : 'Shadow Elevation'}</div>
               </div>
               {graded.shadow.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   {graded.shadow.map((t, i) => (
                     <ShadowGalleryItem key={i} token={{ value: t.value, count: t.sampleCount }} />
                   ))}
@@ -535,12 +518,10 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
             {/* ── 1. 布局参考画廊 ── */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#111', letterSpacing: '-0.01em' }}>
                   {lang === 'zh' ? '布局参考画廊' : 'Layout Gallery'}
                 </div>
-                <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>
-                  {lang === 'zh' ? '悬停联动' : 'Hover'}
-                </div>
+                <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: 500 }}>· {lang === 'zh' ? '悬停联动截图' : 'hover highlight'}</div>
               </div>
               {pageSections.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
@@ -588,12 +569,10 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
             {/* ── 2. 宏观结构特征 ── */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#111', letterSpacing: '-0.01em' }}>
                   {lang === 'zh' ? '宏观结构特征' : 'Technical Traits'}
                 </div>
-                <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>
-                  {lang === 'zh' ? 'DOM 验证' : 'DOM Verified'}
-                </div>
+                <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: 500 }}>· {lang === 'zh' ? 'DOM 验证' : 'DOM verified'}</div>
               </div>
               {(() => {
                 const hasLayout = graded.layout.length > 0 || !!gridColumns
@@ -608,21 +587,15 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
                   <>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                       {gridColumns && (
-                        <span style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderRadius: '8px', fontSize: '13px', color: '#111', border: '1px solid #EAEAEA', fontWeight: 500 }}>
-                          {lang === 'zh' ? `列数: ${gridColumns}` : `Columns: ${gridColumns}`}
-                        </span>
+                        <LayoutChip label={lang === 'zh' ? `列数: ${gridColumns}` : `Columns: ${gridColumns}`} muted={false} />
                       )}
                       {graded.layout.length > 0
                         ? graded.layout.map((item, i) => (
-                            <span key={i} style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderRadius: '8px', fontSize: '13px', color: '#111', border: '1px solid #EAEAEA', fontWeight: 500 }}>
-                              {item.label}
-                            </span>
+                            <LayoutChip key={i} label={item.label} muted={false} />
                           ))
                         : (lang === 'zh' ? designDetails.layoutZh || designDetails.layoutEn : designDetails.layoutEn)
                             ?.split('|').map((v, i) => (
-                              <span key={i} style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderRadius: '8px', fontSize: '13px', color: '#AEAEB2', border: '1px solid #EAEAEA', fontWeight: 500 }}>
-                                {v.trim()}
-                              </span>
+                              <LayoutChip key={i} label={v.trim()} muted={true} />
                             ))
                       }
                     </div>
@@ -640,28 +613,15 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
               {/* Spacing */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#111', letterSpacing: '-0.01em' }}>
                     {lang === 'zh' ? '间距系统' : 'Spacing Scale'}
                   </div>
-                  <div style={{ padding: '2px 8px', backgroundColor: '#F3F3F4', borderRadius: '6px', fontSize: '11px', color: '#555', fontWeight: 600 }}>
-                    {lang === 'zh' ? '高频测量' : 'High-freq'}
-                  </div>
+                  <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: 500 }}>· {lang === 'zh' ? '高频测量' : 'high-freq'}</div>
                 </div>
                 {graded.spacing.length > 0 ? (
                   <div style={{ border: '1px solid #EAEAEA', borderRadius: '12px', padding: '4px 20px' }}>
                     {graded.spacing.map((t, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '9px 0' }}>
-                        <code style={{ width: '40px', fontFamily: 'ui-monospace, monospace', fontSize: '13px', fontWeight: 500, color: '#111', flexShrink: 0 }}>{t.value}</code>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ height: '14px', backgroundColor: '#E0E0E0', borderRadius: '2px', width: `${Math.max(4, t.freqRatio * 160)}px`, transition: 'width 0.3s ease' }} />
-                          {t.sampleCount > 100 && (
-                            <span style={{ fontSize: '10px', backgroundColor: '#FEF08A', color: '#854D0E', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                              {lang === 'zh' ? '高频核心' : 'Top hit'}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#888', flexShrink: 0 }}>{t.sampleCount}× usage</div>
-                      </div>
+                      <SpacingRow key={i} token={t} lang={lang} isLast={i === graded.spacing.length - 1} />
                     ))}
                   </div>
                 ) : (
@@ -674,7 +634,7 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
               {/* Page width */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#111', letterSpacing: '-0.02em' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#111', letterSpacing: '-0.01em' }}>
                     {lang === 'zh' ? '页面宽度' : 'Page Width'}
                   </div>
                 </div>
@@ -719,6 +679,55 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
 
 // ── Helper components ──────────────────────────────────────────────────────────
 
+function SpacingRow({ token, lang, isLast }: { token: { value: string; freqRatio: number; sampleCount: number }; lang: 'zh' | 'en'; isLast: boolean }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '16px',
+        padding: '9px 12px', margin: '0 -12px',
+        borderRadius: '8px',
+        backgroundColor: hovered ? '#F5F5F7' : 'transparent',
+        transition: 'background 0.15s ease',
+        borderBottom: isLast ? 'none' : '1px solid #F5F5F5',
+      }}
+    >
+      <code style={{ width: '40px', fontFamily: 'ui-monospace, monospace', fontSize: '13px', fontWeight: 500, color: '#111', flexShrink: 0 }}>{token.value}</code>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ height: '14px', backgroundColor: hovered ? '#C8C8C8' : '#E0E0E0', borderRadius: '2px', width: `${Math.max(4, token.freqRatio * 160)}px`, transition: 'background 0.15s ease, width 0.3s ease' }} />
+        {token.sampleCount > 100 && (
+          <span style={{ fontSize: '10px', backgroundColor: '#FEF08A', color: '#854D0E', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            {lang === 'zh' ? '高频核心' : 'Top hit'}
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: '12px', color: hovered ? '#555' : '#888', flexShrink: 0, transition: 'color 0.15s' }}>{token.sampleCount}× usage</div>
+    </div>
+  )
+}
+
+function LayoutChip({ label, muted }: { label: string; muted: boolean }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <span
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
+        color: muted ? (hovered ? '#888' : '#AEAEB2') : (hovered ? '#1D1D1F' : '#111'),
+        border: `1px solid ${hovered ? '#D0D0D0' : '#EAEAEA'}`,
+        backgroundColor: hovered ? '#F0F0F0' : '#FAFAFA',
+        transition: 'all 0.15s ease',
+        cursor: 'default', display: 'inline-block',
+      }}
+    >
+      {label}
+    </span>
+  )
+}
+
 function ComponentPreview({ bg, children }: { bg: string; children: React.ReactNode }) {
   return (
     <div style={{
@@ -727,6 +736,258 @@ function ComponentPreview({ bg, children }: { bg: string; children: React.ReactN
       minHeight: '140px', border: '1px solid rgba(0,0,0,0.06)',
     }}>
       {children}
+    </div>
+  )
+}
+
+// ── Playground variant cards ───────────────────────────────────────────────
+
+function PlaygroundEmpty({ lang, kind, dark = true }: { lang: 'zh' | 'en'; kind: string; dark?: boolean }) {
+  const muted = dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)'
+  const faint = dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+      <code style={{ fontSize: '12px', color: muted, fontFamily: 'ui-monospace, monospace' }}>
+        {lang === 'zh' ? `未检测到 ${kind}` : `No ${kind} detected`}
+      </code>
+      <code style={{ fontSize: '10px', color: faint, fontFamily: 'ui-monospace, monospace' }}>
+        {lang === 'zh' ? '该页面可能不包含此组件' : 'This page may not contain this component'}
+      </code>
+    </div>
+  )
+}
+
+function VariantLabel({ children, dark = true }: { children: React.ReactNode; dark?: boolean }) {
+  return (
+    <code style={{
+      fontSize: '10px',
+      color: dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+      fontFamily: 'ui-monospace, "Cascadia Code", monospace',
+      letterSpacing: '0.03em', whiteSpace: 'nowrap',
+      display: 'block', textAlign: 'center', maxWidth: '180px',
+      overflow: 'hidden', textOverflow: 'ellipsis',
+    }}>
+      {children}
+    </code>
+  )
+}
+
+function ButtonVariantCard({ snap, index, lang, getStateStyle, dark = true }: {
+  snap: ButtonSnapshot
+  index: number
+  lang: 'zh' | 'en'
+  getStateStyle: (kind: string, state: 'hover' | 'focus' | 'active') => React.CSSProperties
+  dark?: boolean
+}) {
+  const [hovered, setHovered] = useState(false)
+  const [active, setActive] = useState(false)
+
+  // Detect whether button has a real (non-transparent) fill
+  const isTransparentBg = !snap.backgroundColor
+    || snap.backgroundColor === 'transparent'
+    || snap.backgroundColor === 'rgba(0,0,0,0)'
+    || snap.backgroundColor.toLowerCase() === '#ffffff00'
+
+  // Canvas is always light (#FAFAFA) — ensure transparent buttons have readable text
+  // snap.color from a light-theme page is reliable; guard against invisible white-on-white
+  const canvasColor = isTransparentBg
+    ? (snap.color && !isLight(snap.color) ? snap.color : '#1D1D1F')
+    : snap.color
+      ? snap.color
+      : (snap.backgroundColor && isLight(snap.backgroundColor) ? '#1D1D1F' : '#FFFFFF')
+
+  // Transparent-bg buttons without a border get a subtle dark outline on light canvas
+  const canvasBorder = isTransparentBg && (!snap.border || snap.border === 'none')
+    ? '1px solid rgba(0,0,0,0.18)'
+    : snap.border || 'none'
+
+  // "filled" = has real background color (even if also has border)
+  // "outlined" = transparent background + explicit border
+  // "ghost" = transparent background + no border
+  const hasFill = !isTransparentBg
+  const hasBorder = !!(snap.border && snap.border !== 'none')
+  const labelKind = hasFill ? 'filled'
+    : hasBorder ? 'outlined'
+    : 'ghost'
+
+  // Hover: filled buttons get a brightness-down effect; outlined/ghost get a subtle bg fill
+  const hoverStyle: React.CSSProperties = hovered && !active
+    ? hasFill
+      ? { filter: 'brightness(0.90)' }
+      : { backgroundColor: 'rgba(0,0,0,0.05)' }
+    : {}
+  const activeStyle: React.CSSProperties = active
+    ? { transform: 'scale(0.97)', filter: hasFill ? 'brightness(0.83)' : 'none' }
+    : {}
+
+  const btnStyle: React.CSSProperties = {
+    backgroundColor: isTransparentBg ? 'transparent' : snap.backgroundColor,
+    color: canvasColor,
+    borderRadius: snap.borderRadius || '6px',
+    padding: snap.paddingV && snap.paddingH ? `${snap.paddingV} ${snap.paddingH}` : '10px 20px',
+    fontSize: snap.fontSize || '14px',
+    fontWeight: snap.fontWeight || 600,
+    fontFamily: snap.fontFamily || 'inherit',
+    border: canvasBorder,
+    boxShadow: snap.boxShadow,
+    letterSpacing: snap.letterSpacing,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+    transition: 'all 0.2s ease',
+    outline: 'none',
+    ...hoverStyle,
+    ...activeStyle,
+  }
+  const labelRadius = snap.borderRadius ? `r:${snap.borderRadius}` : ''
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+      <button
+        style={btnStyle}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => { setHovered(false); setActive(false) }}
+        onMouseDown={() => setActive(true)}
+        onMouseUp={() => setActive(false)}
+      >
+        {isValidButtonText(snap.text) ? snap.text : (lang === 'zh' ? '主要按钮' : 'Button')}
+      </button>
+      <VariantLabel dark={dark}>{labelKind}{labelRadius ? `  ·  ${labelRadius}` : ''}{snap.fontWeight ? `  ·  ${snap.fontWeight}` : ''}</VariantLabel>
+    </div>
+  )
+}
+
+function InputVariantCard({ snap, index, lang, dark = true }: {
+  snap: InputSnapshot
+  index: number
+  lang: 'zh' | 'en'
+  dark?: boolean
+}) {
+  // Derive readable text color based on input's actual background
+  const inputBg = snap.backgroundColor || 'rgba(255,255,255,0.06)'
+  const inputIsLight = snap.backgroundColor ? isLight(snap.backgroundColor) : false
+  const inputTextColor = snap.color
+    ? snap.color  // trust the real measured color
+    : inputIsLight ? '#1D1D1F' : 'rgba(255,255,255,0.9)'
+  const inputBorderColor = snap.border && snap.border !== 'none'
+    ? snap.border
+    : inputIsLight ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.15)'
+
+  const inputStyle: React.CSSProperties = {
+    backgroundColor: inputBg,
+    color: inputTextColor,
+    border: inputBorderColor,
+    borderRadius: snap.borderRadius || '6px',
+    padding: snap.paddingV && snap.paddingH ? `${snap.paddingV} ${snap.paddingH}` : '10px 14px',
+    fontSize: snap.fontSize || '14px',
+    fontFamily: snap.fontFamily || 'inherit',
+    outline: 'none',
+    width: '220px',
+    boxSizing: 'border-box' as const,
+  }
+  const labelBorder = snap.border && snap.border !== 'none' ? 'bordered' : 'borderless'
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+      <input
+        readOnly
+        defaultValue=""
+        placeholder={snap.placeholder || (lang === 'zh' ? '输入框示例' : 'Input placeholder')}
+        style={inputStyle}
+      />
+      <VariantLabel dark={dark}>{labelBorder}{snap.borderRadius ? `  ·  r:${snap.borderRadius}` : ''}</VariantLabel>
+    </div>
+  )
+}
+
+function CardVariantCard({ snap, index, lang, typographyWeight, dark = true }: {
+  snap: CardSnapshot
+  index: number
+  lang: 'zh' | 'en'
+  typographyWeight: number
+  dark?: boolean
+}) {
+  const cardStyle: React.CSSProperties = {
+    backgroundColor: snap.backgroundColor || 'rgba(255,255,255,0.08)',
+    border: snap.border || '1px solid rgba(255,255,255,0.1)',
+    borderRadius: snap.borderRadius || '12px',
+    boxShadow: snap.boxShadow,
+    padding: snap.padding || '16px 20px',
+    width: '200px',
+    boxSizing: 'border-box' as const,
+  }
+  const hasShadow = !!(snap.boxShadow && snap.boxShadow !== 'none')
+  // Derive readable text colors based on card's actual background
+  const cardBg = snap.backgroundColor || 'rgba(255,255,255,0.08)'
+  const cardIsLight = snap.backgroundColor ? isLight(snap.backgroundColor) : false
+  const cardHeadingColor = cardIsLight ? '#1D1D1F' : '#FFFFFF'
+  const cardBodyColor = cardIsLight ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.45)'
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+      <div style={cardStyle}>
+        <div style={{
+          fontSize: snap.headingFontSize || '14px',
+          fontWeight: snap.headingFontWeight ? Number(snap.headingFontWeight) : typographyWeight,
+          color: cardHeadingColor,
+          marginBottom: '6px',
+          fontFamily: 'inherit',
+        }}>
+          {snap.headingText || (lang === 'zh' ? '卡片标题' : 'Card Title')}
+        </div>
+        <div style={{ fontSize: '12px', color: cardBodyColor, fontFamily: 'inherit' }}>
+          {lang === 'zh' ? '内容描述文字' : 'Description text'}
+        </div>
+      </div>
+      <VariantLabel dark={dark}>r:{snap.borderRadius || '?'}  ·  {hasShadow ? 'elevated' : 'flat'}</VariantLabel>
+    </div>
+  )
+}
+
+function TagPlayground({ snaps, lang, primaryHex, primaryFgHex, surfaceHex, textHex, dark = true }: {
+  snaps: TagSnapshot[]
+  lang: 'zh' | 'en'
+  primaryHex: string
+  primaryFgHex: string
+  surfaceHex: string
+  textHex: string
+  dark?: boolean
+}) {
+  // Synthesize 3 variants when no real data
+  const displaySnaps: Array<{ backgroundColor: string; color: string; border?: string; borderRadius: string; paddingH?: string; paddingV?: string; fontSize?: string; fontWeight?: string; text?: string }> =
+    snaps.length > 0 ? snaps.map(s => ({
+      backgroundColor: s.backgroundColor || primaryHex,
+      color: s.color || primaryFgHex,
+      border: s.border,
+      borderRadius: s.borderRadius || '999px',
+      paddingH: s.paddingH,
+      paddingV: s.paddingV,
+      fontSize: s.fontSize,
+      fontWeight: s.fontWeight,
+      text: s.text,
+    })) : [
+      { backgroundColor: primaryHex, color: primaryFgHex, borderRadius: '999px', text: lang === 'zh' ? '主要' : 'Primary' },
+      { backgroundColor: 'transparent', color: primaryHex, border: `1px solid ${primaryHex}`, borderRadius: '999px', text: lang === 'zh' ? '边框' : 'Outline' },
+      { backgroundColor: surfaceHex, color: textHex, borderRadius: '999px', text: lang === 'zh' ? '次要' : 'Secondary' },
+    ]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {displaySnaps.map((s, i) => (
+          <span key={i} style={{
+            backgroundColor: s.backgroundColor,
+            color: s.color,
+            border: s.border || 'none',
+            borderRadius: s.borderRadius,
+            padding: s.paddingV && s.paddingH ? `${s.paddingV} ${s.paddingH}` : '4px 12px',
+            fontSize: s.fontSize || '12px',
+            fontWeight: s.fontWeight ? Number(s.fontWeight) : 500,
+            whiteSpace: 'nowrap' as const,
+          }}>
+            {s.text || (lang === 'zh' ? `标签 ${i + 1}` : `Tag ${i + 1}`)}
+          </span>
+        ))}
+      </div>
+      <VariantLabel dark={dark}>r:{displaySnaps[0]?.borderRadius || '999px'}{snaps.length > 0 ? `  ·  ${snaps.length} variant${snaps.length > 1 ? 's' : ''}` : '  ·  synthesized'}</VariantLabel>
     </div>
   )
 }
@@ -782,15 +1043,16 @@ function CopyToast({ show }: { show: boolean }) {
 function RadiusGalleryItem({ token }: { token: { value: string; count: number } }) {
   const [copied, copy] = useCopy()
   return (
-    <div onClick={() => copy(`border-radius: ${token.value};`)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', cursor: 'pointer', position: 'relative' }}>
-      <div style={{ width: '64px', height: '64px', backgroundColor: '#F7F7F8', border: '1px solid #E5E5E5', borderRadius: token.value, display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'all 0.2s ease' }}
+    <div onClick={() => copy(`border-radius: ${token.value};`)}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', position: 'relative' }}>
+      <div style={{ width: '48px', height: '48px', backgroundColor: '#F5F5F7', border: '1px solid #E5E5E5', borderRadius: token.value, display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'border-color 0.15s ease' }}
         onMouseEnter={e => e.currentTarget.style.borderColor = '#111'}
         onMouseLeave={e => e.currentTarget.style.borderColor = '#E5E5E5'}>
         <CopyToast show={copied} />
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '13px', color: '#111', fontWeight: 500 }}>{token.value}</span>
-        <span style={{ fontSize: '11px', color: '#AEAEB2' }}>{token.count}×</span>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '12px', color: '#111', fontWeight: 500 }}>{token.value}</span>
+        <span style={{ fontSize: '10px', color: '#AEAEB2' }}>{token.count}×</span>
       </div>
     </div>
   )
@@ -799,15 +1061,28 @@ function RadiusGalleryItem({ token }: { token: { value: string; count: number } 
 function ShadowGalleryItem({ token }: { token: { value: string; count: number } }) {
   const [copied, copy] = useCopy()
   return (
-    <div onClick={() => copy(`box-shadow: ${token.value};`)} style={{ display: 'flex', alignItems: 'center', gap: '24px', padding: '16px', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.2s ease', position: 'relative' }}
-      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9F9FA'}
-      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+    <div onClick={() => copy(`box-shadow: ${token.value};`)}
+      style={{ display: 'flex', alignItems: 'center', gap: '24px', padding: '16px', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.2s ease', position: 'relative' }}
+      onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F9F9FA' }}
+      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent' }}>
       <CopyToast show={copied} />
-      <div style={{ width: '80px', height: '80px', borderRadius: '8px', flexShrink: 0, background: 'radial-gradient(#E5E5E5 1px, transparent 1px)', backgroundSize: '8px 8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      {/* Shadow preview — Gemini-style: dot grid box + floating white card */}
+      <div style={{
+        width: '80px', height: '80px', borderRadius: '8px', flexShrink: 0,
+        background: 'radial-gradient(#E5E5E5 1px, transparent 1px)',
+        backgroundSize: '8px 8px',
+        display: 'flex', justifyContent: 'center', alignItems: 'center',
+      }}>
         <div style={{ width: '40px', height: '40px', backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #F0F0F0', boxShadow: token.value }} />
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
-        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '12px', color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{token.value}</span>
+      {/* Shadow value — wraps naturally, fills middle */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: 1 }}>
+        <span style={{
+          fontFamily: 'ui-monospace, monospace', fontSize: '12px', color: '#111',
+          wordBreak: 'break-all', lineHeight: 1.6,
+        }}>
+          {token.value}
+        </span>
         <span style={{ fontSize: '11px', color: '#AEAEB2' }}>{token.count}×</span>
       </div>
     </div>

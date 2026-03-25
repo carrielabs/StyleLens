@@ -11,5 +11,5 @@ export function getTopColors(colors: ColorToken[]): ColorToken[] {
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
   })
 
-  return sorted.slice(0, 3)
+  return sorted.slice(0, 5)
 }

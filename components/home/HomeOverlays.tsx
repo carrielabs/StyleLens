@@ -180,7 +180,7 @@ export default function HomeOverlays({
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
-                      <div style={{ width: '32px', height: '34px', borderRadius: '4px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(0,0,0,0.03)' }}>
+                      <div style={{ width: '40px', height: '42px', borderRadius: '5px', backgroundColor: '#F5F5F7', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(0,0,0,0.06)' }}>
                         {item.thumbnail_url ? (
                           <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
