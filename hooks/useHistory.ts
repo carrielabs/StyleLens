@@ -202,7 +202,12 @@ function compactPageAnalysisForStorage(pageAnalysis?: PageStyleAnalysis): PageSt
     pageMaxWidth: pageAnalysis.pageMaxWidth,
     gridColumns: pageAnalysis.gridColumns,
     buttonSnapshot: pageAnalysis.buttonSnapshot,
+    buttonSnapshots: pageAnalysis.buttonSnapshots || [],
+    inputSnapshots: pageAnalysis.inputSnapshots || [],
+    cardSnapshots: pageAnalysis.cardSnapshots || [],
+    tagSnapshots: pageAnalysis.tagSnapshots || [],
     pageSections: pageAnalysis.pageSections,
+    viewportSlices: pageAnalysis.viewportSlices || [],
     sourceCount: pageAnalysis.sourceCount || {
       inlineStyleBlocks: 0,
       linkedStylesheets: 0,
