@@ -86,6 +86,15 @@ async function installClientNavigationLock(page: import('playwright').Page) {
   })
 }
 
+async function installBrowserFingerprintAlignment(page: import('playwright').Page) {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', {
+      get: () => undefined,
+      configurable: true,
+    })
+  })
+}
+
 async function prepareSettledPageForAtomicCapture(page: import('playwright').Page) {
   await page.addStyleTag({
     content: `
@@ -144,12 +153,36 @@ async function prepareSettledPageForAtomicCapture(page: import('playwright').Pag
 
 export async function captureScreenshot(targetUrl: string): Promise<ScreenshotResponse> {
   const normalizedUrl = targetUrl.toLowerCase().trim()
+  const shouldBypassCache = normalizedUrl.includes('notion.com')
   let pageAnalysis = null
 
   try {
-    const browser = await chromium.launch({ headless: true })
+    const browser = await chromium.launch({
+      headless: true,
+      args: ['--disable-blink-features=AutomationControlled'],
+    })
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 960 } })
+      const browserVersion = browser.version()
+      const chromeMajor = browserVersion.split('.')[0] || '136'
+      const context = await browser.newContext({
+        viewport: { width: 1280, height: 960 },
+        deviceScaleFactor: 2,
+        locale: 'en-US',
+        timezoneId: 'America/Los_Angeles',
+        userAgent: [
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+          'AppleWebKit/537.36 (KHTML, like Gecko)',
+          `Chrome/${browserVersion} Safari/537.36`,
+        ].join(' '),
+        extraHTTPHeaders: {
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Sec-CH-UA': `"Google Chrome";v="${chromeMajor}", "Chromium";v="${chromeMajor}", "Not:A-Brand";v="99"`,
+          'Sec-CH-UA-Mobile': '?0',
+          'Sec-CH-UA-Platform': '"macOS"',
+        },
+      })
+      const page = await context.newPage()
+      await installBrowserFingerprintAlignment(page)
       await installClientNavigationLock(page)
 
       await page.route('**/*', route => {
@@ -164,7 +197,7 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 })
       await prepareSettledPageForAtomicCapture(page)
 
-      const [buffer, analysis] = await Promise.all([
+      const [screenshotBuffer, analysis] = await Promise.all([
         page.screenshot({
           type: 'jpeg',
           quality: 80,
@@ -185,11 +218,13 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
         )
         pageAnalysis = null
       }
-      const dataUrl = `data:image/jpeg;base64,${buffer.toString('base64')}`
+      const dataUrl = `data:image/jpeg;base64,${screenshotBuffer.toString('base64')}`
 
-      screenshotCache.set(normalizedUrl, dataUrl)
-      savePersistentCache(screenshotCache)
-      console.log(`[Screenshotter] Local Playwright capture successful and cached. Size: ${buffer.byteLength}`)
+      if (!shouldBypassCache) {
+        screenshotCache.set(normalizedUrl, dataUrl)
+        savePersistentCache(screenshotCache)
+      }
+      console.log(`[Screenshotter] Local Playwright capture successful and cached. Size: ${screenshotBuffer.byteLength}`)
 
       return {
         success: true,
@@ -212,7 +247,7 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
   }
   
   // 1. Check local cache
-  if (screenshotCache.has(normalizedUrl)) {
+  if (!shouldBypassCache && screenshotCache.has(normalizedUrl)) {
     console.log(`[Screenshotter] Serving from cache: ${normalizedUrl}`)
     return {
       success: true,
@@ -287,8 +322,10 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
       const dataUrl = `data:image/jpeg;base64,${base64}`
 
       // Update Cache
-      screenshotCache.set(normalizedUrl, dataUrl)
-      savePersistentCache(screenshotCache)
+      if (!shouldBypassCache) {
+        screenshotCache.set(normalizedUrl, dataUrl)
+        savePersistentCache(screenshotCache)
+      }
       console.log(`[Screenshotter] Capture successful and cached. Size: ${buffer.byteLength}`)
 
       return {
