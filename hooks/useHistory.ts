@@ -16,9 +16,12 @@ import type { DisplayStyleReport, HomeHistoryRecord, HomeUndoItem, PageStyleAnal
 import type { User } from '@supabase/supabase-js'
 
 const GUEST_TRIAL_KEY = 'stylelens_trial_used'
+const HISTORY_DELETE_TOMBSTONES_KEY = 'stylelens_history_delete_tombstones'
+const HISTORY_DELETE_TOMBSTONE_TTL_MS = 10 * 60 * 1000
 
 type BrowserSupabaseClient = ReturnType<typeof createClient>
 type GuestCacheRecordInput = Omit<GuestHistoryRecord, 'id'> & { style_data: PinnedStyleReport }
+type HistoryDeleteTombstone = { id: string; scope: string; at: number }
 type HistoryListRow = {
   id: string
   user_id: string | null
@@ -207,6 +210,55 @@ function compactPageAnalysisForStorage(pageAnalysis?: PageStyleAnalysis): PageSt
   }
 }
 
+function getHistoryDeleteScope(userId?: string | null): string {
+  return userId ? `user:${userId}` : 'guest'
+}
+
+function readHistoryDeleteTombstones(): HistoryDeleteTombstone[] {
+  if (typeof window === 'undefined') return []
+  const raw = window.localStorage.getItem(HISTORY_DELETE_TOMBSTONES_KEY)
+  if (!raw) return []
+
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed as HistoryDeleteTombstone[] : []
+  } catch {
+    return []
+  }
+}
+
+function writeHistoryDeleteTombstones(items: HistoryDeleteTombstone[]): void {
+  if (typeof window === 'undefined') return
+  if (!items.length) {
+    window.localStorage.removeItem(HISTORY_DELETE_TOMBSTONES_KEY)
+    return
+  }
+  window.localStorage.setItem(HISTORY_DELETE_TOMBSTONES_KEY, JSON.stringify(items))
+}
+
+function pruneHistoryDeleteTombstones(now = Date.now()): HistoryDeleteTombstone[] {
+  const filtered = readHistoryDeleteTombstones().filter(item => now - item.at < HISTORY_DELETE_TOMBSTONE_TTL_MS)
+  writeHistoryDeleteTombstones(filtered)
+  return filtered
+}
+
+function addHistoryDeleteTombstone(id: string, scope: string): void {
+  const items = pruneHistoryDeleteTombstones().filter(item => !(item.id === id && item.scope === scope))
+  items.push({ id, scope, at: Date.now() })
+  writeHistoryDeleteTombstones(items)
+}
+
+function clearHistoryDeleteTombstone(id: string, scope: string): void {
+  const items = pruneHistoryDeleteTombstones().filter(item => !(item.id === id && item.scope === scope))
+  writeHistoryDeleteTombstones(items)
+}
+
+function getHistoryDeleteIdsForScope(scope: string): string[] {
+  return pruneHistoryDeleteTombstones()
+    .filter(item => item.scope === scope)
+    .map(item => item.id)
+}
+
 interface UseHistoryParams {
   user: User | null
   supabase: BrowserSupabaseClient
@@ -306,18 +358,32 @@ export function useHistory({
 
     try {
       if (!userId) {
+        const guestDeleteIds = new Set(getHistoryDeleteIdsForScope(getHistoryDeleteScope(null)))
         const guestRecord = await getGuestHistory().catch(err => {
           console.warn('Failed to read guest history from IndexedDB:', err)
           return null
         })
 
-        if (guestRecord) {
+        if (guestRecord && !guestDeleteIds.has(guestRecord.id)) {
           setExtractions([guestRecord as HomeHistoryRecord])
         } else {
           setExtractions([])
         }
+
+        if (guestDeleteIds.size > 0) {
+          void clearGuestHistory()
+            .then(() => {
+              guestDeleteIds.forEach(id => clearHistoryDeleteTombstone(id, getHistoryDeleteScope(null)))
+            })
+            .catch(err => {
+              console.warn('Failed to reconcile guest deletions:', getErrorMessage(err))
+            })
+        }
         return
       }
+
+      const deleteScope = getHistoryDeleteScope(userId)
+      const pendingDeletedIds = new Set(getHistoryDeleteIdsForScope(deleteScope))
 
       const { data, error } = await withTimeout(
         supabase
@@ -331,8 +397,21 @@ export function useHistory({
       )
 
       if (error) throw error
-      const list = (((data as unknown) as HistoryListRow[]) || []).map(buildHistoryListRecord)
+      const list = (((data as unknown) as HistoryListRow[]) || [])
+        .map(buildHistoryListRecord)
+        .filter(item => !pendingDeletedIds.has(item.id))
       setExtractions(dedupeHistoryRecords(list))
+
+      if (pendingDeletedIds.size > 0) {
+        void Promise.allSettled(
+          Array.from(pendingDeletedIds).map(async id => {
+            const result = await deleteFromLibrary(id, supabase)
+            if (result.success) {
+              clearHistoryDeleteTombstone(id, deleteScope)
+            }
+          })
+        )
+      }
     } catch (err: unknown) {
       console.warn('Failed to load history:', getErrorMessage(err))
       if (!hasLoadedExtractionsRef.current) {
@@ -409,6 +488,9 @@ export function useHistory({
           if (error) throw error
         }
 
+        await clearGuestHistory().catch((err) => {
+          console.warn('Failed to clear guest history after migration:', getErrorMessage(err))
+        })
         clearGuestMigrationSnapshot()
         lastGuestMigrationKeyRef.current = migrationKey
       } catch (err: unknown) {
@@ -663,6 +745,7 @@ export function useHistory({
     const record = extractions.find(e => e.id === id)
     if (!record) return
     const label = record.source_label || '未命名分析'
+    const deleteScope = getHistoryDeleteScope(user?.id || null)
 
     setExtractions(prev => prev.filter(e => e.id !== id))
     if (activeItemId === id) {
@@ -671,14 +754,17 @@ export function useHistory({
     }
     setContextMenuId(null)
     setUndoItem({ id, label, record })
+    addHistoryDeleteTombstone(id, deleteScope)
 
     try {
       if (user) {
         const result = await deleteFromLibrary(id, supabase)
         if (!result.success) throw new Error(result.error || 'Delete failed')
+        clearHistoryDeleteTombstone(id, deleteScope)
       } else {
         await clearGuestHistory()
         localStorage.removeItem(GUEST_TRIAL_KEY)
+        clearHistoryDeleteTombstone(id, deleteScope)
       }
     } catch (err) {
       console.error('Delete history item error', err)
@@ -693,6 +779,7 @@ export function useHistory({
         setActiveItemId(record.id)
         setReport(record.style_data as DisplayStyleReport)
       }
+      clearHistoryDeleteTombstone(id, deleteScope)
       setUndoItem(null)
       setError('删除历史记录失败')
       return
@@ -705,6 +792,7 @@ export function useHistory({
 
   const undoDelete = async () => {
     if (!undoItem) return
+    const deleteScope = getHistoryDeleteScope(user?.id || null)
     clearTimeout(deleteTimerRef.current[undoItem.id])
     delete deleteTimerRef.current[undoItem.id]
 
@@ -733,6 +821,8 @@ export function useHistory({
           created_at: undoItem.record.created_at,
         }))
       }
+
+      clearHistoryDeleteTombstone(undoItem.id, deleteScope)
 
       setExtractions(prev => {
         const exists = prev.find(e => e.id === undoItem.id)
