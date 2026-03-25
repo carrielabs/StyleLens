@@ -28,7 +28,6 @@ export default function Home() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState('')
-  const [featuredCollapsed, setFeaturedCollapsed] = useState(false)
 
   // ── Sidebar panel toggle ──
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -231,14 +230,12 @@ export default function Home() {
       <div style={{
         height: '100vh', width: '100vw', display: 'flex', flexDirection: 'row',
         fontFamily: 'var(--font-sans)', WebkitFontSmoothing: 'antialiased',
-        userSelect: 'none', overflow: 'hidden', backgroundColor: '#FFFFFF'
+        overflow: 'hidden', backgroundColor: '#FFFFFF'
       }}>
         <HomeSidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           isSearchOpen={isSearchOpen}
-          featuredCollapsed={featuredCollapsed}
-          setFeaturedCollapsed={setFeaturedCollapsed}
           pinnedCollapsed={pinnedCollapsed}
           setPinnedCollapsed={setPinnedCollapsed}
           historyCollapsed={historyCollapsed}

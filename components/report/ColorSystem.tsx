@@ -155,46 +155,66 @@ export default function ColorSystem({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(8, 1fr)', 
-        gap: '12px' 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
+        gap: '12px'
       }}>
       {paletteItems.map((c, i) => {
         const isLowPriorityOther = sourceType === 'url' && c.role === 'other'
         return (
-        <div 
+        <div
           key={i}
           onClick={() => copyColor(c.hex)}
           onMouseEnter={() => window.dispatchEvent(new CustomEvent('color-hover', { detail: c.hex }))}
           onMouseLeave={() => window.dispatchEvent(new CustomEvent('color-hover', { detail: null }))}
           style={{
             display: 'flex', flexDirection: 'column', gap: '8px',
-            cursor: 'crosshair', transition: 'opacity 0.2s, transform 0.2s',
-            opacity: copiedHex && copiedHex !== c.hex ? 0.3 : isLowPriorityOther ? 0.7 : 1
+            cursor: 'crosshair',
+            opacity: copiedHex && copiedHex !== c.hex ? 0.3 : isLowPriorityOther ? 0.7 : 1,
+            transition: 'opacity 0.2s',
+            minWidth: 0,  // prevent text from expanding column width
           }}
-          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
           title={c.name}
         >
-          {/* Swatch - Soft Square without borders */}
-          <div style={{
+          {/* Swatch — hover lifts up (Gemini-style) */}
+          <div
+            style={{
               width: '100%', aspectRatio: '1/1',
               backgroundColor: c.hex,
               borderRadius: '12px',
-              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)' // extremely subtle inner line so white doesn't bleed, but no visible border
+              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              cursor: 'crosshair',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-4px)'
+              e.currentTarget.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.04), 0 8px 20px rgba(0,0,0,0.14)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'none'
+              e.currentTarget.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.04)'
+            }}
+            onMouseDown={e => {
+              e.currentTarget.style.transform = 'scale(0.95)'
+              e.currentTarget.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.04)'
+            }}
+            onMouseUp={e => {
+              e.currentTarget.style.transform = 'translateY(-4px)'
+              e.currentTarget.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.04), 0 8px 20px rgba(0,0,0,0.14)'
             }}
           />
           {/* Strict Label Stack */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {c.roleLabelOverride || getRoleLabel(c.role)}
             </div>
-            <div style={{ 
-              fontSize: '11px', 
-              fontFamily: 'var(--font-mono)', 
+            <div style={{
+              fontSize: '11px',
+              fontFamily: 'var(--font-mono)',
               color: copiedHex === c.hex ? 'var(--success)' : 'var(--text-tertiary)',
-              fontWeight: copiedHex === c.hex ? 600 : 400
+              fontWeight: copiedHex === c.hex ? 600 : 400,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
               {copiedHex === c.hex ? (lang === 'zh' ? '已复制' : 'Copied') : c.hex.toUpperCase()}
             </div>
