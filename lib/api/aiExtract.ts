@@ -364,7 +364,26 @@ function normalizeSemanticColorSystem(colorSystem?: SemanticColorSystem): Semant
 
   const normalized: SemanticColorSystem = { ...colorSystem }
 
+  const brightness = (hex?: string) => {
+    if (!hex) return Number.NaN
+    const clean = hex.replace('#', '')
+    return Number.parseInt(clean.slice(0, 2), 16)
+      + Number.parseInt(clean.slice(2, 4), 16)
+      + Number.parseInt(clean.slice(4, 6), 16)
+  }
+
   if (normalized.heroTextPrimary && normalized.textPrimary && hexDistance(normalized.heroTextPrimary.hex, normalized.textPrimary.hex) < 18) {
+    normalized.heroTextPrimary = undefined
+  }
+
+  if (
+    normalized.heroTextPrimary &&
+    normalized.heroBackground &&
+    (
+      Math.abs(brightness(normalized.heroTextPrimary.hex) - brightness(normalized.heroBackground.hex)) < 160
+      || hexDistance(normalized.heroTextPrimary.hex, normalized.heroBackground.hex) < 52
+    )
+  ) {
     normalized.heroTextPrimary = undefined
   }
 
@@ -374,6 +393,15 @@ function normalizeSemanticColorSystem(colorSystem?: SemanticColorSystem): Semant
 
   if (normalized.textPrimary && normalized.border && hexDistance(normalized.border.hex, normalized.textPrimary.hex) < 18) {
     normalized.border = undefined
+  }
+
+  if (
+    normalized.pageBackground &&
+    normalized.surface &&
+    brightness(normalized.pageBackground.hex) >= 620 &&
+    brightness(normalized.surface.hex) <= 180
+  ) {
+    normalized.surface = undefined
   }
 
   if (normalized.heroSecondaryAction && normalized.heroPrimaryAction && hexDistance(normalized.heroSecondaryAction.hex, normalized.heroPrimaryAction.hex) < 22) {
@@ -546,6 +574,195 @@ export function deriveScreenshotShellFallback(
     surface,
     textPrimary: textPrimaryFallback,
     textSecondary: textSecondaryFallback,
+  }
+}
+
+export function deriveDomShellFallback(
+  pageAnalysis: PageStyleAnalysis
+): Partial<LayeredColorSystem> {
+  const anchorBoost = (candidate: PageColorCandidate) => {
+    const hint = (candidate.selectorHint || '').toLowerCase()
+    if (hint.includes('[anchor:body]')) return 4
+    if (hint.includes('[anchor:main]')) return 3
+    if (hint.includes('[anchor:nav]')) return 2
+    return 0
+  }
+
+  const domShell = (pageAnalysis.colorCandidates || [])
+    .filter(candidate =>
+      candidate.meta?.source === 'dom-computed' &&
+      !candidate.layerHints?.includes('hero')
+    )
+    .map(candidate => {
+      const clean = candidate.hex.replace('#', '')
+      const r = Number.parseInt(clean.slice(0, 2), 16)
+      const g = Number.parseInt(clean.slice(2, 4), 16)
+      const b = Number.parseInt(clean.slice(4, 6), 16)
+      const brightness = r + g + b
+      const chroma = Math.max(r, g, b) - Math.min(r, g, b)
+      return { candidate, brightness, chroma }
+    })
+
+  const shellBackgrounds = domShell
+    .filter(item =>
+      item.candidate.roleHints?.includes('background') &&
+      !item.candidate.roleHints?.includes('text') &&
+      !item.candidate.roleHints?.includes('border') &&
+      !item.candidate.roleHints?.includes('accent') &&
+      item.brightness >= 600 &&
+      item.chroma <= 40
+    )
+    .sort((a, b) => {
+      const anchorDiff = anchorBoost(b.candidate) - anchorBoost(a.candidate)
+      if (anchorDiff !== 0) return anchorDiff
+
+      const aScore = (b.candidate.evidenceScore || b.candidate.count) - (a.candidate.evidenceScore || a.candidate.count)
+      if (aScore !== 0) return aScore
+      return a.brightness - b.brightness
+    })
+
+  const shellSurfaces = domShell
+    .filter(item =>
+      (item.candidate.roleHints?.includes('surface') || item.candidate.roleHints?.includes('background')) &&
+      !item.candidate.roleHints?.includes('text') &&
+      !item.candidate.roleHints?.includes('border') &&
+      item.brightness >= 560 &&
+      item.chroma <= 56
+    )
+    .sort((a, b) => {
+      const anchorDiff = anchorBoost(b.candidate) - anchorBoost(a.candidate)
+      if (anchorDiff !== 0) return anchorDiff
+
+      const scoreDiff = (b.candidate.evidenceScore || b.candidate.count) - (a.candidate.evidenceScore || a.candidate.count)
+      if (scoreDiff !== 0) return scoreDiff
+      return b.brightness - a.brightness
+    })
+
+  const shellText = domShell
+    .filter(item =>
+      item.candidate.roleHints?.includes('text') &&
+      !item.candidate.roleHints?.includes('background') &&
+      item.brightness <= 260 &&
+      item.chroma <= 56
+    )
+    .sort((a, b) => {
+      const anchorDiff = anchorBoost(b.candidate) - anchorBoost(a.candidate)
+      if (anchorDiff !== 0) return anchorDiff
+
+      const scoreDiff = (b.candidate.evidenceScore || b.candidate.count) - (a.candidate.evidenceScore || a.candidate.count)
+      if (scoreDiff !== 0) return scoreDiff
+      return a.brightness - b.brightness
+    })
+
+  const shellBorders = domShell
+    .filter(item =>
+      (item.candidate.property === 'border-color' || item.candidate.roleHints?.includes('border')) &&
+      item.brightness > 40
+    )
+    .sort((a, b) => {
+      const anchorDiff = anchorBoost(b.candidate) - anchorBoost(a.candidate)
+      if (anchorDiff !== 0) return anchorDiff
+      const scoreDiff = (b.candidate.evidenceScore || b.candidate.count) - (a.candidate.evidenceScore || a.candidate.count)
+      if (scoreDiff !== 0) return scoreDiff
+      return a.brightness - b.brightness
+    })
+
+  const pageBackgroundItem = shellBackgrounds[0]
+  const surfaceItem = shellSurfaces.find(item => item.candidate.hex !== pageBackgroundItem?.candidate.hex)
+  const textPrimaryItem = shellText[0]
+  const textSecondaryItem = shellText.find(item => item.candidate.hex !== textPrimaryItem?.candidate.hex)
+  const borderItem = shellBorders.find(item => {
+    if (!pageBackgroundItem) return true
+    const delta = Math.abs(item.brightness - pageBackgroundItem.brightness)
+    return delta >= 8 && delta <= 90
+  })
+
+  return {
+    pageBackground: pageBackgroundItem
+      ? {
+          role: 'background',
+          hex: pageBackgroundItem.candidate.hex,
+          rgb: hexToRgb(pageBackgroundItem.candidate.hex),
+          hsl: hexToHsl(pageBackgroundItem.candidate.hex),
+          name: 'Page Background',
+          description: 'Recovered from DOM shell candidates',
+          meta: {
+            source: pageBackgroundItem.candidate.meta?.source || 'dom-computed',
+            confidence: pageBackgroundItem.candidate.meta?.confidence || 'medium',
+            evidenceCount: pageBackgroundItem.candidate.meta?.evidenceCount || pageBackgroundItem.candidate.count || 1,
+            context: 'page shell background',
+            viewport: pageBackgroundItem.candidate.meta?.viewport,
+          },
+        }
+      : undefined,
+    surface: surfaceItem
+      ? {
+          role: 'surface',
+          hex: surfaceItem.candidate.hex,
+          rgb: hexToRgb(surfaceItem.candidate.hex),
+          hsl: hexToHsl(surfaceItem.candidate.hex),
+          name: 'Surface',
+          description: 'Recovered from DOM shell candidates',
+          meta: {
+            source: surfaceItem.candidate.meta?.source || 'dom-computed',
+            confidence: surfaceItem.candidate.meta?.confidence || 'medium',
+            evidenceCount: surfaceItem.candidate.meta?.evidenceCount || surfaceItem.candidate.count || 1,
+            context: 'page shell surface',
+            viewport: surfaceItem.candidate.meta?.viewport,
+          },
+        }
+      : undefined,
+    textPrimary: textPrimaryItem
+      ? {
+          role: 'text',
+          hex: textPrimaryItem.candidate.hex,
+          rgb: hexToRgb(textPrimaryItem.candidate.hex),
+          hsl: hexToHsl(textPrimaryItem.candidate.hex),
+          name: 'Text Primary',
+          description: 'Recovered from DOM shell candidates',
+          meta: {
+            source: textPrimaryItem.candidate.meta?.source || 'dom-computed',
+            confidence: textPrimaryItem.candidate.meta?.confidence || 'medium',
+            evidenceCount: textPrimaryItem.candidate.meta?.evidenceCount || textPrimaryItem.candidate.count || 1,
+            context: 'primary text',
+            viewport: textPrimaryItem.candidate.meta?.viewport,
+          },
+        }
+      : undefined,
+    textSecondary: textSecondaryItem
+      ? {
+          role: 'text',
+          hex: textSecondaryItem.candidate.hex,
+          rgb: hexToRgb(textSecondaryItem.candidate.hex),
+          hsl: hexToHsl(textSecondaryItem.candidate.hex),
+          name: 'Text Secondary',
+          description: 'Recovered from DOM shell candidates',
+          meta: {
+            source: textSecondaryItem.candidate.meta?.source || 'dom-computed',
+            confidence: textSecondaryItem.candidate.meta?.confidence || 'low',
+            evidenceCount: textSecondaryItem.candidate.meta?.evidenceCount || textSecondaryItem.candidate.count || 1,
+            context: 'secondary text',
+            viewport: textSecondaryItem.candidate.meta?.viewport,
+          },
+        }
+      : undefined,
+    border: borderItem
+      ? {
+          role: 'border',
+          hex: borderItem.candidate.hex,
+          rgb: hexToRgb(borderItem.candidate.hex),
+          hsl: hexToHsl(borderItem.candidate.hex),
+          name: 'Border',
+          description: 'Recovered from DOM shell candidates',
+          meta: {
+            source: borderItem.candidate.meta?.source || 'dom-computed',
+            confidence: borderItem.candidate.meta?.confidence || 'medium',
+            evidenceCount: borderItem.candidate.meta?.evidenceCount || borderItem.candidate.count || 1,
+            context: 'border color',
+            viewport: borderItem.candidate.meta?.viewport,
+          },
+        }
+      : undefined,
   }
 }
 
@@ -760,14 +977,16 @@ export function applyMeasuredUrlSignals(
   const hydratedColorSystem = normalizeSemanticColorSystem(
     hydrateSemanticColorSystem(pageAnalysis.semanticColorSystem, parsed.colors || [])
   )
+  const domShellFallback = deriveDomShellFallback(pageAnalysis)
   const screenshotShellFallback = deriveScreenshotShellFallback(pageAnalysis, parsed.colors || [])
   const aiShellFallback = deriveAiShellFallback(parsed.colors || [])
   const colorSystem = normalizeSemanticColorSystem({
     ...hydratedColorSystem,
-    pageBackground: hydratedColorSystem?.pageBackground || screenshotShellFallback.pageBackground || aiShellFallback.pageBackground,
-    surface: hydratedColorSystem?.surface || screenshotShellFallback.surface || aiShellFallback.surface,
-    textPrimary: hydratedColorSystem?.textPrimary || screenshotShellFallback.textPrimary || aiShellFallback.textPrimary,
-    textSecondary: hydratedColorSystem?.textSecondary || screenshotShellFallback.textSecondary || aiShellFallback.textSecondary,
+    pageBackground: hydratedColorSystem?.pageBackground || domShellFallback.pageBackground || screenshotShellFallback.pageBackground || aiShellFallback.pageBackground,
+    surface: hydratedColorSystem?.surface || domShellFallback.surface || screenshotShellFallback.surface || aiShellFallback.surface,
+    textPrimary: hydratedColorSystem?.textPrimary || domShellFallback.textPrimary || screenshotShellFallback.textPrimary || aiShellFallback.textPrimary,
+    textSecondary: hydratedColorSystem?.textSecondary || domShellFallback.textSecondary || screenshotShellFallback.textSecondary || aiShellFallback.textSecondary,
+    border: hydratedColorSystem?.border || domShellFallback.border,
   })
   const compatibilityColors = colorSystem
     ? dedupeColorTokens([

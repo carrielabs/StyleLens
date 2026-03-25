@@ -1314,6 +1314,14 @@ function pickSlot(candidates: PageColorCandidate[], predicate: (candidate: PageC
 export function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticColorSystem | undefined {
   if (!candidates.length) return undefined
 
+  const anchorBoost = (candidate: PageColorCandidate) => {
+    const hint = (candidate.selectorHint || '').toLowerCase()
+    if (hint.includes('[anchor:body]')) return 4
+    if (hint.includes('[anchor:main]')) return 3
+    if (hint.includes('[anchor:nav]')) return 2
+    return 0
+  }
+
   const semanticContextForSlot = (slot?: string) => {
     switch (slot) {
       case 'heroBackground':
@@ -1492,6 +1500,9 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       const bVisualBoost = b.property === 'visual-hero' || b.property === 'screenshot-hero' ? 3 : b.property === 'background-image' ? 2 : b.property === 'background-color' ? 1 : 0
       if (aVisualBoost !== bVisualBoost) return bVisualBoost - aVisualBoost
 
+      const anchorDiff = anchorBoost(b) - anchorBoost(a)
+      if (anchorDiff !== 0) return anchorDiff
+
       const aModeMismatch = heroBackgroundMode === 'dark'
         ? Number(getColorBrightness(a.hex) > 170)
         : Number(getColorBrightness(a.hex) < 85)
@@ -1528,6 +1539,8 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
     )
     .sort((a, b) => {
       const pageWeight = (candidate: PageColorCandidate) => {
+        const anchor = anchorBoost(candidate)
+        if (anchor) return 10 + anchor
         if (candidate.property === 'css-variable') return 4
         if (candidate.property === 'background-color') return 3
         if (candidate.property === 'background-image') return 2
@@ -1577,6 +1590,9 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       !used.has(candidate.hex.toUpperCase())
     )
     .sort((a, b) => {
+      const anchorDiff = anchorBoost(b) - anchorBoost(a)
+      if (anchorDiff !== 0) return anchorDiff
+
       const aLayerBoost = (a.layerHints.includes('content') ? 2 : 0) + (a.property === 'screenshot-content' || a.property === 'visual-content' ? 2 : 0)
       const bLayerBoost = (b.layerHints.includes('content') ? 2 : 0) + (b.property === 'screenshot-content' || b.property === 'visual-content' ? 2 : 0)
       if (aLayerBoost !== bLayerBoost) return bLayerBoost - aLayerBoost
@@ -1595,6 +1611,9 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
   const textPrimary = preferredTextCandidates
     .filter(candidate => !used.has(candidate.hex.toUpperCase()))
     .sort((a, b) => {
+      const anchorDiff = anchorBoost(b) - anchorBoost(a)
+      if (anchorDiff !== 0) return anchorDiff
+
       const aBrightness = getColorBrightness(a.hex)
       const bBrightness = getColorBrightness(b.hex)
       if (prefersDarkText && aBrightness !== bBrightness) return aBrightness - bBrightness
@@ -1629,6 +1648,9 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
   const textSecondary = preferredTextCandidates
     .filter(candidate => !used.has(candidate.hex.toUpperCase()))
     .sort((a, b) => {
+      const anchorDiff = anchorBoost(b) - anchorBoost(a)
+      if (anchorDiff !== 0) return anchorDiff
+
       const aSecondaryHint = a.roleHints.includes('text-secondary') ? 1 : 0
       const bSecondaryHint = b.roleHints.includes('text-secondary') ? 1 : 0
       if (aSecondaryHint !== bSecondaryHint) return bSecondaryHint - aSecondaryHint
@@ -1642,9 +1664,33 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
     })[0]
   if (textSecondary) used.add(textSecondary.hex.toUpperCase())
 
-  const border = pickSlot(ranked, candidate =>
-    candidate.roleHints.includes('border') || candidate.property === 'border-color'
-  , used)
+  const border = [...ranked]
+    .filter(candidate =>
+      !used.has(candidate.hex.toUpperCase()) &&
+      (candidate.roleHints.includes('border') || candidate.property === 'border-color')
+    )
+    .sort((a, b) => {
+      const anchorDiff = anchorBoost(b) - anchorBoost(a)
+      if (anchorDiff !== 0) return anchorDiff
+
+      const aBorderProp = Number(a.property === 'border-color' || a.property === 'cta-border')
+      const bBorderProp = Number(b.property === 'border-color' || b.property === 'cta-border')
+      if (aBorderProp !== bBorderProp) return bBorderProp - aBorderProp
+
+      const aBrightness = getColorBrightness(a.hex)
+      const bBrightness = getColorBrightness(b.hex)
+      if (pageBackground) {
+        const pageBrightness = getColorBrightness(pageBackground.hex)
+        const aDelta = Math.abs(aBrightness - pageBrightness)
+        const bDelta = Math.abs(bBrightness - pageBrightness)
+        const aReasonable = Number(aDelta >= 8 && aDelta <= 90)
+        const bReasonable = Number(bDelta >= 8 && bDelta <= 90)
+        if (aReasonable !== bReasonable) return bReasonable - aReasonable
+        if (aReasonable && aDelta !== bDelta) return aDelta - bDelta
+      }
+
+      return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
+    })[0]
   if (border) used.add(border.hex.toUpperCase())
 
   const actionCandidates = ranked.filter(candidate =>
@@ -2281,6 +2327,78 @@ async function extractDomSignalsFromPage(
         }
       }
 
+      const extractSemanticAnchorEvidence = () => {
+        const visibleArea = (el: HTMLElement | null) => {
+          if (!el) return 0
+          const rect = el.getBoundingClientRect()
+          return rect.width * rect.height
+        }
+
+        const pickAnchor = (selectors: string[]) => {
+          for (const selector of selectors) {
+            const el = document.querySelector<HTMLElement>(selector)
+            if (el) return el
+          }
+          return null
+        }
+
+        const body = document.body
+        const main = pickAnchor(['main', '[role="main"]', '#__next', '#app', '#root', '[data-reactroot]'])
+        const nav = pickAnchor(['header', 'nav', '[role="navigation"]'])
+        const viewportArea = Math.max(window.innerWidth * window.innerHeight, 1)
+
+        const addAnchor = (
+          el: HTMLElement | null,
+          label: string,
+          property: 'background-color' | 'color' | 'border-color',
+          roleHints: string[],
+          layerHints: Array<'global' | 'hero' | 'content'>,
+          componentKinds: ComponentKind[]
+        ) => {
+          if (!el) return
+          const style = window.getComputedStyle(el)
+          const raw =
+            property === 'background-color' ? style.backgroundColor
+              : property === 'color' ? style.color
+                : style.borderColor
+
+          if (!raw || isTransparent(raw)) return
+          if (property === 'border-color') {
+            const widths = [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth]
+            const hasVisibleBorder = widths.some(value => Number.parseFloat(value || '0') > 0)
+            if (!hasVisibleBorder) return
+          }
+
+          const areaRatio = Math.min(visibleArea(el) / viewportArea, 1)
+          const evidence =
+            110
+            + Math.round(areaRatio * 24)
+            + (label === 'body' ? 18 : 0)
+            + (label === 'main' ? 14 : 0)
+            + (label === 'nav' ? 10 : 0)
+
+          addExplicitColor(
+            raw,
+            property,
+            `[anchor:${label}]`,
+            componentKinds,
+            roleHints,
+            layerHints,
+            evidence
+          )
+        }
+
+        addAnchor(body, 'body', 'background-color', ['background'], ['global'], ['surface'])
+        addAnchor(main, 'main', 'background-color', ['background', 'surface'], ['content'], ['surface'])
+        addAnchor(nav, 'nav', 'background-color', ['surface'], ['global'], ['nav', 'surface'])
+        addAnchor(body, 'body-text', 'color', ['text'], ['global'], ['text'])
+        addAnchor(main, 'main-text', 'color', ['text'], ['content'], ['text'])
+        addAnchor(nav, 'nav-text', 'color', ['text'], ['global'], ['nav', 'text'])
+        addAnchor(body, 'body-border', 'border-color', ['border'], ['global'], ['surface'])
+        addAnchor(main, 'main-border', 'border-color', ['border'], ['content'], ['surface'])
+        addAnchor(nav, 'nav-border', 'border-color', ['border'], ['global'], ['nav', 'surface'])
+      }
+
       const extractCtaEvidence = () => {
         const targets = Array.from(document.querySelectorAll<HTMLElement>('button, [role="button"], a[href], input[type="submit"], input[type="button"]'))
         for (const el of targets) {
@@ -2359,6 +2477,7 @@ async function extractDomSignalsFromPage(
       }
 
       extractRootVariableEvidence()
+      extractSemanticAnchorEvidence()
       extractCtaEvidence()
 
       const hasDirectText = (el: HTMLElement) =>
