@@ -467,11 +467,18 @@ export default function HomeWorkspace({
                     width: '100%', height: '1px', backgroundColor: '#F0F0F0',
                     borderRadius: '1px', overflow: 'hidden', position: 'relative'
                   }}>
+                    {/* 阶段进度底层 */}
                     <div style={{
                       position: 'absolute', top: 0, left: 0, height: '100%',
                       width: `${progressPct}%`,
-                      backgroundColor: '#1D1D1F', opacity: 0.8,
+                      backgroundColor: '#E0E0E0',
                       transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }} />
+                    {/* 扫光层：在已填充区域内持续扫动 */}
+                    <div className="animate-scan" style={{
+                      position: 'absolute', top: 0, height: '100%',
+                      width: '30%',
+                      background: 'linear-gradient(90deg, transparent, rgba(29,29,31,0.7), transparent)',
                     }} />
                   </div>
                 </div>
