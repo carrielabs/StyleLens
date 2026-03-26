@@ -519,7 +519,7 @@ const HistoryItem = memo(function HistoryItem({
       <button
         onClick={isRenaming ? undefined : onClick}
         style={{
-          width: '100%', padding: '8px 10px', paddingRight: (hovered || contextMenuOpen) && !isRenaming ? '32px' : '10px',
+          width: '100%', padding: '8px 10px', paddingRight: '32px',
           borderRadius: '8px',
           backgroundColor: isActive ? 'rgba(0,0,0,0.05)' : (hovered ? 'rgba(0,0,0,0.025)' : 'transparent'),
           border: 'none', cursor: isRenaming ? 'default' : 'pointer', textAlign: 'left',
@@ -564,19 +564,22 @@ const HistoryItem = memo(function HistoryItem({
             </span>
           )}
 
-          {!isRenaming && topColors.length > 0 && (
+          {!isRenaming && (
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              {topColors.map((c, i) => (
-                <div key={i} style={{
-                  width: '15px', height: '15px', borderRadius: '50%',
-                  backgroundColor: c.hex || '#CCCCCC',
-                  boxShadow: i === 0
-                    ? '0 0 0 1px rgba(0,0,0,0.08)'
-                    : '0 0 0 1.5px #FFFFFF, 0 0 0 2px rgba(0,0,0,0.08)',
-                  marginLeft: i === 0 ? 0 : '-5px',
-                  flexShrink: 0
-                }} />
-              ))}
+              {Array.from({ length: 5 }).map((_, i) => {
+                const c = topColors[i]
+                return (
+                  <div key={i} style={{
+                    width: '15px', height: '15px', borderRadius: '50%',
+                    backgroundColor: c ? (c.hex || '#CCCCCC') : 'transparent',
+                    boxShadow: c
+                      ? (i === 0 ? '0 0 0 1px rgba(0,0,0,0.08)' : '0 0 0 1.5px #FFFFFF, 0 0 0 2px rgba(0,0,0,0.08)')
+                      : 'none',
+                    marginLeft: i === 0 ? 0 : '-5px',
+                    flexShrink: 0
+                  }} />
+                )
+              })}
             </div>
           )}
         </div>
