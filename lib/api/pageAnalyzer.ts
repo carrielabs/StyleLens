@@ -2906,12 +2906,27 @@ async function extractDomSignalsFromPage(
           const hasButtonSemantics = tag === 'button' || el.getAttribute('role') === 'button' || /btn|button|cta|primary/.test(selector)
           const hasVisualChrome = !!normalizeColor(s.backgroundColor) || !!toBorder(s) || s.borderRadius !== '0px'
           const hasSolidFill = !!normalizeColor(s.backgroundColor) && !/rgba?\(\s*0[\s,]+0[\s,]+0(?:[\s,\/]+0)?\s*\)/i.test(s.backgroundColor)
+          const isTransparent = /rgba?\(\s*0[\s,]+0[\s,]+0(?:[\s,\/]+0)?\s*\)|transparent/i.test(s.backgroundColor)
+          const hasVisibleBorder = !!toBorder(s)
+          const hasShadow = s.boxShadow !== 'none'
           const hasPadding = (parseFloat(s.paddingLeft || '0') >= 8 || parseFloat(s.paddingRight || '0') >= 8)
             && (parseFloat(s.paddingTop || '0') >= 4 || parseFloat(s.paddingBottom || '0') >= 4)
+          const radiusParts = (s.borderRadius || '')
+            .split(/\s+/)
+            .map(part => parseFloat(part))
+            .filter(n => Number.isFinite(n))
+          const hasMixedCornerRadius = radiusParts.length >= 2
+            && radiusParts.some(v => v === 0)
+            && radiusParts.some(v => v > 0)
           const looksLikePrimaryAction = /request|demo|get|free|download|start|sign\s*up|contact\s*sales|try|book/i.test(text)
             || /demo|free|download|get-started|signup|sign-up|start|contact-sales|request/.test(href)
+          const looksLikeStrongHeroCta = /request a demo|get notion free|sign\s*up|start free|get started|download/i.test(text)
+            || /demo|free|download|get-started|signup|sign-up|start/.test(href)
           if (!hasPadding) return false
+          if (hasMixedCornerRadius) return false
+          if (isTransparent && !hasVisibleBorder && !hasShadow) return false
           if (inNav && !looksLikePrimaryAction && !hasSolidFill) return false
+          if (inNav && !hasSolidFill && !looksLikeStrongHeroCta) return false
           if (inNav && /^(product|ai|solutions|resources|enterprise|pricing|login|log in)$/i.test(text)) return false
           if (!hasSolidFill && !looksLikePrimaryAction && text.split(/\s+/).length <= 2) return false
           if (inNav && !hasButtonSemantics && !hasVisualChrome) return false
@@ -2920,23 +2935,34 @@ async function extractDomSignalsFromPage(
         .sort((a, b) => getButtonCandidateScore(b) - getButtonCandidateScore(a))
         .slice(0, 20)
       const buttonSnapshots = collectDistinctSnapshots<ButtonSnapshot>(buttonElements, 3, (el, s, rect) => {
-        const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30)
-        if (!text) return undefined
-        return {
-          backgroundColor: normalizeColor(s.backgroundColor),
-          color: normalizeColor(s.color),
-          borderRadius: s.borderRadius !== '0px' ? s.borderRadius : undefined,
-          paddingH: s.paddingLeft !== '0px' ? s.paddingLeft : (s.paddingRight !== '0px' ? s.paddingRight : undefined),
-          paddingV: s.paddingTop !== '0px' ? s.paddingTop : (s.paddingBottom !== '0px' ? s.paddingBottom : undefined),
-          fontSize: s.fontSize,
-          fontWeight: s.fontWeight,
-          fontFamily: s.fontFamily,
-          border: toBorder(s) || 'none',
-          boxShadow: s.boxShadow !== 'none' ? s.boxShadow : undefined,
-          letterSpacing: s.letterSpacing !== 'normal' && s.letterSpacing !== '0px' ? s.letterSpacing : undefined,
-          width: `${Math.round(rect.width)}px`,
-          height: `${Math.round(rect.height)}px`,
-          text,
+        try {
+          const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30)
+          if (!text) return undefined
+          const innerEl =
+            el.querySelector<HTMLElement>('span:not([aria-hidden="true"]), strong:not([aria-hidden="true"]), em:not([aria-hidden="true"]), b:not([aria-hidden="true"])')
+            ?? el
+          const innerStyle = window.getComputedStyle(innerEl)
+          const paddingH = ((parseFloat(s.paddingLeft || '0') + parseFloat(s.paddingRight || '0')) / 2) || 0
+          const paddingV = ((parseFloat(s.paddingTop || '0') + parseFloat(s.paddingBottom || '0')) / 2) || 0
+          const shorthandBg = s.backgroundImage && s.backgroundImage !== 'none' ? s.backgroundImage : undefined
+          return {
+            backgroundColor: normalizeColor(s.backgroundColor) || shorthandBg,
+            color: normalizeColor(innerStyle.color),
+            borderRadius: s.borderRadius !== '0px' ? s.borderRadius : undefined,
+            paddingH: paddingH > 0 ? `${paddingH.toFixed(1)}px` : undefined,
+            paddingV: paddingV > 0 ? `${paddingV.toFixed(1)}px` : undefined,
+            fontSize: innerStyle.fontSize,
+            fontWeight: innerStyle.fontWeight,
+            fontFamily: innerStyle.fontFamily.split(',')[0]?.replace(/['"]/g, '').trim() || undefined,
+            border: toBorder(s) || 'none',
+            boxShadow: s.boxShadow !== 'none' ? s.boxShadow : undefined,
+            letterSpacing: innerStyle.letterSpacing !== 'normal' && innerStyle.letterSpacing !== '0px' ? innerStyle.letterSpacing : undefined,
+            width: `${Math.round(rect.width)}px`,
+            height: `${Math.round(rect.height)}px`,
+            text,
+          }
+        } catch {
+          return undefined
         }
       }, (mapped) => {
         const filled = mapped.backgroundColor && mapped.backgroundColor !== 'transparent' ? 'filled' : (mapped.border && mapped.border !== 'none' ? 'outlined' : 'ghost')

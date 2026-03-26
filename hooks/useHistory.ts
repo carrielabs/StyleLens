@@ -12,7 +12,7 @@ import {
   getGuestMigrationSnapshot,
   saveGuestHistory,
 } from '@/lib/storage/guestStore'
-import type { DisplayStyleReport, HomeHistoryRecord, HomeUndoItem, PageStyleAnalysis, PinnedStyleReport, StyleReport } from '@/lib/types'
+import type { ColorToken, DisplayStyleReport, HomeHistoryRecord, HomeUndoItem, PageStyleAnalysis, PinnedStyleReport, SemanticColorSystem, StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
 const GUEST_TRIAL_KEY = 'stylelens_trial_used'
@@ -29,6 +29,7 @@ type HistoryListRow = {
   thumbnail_url: string | null
   created_at: string
   colors?: unknown
+  semanticColors?: unknown
   pinned?: unknown
 }
 
@@ -54,8 +55,40 @@ function buildGuestCacheRecord(record: GuestCacheRecordInput): GuestHistoryRecor
   }
 }
 
+function getSupplementalSemanticColors(input: unknown): ColorToken[] {
+  const semantic = (input && typeof input === 'object' ? input : null) as SemanticColorSystem | null
+  if (!semantic) return []
+  const ordered = [
+    semantic.heroBackground,
+    semantic.pageBackground,
+    semantic.surface,
+    semantic.textPrimary,
+    semantic.primaryAction,
+    semantic.secondaryAction,
+    semantic.textSecondary,
+    semantic.border,
+    ...(semantic.heroAccentColors || []),
+    ...(semantic.contentColors || []),
+  ].filter(Boolean) as ColorToken[]
+
+  const seen = new Set<string>()
+  return ordered.filter(token => {
+    const hex = (token.hex || '').toUpperCase()
+    if (!hex || seen.has(hex)) return false
+    seen.add(hex)
+    return true
+  })
+}
+
 function buildHistoryListRecord(item: HistoryListRow): HomeHistoryRecord {
-  const colors = Array.isArray(item.colors) ? item.colors : []
+  const colors = Array.isArray(item.colors) ? item.colors as ColorToken[] : []
+  const supplemental = colors.length >= 5 ? [] : getSupplementalSemanticColors(item.semanticColors)
+  const mergedColors = [...colors]
+  for (const token of supplemental) {
+    if (mergedColors.length >= 5) break
+    if (mergedColors.some(existing => existing?.hex?.toUpperCase() === token.hex?.toUpperCase())) continue
+    mergedColors.push(token)
+  }
   const isPinned = item.pinned === true || item.pinned === 'true'
 
   return {
@@ -69,7 +102,7 @@ function buildHistoryListRecord(item: HistoryListRow): HomeHistoryRecord {
       sourceLabel: item.source_label || 'Untitled',
       summary: '',
       tags: [],
-      colors: colors as PinnedStyleReport['colors'],
+      colors: mergedColors as PinnedStyleReport['colors'],
       gradients: [],
       typography: {
         fontFamily: '',
@@ -397,7 +430,7 @@ export function useHistory({
       const { data, error } = await withTimeout(
         supabase
           .from('style_records')
-          .select('id,user_id,source_label,thumbnail_url,created_at,colors:style_data->colors,pinned:style_data->__pinned')
+          .select('id,user_id,source_label,thumbnail_url,created_at,colors:style_data->colors,semanticColors:style_data->semanticColorSystem,pinned:style_data->__pinned')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(50),
@@ -584,7 +617,7 @@ export function useHistory({
         supabase
           .from('style_records')
           .insert([record])
-          .select('id,user_id,source_label,thumbnail_url,created_at,colors:style_data->colors,pinned:style_data->__pinned')
+          .select('id,user_id,source_label,thumbnail_url,created_at,colors:style_data->colors,semanticColors:style_data->semanticColorSystem,pinned:style_data->__pinned')
           .single(),
         8000,
         'History save'
