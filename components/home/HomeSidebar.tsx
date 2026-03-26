@@ -233,7 +233,7 @@ export default function HomeSidebar({
                     renamingId={renamingId}
                     renameValue={renameValue}
                     onRenameChange={setRenameValue}
-                    onClick={() => { setShowUserMenu(false); void openHistoryItem(item) }}
+                    onClick={() => { setShowUserMenu(false); onCloseSettings(); void openHistoryItem(item) }}
                     onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
                     onPin={() => togglePin(item.id)}
                     onDelete={() => deleteItem(item.id)}
@@ -282,7 +282,7 @@ export default function HomeSidebar({
                 renamingId={renamingId}
                 renameValue={renameValue}
                 onRenameChange={setRenameValue}
-                onClick={() => { setShowUserMenu(false); void openHistoryItem(item) }}
+                onClick={() => { setShowUserMenu(false); onCloseSettings(); void openHistoryItem(item) }}
                 onContextMenu={(e) => { e.stopPropagation(); setShowUserMenu(false); setContextMenuId(contextMenuId === item.id ? null : item.id) }}
                 onPin={() => togglePin(item.id)}
                 onDelete={() => deleteItem(item.id)}

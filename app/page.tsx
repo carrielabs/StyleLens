@@ -346,6 +346,7 @@ export default function Home() {
           undoDelete={undoDelete}
           isAuthVisible={isAuthVisible}
           setIsAuthVisible={setIsAuthVisible}
+          onCloseSettings={() => setIsSettingsOpen(false)}
         />
       </div>
     </>
