@@ -7,6 +7,7 @@ import AuthOverlay from '@/components/auth/AuthOverlay'
 import StyleReportView from '@/components/report/StyleReport'
 import type { DisplayStyleReport, HomeHistoryRecord, HomeUndoItem, StyleReport } from '@/lib/types'
 import { getTopColors } from './viewUtils'
+import type { ColorToken } from '@/lib/types'
 
 interface HomeOverlaysProps {
   report: DisplayStyleReport | null
@@ -33,6 +34,7 @@ interface HomeOverlaysProps {
   undoDelete: () => void
   isAuthVisible: boolean
   setIsAuthVisible: Dispatch<SetStateAction<boolean>>
+  onCloseSettings: () => void
 }
 
 export default function HomeOverlays({
@@ -60,6 +62,7 @@ export default function HomeOverlays({
   undoDelete,
   isAuthVisible,
   setIsAuthVisible,
+  onCloseSettings,
 }: HomeOverlaysProps) {
   return (
     <>
@@ -170,6 +173,7 @@ export default function HomeOverlays({
                       setError(null)
                       setIsSearchOpen(false)
                       setModalSearchQuery('')
+                      onCloseSettings()
                       void openHistoryItem(item)
                     }}
                     style={{
@@ -277,7 +281,7 @@ function SearchThumbnail({
   sourceType,
 }: {
   thumbnailUrl?: string | null
-  colors: Array<{ hex: string; role?: string }>
+  colors: ColorToken[]
   sourceType?: 'image' | 'url'
 }) {
   const [imageFailed, setImageFailed] = useState(false)
