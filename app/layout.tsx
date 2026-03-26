@@ -18,6 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'StyleLens — 解构全球顶级网页设计',
   description: '专业的视觉风格提取与方案生成工具，沉淀你的设计灵感。',
+  manifest: '/manifest.json',
   icons: {
     icon: '/logo-graphic.png',
     apple: '/logo-graphic.png',

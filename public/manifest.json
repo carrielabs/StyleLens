@@ -1,0 +1,23 @@
+{
+  "name": "StyleLens",
+  "short_name": "StyleLens",
+  "description": "解构全球顶级网页设计，提取设计 DNA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1D1D1F",
+  "orientation": "landscape-primary",
+  "icons": [
+    {
+      "src": "/logo-graphic.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

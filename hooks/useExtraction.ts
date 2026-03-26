@@ -42,6 +42,7 @@ interface UseExtractionResult {
   isExtracting: boolean
   isUrlExtracting: boolean
   isImageExtracting: boolean
+  extractionPhase: 'screenshot' | 'ai' | 'saving' | null
   pendingFile: File | null
   pendingPreviewUrl: string | null
   uploadZoneHovered: boolean
@@ -71,6 +72,7 @@ export function useExtraction({
   const [url, setUrl] = useState('')
   const [isDragging, setIsDragging] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
+  const [extractionPhase, setExtractionPhase] = useState<'screenshot' | 'ai' | 'saving' | null>(null)
   const [activeExtractionMode, setActiveExtractionMode] = useState<'url' | 'image' | null>(null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null)
@@ -170,6 +172,7 @@ export function useExtraction({
     extractAbortRef.current = abort
 
     setIsExtracting(true)
+    setExtractionPhase('screenshot')
     setActiveExtractionMode('url')
     setReport(null)
     setActiveItemId(null)
@@ -202,6 +205,7 @@ export function useExtraction({
         label = new URL(url.trim()).hostname.replace(/^www\./, '')
       } catch {}
 
+      setExtractionPhase('ai')
       const result = await callExtractAPI({
         sourceType: 'url',
         screenshotUrl: ssData.screenshotUrl,
@@ -211,6 +215,7 @@ export function useExtraction({
       }, abort.signal)
       result.thumbnailUrl = ssData.screenshotUrl
 
+      setExtractionPhase('saving')
       setReport(result)
       await saveExtraction(result, ssData.screenshotUrl)
       setUrl('')
@@ -221,6 +226,7 @@ export function useExtraction({
       setError(msg)
     } finally {
       setIsExtracting(false)
+      setExtractionPhase(null)
       setActiveExtractionMode(null)
       extractAbortRef.current = null
     }
@@ -254,6 +260,7 @@ export function useExtraction({
     extractAbortRef.current = abort
 
     setIsExtracting(true)
+    setExtractionPhase('ai')
     setActiveExtractionMode('image')
     setReport(null)
     setActiveItemId(null)
@@ -340,5 +347,6 @@ export function useExtraction({
     handleDrop,
     handlePaste,
     cancelExtraction,
+    extractionPhase,
   }
 }

@@ -102,6 +102,7 @@ export default function Home() {
     handleDrop,
     handlePaste,
     cancelExtraction,
+    extractionPhase,
   } = useExtraction({
     user,
     guestTrialUsed,
@@ -318,6 +319,7 @@ export default function Home() {
             clearPendingFile={clearPendingFile}
             cancelExtraction={cancelExtraction}
             handleFilePreview={handleFilePreview}
+            extractionPhase={extractionPhase}
           />
         )}
 

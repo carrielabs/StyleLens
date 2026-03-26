@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import type { Dispatch, MouseEvent, ReactNode, RefObject, SetStateAction } from 'react'
 import {
   ChevronDown,
@@ -447,7 +447,7 @@ function SidebarBtn({ icon, label, onClick, active = false, collapsed = false }:
   )
 }
 
-function HistoryItem({
+const HistoryItem = memo(function HistoryItem({
   id, label, thumbnailUrl, colors, sourceType, isActive, isPinned,
   contextMenuOpen, renamingId, renameValue, onRenameChange,
   onClick, onContextMenu, onPin, onDelete, onStartRename,
@@ -633,7 +633,16 @@ function HistoryItem({
       )}
     </div>
   )
-}
+}, (prev, next) => (
+  prev.id === next.id &&
+  prev.label === next.label &&
+  prev.isActive === next.isActive &&
+  prev.isPinned === next.isPinned &&
+  prev.contextMenuOpen === next.contextMenuOpen &&
+  prev.renamingId === next.renamingId &&
+  prev.renameValue === next.renameValue &&
+  prev.thumbnailUrl === next.thumbnailUrl
+))
 
 function ContextMenuItem({ label, icon, onClick, danger = false }: {
   label: string, icon: ReactNode, onClick: (e: MouseEvent) => void, danger?: boolean

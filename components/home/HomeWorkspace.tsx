@@ -43,6 +43,7 @@ interface HomeWorkspaceProps {
   clearPendingFile: () => void
   cancelExtraction: () => void
   handleFilePreview: (file: File) => void
+  extractionPhase: 'screenshot' | 'ai' | 'saving' | null
 }
 
 export default function HomeWorkspace({
@@ -79,6 +80,7 @@ export default function HomeWorkspace({
   clearPendingFile,
   cancelExtraction,
   handleFilePreview,
+  extractionPhase,
 }: HomeWorkspaceProps) {
   const [hoveredSection, setHoveredSection] = useState<{ yStart: number; yEnd: number } | null>(null)
 
@@ -427,39 +429,54 @@ export default function HomeWorkspace({
               )}
             </div>
 
-            {isExtracting && (
-              <div style={{
-                position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
-                width: '100%', maxWidth: '500px', animation: 'fadeIn 0.3s ease-out'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '12px', color: '#1D1D1F', opacity: 0.5, fontWeight: 500 }}>
-                    正在解析设计，约需 15 秒 ...
-                  </span>
-                  <button
-                    onClick={cancelExtraction}
-                    style={{
-                      background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: '6px',
-                      padding: '3px 10px', fontSize: '11px', fontWeight: 500, color: '#8E8E93',
-                      cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'var(--font-sans)'
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.22)'; e.currentTarget.style.color = '#3C3C3E' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; e.currentTarget.style.color = '#8E8E93' }}
-                  >
-                    取消
-                  </button>
-                </div>
+            {isExtracting && (() => {
+              const phaseText =
+                extractionPhase === 'screenshot' ? '正在打开页面，分析视觉结构…' :
+                extractionPhase === 'ai'         ? 'AI 正在识别设计语言…' :
+                extractionPhase === 'saving'     ? '整理结果中…' :
+                '准备中…'
+              const progressPct =
+                extractionPhase === 'screenshot' ? 30 :
+                extractionPhase === 'ai'         ? 65 :
+                extractionPhase === 'saving'     ? 92 : 5
+              return (
                 <div style={{
-                  width: '100%', height: '1px', backgroundColor: '#F0F0F0',
-                  borderRadius: '1px', overflow: 'hidden', position: 'relative'
+                  position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
+                  width: '100%', maxWidth: '500px', animation: 'fadeIn 0.3s ease-out'
                 }}>
-                  <div className="animate-scan" style={{
-                    position: 'absolute', top: 0, width: '40%', height: '100%',
-                    backgroundColor: '#1D1D1F', opacity: 0.8
-                  }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '12px', color: '#1D1D1F', opacity: 0.5, fontWeight: 500, transition: 'all 0.4s ease' }}>
+                      {phaseText}
+                    </span>
+                    {extractionPhase !== 'saving' && (
+                      <button
+                        onClick={cancelExtraction}
+                        style={{
+                          background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: '6px',
+                          padding: '3px 10px', fontSize: '11px', fontWeight: 500, color: '#8E8E93',
+                          cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'var(--font-sans)'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.22)'; e.currentTarget.style.color = '#3C3C3E' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; e.currentTarget.style.color = '#8E8E93' }}
+                      >
+                        取消
+                      </button>
+                    )}
+                  </div>
+                  <div style={{
+                    width: '100%', height: '1px', backgroundColor: '#F0F0F0',
+                    borderRadius: '1px', overflow: 'hidden', position: 'relative'
+                  }}>
+                    <div style={{
+                      position: 'absolute', top: 0, left: 0, height: '100%',
+                      width: `${progressPct}%`,
+                      backgroundColor: '#1D1D1F', opacity: 0.8,
+                      transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }} />
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
               onChange={e => { if (e.target.files?.[0]) handleFilePreview(e.target.files[0]) }} />
