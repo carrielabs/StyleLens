@@ -585,7 +585,7 @@ const HistoryItem = memo(function HistoryItem({
         </div>
       </button>
 
-      {(hovered || contextMenuOpen) && !isRenaming && (
+      {!isRenaming && (
         <button
           onClick={onContextMenu}
           style={{
@@ -594,7 +594,10 @@ const HistoryItem = memo(function HistoryItem({
             background: contextMenuOpen ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.04)',
             borderRadius: '5px', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#3C3C3E', transition: 'background 0.1s', padding: 0
+            color: '#3C3C3E', padding: 0,
+            opacity: (hovered || contextMenuOpen) ? 1 : 0,
+            pointerEvents: (hovered || contextMenuOpen) ? 'auto' : 'none',
+            transition: 'background 0.1s, opacity 0.1s',
           }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.08)'}
           onMouseLeave={e => e.currentTarget.style.background = contextMenuOpen ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.04)'}
