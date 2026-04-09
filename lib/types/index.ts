@@ -317,30 +317,21 @@ export interface PageTypographyCandidate {
   meta?: TokenMeta
 }
 
+export type AnalysisCoverageArea =
+  | 'color'
+  | 'typography'
+  | 'radius'
+  | 'shadow'
+  | 'spacing'
+  | 'layout'
+  | 'interaction'
+  | 'sections'
+  | 'components'
+
 export interface AnalysisCoverageSummary {
   overallCoverage: number
-  coveredAreas: Array<
-    | 'color'
-    | 'typography'
-    | 'radius'
-    | 'shadow'
-    | 'spacing'
-    | 'layout'
-    | 'interaction'
-    | 'sections'
-    | 'components'
-  >
-  missingAreas?: Array<
-    | 'color'
-    | 'typography'
-    | 'radius'
-    | 'shadow'
-    | 'spacing'
-    | 'layout'
-    | 'interaction'
-    | 'sections'
-    | 'components'
-  >
+  coveredAreas: AnalysisCoverageArea[]
+  missingAreas?: AnalysisCoverageArea[]
   notes?: string[]
 }
 
@@ -364,6 +355,7 @@ export interface AuditModuleSummary {
   status: 'not-run' | 'queued' | 'completed' | 'failed'
   summary?: string
   findingsCount?: number
+  // ISO 8601 timestamp string, e.g. 2026-04-09T12:30:00.000Z
   updatedAt?: string
 }
 
