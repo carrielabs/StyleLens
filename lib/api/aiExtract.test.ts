@@ -75,10 +75,23 @@ describe('aiExtract shell recovery', () => {
       sourceType: 'url',
       pageAnalysis: emptyAnalysis({
         stateTokens: {
-          hover: [{ selector: '.cta', declarations: ['background:#111111'] }],
+          button: [{
+            value: '#111111',
+            property: 'background-color',
+            state: 'hover',
+            componentKinds: ['button'],
+            evidenceScore: 1,
+            measured: true,
+          }],
         },
         layoutEvidence: [
-          { label: 'Hero split layout', selectors: ['main'], confidence: 0.9 },
+          {
+            label: 'Hero split layout',
+            kind: 'hero',
+            sampleCount: 1,
+            componentKinds: ['section'],
+            evidenceScore: 1,
+          },
         ],
       }),
     } as any)

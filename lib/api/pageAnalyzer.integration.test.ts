@@ -86,7 +86,7 @@ describe('screenshotter viewport aggregation', () => {
           letterSpacing: '-0.02em',
           usage: 'heading',
           sampleCount: 4,
-          componentKinds: ['heading'],
+          componentKinds: ['text'],
           evidenceScore: 80,
         },
       ],
