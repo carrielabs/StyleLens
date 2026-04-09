@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { StyleReport, RadiusToken, ShadowToken, BorderToken, TransitionToken, ButtonSnapshot, InputSnapshot, CardSnapshot, TagSnapshot, PageSection, VisualStyleAnalysis, InteractionStyleAI } from '@/lib/types'
 import { gradeTokens, confidenceLabel } from '@/lib/design-details/gradeTokens'
 import type { GradedTokenSet } from '@/lib/design-details/gradeTokens'
+import { FLAGS } from '@/lib/flags'
 import Typography from './Typography'
 
 type MeasuredTab = 'components' | 'shape' | 'space' | 'typography'
@@ -34,6 +35,8 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
   const { colors, colorSystem, typography, designDetails } = report
   const analysis = report.pageAnalysis
   const sourceIsUrl = report.sourceType === 'url'
+  const evidenceSummary = analysis?.evidenceSummary
+  const coverageSummary = analysis?.coverageSummary
 
   // ── Snapshot data (DOM-measured button) ──────────────────────────────────
   const snap: ButtonSnapshot | undefined = analysis?.buttonSnapshot
@@ -96,6 +99,24 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
   // ── AI-inferred style ─────────────────────────────────────────────────────
   const visualStyle: VisualStyleAnalysis | undefined  = designDetails.visualStyle
   const interactionStyle: InteractionStyleAI | undefined = designDetails.interactionStyle
+
+  const totalEvidenceCount = evidenceSummary?.totalEvidenceCount || 0
+  const domEvidenceCount = evidenceSummary?.sourceBreakdown?.['dom-computed'] || 0
+  const screenshotEvidenceCount = evidenceSummary?.sourceBreakdown?.['screenshot-sampled'] || 0
+  const inferredEvidenceCount = evidenceSummary?.sourceBreakdown?.inferred || 0
+  const domEvidenceRatio = totalEvidenceCount > 0 ? domEvidenceCount / totalEvidenceCount : 0
+  const screenshotEvidenceRatio = totalEvidenceCount > 0 ? screenshotEvidenceCount / totalEvidenceCount : 0
+  const inferredEvidenceRatio = totalEvidenceCount > 0 ? inferredEvidenceCount / totalEvidenceCount : 0
+  const hasCssText = Boolean(analysis?.cssTextExcerpt?.trim())
+  const styleSourceCount = (analysis?.sourceCount?.inlineStyleBlocks || 0) + (analysis?.sourceCount?.linkedStylesheets || 0)
+  const inferredSections = (designDetails.pageSections || []).length > 0 && !pageSecsMeasured
+  const hasFallback = inferredEvidenceCount > 0 || typography.confidence === 'inferred' || inferredSections
+  const hasEvidenceCard = FLAGS.ENABLE_REPORT_EVIDENCE_SUMMARY && (
+    totalEvidenceCount > 0 || Boolean(evidenceSummary?.overallConfidence) || Boolean(evidenceSummary?.notes?.length)
+  )
+  const hasCoverageCard = FLAGS.ENABLE_REPORT_COVERAGE_SUMMARY && (
+    Boolean(coverageSummary) || styleSourceCount > 0 || hasCssText || hasFallback || sourceIsUrl
+  )
 
   const hasStateData = Object.values(stateTokens).some(
     (arr) => (arr as Array<{ state: string }>).some(v => v.state !== 'default')
@@ -281,6 +302,130 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
 
   return (
     <div>
+      {(hasEvidenceCard || hasCoverageCard) && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: '16px',
+          marginBottom: '24px',
+        }}>
+          {hasEvidenceCard && (
+            <SummaryCard
+              title={lang === 'zh' ? '可信度摘要' : 'Evidence Summary'}
+              subtitle={lang === 'zh' ? '看这份报告有多少来自实测，多少来自推断。' : 'Shows how much comes from measured evidence vs inference.'}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <SourceRatioRow
+                  label={lang === 'zh' ? 'DOM 实测占比' : 'DOM measured'}
+                  ratio={domEvidenceRatio}
+                  count={domEvidenceCount}
+                  color="#34C759"
+                />
+                <SourceRatioRow
+                  label={lang === 'zh' ? '截图采样占比' : 'Screenshot sampled'}
+                  ratio={screenshotEvidenceRatio}
+                  count={screenshotEvidenceCount}
+                  color="#FF9F0A"
+                />
+                <SourceRatioRow
+                  label={lang === 'zh' ? 'AI 推断占比' : 'AI inferred'}
+                  ratio={inferredEvidenceRatio}
+                  count={inferredEvidenceCount}
+                  color="#AEAEB2"
+                />
+              </div>
+
+              {evidenceSummary?.overallConfidence && (
+                <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    {lang === 'zh' ? '关键结论可信度' : 'Key conclusion confidence'}
+                  </div>
+                  <ConfidenceBadge confidence={evidenceSummary.overallConfidence} lang={lang} />
+                </div>
+              )}
+
+              {totalEvidenceCount > 0 && (
+                <div style={{ marginTop: '10px', fontSize: '12px', color: '#8E8E93' }}>
+                  {lang === 'zh' ? `共 ${totalEvidenceCount} 条证据信号` : `${totalEvidenceCount} evidence signals total`}
+                </div>
+              )}
+
+              {evidenceSummary?.notes?.length ? (
+                <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {evidenceSummary.notes.slice(0, 3).map(note => (
+                    <span key={note} style={summaryNoteStyle}>
+                      {note}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </SummaryCard>
+          )}
+
+          {hasCoverageCard && (
+            <SummaryCard
+              title={lang === 'zh' ? '覆盖度说明' : 'Coverage Summary'}
+              subtitle={lang === 'zh' ? '帮助判断哪些结果完整、哪些是兜底。' : 'Helps explain what was covered and what used fallback.'}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <CoverageRow
+                  label={lang === 'zh' ? '是否 URL 实测' : 'URL measured'}
+                  value={sourceIsUrl ? (lang === 'zh' ? '是' : 'Yes') : (lang === 'zh' ? '否' : 'No')}
+                  positive={sourceIsUrl}
+                />
+                <CoverageRow
+                  label={lang === 'zh' ? '是否有 CSS 文本' : 'CSS text available'}
+                  value={hasCssText ? (lang === 'zh' ? '有' : 'Yes') : (lang === 'zh' ? '无' : 'No')}
+                  positive={hasCssText}
+                />
+                <CoverageRow
+                  label={lang === 'zh' ? '样式源数量' : 'Style sources'}
+                  value={String(styleSourceCount)}
+                  detail={lang === 'zh'
+                    ? `内联 ${analysis?.sourceCount?.inlineStyleBlocks || 0} / 外链 ${analysis?.sourceCount?.linkedStylesheets || 0}`
+                    : `Inline ${analysis?.sourceCount?.inlineStyleBlocks || 0} / Linked ${analysis?.sourceCount?.linkedStylesheets || 0}`}
+                />
+                <CoverageRow
+                  label={lang === 'zh' ? '是否存在 fallback' : 'Fallback present'}
+                  value={hasFallback ? (lang === 'zh' ? '有' : 'Yes') : (lang === 'zh' ? '无' : 'No')}
+                  positive={!hasFallback}
+                />
+              </div>
+
+              {coverageSummary && (
+                <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      {lang === 'zh' ? '覆盖率' : 'Coverage'}
+                    </div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F' }}>
+                      {formatPercent(coverageSummary.overallCoverage)}
+                    </div>
+                  </div>
+                  <div style={{ height: '6px', borderRadius: '999px', background: '#F1F1F3', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${Math.max(0, Math.min(100, normalizePercent(coverageSummary.overallCoverage) * 100))}%`,
+                      height: '100%',
+                      background: '#1D1D1F',
+                      borderRadius: '999px',
+                    }} />
+                  </div>
+                  {coverageSummary.coveredAreas?.length ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {coverageSummary.coveredAreas.slice(0, 6).map(area => (
+                        <span key={area} style={summaryNoteStyle}>
+                          {coverageAreaLabel(area, lang)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </SummaryCard>
+          )}
+        </div>
+      )}
+
       {/* ── Tab bar (same style as export code panel) ── */}
       <div style={{
         display: 'flex',
@@ -679,7 +824,175 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
   )
 }
 
+const summaryNoteStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '4px 10px',
+  borderRadius: '999px',
+  background: '#F5F5F7',
+  color: '#666',
+  fontSize: '11px',
+  lineHeight: 1.4,
+}
+
+function normalizePercent(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return value > 1 ? value / 100 : value
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(normalizePercent(value) * 100)}%`
+}
+
+function confidenceText(confidence: 'high' | 'medium' | 'low') {
+  if (confidence === 'high') return '高'
+  if (confidence === 'medium') return '中'
+  return '低'
+}
+
+function coverageAreaLabel(
+  area: 'color' | 'typography' | 'radius' | 'shadow' | 'spacing' | 'layout' | 'interaction' | 'sections' | 'components',
+  lang: 'zh' | 'en'
+) {
+  const zhMap = {
+    color: '颜色',
+    typography: '字体',
+    radius: '圆角',
+    shadow: '阴影',
+    spacing: '间距',
+    layout: '布局',
+    interaction: '交互',
+    sections: '分区',
+    components: '组件',
+  } as const
+  const enMap = {
+    color: 'Color',
+    typography: 'Typography',
+    radius: 'Radius',
+    shadow: 'Shadow',
+    spacing: 'Spacing',
+    layout: 'Layout',
+    interaction: 'Interaction',
+    sections: 'Sections',
+    components: 'Components',
+  } as const
+  return lang === 'zh' ? zhMap[area] : enMap[area]
+}
+
 // ── Helper components ──────────────────────────────────────────────────────────
+
+function SummaryCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string
+  subtitle: string
+  children: React.ReactNode
+}) {
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      borderRadius: '16px',
+      border: '1px solid rgba(0,0,0,0.06)',
+      padding: '18px 18px 16px',
+    }}>
+      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>{title}</div>
+      <div style={{ fontSize: '12px', color: '#8E8E93', lineHeight: 1.6, marginBottom: '14px' }}>{subtitle}</div>
+      {children}
+    </div>
+  )
+}
+
+function SourceRatioRow({
+  label,
+  ratio,
+  count,
+  color,
+}: {
+  label: string
+  ratio: number
+  count: number
+  color: string
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ fontSize: '12px', color: '#3C3C43' }}>{label}</div>
+        <div style={{ fontSize: '12px', color: '#1D1D1F', fontWeight: 600 }}>
+          {formatPercent(ratio)}{count > 0 ? ` · ${count}` : ''}
+        </div>
+      </div>
+      <div style={{ height: '6px', borderRadius: '999px', background: '#F1F1F3', overflow: 'hidden' }}>
+        <div style={{
+          width: `${Math.max(0, Math.min(100, ratio * 100))}%`,
+          height: '100%',
+          borderRadius: '999px',
+          background: color,
+        }} />
+      </div>
+    </div>
+  )
+}
+
+function ConfidenceBadge({ confidence, lang }: { confidence: 'high' | 'medium' | 'low'; lang: 'zh' | 'en' }) {
+  const styleMap = {
+    high: { bg: 'rgba(52,199,89,0.12)', text: '#1F7A3D' },
+    medium: { bg: 'rgba(255,159,10,0.14)', text: '#9A5A00' },
+    low: { bg: 'rgba(174,174,178,0.18)', text: '#636366' },
+  } as const
+  const tone = styleMap[confidence]
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '5px 10px',
+      borderRadius: '999px',
+      background: tone.bg,
+      color: tone.text,
+      fontSize: '12px',
+      fontWeight: 600,
+    }}>
+      {lang === 'zh' ? confidenceText(confidence) : confidence}
+    </span>
+  )
+}
+
+function CoverageRow({
+  label,
+  value,
+  detail,
+  positive,
+}: {
+  label: string
+  value: string
+  detail?: string
+  positive?: boolean
+}) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: '12px',
+      paddingBottom: '10px',
+      borderBottom: '1px solid rgba(0,0,0,0.05)',
+    }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ fontSize: '12px', color: '#3C3C43' }}>{label}</div>
+        {detail ? <div style={{ fontSize: '11px', color: '#8E8E93' }}>{detail}</div> : null}
+      </div>
+      <div style={{
+        fontSize: '12px',
+        fontWeight: 600,
+        color: positive === undefined ? '#1D1D1F' : positive ? '#1F7A3D' : '#636366',
+        flexShrink: 0,
+      }}>
+        {value}
+      </div>
+    </div>
+  )
+}
 
 function SpacingRow({ token, lang, isLast }: { token: { value: string; freqRatio: number; sampleCount: number }; lang: 'zh' | 'en'; isLast: boolean }) {
   const [hovered, setHovered] = useState(false)
