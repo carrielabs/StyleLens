@@ -157,6 +157,23 @@ type StateAccumulator = {
   meta?: TokenMeta
 }
 
+type InteractiveTargetComponent = keyof ComponentStateTokens
+
+export type InteractiveTargetCandidate = {
+  component: InteractiveTargetComponent
+  tagName: string
+  role: string
+  text: string
+  ariaLabel: string
+  placeholder: string
+  title: string
+  href: string
+  className: string
+  width: number
+  height: number
+  disabled: boolean
+}
+
 export function createEmptyPageAnalysis(sourceCount?: { inlineStyleBlocks: number; linkedStylesheets: number }): PageStyleAnalysis {
   return {
     colorCandidates: [],
@@ -1268,6 +1285,56 @@ async function captureInteractiveSnapshot(handle: ElementHandle): Promise<Intera
   })
 }
 
+function normalizeCandidateText(value: string | null | undefined): string {
+  return (value || '').replace(/\s+/g, ' ').trim()
+}
+
+export function scoreInteractiveTargetCandidate(candidate: InteractiveTargetCandidate): number {
+  if (candidate.disabled) return 0
+
+  const width = Math.max(0, candidate.width || 0)
+  const height = Math.max(0, candidate.height || 0)
+  const area = width * height
+
+  if (width < 16 || height < 16 || area < 256) return 0
+
+  const text = normalizeCandidateText(candidate.text)
+  const ariaLabel = normalizeCandidateText(candidate.ariaLabel)
+  const placeholder = normalizeCandidateText(candidate.placeholder)
+  const title = normalizeCandidateText(candidate.title)
+  const label = text || ariaLabel || placeholder || title
+
+  if (!label && candidate.component !== 'input') return 0
+  if (candidate.component === 'card' && !label) return 0
+
+  let score = 0
+
+  if (candidate.component === 'button') score += 14
+  if (candidate.component === 'input') score += 12
+  if (candidate.component === 'link') score += 9
+  if (candidate.component === 'card') score += 6
+
+  if (text) score += 8
+  else if (ariaLabel) score += 6
+  else if (placeholder) score += 5
+  else if (title) score += 3
+
+  if (width >= 72) score += 3
+  else if (width >= 32) score += 1
+
+  if (height >= 36) score += 3
+  else if (height >= 24) score += 1
+
+  if (area >= 2_500) score += 2
+  else if (area >= 900) score += 1
+
+  if (candidate.component === 'link' && candidate.href.trim().startsWith('#')) score -= 2
+  if (!text && /icon|logo|avatar|social/i.test(candidate.className)) score -= 6
+  if (candidate.component === 'card' && area > 120_000) score -= 4
+
+  return Math.max(0, score)
+}
+
 async function collectInteractiveStateSignals(page: Page): Promise<ComponentStateTokens> {
   const result = emptyComponentStateTokens()
   const targets = [
@@ -1279,16 +1346,15 @@ async function collectInteractiveStateSignals(page: Page): Promise<ComponentStat
 
   for (const { selector, component } of targets) {
     const handles = await page.locator(selector).elementHandles()
-    let sampled = 0
+    const scoredHandles: Array<{ handle: ElementHandle; score: number }> = []
 
     for (const handle of handles) {
-      if (sampled >= MAX_INTERACTIVE_STATE_ELEMENTS) break
-
-      const isVisible = await handle.evaluate((node) => {
+      const candidate = await handle.evaluate((node, currentComponent) => {
         const element = node as HTMLElement
         const style = window.getComputedStyle(element)
         const rect = element.getBoundingClientRect()
-        return !(
+
+        if (
           style.display === 'none' ||
           style.visibility === 'hidden' ||
           Number(style.opacity) === 0 ||
@@ -1296,10 +1362,38 @@ async function collectInteractiveStateSignals(page: Page): Promise<ComponentStat
           rect.height < 8 ||
           rect.bottom < 0 ||
           rect.top > window.innerHeight * 1.25
-        )
-      }).catch(() => false)
+        ) {
+          return null
+        }
 
-      if (!isVisible) continue
+        return {
+          component: currentComponent,
+          tagName: element.tagName.toLowerCase(),
+          role: element.getAttribute('role') || '',
+          text: element.innerText || element.textContent || '',
+          ariaLabel: element.getAttribute('aria-label') || '',
+          placeholder: (element as HTMLInputElement).placeholder || '',
+          title: element.getAttribute('title') || '',
+          href: (element as HTMLAnchorElement).getAttribute('href') || '',
+          className: element.className || '',
+          width: rect.width,
+          height: rect.height,
+          disabled: element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true',
+        }
+      }, component).catch(() => null) as InteractiveTargetCandidate | null
+
+      if (!candidate) continue
+
+      const score = scoreInteractiveTargetCandidate(candidate)
+      if (score <= 0) continue
+      scoredHandles.push({ handle, score })
+    }
+
+    const rankedHandles = scoredHandles
+      .sort((a, b) => b.score - a.score)
+      .slice(0, MAX_INTERACTIVE_STATE_ELEMENTS)
+
+    for (const { handle } of rankedHandles) {
 
       const baseline = await captureInteractiveSnapshot(handle).catch(() => [])
       const baselineMap = new Map(baseline.map(item => [item.property, item.value.trim()]))
@@ -1346,7 +1440,6 @@ async function collectInteractiveStateSignals(page: Page): Promise<ComponentStat
 
       await page.mouse.up().catch(() => {})
       await page.locator('body').hover({ force: true }).catch(() => {})
-      sampled += 1
     }
   }
 
