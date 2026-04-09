@@ -3651,7 +3651,7 @@ async function analyzePageStylesCore(
 
   const analysis: PageStyleAnalysis = {
     colorCandidates,
-    semanticColorSystem: undefined,
+    semanticColorSystem: buildSemanticColorSystem(colorCandidates),
     typographyCandidates,
     typographyTokens: toTypographyTokens(typographyCandidates),
     radiusCandidates: mergeUniqueValues(10, domSignals?.radiusCandidates || [], cssSignals.radiusCandidates),

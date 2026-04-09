@@ -160,7 +160,7 @@ describe('useHistory', () => {
     expect(supabase.__mocks.update).toHaveBeenCalledTimes(1)
   })
 
-  it('deletes and restores an item through undo', () => {
+  it('deletes and restores an item through undo', async () => {
     const supabase = createSupabaseMock()
     const report = createReport()
 
@@ -196,8 +196,8 @@ describe('useHistory', () => {
     expect(result.current.extractions).toHaveLength(0)
     expect(result.current.undoItem?.id).toBe('rec-1')
 
-    act(() => {
-      result.current.undoDelete()
+    await act(async () => {
+      await result.current.undoDelete()
     })
 
     expect(result.current.extractions).toHaveLength(1)
