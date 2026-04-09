@@ -8,6 +8,18 @@ describe('UrlInput', () => {
     vi.restoreAllMocks()
   })
 
+  it('shows structured measurement helper copy', () => {
+    render(
+      <UrlInput
+        onStart={vi.fn()}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('本次分析已含结构化测量')).toBeTruthy()
+  })
+
   it('forwards pageAnalysis from screenshot response into extract request', async () => {
     const onStart = vi.fn()
     const onSuccess = vi.fn()
@@ -89,6 +101,89 @@ describe('UrlInput', () => {
     expect(extractBody.screenshotUrl).toBe(screenshotResponse.screenshotUrl)
     expect(onStart).toHaveBeenCalled()
     expect(onSuccess).toHaveBeenCalled()
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('hydrates missing report pageAnalysis from screenshot response before success callback', async () => {
+    const onStart = vi.fn()
+    const onSuccess = vi.fn()
+    const onError = vi.fn()
+
+    const screenshotResponse = {
+      success: true,
+      screenshotUrl: 'data:image/jpeg;base64,abc',
+      extractedCss: 'body{background:#fff;}',
+      pageAnalysis: {
+        colorCandidates: [],
+        typographyCandidates: [],
+        typographyTokens: [],
+        radiusCandidates: [],
+        radiusTokens: [],
+        shadowCandidates: [],
+        shadowTokens: [],
+        spacingCandidates: [],
+        spacingTokens: [],
+        layoutHints: [],
+        layoutEvidence: [],
+        coverageSummary: {
+          overallCoverage: 0.32,
+          coveredAreas: ['layout'],
+          missingAreas: ['typography', 'spacing'],
+        },
+        sourceCount: {
+          inlineStyleBlocks: 0,
+          linkedStylesheets: 0,
+        },
+      },
+    }
+
+    const extractResponse = {
+      success: true,
+      report: {
+        sourceType: 'url',
+        sourceLabel: 'notion.com',
+        summary: '',
+        tags: [],
+        colors: [],
+        gradients: [],
+        typography: {},
+        designDetails: {},
+        createdAt: new Date().toISOString(),
+      },
+    }
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        json: async () => screenshotResponse,
+      })
+      .mockResolvedValueOnce({
+        json: async () => extractResponse,
+      })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <UrlInput
+        onStart={onStart}
+        onSuccess={onSuccess}
+        onError={onError}
+      />
+    )
+
+    fireEvent.change(screen.getByPlaceholderText('粘贴网页 URL，例如 https://linear.app'), {
+      target: { value: 'notion.com' },
+    })
+    fireEvent.submit(screen.getByRole('button', { name: '解析' }).closest('form')!)
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledTimes(1)
+    })
+
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pageAnalysis: screenshotResponse.pageAnalysis,
+      })
+    )
     expect(onError).not.toHaveBeenCalled()
   })
 })

@@ -59,7 +59,11 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
 
       const extractData = await extractRes.json()
       if (extractData.success) {
-        onSuccess(extractData.report)
+        const report = {
+          ...extractData.report,
+          pageAnalysis: extractData.report?.pageAnalysis || screenData.pageAnalysis,
+        }
+        onSuccess(report)
       } else {
         throw new Error(extractData.error || '风格提取失败')
       }
@@ -69,69 +73,80 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
   }
 
   return (
-    <form 
-      onSubmit={handleSubmit}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        background: '#F5F5F5',
-        border: '1px solid transparent',
-        borderRadius: '100px',
-        padding: '6px 6px 6px 24px',
-        transition: 'all 0.25s ease',
-        opacity: disabled ? 0.5 : 1,
-        width: '100%',
-      }}
-      onFocus={(e) => {
-        e.currentTarget.style.background = '#FFFFFF'
-        e.currentTarget.style.border = '1px solid #E0E0E0'
-        e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.07)'
-      }}
-      onBlur={(e) => {
-        e.currentTarget.style.background = '#F5F5F5'
-        e.currentTarget.style.border = '1px solid transparent'
-        e.currentTarget.style.boxShadow = 'none'
-      }}
-    >
-      <input
-        type="text"
-        placeholder="粘贴网页 URL，例如 https://linear.app"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        disabled={disabled}
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <form 
+        onSubmit={handleSubmit}
         style={{
-          flex: 1,
-          height: '44px',
-          border: 'none',
-          background: 'transparent',
-          color: '#1A1A1A',
-          fontSize: '15px',
-          outline: 'none',
-          fontFamily: 'inherit',
-        }}
-      />
-      <button
-        type="submit"
-        disabled={disabled || !url}
-        style={{
-          height: '44px',
-          padding: '0 28px',
-          background: !url ? '#E0E0E0' : '#1A1A1A',
-          color: !url ? '#999' : '#FFFFFF',
-          border: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          background: '#F5F5F5',
+          border: '1px solid transparent',
           borderRadius: '100px',
-          fontSize: '14px',
-          fontWeight: 600,
-          cursor: disabled || !url ? 'not-allowed' : 'pointer',
-          transition: 'all 0.2s ease',
-          flexShrink: 0,
-          fontFamily: 'inherit',
+          padding: '6px 6px 6px 24px',
+          transition: 'all 0.25s ease',
+          opacity: disabled ? 0.5 : 1,
+          width: '100%',
         }}
-        onMouseEnter={e => { if (!disabled && url) e.currentTarget.style.opacity = '0.85' }}
-        onMouseLeave={e => { if (!disabled && url) e.currentTarget.style.opacity = '1' }}
+        onFocus={(e) => {
+          e.currentTarget.style.background = '#FFFFFF'
+          e.currentTarget.style.border = '1px solid #E0E0E0'
+          e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.07)'
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.background = '#F5F5F5'
+          e.currentTarget.style.border = '1px solid transparent'
+          e.currentTarget.style.boxShadow = 'none'
+        }}
       >
-        解析
-      </button>
-    </form>
+        <input
+          type="text"
+          placeholder="粘贴网页 URL，例如 https://linear.app"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          disabled={disabled}
+          style={{
+            flex: 1,
+            height: '44px',
+            border: 'none',
+            background: 'transparent',
+            color: '#1A1A1A',
+            fontSize: '15px',
+            outline: 'none',
+            fontFamily: 'inherit',
+          }}
+        />
+        <button
+          type="submit"
+          disabled={disabled || !url}
+          style={{
+            height: '44px',
+            padding: '0 28px',
+            background: !url ? '#E0E0E0' : '#1A1A1A',
+            color: !url ? '#999' : '#FFFFFF',
+            border: 'none',
+            borderRadius: '100px',
+            fontSize: '14px',
+            fontWeight: 600,
+            cursor: disabled || !url ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease',
+            flexShrink: 0,
+            fontFamily: 'inherit',
+          }}
+          onMouseEnter={e => { if (!disabled && url) e.currentTarget.style.opacity = '0.85' }}
+          onMouseLeave={e => { if (!disabled && url) e.currentTarget.style.opacity = '1' }}
+        >
+          解析
+        </button>
+      </form>
+
+      <div style={{
+        paddingLeft: '18px',
+        fontSize: '12px',
+        lineHeight: 1.5,
+        color: '#8E8E93',
+      }}>
+        本次分析已含结构化测量
+      </div>
+    </div>
   )
 }
