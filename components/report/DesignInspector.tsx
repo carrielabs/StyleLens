@@ -111,11 +111,34 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
   const styleSourceCount = (analysis?.sourceCount?.inlineStyleBlocks || 0) + (analysis?.sourceCount?.linkedStylesheets || 0)
   const inferredSections = (designDetails.pageSections || []).length > 0 && !pageSecsMeasured
   const hasFallback = inferredEvidenceCount > 0 || typography.confidence === 'inferred' || inferredSections
+  const sectionCount = pageSections.length
+  const ctaSectionCount = pageSections.filter(section => section.hasCTA).length
+  const imageSectionCount = pageSections.filter(section => section.hasImage).length
+  const measuredTransitionCount = transitionTokens.length
+  const measuredInteractionStates = [...new Set(
+    Object.values(stateTokens)
+      .flatMap(values => values || [])
+      .map(value => value.state)
+      .filter(state => state && state !== 'default')
+  )]
+  const interactionSummaryItems = interactionStyle
+    ? [
+        interactionStyle.hoverEffect,
+        interactionStyle.transitionFeel,
+        interactionStyle.animationCharacter,
+      ].filter(Boolean)
+    : []
   const hasEvidenceCard = FLAGS.ENABLE_REPORT_EVIDENCE_SUMMARY && (
     totalEvidenceCount > 0 || Boolean(evidenceSummary?.overallConfidence) || Boolean(evidenceSummary?.notes?.length)
   )
   const hasCoverageCard = FLAGS.ENABLE_REPORT_COVERAGE_SUMMARY && (
     Boolean(coverageSummary) || styleSourceCount > 0 || hasCssText || hasFallback || sourceIsUrl
+  )
+  const hasInteractionCard = FLAGS.ENABLE_REPORT_INTERACTION_SUMMARY && (
+    measuredInteractionStates.length > 0 || measuredTransitionCount > 0 || interactionSummaryItems.length > 0
+  )
+  const hasStructureCard = FLAGS.ENABLE_REPORT_INTERACTION_SUMMARY && (
+    sectionCount > 0 || Boolean(gridColumns) || Boolean(pageMaxWidth)
   )
 
   const hasStateData = Object.values(stateTokens).some(
@@ -302,7 +325,7 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
 
   return (
     <div>
-      {(hasEvidenceCard || hasCoverageCard) && (
+      {(hasEvidenceCard || hasCoverageCard || hasInteractionCard || hasStructureCard) && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
@@ -421,6 +444,58 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
                   ) : null}
                 </div>
               )}
+            </SummaryCard>
+          )}
+
+          {hasInteractionCard && (
+            <SummaryCard
+              title={lang === 'zh' ? '交互与动效' : 'Interaction & Motion'}
+              subtitle={lang === 'zh' ? '基于实测交互态和页面动效线索。' : 'Summarized from measured states and motion cues.'}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <CoverageRow
+                  label={lang === 'zh' ? '检测到的交互态' : 'Measured states'}
+                  value={measuredInteractionStates.length ? measuredInteractionStates.join(', ') : (lang === 'zh' ? '无' : 'None')}
+                />
+                <CoverageRow
+                  label={lang === 'zh' ? '过渡 token 数量' : 'Transition tokens'}
+                  value={String(measuredTransitionCount)}
+                />
+                <CoverageRow
+                  label={lang === 'zh' ? '动效风格' : 'Motion style'}
+                  value={interactionSummaryItems.length ? interactionSummaryItems.join(' · ') : (lang === 'zh' ? '未归纳' : 'Not summarized')}
+                />
+              </div>
+            </SummaryCard>
+          )}
+
+          {hasStructureCard && (
+            <SummaryCard
+              title={lang === 'zh' ? '页面结构总览' : 'Structure Overview'}
+              subtitle={lang === 'zh' ? '快速看页面段落、列数和宽度。' : 'Quick summary of sections, columns, and width.'}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <CoverageRow
+                  label={lang === 'zh' ? '页面段数' : 'Sections'}
+                  value={String(sectionCount)}
+                />
+                <CoverageRow
+                  label={lang === 'zh' ? 'CTA 段数' : 'CTA sections'}
+                  value={String(ctaSectionCount)}
+                />
+                <CoverageRow
+                  label={lang === 'zh' ? '含图段数' : 'Image sections'}
+                  value={String(imageSectionCount)}
+                />
+                <CoverageRow
+                  label={lang === 'zh' ? '主列信息' : 'Columns'}
+                  value={gridColumns || (lang === 'zh' ? '未检测到' : 'Not detected')}
+                />
+                <CoverageRow
+                  label={lang === 'zh' ? '页面宽度' : 'Page width'}
+                  value={pageMaxWidth || (lang === 'zh' ? '未检测到' : 'Not detected')}
+                />
+              </div>
             </SummaryCard>
           )}
         </div>
