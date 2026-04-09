@@ -205,10 +205,21 @@ function formatPageAnalysis(pageAnalysis?: PageStyleAnalysis): string {
         .map(([slot, value]) => `${slot}=${(value as ColorToken).hex}`)
         .join(' | ')
     : 'none'
+  const stateTokens = Object.entries(pageAnalysis.stateTokens || {})
+    .map(([kind, values]) => `${kind}=${(values || []).length}`)
+    .join(' | ')
+  const pageSections = (pageAnalysis.pageSections || [])
+    .map(section => `${section.index}:${section.purpose}:${section.layout}:${section.columns}`)
+    .join(' | ')
+  const viewportSlices = (pageAnalysis.viewportSlices || [])
+    .map(slice => `${slice.index}:${slice.yStartPct}-${slice.yEndPct}:${slice.dominantSectionId || 'none'}`)
+    .join(' | ')
 
   return `
 
 Measured page style signals (prefer these over screenshot-only guesses):
+- Prefer measured pageAnalysis signals first.
+- Use screenshot evidence only as supporting context.
 - Semantic color slots: ${semanticSlots}
 - Color candidates:
 ${colors || 'none'}
@@ -218,7 +229,92 @@ ${typography || 'none'}
 - Shadow tokens: ${pageAnalysis.shadowTokens.map(token => token.value).join(' | ') || 'none'}
 - Spacing tokens: ${pageAnalysis.spacingTokens.map(token => token.value).join(' | ') || 'none'}
 - Layout evidence: ${pageAnalysis.layoutEvidence.map(item => item.label).join(' | ') || 'none'}
+- stateTokens: ${stateTokens || 'none'}
+- pageSections: ${pageSections || 'none'}
+- viewportSlices: ${viewportSlices || 'none'}
 `
+}
+
+export function buildAiExtractionPrompt(req: Pick<ExtractRequest, 'sourceType' | 'extractedCss' | 'pageAnalysis'>): string {
+  let promptText = USER_PROMPT_TEMPLATE
+
+  if (req.extractedCss) {
+    promptText += `\n\nAdditional context — extracted CSS from the page:\n\`\`\`css\n${req.extractedCss.slice(0, 3000)}\n\`\`\``
+  }
+
+  if (req.pageAnalysis) {
+    promptText += formatPageAnalysis(req.pageAnalysis)
+  }
+
+  return promptText
+}
+
+async function enhancePageAnalysisWithScreenshotSignals(
+  req: ExtractRequest,
+  base64Data: string
+): Promise<ExtractRequest> {
+  let requestWithAnalysis = {
+    ...req,
+    pageAnalysis: sanitizePageAnalysis(req.pageAnalysis),
+  }
+
+  if (requestWithAnalysis.sourceType === 'url') {
+    writeUrlDebugSnapshot('url-before-merge', {
+      sourceLabel: requestWithAnalysis.sourceLabel,
+      pageAnalysis: requestWithAnalysis.pageAnalysis,
+    })
+  }
+
+  if (!(requestWithAnalysis.sourceType === 'url' && requestWithAnalysis.pageAnalysis && base64Data)) {
+    return requestWithAnalysis
+  }
+
+  const mergedAnalysis = await mergeScreenshotColorSignals(requestWithAnalysis.pageAnalysis, base64Data)
+  if (mergedAnalysis) {
+    const originalAnalysis = requestWithAnalysis.pageAnalysis
+    const recoveredAnalysis = recoverShellSemanticSlots(mergedAnalysis)
+    requestWithAnalysis = {
+      ...requestWithAnalysis,
+      pageAnalysis: {
+        ...recoveredAnalysis,
+        typographyCandidates:
+          recoveredAnalysis.typographyCandidates?.length
+            ? recoveredAnalysis.typographyCandidates
+            : originalAnalysis?.typographyCandidates ?? [],
+        typographyTokens:
+          recoveredAnalysis.typographyTokens?.length
+            ? recoveredAnalysis.typographyTokens
+            : originalAnalysis?.typographyTokens ?? [],
+        radiusTokens:
+          recoveredAnalysis.radiusTokens?.length
+            ? recoveredAnalysis.radiusTokens
+            : originalAnalysis?.radiusTokens ?? [],
+        shadowTokens:
+          recoveredAnalysis.shadowTokens?.length
+            ? recoveredAnalysis.shadowTokens
+            : originalAnalysis?.shadowTokens ?? [],
+        spacingTokens:
+          recoveredAnalysis.spacingTokens?.length
+            ? recoveredAnalysis.spacingTokens
+            : originalAnalysis?.spacingTokens ?? [],
+        layoutEvidence:
+          recoveredAnalysis.layoutEvidence?.length
+            ? recoveredAnalysis.layoutEvidence
+            : originalAnalysis?.layoutEvidence ?? [],
+        stateTokens:
+          Object.keys(recoveredAnalysis.stateTokens ?? {}).length
+            ? recoveredAnalysis.stateTokens
+            : originalAnalysis?.stateTokens ?? {},
+      },
+    }
+  }
+
+  writeUrlDebugSnapshot('url-after-merge', {
+    sourceLabel: requestWithAnalysis.sourceLabel,
+    pageAnalysis: requestWithAnalysis.pageAnalysis,
+  })
+
+  return requestWithAnalysis
 }
 
 function hexToRgb(hex: string): string {
@@ -1067,71 +1163,15 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
 
   console.log(`[aiExtract] Image prepared. Mime: ${mimeType}, B64 Length: ${base64Data.length}`)
 
-  let requestWithAnalysis = {
-    ...req,
-    pageAnalysis: sanitizePageAnalysis(req.pageAnalysis),
-  }
-  if (requestWithAnalysis.sourceType === 'url') {
-    writeUrlDebugSnapshot('url-before-merge', {
-      sourceLabel: requestWithAnalysis.sourceLabel,
-      pageAnalysis: requestWithAnalysis.pageAnalysis,
-    })
-  }
-  if (requestWithAnalysis.sourceType === 'url' && requestWithAnalysis.pageAnalysis && base64Data) {
-    const mergedAnalysis = await mergeScreenshotColorSignals(requestWithAnalysis.pageAnalysis, base64Data)
-    if (mergedAnalysis) {
-      const originalAnalysis = requestWithAnalysis.pageAnalysis
-      const recoveredAnalysis = recoverShellSemanticSlots(mergedAnalysis)
-      requestWithAnalysis = {
-        ...requestWithAnalysis,
-        pageAnalysis: {
-          ...recoveredAnalysis,
-          typographyCandidates:
-            recoveredAnalysis.typographyCandidates?.length
-              ? recoveredAnalysis.typographyCandidates
-              : originalAnalysis?.typographyCandidates ?? [],
-          typographyTokens:
-            recoveredAnalysis.typographyTokens?.length
-              ? recoveredAnalysis.typographyTokens
-              : originalAnalysis?.typographyTokens ?? [],
-          radiusTokens:
-            recoveredAnalysis.radiusTokens?.length
-              ? recoveredAnalysis.radiusTokens
-              : originalAnalysis?.radiusTokens ?? [],
-          shadowTokens:
-            recoveredAnalysis.shadowTokens?.length
-              ? recoveredAnalysis.shadowTokens
-              : originalAnalysis?.shadowTokens ?? [],
-          spacingTokens:
-            recoveredAnalysis.spacingTokens?.length
-              ? recoveredAnalysis.spacingTokens
-              : originalAnalysis?.spacingTokens ?? [],
-          layoutEvidence:
-            recoveredAnalysis.layoutEvidence?.length
-              ? recoveredAnalysis.layoutEvidence
-              : originalAnalysis?.layoutEvidence ?? [],
-          stateTokens:
-            Object.keys(recoveredAnalysis.stateTokens ?? {}).length
-              ? recoveredAnalysis.stateTokens
-              : originalAnalysis?.stateTokens ?? {},
-        },
-      }
-    }
-    writeUrlDebugSnapshot('url-after-merge', {
-      sourceLabel: requestWithAnalysis.sourceLabel,
-      pageAnalysis: requestWithAnalysis.pageAnalysis,
-    })
-  }
+  const requestWithAnalysis = await enhancePageAnalysisWithScreenshotSignals(req, base64Data)
 
-  let promptText = USER_PROMPT_TEMPLATE
   if (requestWithAnalysis.extractedCss) {
     console.log(`[aiExtract] Adding CSS context (${requestWithAnalysis.extractedCss.length} bytes)`)
-    promptText += `\n\nAdditional context — extracted CSS from the page:\n\`\`\`css\n${requestWithAnalysis.extractedCss.slice(0, 3000)}\n\`\`\``
   }
   if (requestWithAnalysis.pageAnalysis) {
     console.log('[aiExtract] Adding measured page analysis context')
-    promptText += formatPageAnalysis(requestWithAnalysis.pageAnalysis)
   }
+  const promptText = buildAiExtractionPrompt(requestWithAnalysis)
 
   let lastError: unknown = null
   
