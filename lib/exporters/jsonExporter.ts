@@ -165,6 +165,19 @@ function buildStateSection(stateTokens?: ComponentStateTokens) {
   return Object.fromEntries(components)
 }
 
+function buildSectionSummary(report: StyleReport) {
+  const sections = report.pageAnalysis?.pageSections || report.designDetails.pageSections || []
+  return sections.map(section => ({
+    index: section.index,
+    purpose: section.purpose,
+    layout: section.layout,
+    columns: section.columns,
+    hasCTA: section.hasCTA,
+    hasImage: section.hasImage,
+    measured: section.measured,
+  }))
+}
+
 export function generateJsonToken(report: StyleReport): string {
   const analysis = report.pageAnalysis
   const typographyTokens = analysis?.typographyTokens || []
@@ -246,6 +259,21 @@ export function generateJsonToken(report: StyleReport): string {
           $type: 'string',
           $description: 'Measured layout pattern evidence',
         },
+      },
+      interaction: {
+        states: buildStateSection(analysis?.stateTokens),
+        transitions: (analysis?.transitionTokens || []).map(token => ({
+          property: token.property,
+          duration: token.duration,
+          easing: token.easing,
+          sampleCount: token.sampleCount,
+        })),
+      },
+      analysis: {
+        evidenceSummary: analysis?.evidenceSummary || null,
+        coverageSummary: analysis?.coverageSummary || null,
+        interactionSummary: analysis?.interactionSummary || null,
+        sections: buildSectionSummary(report),
       },
     },
   }
