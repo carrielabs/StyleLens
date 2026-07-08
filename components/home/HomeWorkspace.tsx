@@ -8,11 +8,25 @@ import StyleReportView from '@/components/report/StyleReport'
 import MagicalHeroLogo from './MagicalHeroLogo'
 import type { DisplayStyleReport, HomeHistoryRecord } from '@/lib/types'
 import type { UploadState } from '@/hooks/useExtraction'
+import { detectInputIntent, isTextUpload } from '@/lib/publisher/inputIntent'
+import type { GeneratedPageResult } from '@/hooks/usePublisher'
+
+const WEBSITE_TEMPLATES = [
+  { id: 'website-01-fui', name: 'FUI' },
+  { id: 'website-02-soft-surrealism', name: 'Soft Surrealism' },
+  { id: 'website-03-red-clay', name: 'Red Clay' },
+  { id: 'website-04-premium-midnight', name: 'Premium Midnight' },
+  { id: 'website-05-voltflow-cyber-saas', name: 'Voltflow Cyber SaaS' },
+  { id: 'website-07-blueprint-agent-platform', name: 'Blueprint Agent' },
+  { id: 'website-08-editorial-apple-tech', name: 'Editorial Apple Tech' },
+  { id: 'website-09-blue-shift-portfolio', name: 'Blue Shift Portfolio' },
+]
 
 interface HomeWorkspaceProps {
   activeItemId: string | null
   report: DisplayStyleReport | null
   isExtracting: boolean
+  isGenerating: boolean
   isUrlExtracting: boolean
   isImageExtracting: boolean
   extractions: HomeHistoryRecord[]
@@ -24,6 +38,7 @@ interface HomeWorkspaceProps {
   setError: Dispatch<SetStateAction<string | null>>
   greeting: { prefix: string; name: string } | null
   handleUrlSubmit: (e?: FormEvent) => Promise<void>
+  generatePage: (sourceText: string, templateId: string) => Promise<GeneratedPageResult>
   urlInputRef: RefObject<HTMLInputElement | null>
   url: string
   setUrl: Dispatch<SetStateAction<string>>
@@ -33,7 +48,6 @@ interface HomeWorkspaceProps {
   isDragging: boolean
   setIsDragging: Dispatch<SetStateAction<boolean>>
   setUploadZoneHovered: Dispatch<SetStateAction<boolean>>
-  handleDrop: (e: DragEvent) => void
   user: User | null
   guestTrialUsed: boolean
   fileInputRef: RefObject<HTMLInputElement | null>
@@ -50,6 +64,7 @@ export default function HomeWorkspace({
   activeItemId,
   report,
   isExtracting,
+  isGenerating,
   isUrlExtracting,
   isImageExtracting,
   extractions,
@@ -61,6 +76,7 @@ export default function HomeWorkspace({
   setError,
   greeting,
   handleUrlSubmit,
+  generatePage,
   urlInputRef,
   url,
   setUrl,
@@ -70,7 +86,6 @@ export default function HomeWorkspace({
   isDragging,
   setIsDragging,
   setUploadZoneHovered,
-  handleDrop,
   user,
   guestTrialUsed,
   fileInputRef,
@@ -83,6 +98,52 @@ export default function HomeWorkspace({
   extractionPhase,
 }: HomeWorkspaceProps) {
   const [hoveredSection, setHoveredSection] = useState<{ yStart: number; yEnd: number } | null>(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState('website-01-fui')
+  const isBusy = isExtracting || isGenerating
+
+  const handleUnifiedSubmit = async (e?: FormEvent) => {
+    if (e) e.preventDefault()
+    const value = url.trim()
+    if (!value || isBusy) return
+
+    if (detectInputIntent(value) === 'extract-style') {
+      await handleUrlSubmit(e)
+      return
+    }
+
+    setError(null)
+    try {
+      await generatePage(value, selectedTemplateId)
+      setUrl('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '生成失败，请重试')
+    }
+  }
+
+  const handleTextUpload = async (file: File) => {
+    if (isBusy) return
+    setError(null)
+    try {
+      await generatePage(await file.text(), selectedTemplateId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '生成失败，请重试')
+    }
+  }
+
+  const handleUnifiedFile = (file: File) => {
+    if (isTextUpload(file)) {
+      void handleTextUpload(file)
+      return
+    }
+    handleFilePreview(file)
+  }
+
+  const handleUnifiedDrop = (e: DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleUnifiedFile(file)
+  }
 
   return (
     <>
@@ -225,7 +286,7 @@ export default function HomeWorkspace({
             </div>
             </div>
 
-            <form onSubmit={handleUrlSubmit} style={{ position: 'relative', marginBottom: '28px' }}>
+            <form onSubmit={handleUnifiedSubmit} style={{ position: 'relative', marginBottom: '18px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center',
                 backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)',
@@ -250,7 +311,7 @@ export default function HomeWorkspace({
                 <input
                   ref={urlInputRef}
                   type="text"
-                  placeholder="粘贴网页链接，如 https://linear.app"
+                  placeholder="粘贴网址、产品文案、PRD、报告内容..."
                   className="url-input-placeholder"
                   style={{
                     flex: 1, border: 'none', outline: 'none', fontSize: '15px',
@@ -259,7 +320,7 @@ export default function HomeWorkspace({
                   }}
                   value={url}
                   onChange={e => setUrl(e.target.value)}
-                  disabled={isExtracting}
+                  disabled={isBusy}
                 />
                 <style>{`
                   .url-input-placeholder::placeholder {
@@ -269,7 +330,7 @@ export default function HomeWorkspace({
                 `}</style>
                 <button
                   type="submit"
-                  disabled={isExtracting}
+                  disabled={isBusy}
                   style={{
                     height: '34px', width: '34px', margin: '0 10px',
                     backgroundColor: url.trim() ? '#1D1D1F' : 'transparent',
@@ -283,7 +344,7 @@ export default function HomeWorkspace({
                     flexShrink: 0
                   }}
                 >
-                  {isUrlExtracting ? (
+                  {isUrlExtracting || isGenerating ? (
                     <div className="animate-spin" style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', borderRadius: '50%' }} />
                   ) : (
                     <ArrowUp size={18} strokeWidth={2.5} />
@@ -291,6 +352,32 @@ export default function HomeWorkspace({
                 </button>
               </div>
             </form>
+
+            {detectInputIntent(url) === 'generate-page' && url.trim() && (
+              <div style={{ margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '12px', color: '#8E8E93', flexShrink: 0 }}>官网模板</span>
+                <select
+                  value={selectedTemplateId}
+                  onChange={e => setSelectedTemplateId(e.target.value)}
+                  disabled={isBusy}
+                  style={{
+                    flex: 1,
+                    height: '34px',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: '10px',
+                    background: '#FFFFFF',
+                    color: '#1D1D1F',
+                    fontSize: '12px',
+                    padding: '0 10px',
+                    outline: 'none',
+                  }}
+                >
+                  {WEBSITE_TEMPLATES.map(template => (
+                    <option key={template.id} value={template.id}>{template.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '4px 0 24px' }}>
               <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
@@ -324,17 +411,17 @@ export default function HomeWorkspace({
                   : 'inset 0 1px 4px rgba(0,0,0,0.01)',
                 transform: uploadState === 'hover' ? 'scale(1.002)' : 'scale(1)',
                 opacity: uploadState === 'extracting' ? 0.85 : 1,
-                pointerEvents: isExtracting ? 'none' : 'auto',
+                pointerEvents: isBusy ? 'none' : 'auto',
                 overflow: 'hidden', position: 'relative'
               }}
               onMouseEnter={() => !isDragging && !pendingFile && setUploadZoneHovered(true)}
               onMouseLeave={() => setUploadZoneHovered(false)}
               onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
               onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
-              onDrop={handleDrop}
+              onDrop={handleUnifiedDrop}
               onDragOver={e => e.preventDefault()}
               onClick={() => {
-                if (isExtracting) return
+                if (isBusy) return
                 if (pendingFile) return
                 if (user || !guestTrialUsed) fileInputRef.current?.click()
                 else setIsAuthVisible(true)
@@ -421,9 +508,9 @@ export default function HomeWorkspace({
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1F', marginBottom: '5px', letterSpacing: '-0.01em' }}>
-                      {uploadState === 'dragover' ? '释放以解析' : '点击上传 / 将图片拖拽至此 / 直接粘贴图片'}
+                      {uploadState === 'dragover' ? '释放以解析' : '点击上传 / 将图片、.md 或 .txt 拖拽至此'}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>支持 JPG、PNG、WebP，最大 20MB</div>
+                    <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>图片用于提取风格，Markdown/TXT 用于生成官网</div>
                   </div>
                 </>
               )}
@@ -485,8 +572,8 @@ export default function HomeWorkspace({
               )
             })()}
 
-            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-              onChange={e => { if (e.target.files?.[0]) handleFilePreview(e.target.files[0]) }} />
+            <input ref={fileInputRef} type="file" accept="image/*,.md,.txt,text/plain,text/markdown" style={{ display: 'none' }}
+              onChange={e => { if (e.target.files?.[0]) handleUnifiedFile(e.target.files[0]) }} />
           </div>
         </div>
       )}

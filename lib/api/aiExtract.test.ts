@@ -4,7 +4,12 @@
 
 import { describe, expect, it } from 'vitest'
 import type { PageStyleAnalysis, StyleReport } from '@/lib/types'
-import { applyMeasuredUrlSignals, deriveAiShellFallback, recoverShellSemanticSlots } from '@/lib/api/aiExtract'
+import {
+  applyMeasuredUrlSignals,
+  buildAiExtractionPrompt,
+  deriveAiShellFallback,
+  recoverShellSemanticSlots
+} from '@/lib/api/aiExtract'
 
 function emptyAnalysis(overrides: Partial<PageStyleAnalysis> = {}): PageStyleAnalysis {
   return {
@@ -65,6 +70,39 @@ function baseParsed(colors: StyleReport['colors']) {
 }
 
 describe('aiExtract shell recovery', () => {
+  it('builds prompt with measured pageAnalysis signals and prioritization rules', () => {
+    const prompt = buildAiExtractionPrompt({
+      sourceType: 'url',
+      pageAnalysis: emptyAnalysis({
+        stateTokens: {
+          button: [{
+            value: '#111111',
+            property: 'background-color',
+            state: 'hover',
+            componentKinds: ['button'],
+            evidenceScore: 1,
+            measured: true,
+          }],
+        },
+        layoutEvidence: [
+          {
+            label: 'Hero split layout',
+            kind: 'hero',
+            sampleCount: 1,
+            componentKinds: ['section'],
+            evidenceScore: 1,
+          },
+        ],
+      }),
+    } as any)
+
+    expect(prompt).toContain('stateTokens')
+    expect(prompt).toContain('pageSections')
+    expect(prompt).toContain('viewportSlices')
+    expect(prompt).toContain('Prefer measured pageAnalysis signals first')
+    expect(prompt).toContain('Use screenshot evidence only as supporting context')
+  })
+
   it('derives page shell from AI colors when only hero semantic slots exist', () => {
     const fallback = deriveAiShellFallback([
       {

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLUE SHIFT Inc. | 极简主义数字与空间设计</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@100;200;300;400;500&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        dark: {
+                            bg: '#000000',
+                            panel: '#07070a',
+                            border: 'rgba(255, 255, 255, 0.08)',
+                            borderActive: 'rgba(255, 255, 255, 0.25)',
+                            textMuted: '#8E8E96',
+                            textDark: '#44444A',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 极致细节与先锋流体动画样式 */
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+            overflow-x: hidden;
+        }
+
+        /* 极细定制滚动条 */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 噪点质感图层：微调频率以获得细腻的胶片暗室纹理，完全消除数码色彩断层 */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            content: "";
+            opacity: 0.045; 
+            z-index: 999;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* ========================================== */
+        /* 水母流体不规则光晕核心引擎 (Solid Organic Blob) */
+        /* ========================================== */
+        .fluid-glow-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fluid-glow-wrapper {
+            position: relative;
+            width: 900px;
+            height: 900px;
+            /* 关键修复：降低 blur，强化 SVG 形变边界，形成有轮廓的不规则色块 */
+            filter: url(#organic-jellyfish-warp) blur(35px) saturate(1.2) contrast(1.1);
+            opacity: 0.85;
+            transform: scale(1.1);
+            animation: slow-container-rotation 60s infinite linear;
+        }
+
+        /* 实体色块，加强中心饱和度，减弱边缘弥散 */
+        .glow-blob {
+            position: absolute;
+            border-radius: 50%;
+            mix-blend-mode: screen;
+            transition: all 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* 核心青色体 */
+        .blob-cyan {
+            width: 480px;
+            height: 480px;
+            background: radial-gradient(circle, rgba(0, 220, 255, 0.95) 0%, rgba(0, 160, 255, 0.8) 60%, transparent 85%);
+            top: 15%;
+            left: 20%;
+            animation: jellyfish-drift-1 25s infinite alternate ease-in-out;
+        }
+
+        /* 深邃主发光体 */
+        .blob-blue {
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, rgba(20, 80, 255, 0.95) 0%, rgba(20, 60, 220, 0.7) 65%, transparent 85%);
+            bottom: 15%;
+            right: 15%;
+            animation: jellyfish-drift-2 30s infinite alternate ease-in-out;
+        }
+
+        /* 辅助水母触角（绿） */
+        .blob-green {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, rgba(0, 255, 180, 0.7) 0%, rgba(0, 200, 150, 0.5) 60%, transparent 85%);
+            top: 30%;
+            right: 25%;
+            animation: jellyfish-drift-3 22s infinite alternate ease-in-out;
+        }
+
+        /* 光晕容器极慢旋转 */
+        @keyframes slow-container-rotation {
+            0% { transform: scale(1.1) rotate(0deg); }
+            100% { transform: scale(1.1) rotate(360deg); }
+        }
+
+        /* 有机漂移动画：模拟水生浮游生物的舒张，保持在一个集中的核心区域 */
+        @keyframes jellyfish-drift-1 {
+            0% { transform: translate(0, 0) scale(1) skewX(0deg); }
+            50% { transform: translate(60px, 40px) scale(1.1) skewX(4deg); }
+            100% { transform: translate(-40px, -50px) scale(0.95) skewX(-4deg); }
+        }
+
+        @keyframes jellyfish-drift-2 {
+            0% { transform: translate(0, 0) scale(1) skewY(0deg); }
+            50% { transform: translate(-60px, -40px) scale(0.9) skewY(-5deg); }
+            100% { transform: translate(40px, 50px) scale(1.05) skewY(5deg); }
+        }
+
+        @keyframes jellyfish-drift-3 {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(40px, -60px) scale(1.15); }
+            100% { transform: translate(-50px, 30px) scale(0.9); }
+        }
+
+        /* 侧边垂直文本 */
+        .vertical-text-left {
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+        }
+        .vertical-text-right {
+            writing-mode: vertical-lr;
+        }
+
+        /* 单个文本输入光标动画 */
+        .cursor-blink::after {
+            content: '|';
+            animation: blink 1.1s infinite step-start;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* 直角精细网格Hover动效 */
+        .work-card img {
+            transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .work-card:hover img {
+            transform: scale(1.05);
+        }
+
+        /* 针对可编辑状态的微弱提示框 */
+        [data-editable="true"]:focus {
+            outline: 1px dashed rgba(0, 242, 254, 0.5);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 2px 6px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-white selection:bg-neutral-800 selection:text-cyan-400 relative">
+
+    <!-- 噪点背景 -->
+    <div class="noise-overlay"></div>
+
+    <!-- ========================================== -->
+    <!-- 用于对底层渐变色块进行液态变形的物理 SVG 滤镜 -->
+    <!-- ========================================== -->
+    <svg class="hidden" width="0" height="0">
+        <defs>
+            <filter id="organic-jellyfish-warp" x="-20%" y="-20%" width="140%" height="140%">
+                <!-- 关键修复：调低 baseFrequency (增大波浪尺寸)，使色块形成明确的大起伏边界 -->
+                <feTurbulence type="fractalNoise" baseFrequency="0.002" numOctaves="3" result="liquidNoise" />
+                <!-- 增大 scale (强化形变力度)，让完美的圆形被拉扯成液态不规则团块 -->
+                <feDisplacementMap in="SourceGraphic" in2="liquidNoise" scale="250" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+        </defs>
+    </svg>
+
+    <!-- 高级水母流体动态光晕 -->
+    <div class="fluid-glow-container" id="glow-container">
+        <div class="fluid-glow-wrapper">
+            <div class="glow-blob blob-cyan"></div>
+            <div class="glow-blob blob-blue"></div>
+            <div class="glow-blob blob-green"></div>
+        </div>
+    </div>
+
+    <!-- 左侧定锚侧边条 (大屏专享) -->
+    <div class="hidden lg:flex fixed left-6 top-0 bottom-0 z-40 items-center justify-between py-12 flex-col pointer-events-none">
+        <div class="vertical-text-left text-[9px] font-mono tracking-[0.3em] text-dark-textDark uppercase" data-editable="true" data-section="sidebar-left-top">
+            LAT. 31° 12' N / LONG. 121° 30' E
+        </div>
+        <div class="w-[1px] h-24 bg-dark-border"></div>
+        <div class="vertical-text-left text-[9px] font-mono tracking-[0.3em] text-dark-textMuted uppercase" data-editable="true" data-section="sidebar-left-bottom">
+            BLUE SHIFT STUDIO // VER 4.01
+        </div>
+    </div>
+
+    <!-- 右侧定锚侧边条 (大屏专享) -->
+    <div class="hidden lg:flex fixed right-6 top-0 bottom-0 z-40 items-center justify-between py-12 flex-col pointer-events-none">
+        <div class="vertical-text-right text-[9px] font-mono tracking-[0.3em] text-dark-textDark uppercase" data-editable="true" data-section="sidebar-right-top">
+            ARCHITECTURAL CODES & METRICS
+        </div>
+        <div class="w-[1px] h-24 bg-dark-border"></div>
+        <div class="vertical-text-right text-[9px] font-mono tracking-[0.3em] text-dark-textMuted uppercase" data-editable="true" data-section="sidebar-right-bottom">
+            © DESIGN & PRODUCTION 2026
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- <!-- Header -->
+    <!-- ========================================== -->
+    <header class="fixed top-0 left-0 w-full z-50 transition-all duration-500" id="main-header" data-section="navbar">
+        <div class="max-w-7xl mx-auto px-6 lg:px-16 h-20 flex items-center justify-between border-b border-transparent transition-all" id="header-border">
+            
+            <!-- Logo 区 -->
+            <a href="#" class="flex items-center gap-3.5 group">
+                <div class="w-[14px] h-[14px] border-[2px] border-cyan-400 relative transition-all duration-500 group-hover:rotate-90"></div>
+                <span class="font-mono text-xs tracking-[0.25em] font-medium" data-editable="true">BLUE SHIFT <span class="text-cyan-400">Inc.</span></span>
+            </a>
+
+            <!-- 导航链接 -->
+            <nav class="hidden md:flex items-center gap-10 font-mono text-[11px] tracking-[0.2em] text-dark-textMuted">
+                <a href="#philosophy" class="hover:text-white transition-colors duration-300 uppercase">PHILOSOPHY</a>
+                <a href="#works" class="hover:text-white transition-colors duration-300 uppercase">ARCHITECTURE</a>
+                <a href="#works" class="hover:text-white transition-colors duration-300 uppercase">EXHIBITION</a>
+                <a href="#works" class="hover:text-white transition-colors duration-300 uppercase">PRODUCT</a>
+                <a href="#milestones" class="hover:text-white transition-colors duration-300 uppercase">MILESTONES</a>
+            </nav>
+
+            <!-- 极简控制工具 -->
+            <div class="flex items-center gap-5">
+                <button id="search-btn" class="p-1 text-dark-textMuted hover:text-white transition-colors" aria-label="Search">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.637 10.637Z"/></svg>
+                </button>
+                <a href="#contact" class="hidden sm:inline-block font-mono text-[10px] tracking-[0.2em] border border-dark-border px-3.5 py-1.5 hover:border-white hover:text-cyan-400 transition-all duration-300 uppercase">
+                    GET IN TOUCH
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- <!-- Hero -->
+    <!-- ========================================== -->
+    <section class="min-h-screen flex flex-col justify-between pt-36 pb-16 px-6 lg:px-24 relative z-10 max-w-7xl mx-auto" data-section="hero" id="hero">
+        <div><!-- 空盒占位，保持完美垂直三等分 --></div>
+        
+        <!-- 中央文案区 -->
+        <div class="text-center my-auto flex flex-col items-center justify-center">
+            <span class="font-mono text-[10px] tracking-[0.35em] text-cyan-400 uppercase mb-4 block" data-editable="true">
+                ARCHITECTURE PRACTICE & PARAMETRIC MEDIAS
+            </span>
+            <h1 class="font-mono text-4xl sm:text-6xl md:text-7xl lg:text-[6.5rem] font-light tracking-[-0.04em] leading-[0.95] text-white cursor-blink drop-shadow-[0_0_20px_rgba(0,242,254,0.18)]" data-editable="true">
+                Greetings!<br>explore ;)
+            </h1>
+            <p class="max-w-md mx-auto mt-8 text-xs sm:text-sm text-dark-textMuted leading-relaxed tracking-wide font-light" data-editable="true">
+                我们通过前沿算法与物质建构的精密契合，设计跨越维度的实体空间、数字媒介和感知体验。欢迎进入我们的数字档案库。
+            </p>
+        </div>
+
+        <!-- 底部引导区 -->
+        <div class="flex items-end justify-between border-t border-dark-border pt-6 w-full">
+            <div class="flex items-center gap-6 text-[10px] font-mono tracking-[0.2em] text-dark-textDark">
+                <span class="text-cyan-400" data-editable="true">01 / OVERVIEW</span>
+                <span class="hidden sm:inline" data-editable="true">ESTABLISHED IN SHANGHAI</span>
+            </div>
+            
+            <a href="#philosophy" class="group flex items-center gap-2.5 text-[11px] font-mono tracking-[0.2em] text-dark-textMuted hover:text-white transition-colors duration-300">
+                <span data-editable="true">SCROLL DOWN TO ARCHIVE</span>
+                <span class="inline-block transition-transform duration-300 group-hover:translate-y-1">↓</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- <!-- Philosophy (Problem & Solution) -->
+    <!-- ========================================== -->
+    <section class="py-32 px-6 lg:px-24 border-t border-dark-border/40 relative z-10 max-w-7xl mx-auto" id="philosophy" data-section="philosophy">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+            
+            <div class="lg:col-span-8">
+                <span class="font-mono text-[10px] tracking-[0.3em] text-dark-textMuted uppercase mb-6 block" data-editable="true">
+                    02 / OUR PHILOSOPHY
+                </span>
+                <h2 class="text-xl sm:text-2xl md:text-3xl font-light leading-relaxed tracking-wide text-gray-200" data-editable="true">
+                    “我们反对浮跨的装饰性外壳与平庸的几何堆砌。空间应该是算法的物理投影、光影的精微传感器以及人体感知的自然延伸。在物理世界与赛博空间的极窄缝隙里，探索结构的永恒张力。”
+                </h2>
+            </div>
+
+            <div class="lg:col-span-4 border-l border-dark-border pl-6 lg:pl-10 space-y-8 font-mono">
+                <div>
+                    <h3 class="text-[10px] tracking-[0.25em] text-dark-textDark mb-1" data-editable="true">DESIGN METRIC</h3>
+                    <p class="text-sm font-light text-cyan-400" data-editable="true">0.16% 极限容差参数化流体模型</p>
+                </div>
+                <div>
+                    <h3 class="text-[10px] tracking-[0.25em] text-dark-textDark mb-1" data-editable="true">MATERIALS RESEARCH</h3>
+                    <p class="text-sm font-light text-white leading-relaxed" data-editable="true">光反应型仿生复合凝胶、高透光结构活性预制件、航天级轻量化碳纤龙骨</p>
+                </div>
+                <div>
+                    <h3 class="text-[10px] tracking-[0.25em] text-dark-textDark mb-1" data-editable="true">COMPLETED PROJECTS</h3>
+                    <p class="text-sm font-light text-white" data-editable="true">42+ 全球跨界实践 / 12 项国际大奖提名</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- <!-- Works Grid -->
+    <!-- ========================================== -->
+    <section class="py-24 px-6 lg:px-24 border-t border-dark-border/40 relative z-10 max-w-7xl mx-auto" id="works" data-section="works">
+        
+        <div class="flex flex-wrap items-center justify-between border-b border-dark-border pb-6 mb-12 gap-4">
+            <span class="font-mono text-[10px] tracking-[0.3em] text-dark-textMuted uppercase" data-editable="true">
+                03 / CLASSIFIED PORTFOLIOS
+            </span>
+            <div class="flex items-center gap-6 sm:gap-8 font-mono text-[11px] tracking-[0.2em]">
+                <button class="filter-btn text-cyan-400 hover:text-cyan-400 transition-colors uppercase" data-filter="all">ALL WORKS</button>
+                <button class="filter-btn text-dark-textMuted hover:text-white transition-colors uppercase" data-filter="architecture">ARCHITECTURE</button>
+                <button class="filter-btn text-dark-textMuted hover:text-white transition-colors uppercase" data-filter="exhibition">EXHIBITION</button>
+                <button class="filter-btn text-dark-textMuted hover:text-white transition-colors uppercase" data-filter="product">PRODUCT</button>
+            </div>
+        </div>
+
+        <div class="space-y-32">
+            
+            <!-- Category Block 1 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start category-section" data-category="architecture">
+                <div class="lg:col-span-4 lg:sticky lg:top-32 space-y-4">
+                    <h2 class="font-mono text-2xl lg:text-3xl font-light tracking-[0.1em] text-white uppercase" data-editable="true">
+                        ARCHITECTURE<br>
+                        <span class="text-dark-textDark font-normal text-lg tracking-normal">WORK</span>
+                    </h2>
+                    <p class="text-xs text-dark-textMuted max-w-sm leading-relaxed" data-editable="true">
+                        参数化立面与仿生流体空间。通过严谨的数据分析及力学建模，打破传统箱体建筑边界。
+                    </p>
+                    <div class="pt-2">
+                        <button class="archive-btn group flex items-center gap-3 text-[10px] font-mono tracking-[0.25em] text-dark-textMuted hover:text-cyan-400 transition-colors">
+                            <span class="w-3 h-3 border border-dark-border group-hover:border-cyan-400 group-hover:bg-cyan-400/20 transition-all"></span>
+                            <span>VIEW ARCHIVE</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 works-grid">
+                    <div class="work-card group cursor-pointer border border-dark-border p-3 bg-dark-panel hover:border-dark-borderActive transition-all duration-500" onclick="openDetailModal('NEST-V 垂直栖息住宅', 'ARCHITECTURE', '2025', '上海', '采用拓扑逻辑进行采光建模的大型中高层生态住宅。通过参数化双曲面网架实现高层立体绿化、天然新风引导。')">
+                        <div class="aspect-[4/3] w-full overflow-hidden mb-3 bg-neutral-900 relative">
+                            <svg class="absolute inset-0 w-full h-full text-cyan-400/10" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <path d="M10 90 L50 20 L90 90 Z" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                                <path d="M20 90 L50 40 L80 90 Z" stroke="currentColor" stroke-width="0.2" fill="none"/>
+                                <line x1="10" y1="90" x2="90" y2="90" stroke="currentColor" stroke-width="0.5"/>
+                                <line x1="50" y1="20" x2="50" y2="90" stroke="currentColor" stroke-width="0.2" stroke-dasharray="2,2"/>
+                            </svg>
+                        </div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs tracking-wider text-white font-medium uppercase font-mono" data-editable="true">NEST-V RESIDENCE</span>
+                            <span class="text-[10px] font-mono text-dark-textDark" data-editable="true">SHANGHAI, 2025</span>
+                        </div>
+                    </div>
+
+                    <div class="work-card group cursor-pointer border border-dark-border p-3 bg-dark-panel hover:border-dark-borderActive transition-all duration-500" onclick="openDetailModal('MORPH-GRID 艺术中心', 'ARCHITECTURE', '2024', '东京', '利用自适应曲壳钢结构网格，创造完全无柱的广阔空间，顶部天窗可以根据自然光照角度自动张合调整。')">
+                        <div class="aspect-[4/3] w-full overflow-hidden mb-3 bg-neutral-900 relative">
+                            <svg class="absolute inset-0 w-full h-full text-cyan-400/10" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <circle cx="50" cy="50" r="35" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                                <line x1="15" y1="50" x2="85" y2="50" stroke="currentColor" stroke-width="0.2"/>
+                                <line x1="50" y1="15" x2="50" y2="85" stroke="currentColor" stroke-width="0.2"/>
+                                <path d="M25 25 Q50 60 75 25" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs tracking-wider text-white font-medium uppercase font-mono" data-editable="true">MORPH-GRID CENTER</span>
+                            <span class="text-[10px] font-mono text-dark-textDark" data-editable="true">TOKYO, 2024</span>
+                        </div>
+                    </div>
+
+                    <div class="work-card group cursor-pointer border border-dark-border p-3 bg-dark-panel hover:border-dark-borderActive transition-all duration-500" onclick="openDetailModal('VOID-TOWER 算法写字楼', 'ARCHITECTURE', '2026', '首尔', '运用风洞流体力学进行立面削减，减少了28%的空气阻力，将微型螺旋风力发电机直接嵌入建筑中层开口。')">
+                        <div class="aspect-[4/3] w-full overflow-hidden mb-3 bg-neutral-900 relative">
+                            <svg class="absolute inset-0 w-full h-full text-cyan-400/10" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <rect x="30" y="15" width="40" height="70" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                                <ellipse cx="50" cy="45" rx="15" ry="8" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                                <line x1="30" y1="15" x2="70" y2="85" stroke="currentColor" stroke-width="0.2" stroke-dasharray="1,1"/>
+                            </svg>
+                        </div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs tracking-wider text-white font-medium uppercase font-mono" data-editable="true">VOID-TOWER</span>
+                            <span class="text-[10px] font-mono text-dark-textDark" data-editable="true">SEOUL, 2026</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Block 2 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start category-section" data-category="exhibition">
+                <div class="lg:col-span-4 lg:sticky lg:top-32 space-y-4">
+                    <h2 class="font-mono text-2xl lg:text-3xl font-light tracking-[0.1em] text-white uppercase" data-editable="true">
+                        EXHIBITION<br>
+                        <span class="text-dark-textDark font-normal text-lg tracking-normal">WORK</span>
+                    </h2>
+                    <p class="text-xs text-dark-textMuted max-w-sm leading-relaxed" data-editable="true">
+                        重塑空间叙事与人体感官。采用动态光影装置，为概念展览、美术馆、商业跨界媒介提供流动交互剧场。
+                    </p>
+                    <div class="pt-2">
+                        <button class="archive-btn group flex items-center gap-3 text-[10px] font-mono tracking-[0.25em] text-dark-textMuted hover:text-cyan-400 transition-colors">
+                            <span class="w-3 h-3 border border-dark-border group-hover:border-cyan-400 group-hover:bg-cyan-400/20 transition-all"></span>
+                            <span>VIEW ARCHIVE</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 works-grid">
+                    <div class="work-card group cursor-pointer border border-dark-border p-3 bg-dark-panel hover:border-dark-borderActive transition-all duration-500" onclick="openDetailModal('ECHOING CHAMBER 呼吸共振剧场', 'EXHIBITION', '2024', '米兰', '米兰设计周限定艺术装置。装置内置声谱分析传感器，能够通过游客脚步的振幅与声波，动态调整中心水凝胶幕墙的折射率和背景声学环境。')">
+                        <div class="aspect-[4/3] w-full overflow-hidden mb-3 bg-neutral-900 relative">
+                            <svg class="absolute inset-0 w-full h-full text-cyan-400/10" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <path d="M10 50 Q30 80 50 50 T90 50" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                                <path d="M10 40 Q30 70 50 40 T90 40" stroke="currentColor" stroke-width="0.2" fill="none"/>
+                                <path d="M10 60 Q30 90 50 60 T90 60" stroke="currentColor" stroke-width="0.2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs tracking-wider text-white font-medium uppercase font-mono" data-editable="true">ECHOING CHAMBER</span>
+                            <span class="text-[10px] font-mono text-dark-textDark" data-editable="true">MILAN, 2024</span>
+                        </div>
+                    </div>
+
+                    <div class="work-card group cursor-pointer border border-dark-border p-3 bg-dark-panel hover:border-dark-borderActive transition-all duration-500" onclick="openDetailModal('AURA METROPOLIS 流光都市展', 'EXHIBITION', '2025', '伦敦', '利用悬挂式自发光编织网和微调透镜投影技术，建立了一个完全解构、动态收缩、可感知人数变化的沉浸式微缩都市。')">
+                        <div class="aspect-[4/3] w-full overflow-hidden mb-3 bg-neutral-900 relative">
+                            <svg class="absolute inset-0 w-full h-full text-cyan-400/10" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <line x1="10" y1="10" x2="90" y2="90" stroke="currentColor" stroke-width="0.3"/>
+                                <line x1="90" y1="10" x2="10" y2="90" stroke="currentColor" stroke-width="0.3"/>
+                                <line x1="50" y1="10" x2="50" y2="90" stroke="currentColor" stroke-width="0.2"/>
+                                <line x1="10" y1="50" x2="90" y2="50" stroke="currentColor" stroke-width="0.2"/>
+                                <circle cx="50" cy="50" r="15" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs tracking-wider text-white font-medium uppercase font-mono" data-editable="true">AURA METROPOLIS</span>
+                            <span class="text-[10px] font-mono text-dark-textDark" data-editable="true">LONDON, 2025</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Block 3 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start category-section" data-category="product">
+                <div class="lg:col-span-4 lg:sticky lg:top-32 space-y-4">
+                    <h2 class="font-mono text-2xl lg:text-3xl font-light tracking-[0.1em] text-white uppercase" data-editable="true">
+                        PRODUCT<br>
+                        <span class="text-dark-textDark font-normal text-lg tracking-normal">DESIGN</span>
+                    </h2>
+                    <p class="text-xs text-dark-textMuted max-w-sm leading-relaxed" data-editable="true">
+                        探索空间、媒介与日常硬件。通过参数化建模和 3D 金属烧结工艺，产出高度契合人机工程学的实体器具。
+                    </p>
+                    <div class="pt-2">
+                        <button class="archive-btn group flex items-center gap-3 text-[10px] font-mono tracking-[0.25em] text-dark-textMuted hover:text-cyan-400 transition-colors">
+                            <span class="w-3 h-3 border border-dark-border group-hover:border-cyan-400 group-hover:bg-cyan-400/20 transition-all"></span>
+                            <span>VIEW ARCHIVE</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 works-grid">
+                    <div class="work-card group cursor-pointer border border-dark-border p-3 bg-dark-panel hover:border-dark-borderActive transition-all duration-500" onclick="openDetailModal('SPIN-OFF CHAIR 回旋骨骼椅', 'PRODUCT', '2025', '上海', '利用拓扑寻优拓、金属晶格增材制造设计的一款极轻量化座椅。完美贴合人体腰椎曲度，整椅采用航天铝一体成型。')">
+                        <div class="aspect-[4/3] w-full overflow-hidden mb-3 bg-neutral-900 relative">
+                            <svg class="absolute inset-0 w-full h-full text-cyan-400/10" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <path d="M40 80 Q30 50 45 40 T40 20" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                                <path d="M45 40 L70 40 L65 80" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                                <line x1="45" y1="40" x2="40" y2="80" stroke="currentColor" stroke-width="0.3"/>
+                            </svg>
+                        </div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs tracking-wider text-white font-medium uppercase font-mono" data-editable="true">SPIN-OFF CHAIR</span>
+                            <span class="text-[10px] font-mono text-dark-textDark" data-editable="true">SHANGHAI, 2025</span>
+                        </div>
+                    </div>
+
+                    <div class="work-card group cursor-pointer border border-dark-border p-3 bg-dark-panel hover:border-dark-borderActive transition-all duration-500" onclick="openDetailModal('NEXUS-06 参数化台灯', 'PRODUCT', '2026', '米兰', '底座与灯身运用沃罗诺伊（Voronoi）算法分割出不均匀网格，散发的投影能在桌面形成森林树冠般的自然斑驳光斑。')">
+                        <div class="aspect-[4/3] w-full overflow-hidden mb-3 bg-neutral-900 relative">
+                            <svg class="absolute inset-0 w-full h-full text-cyan-400/10" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <line x1="50" y1="20" x2="50" y2="80" stroke="currentColor" stroke-width="0.5"/>
+                                <ellipse cx="50" cy="20" rx="15" ry="5" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                                <circle cx="50" cy="80" r="10" stroke="currentColor" stroke-width="0.5" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs tracking-wider text-white font-medium uppercase font-mono" data-editable="true">NEXUS-06 LAMP</span>
+                            <span class="text-[10px] font-mono text-dark-textDark" data-editable="true">MILAN, 2026</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- <!-- Milestones / Timeline -->
+    <!-- ========================================== -->
+    <section class="py-24 px-6 lg:px-24 border-t border-dark-border/40 relative z-10 max-w-7xl mx-auto" id="milestones" data-section="milestones">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-4">
+                <span class="font-mono text-[10px] tracking-[0.3em] text-dark-textMuted uppercase mb-4 block" data-editable="true">
+                    04 / CHRONOLOGY
+                </span>
+                <h2 class="font-mono text-2xl lg:text-3xl font-light tracking-[0.1em] text-white uppercase" data-editable="true">
+                    MILESTONES &<br>
+                    <span class="text-dark-textDark font-normal text-lg tracking-normal">RECOGNITIONS</span>
+                </h2>
+            </div>
+            
+            <div class="lg:col-span-8 divide-y divide-dark-border border-t border-b border-dark-border font-mono text-xs">
+                <div class="grid grid-cols-12 py-5 gap-4 items-center hover:bg-neutral-950 px-2 transition-colors duration-300">
+                    <div class="col-span-2 text-cyan-400" data-editable="true">2026.04</div>
+                    <div class="col-span-6 text-white tracking-wide" data-editable="true">受邀参加第18届威尼斯国际建筑双年展 (Venice Biennale)</div>
+                    <div class="col-span-4 text-right text-dark-textMuted" data-editable="true">VENICE, ITALY</div>
+                </div>
+
+                <div class="grid grid-cols-12 py-5 gap-4 items-center hover:bg-neutral-950 px-2 transition-colors duration-300">
+                    <div class="col-span-2 text-cyan-400" data-editable="true">2025.10</div>
+                    <div class="col-span-6 text-white tracking-wide" data-editable="true">斩获德国红点奖 (Red Dot) 最佳概念设计大奖</div>
+                    <div class="col-span-4 text-right text-dark-textMuted" data-editable="true">ESSEN, GERMANY</div>
+                </div>
+
+                <div class="grid grid-cols-12 py-5 gap-4 items-center hover:bg-neutral-950 px-2 transition-colors duration-300">
+                    <div class="col-span-2 text-cyan-400" data-editable="true">2025.03</div>
+                    <div class="col-span-6 text-white tracking-wide" data-editable="true">发布“BLUE-GEN”开源动态拓扑寻优算法底层工具箱</div>
+                    <div class="col-span-4 text-right text-dark-textMuted" data-editable="true">GITHUB RELEASE</div>
+                </div>
+
+                <div class="grid grid-cols-12 py-5 gap-4 items-center hover:bg-neutral-950 px-2 transition-colors duration-300">
+                    <div class="col-span-2 text-cyan-400" data-editable="true">2024.11</div>
+                    <div class="col-span-6 text-white tracking-wide" data-editable="true">设计完成米兰呼吸剧场，打破历代空间交互游客人数纪录</div>
+                    <div class="col-span-4 text-right text-dark-textMuted" data-editable="true">MILAN, ITALY</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- <!-- Footer & Contact -->
+    <!-- ========================================== -->
+    <!-- 关键修复：移除了 bg-black，让底部直接穿透显示背后的深海流体背景 -->
+    <footer class="py-24 px-6 lg:px-24 border-t border-dark-border/40 relative z-10 max-w-7xl mx-auto" id="contact" data-section="contact">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+            
+            <div class="lg:col-span-6 space-y-6">
+                <span class="font-mono text-[10px] tracking-[0.3em] text-cyan-400 uppercase block" data-editable="true">
+                    05 / INITIATE ENGAGEMENT
+                </span>
+                <h2 class="font-mono text-3xl sm:text-4xl md:text-5xl font-light tracking-tight text-white leading-tight uppercase" data-editable="true">
+                    Let's carve<br>the virtual void.
+                </h2>
+                <p class="text-xs text-dark-textMuted max-w-md leading-relaxed" data-editable="true">
+                    无论是先锋地标、沉浸媒体艺术装置，还是具有工业革命性意义的硬核产品设计，我们随时期待与全球卓越的品牌及机构联合。
+                </p>
+            </div>
+
+            <div class="lg:col-span-6 w-full space-y-8">
+                <div class="border-b border-dark-border pb-4 flex justify-between items-center group cursor-pointer hover:border-white transition-colors duration-500">
+                    <span class="font-mono text-xs tracking-[0.2em] text-dark-textMuted uppercase" data-editable="true">SEND EMAIL</span>
+                    <a href="mailto:office@blueshift-inc.com" class="font-mono text-sm text-white group-hover:text-cyan-400 transition-colors">office@blueshift-inc.com</a>
+                </div>
+                <div class="border-b border-dark-border pb-4 flex justify-between items-center group cursor-pointer hover:border-white transition-colors duration-500">
+                    <span class="font-mono text-xs tracking-[0.2em] text-dark-textMuted uppercase" data-editable="true">STUDIO TELEPHONE</span>
+                    <a href="tel:+862188888888" class="font-mono text-sm text-white group-hover:text-cyan-400 transition-colors">+86 (21) 8888 8888</a>
+                </div>
+                <div class="border-b border-dark-border pb-4 flex justify-between items-center group cursor-pointer hover:border-white transition-colors duration-500">
+                    <span class="font-mono text-xs tracking-[0.2em] text-dark-textMuted uppercase" data-editable="true">PHYSICAL ADDRESS</span>
+                    <span class="font-mono text-xs text-white text-right" data-editable="true">上海市静安区静安八里数字创意园区 3-02 室</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="border-t border-dark-border mt-20 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] font-mono tracking-widest text-dark-textDark">
+            <div data-editable="true">ALL LOGOS, ALGORITHMS & BLUEPRINTS ARE PROTECTED UNDER INTERNATIONAL PROPERTY LAW</div>
+            <div class="flex gap-4">
+                <a href="#" class="hover:text-white transition-colors">INSTAGRAM</a>
+                <span>/</span>
+                <a href="#" class="hover:text-white transition-colors">LINKEDIN</a>
+                <span>/</span>
+                <a href="#" class="hover:text-white transition-colors">GITHUB</a>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- ========================================== -->
+    <!-- <!-- Custom Interactive Modal -->
+    <!-- ========================================== -->
+    <div id="detail-modal" class="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-500">
+        <div class="bg-dark-panel border border-dark-border max-w-2xl w-full p-6 md:p-8 relative transform scale-95 transition-all duration-500">
+            <button onclick="closeDetailModal()" class="absolute top-6 right-6 font-mono text-xs tracking-[0.2em] text-dark-textMuted hover:text-white transition-colors">
+                [ CLOSE ]
+            </button>
+
+            <div class="space-y-6">
+                <div class="flex flex-col gap-1 border-b border-dark-border pb-4">
+                    <span id="modal-category" class="font-mono text-[9px] tracking-[0.3em] text-cyan-400 uppercase">CATEGORY</span>
+                    <h3 id="modal-title" class="font-mono text-xl md:text-2xl font-light tracking-wide text-white uppercase">PROJECT TITLE</h3>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 font-mono text-[10px] bg-black p-4 border border-dark-border/40">
+                    <div>
+                        <span class="text-dark-textDark block uppercase">YEAR // 年份</span>
+                        <span id="modal-year" class="text-white">---</span>
+                    </div>
+                    <div>
+                        <span class="text-dark-textDark block uppercase">LOCATION // 地点</span>
+                        <span id="modal-location" class="text-white">---</span>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <span class="font-mono text-[9px] tracking-[0.3em] text-dark-textMuted block uppercase">PROJECT BRIEF // 方案概况</span>
+                    <p id="modal-desc" class="text-xs md:text-sm text-dark-textMuted leading-relaxed font-light">
+                        Placeholder Description.
+                    </p>
+                </div>
+
+                <div class="h-32 bg-neutral-950 border border-dark-border flex items-center justify-center relative overflow-hidden">
+                    <svg class="absolute inset-0 w-full h-full text-cyan-400/5" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <line x1="0" y1="20" x2="100" y2="20" stroke="currentColor" stroke-width="0.1"/>
+                        <line x1="0" y1="40" x2="100" y2="40" stroke="currentColor" stroke-width="0.1"/>
+                        <line x1="0" y1="60" x2="100" y2="60" stroke="currentColor" stroke-width="0.1"/>
+                        <line x1="0" y1="80" x2="100" y2="80" stroke="currentColor" stroke-width="0.1"/>
+                        <line x1="20" y1="0" x2="20" y2="100" stroke="currentColor" stroke-width="0.1"/>
+                        <line x1="40" y1="0" x2="40" y2="100" stroke="currentColor" stroke-width="0.1"/>
+                        <line x1="60" y1="0" x2="60" y2="100" stroke="currentColor" stroke-width="0.1"/>
+                        <line x1="80" y1="0" x2="80" y2="100" stroke="currentColor" stroke-width="0.1"/>
+                    </svg>
+                    <span class="font-mono text-[9px] tracking-[0.35em] text-dark-textDark">ALGORITHMIC SCANNING SYSTEM // OK</span>
+                </div>
+
+                <div class="pt-4 flex justify-end">
+                    <button onclick="closeDetailModal()" class="font-mono text-[10px] tracking-[0.2em] border border-dark-border px-5 py-2 hover:border-white hover:text-cyan-400 transition-all duration-300 uppercase">
+                        CONFIRM / BACK
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const glowContainer = document.getElementById('glow-container');
+        let currentX = 0;
+        let currentY = 0;
+        let targetX = 0;
+        let targetY = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            const xPercent = (e.clientX - window.innerWidth / 2) / window.innerWidth;
+            const yPercent = (e.clientY - window.innerHeight / 2) / window.innerHeight;
+            
+            targetX = xPercent * 70; 
+            targetY = yPercent * 50;
+        });
+
+        function updateGlowPosition() {
+            currentX += (targetX - currentX) * 0.04;
+            currentY += (targetY - currentY) * 0.04;
+            
+            glowContainer.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
+            requestAnimationFrame(updateGlowPosition);
+        }
+        updateGlowPosition();
+
+        const header = document.getElementById('main-header');
+        const headerBorder = document.getElementById('header-border');
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                header.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+                header.style.backdropFilter = 'blur(12px)';
+                headerBorder.style.borderBottomColor = 'rgba(255, 255, 255, 0.08)';
+                headerBorder.style.height = '72px';
+            } else {
+                header.style.backgroundColor = 'transparent';
+                header.style.backdropFilter = 'none';
+                headerBorder.style.borderBottomColor = 'transparent';
+                headerBorder.style.height = '80px';
+            }
+        });
+
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const categorySections = document.querySelectorAll('.category-section');
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => {
+                    b.classList.remove('text-cyan-400');
+                    b.classList.add('text-dark-textMuted');
+                });
+                btn.classList.add('text-cyan-400');
+                btn.classList.remove('text-dark-textMuted');
+
+                const filterValue = btn.getAttribute('data-filter');
+
+                categorySections.forEach(section => {
+                    const sectionCategory = section.getAttribute('data-category');
+                    if (filterValue === 'all' || filterValue === sectionCategory) {
+                        section.style.display = 'grid';
+                        section.style.opacity = '0';
+                        setTimeout(() => {
+                            section.style.transition = 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+                            section.style.opacity = '1';
+                        }, 50);
+                    } else {
+                        section.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        const modal = document.getElementById('detail-modal');
+        const modalContent = modal.querySelector('.transform');
+        
+        function openDetailModal(title, category, year, location, desc) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-category').textContent = category;
+            document.getElementById('modal-year').textContent = year;
+            document.getElementById('modal-location').textContent = location;
+            document.getElementById('modal-desc').textContent = desc;
+
+            modal.classList.remove('pointer-events-none');
+            modal.classList.add('opacity-100');
+            modalContent.classList.remove('scale-95');
+            modalContent.classList.add('scale-100');
+        }
+
+        function closeDetailModal() {
+            modal.classList.remove('opacity-100');
+            modal.classList.add('pointer-events-none');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+        }
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeDetailModal();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeDetailModal();
+        });
+    </script>
+</body>
+</html>

@@ -78,6 +78,9 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false, on
   const isElite = isV2 || isV3
   const isDNA = report.id?.startsWith('preset_') || report.id === 'linear'
   const showDNA = FLAGS.ENABLE_DESIGN_AUDITS || !isDNA
+  const auditEntries = report.pageAnalysis?.auditSummary
+    ? Object.entries(report.pageAnalysis.auditSummary).filter(([, value]) => value && value.status !== 'not-run')
+    : []
 
   const contentMap = {
     markdown: generateMarkdown(report, lang),
@@ -179,6 +182,50 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false, on
         <section>
           <SectionLabel>{t.inspector}</SectionLabel>
           <DesignInspector report={report} lang={lang} onSectionHover={onSectionHover} />
+        </section>
+      )}
+
+      {FLAGS.ENABLE_PAGE_AUDITS && auditEntries.length > 0 && (
+        <section>
+          <SectionLabel>{lang === 'zh' ? '页面审计' : 'Page Audits'}</SectionLabel>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+            {auditEntries.map(([key, value]) => (
+              <div
+                key={key}
+                style={{
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  borderRadius: '14px',
+                  padding: '16px',
+                  background: '#FFFFFF',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#1D1D1F' }}>
+                    {auditLabel(key, lang)}
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    color: '#636366',
+                    background: '#F5F5F7',
+                    borderRadius: '999px',
+                    padding: '4px 8px',
+                  }}>
+                    {value?.status}
+                  </span>
+                </div>
+                {value?.summary && (
+                  <div style={{ fontSize: '12px', color: '#666', lineHeight: 1.6 }}>
+                    {value.summary}
+                  </div>
+                )}
+                {typeof value?.findingsCount === 'number' && (
+                  <div style={{ marginTop: '8px', fontSize: '11px', color: '#8E8E93' }}>
+                    {lang === 'zh' ? `发现 ${value.findingsCount} 项` : `${value.findingsCount} findings`}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
@@ -322,6 +369,20 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false, on
 
     </div>
   )
+}
+
+function auditLabel(key: string, lang: 'zh' | 'en') {
+  const zhMap: Record<string, string> = {
+    cssAnalyzer: 'CSS 一致性',
+    accessibility: '可访问性',
+    performance: '性能',
+  }
+  const enMap: Record<string, string> = {
+    cssAnalyzer: 'CSS Consistency',
+    accessibility: 'Accessibility',
+    performance: 'Performance',
+  }
+  return lang === 'zh' ? (zhMap[key] || key) : (enMap[key] || key)
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {

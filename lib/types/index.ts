@@ -317,6 +317,54 @@ export interface PageTypographyCandidate {
   meta?: TokenMeta
 }
 
+export type AnalysisCoverageArea =
+  | 'color'
+  | 'typography'
+  | 'radius'
+  | 'shadow'
+  | 'spacing'
+  | 'layout'
+  | 'interaction'
+  | 'sections'
+  | 'components'
+
+export interface AnalysisCoverageSummary {
+  overallCoverage: number
+  coveredAreas: AnalysisCoverageArea[]
+  missingAreas?: AnalysisCoverageArea[]
+  notes?: string[]
+}
+
+export interface EvidenceSummary {
+  overallConfidence: EvidenceConfidence
+  totalEvidenceCount: number
+  sourceBreakdown: Partial<Record<EvidenceSource, number>>
+  confidenceBreakdown: Partial<Record<EvidenceConfidence, number>>
+  notes?: string[]
+}
+
+export interface InteractionSummary {
+  hasInteractiveSignals: boolean
+  measuredStates: InteractionState[]
+  componentKinds: ComponentKind[]
+  transitionCount: number
+  notes?: string[]
+}
+
+export interface AuditModuleSummary {
+  status: 'not-run' | 'queued' | 'completed' | 'failed'
+  summary?: string
+  findingsCount?: number
+  // ISO 8601 timestamp string, e.g. 2026-04-09T12:30:00.000Z
+  updatedAt?: string
+}
+
+export interface PageAuditSummary {
+  cssAnalyzer?: AuditModuleSummary
+  accessibility?: AuditModuleSummary
+  performance?: AuditModuleSummary
+}
+
 export interface PageStyleAnalysis {
   colorCandidates: PageColorCandidate[]
   semanticColorSystem?: SemanticColorSystem
@@ -343,6 +391,10 @@ export interface PageStyleAnalysis {
   pageSections?: PageSection[]
   viewportSlices?: ViewportSlice[]
   cssTextExcerpt?: string
+  evidenceSummary?: EvidenceSummary
+  coverageSummary?: AnalysisCoverageSummary
+  interactionSummary?: InteractionSummary
+  auditSummary?: PageAuditSummary
   sourceCount: {
     inlineStyleBlocks: number
     linkedStylesheets: number

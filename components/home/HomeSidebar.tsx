@@ -124,6 +124,31 @@ export default function HomeSidebar({
 
   return (
     <>
+    <style>{`
+      .sidebar-nav-btn {
+        transition: background-color 0.1s;
+      }
+      .sidebar-nav-btn:hover:not([data-active="true"]) {
+        background-color: rgba(0,0,0,0.025);
+      }
+      .history-item-shell:hover .history-item-main:not([data-active="true"]) {
+        background-color: rgba(0,0,0,0.025);
+      }
+      .history-item-shell:hover .history-item-menu,
+      .history-item-menu[data-open="true"] {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .history-item-menu:hover {
+        background: rgba(0,0,0,0.08) !important;
+      }
+      .section-header:hover .section-header-label {
+        color: #8E8E93;
+      }
+      .section-header:hover .section-header-icon {
+        color: #8E8E93;
+      }
+    `}</style>
     <aside style={{
       width: sidebarOpen ? '270px' : '48px', flexShrink: 0, display: 'flex', flexDirection: 'column',
       backgroundColor: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.06)',
@@ -428,6 +453,8 @@ function SidebarBtn({ icon, label, onClick, active = false, collapsed = false }:
     <button
       onClick={onClick}
       title={collapsed ? label : undefined}
+      className="sidebar-nav-btn"
+      data-active={active ? 'true' : 'false'}
       style={{
         width: '100%', display: 'flex', alignItems: 'center',
         justifyContent: collapsed ? 'center' : 'flex-start',
@@ -438,8 +465,6 @@ function SidebarBtn({ icon, label, onClick, active = false, collapsed = false }:
         fontSize: '14px', fontWeight: 500, fontFamily: 'var(--font-sans)',
         transition: 'background 0.1s'
       }}
-      onMouseEnter={e => !active && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.025)')}
-      onMouseLeave={e => !active && (e.currentTarget.style.backgroundColor = 'transparent')}
     >
       <span style={{ opacity: 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
       {!collapsed && <span>{label}</span>}
@@ -472,7 +497,6 @@ const HistoryItem = memo(function HistoryItem({
   onRenameSubmit: () => void
   onRenameCancel: () => void
 }) {
-  const [hovered, setHovered] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
   // URL extractions are always full-page → show top (hero section)
   // Image uploads: detect on load — long screenshots (h/w > 2.5) also show top
@@ -511,17 +535,17 @@ const HistoryItem = memo(function HistoryItem({
 
   return (
     <div
-      className="context-menu-anchor"
+      className="context-menu-anchor history-item-shell"
       style={{ position: 'relative', borderRadius: '8px' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       <button
         onClick={isRenaming ? undefined : onClick}
+        className="history-item-main"
+        data-active={isActive ? 'true' : 'false'}
         style={{
           width: '100%', padding: '8px 10px', paddingRight: '32px',
           borderRadius: '8px',
-          backgroundColor: isActive ? 'rgba(0,0,0,0.05)' : (hovered ? 'rgba(0,0,0,0.025)' : 'transparent'),
+          backgroundColor: isActive ? 'rgba(0,0,0,0.05)' : 'transparent',
           border: 'none', cursor: isRenaming ? 'default' : 'pointer', textAlign: 'left',
           fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: '10px',
           transition: 'background 0.1s'
@@ -588,6 +612,8 @@ const HistoryItem = memo(function HistoryItem({
       {!isRenaming && (
         <button
           onClick={onContextMenu}
+          className="history-item-menu"
+          data-open={contextMenuOpen ? 'true' : 'false'}
           style={{
             position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
             width: '22px', height: '22px', border: 'none',
@@ -595,12 +621,10 @@ const HistoryItem = memo(function HistoryItem({
             borderRadius: '5px', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: '#3C3C3E', padding: 0,
-            opacity: (hovered || contextMenuOpen) ? 1 : 0,
-            pointerEvents: (hovered || contextMenuOpen) ? 'auto' : 'none',
+            opacity: contextMenuOpen ? 1 : 0,
+            pointerEvents: contextMenuOpen ? 'auto' : 'none',
             transition: 'background 0.1s, opacity 0.1s',
           }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.08)'}
-          onMouseLeave={e => e.currentTarget.style.background = contextMenuOpen ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.04)'}
         >
           <MoreHorizontal size={13} strokeWidth={2} />
         </button>
@@ -684,26 +708,25 @@ function EmptyState({ children }: { children: ReactNode }) {
 function SectionHeader({ label, collapsed, onToggle }: {
   label: string, collapsed: boolean, onToggle: () => void
 }) {
-  const [hovered, setHovered] = useState(false)
   return (
     <button
+      className="section-header"
       onClick={onToggle}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '18px 20px 6px', width: '100%', border: 'none', background: 'none',
         cursor: 'pointer', fontFamily: 'var(--font-sans)'
       }}
     >
-      <span style={{ fontSize: '12px', fontWeight: 500, color: hovered ? '#8E8E93' : '#AEAEB2', letterSpacing: '0.01em', textTransform: 'none', transition: 'color 0.15s' }}>
+      <span className="section-header-label" style={{ fontSize: '12px', fontWeight: 500, color: '#AEAEB2', letterSpacing: '0.01em', textTransform: 'none', transition: 'color 0.15s' }}>
         {label}
       </span>
       <ChevronDown
+        className="section-header-icon"
         size={12}
         strokeWidth={2}
         style={{
-          color: hovered ? '#8E8E93' : '#C7C7CC',
+          color: '#C7C7CC',
           transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
           transition: 'transform 0.2s ease, color 0.15s'
         }}

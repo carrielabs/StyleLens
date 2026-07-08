@@ -1,7 +1,7 @@
 import type { StyleReport } from '@/lib/types'
 
 export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'): string {
-  const { colors, colorSystem, typography, designDetails, gradients } = report
+  const { colors, colorSystem, typography, designDetails, gradients, pageAnalysis } = report
   const isEn = lang === 'en'
 
   const summary    = isEn ? (report.summaryEn || report.summary) : (report.summaryZh || report.summary)
@@ -114,6 +114,61 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
     md += `| 动效倾向 | ${designDetails.animationTendency} |\n`
     md += `| 图像处理 | ${designDetails.imageHandling} |\n`
     md += `| 整体风格 | ${designDetails.overallStyle} |\n`
+  }
+
+  if (pageAnalysis?.pageSections?.length) {
+    md += isEn ? `\n## Page Structure\n\n` : `\n## 页面结构\n\n`
+    pageAnalysis.pageSections.forEach(section => {
+      md += isEn
+        ? `- Section ${section.index + 1}: ${section.purpose} · ${section.layout} · columns ${section.columns}${section.hasCTA ? ' · CTA' : ''}${section.hasImage ? ' · image' : ''}\n`
+        : `- 第 ${section.index + 1} 段：${section.purpose} · ${section.layout} · ${section.columns} 列${section.hasCTA ? ' · 含 CTA' : ''}${section.hasImage ? ' · 含图片' : ''}\n`
+    })
+  }
+
+  if (pageAnalysis?.stateTokens && Object.values(pageAnalysis.stateTokens).some(tokens => (tokens || []).length > 0)) {
+    md += isEn ? `\n## Interaction States\n\n` : `\n## 交互状态\n\n`
+    for (const [component, tokens] of Object.entries(pageAnalysis.stateTokens)) {
+      if (!tokens?.length) continue
+      md += isEn ? `### ${component}\n` : `### ${component}\n`
+      tokens.forEach((token: NonNullable<typeof tokens>[number]) => {
+        md += isEn
+          ? `- ${token.state} · ${token.property}: \`${token.value}\`\n`
+          : `- ${token.state} · ${token.property}：\`${token.value}\`\n`
+      })
+    }
+  }
+
+  if (pageAnalysis?.transitionTokens?.length) {
+    md += isEn ? `\n## Motion Tokens\n\n` : `\n## 动效 Token\n\n`
+    pageAnalysis.transitionTokens.forEach(token => {
+      md += isEn
+        ? `- ${token.property} · ${token.duration} · ${token.easing}\n`
+        : `- ${token.property} · ${token.duration} · ${token.easing}\n`
+    })
+  }
+
+  if (pageAnalysis?.evidenceSummary || pageAnalysis?.coverageSummary) {
+    md += isEn ? `\n## Analysis Trust\n\n` : `\n## 分析可信度\n\n`
+    if (pageAnalysis.evidenceSummary) {
+      md += isEn
+        ? `- Confidence: ${pageAnalysis.evidenceSummary.overallConfidence}\n- Evidence count: ${pageAnalysis.evidenceSummary.totalEvidenceCount}\n`
+        : `- 可信度：${pageAnalysis.evidenceSummary.overallConfidence}\n- 证据数量：${pageAnalysis.evidenceSummary.totalEvidenceCount}\n`
+    }
+    if (pageAnalysis.coverageSummary) {
+      md += isEn
+        ? `- Coverage: ${Math.round(pageAnalysis.coverageSummary.overallCoverage * 100)}%\n`
+        : `- 覆盖率：${Math.round(pageAnalysis.coverageSummary.overallCoverage * 100)}%\n`
+      if (pageAnalysis.coverageSummary.coveredAreas?.length) {
+        md += isEn
+          ? `- Covered: ${pageAnalysis.coverageSummary.coveredAreas.join(', ')}\n`
+          : `- 已覆盖：${pageAnalysis.coverageSummary.coveredAreas.join('、')}\n`
+      }
+      if (pageAnalysis.coverageSummary.missingAreas?.length) {
+        md += isEn
+          ? `- Missing: ${pageAnalysis.coverageSummary.missingAreas.join(', ')}\n`
+          : `- 缺失：${pageAnalysis.coverageSummary.missingAreas.join('、')}\n`
+      }
+    }
   }
 
   return md

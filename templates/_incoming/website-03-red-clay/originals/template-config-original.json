@@ -1,0 +1,147 @@
+{
+  "templateName": "RedClayTennisClubPremiumTemplate",
+  "version": "2.2.0",
+  "description": "极具情绪张力与粉笔手绘质感的顶级网球俱乐部全漏斗官网模板，零外部依赖，内置 SVG 位移噪点与全局沙粒物理图层。",
+  "theme": {
+    "colors": {
+      "clay": "#B73E23",
+      "chalk": "#FDF9F1",
+      "neon": "#D9EB26",
+      "net": "#1C1514"
+    },
+    "fonts": {
+      "mega": "Chivo, Arial Black, Impact, sans-serif",
+      "body": "Noto Sans SC, sans-serif"
+    }
+  },
+  "sections": [
+    {
+      "id": "hero",
+      "name": "巨型海报首屏",
+      "description": "展示品牌冲击力和赛事属性，带有巨幅对撞排版标语。",
+      "elements": [
+        { "selector": "#hero .poster-tag .num", "type": "text", "defaultValue": "#01" },
+        { "selector": "#hero .poster-tag .name", "type": "text", "defaultValue": "@ROLAND_GARROS" },
+        { "selector": "#hero .hero-sub:nth-child(2)", "type": "text", "defaultValue": "SOMETIMES YOU" },
+        { "selector": "#hero .hero-main:nth-child(3)", "type": "text", "defaultValue": "INNOVATE" },
+        { "selector": "#hero .hero-sub:nth-child(4)", "type": "text", "defaultValue": "SOMETIMES YOU" },
+        { "selector": "#hero .hero-main:nth-child(5)", "type": "text", "defaultValue": "DISRUPT" }
+      ]
+    },
+    {
+      "id": "statement",
+      "name": "核心价值观宣言",
+      "description": "俱乐部品牌态度阐释，大留白、超大字号展示。",
+      "elements": [
+        { "selector": "[data-section='statement'] h2", "type": "text", "defaultValue": "属于勇敢者的红土主场。<br>挥拍，感受每一次心跳。" }
+      ]
+    },
+    {
+      "id": "problem",
+      "name": "用户现状痛点",
+      "description": "粉笔横向画线擦除样式，列举用户当前的球技或硬件瓶颈。",
+      "elements": [
+        { "selector": "#problem .poster-tag .num", "type": "text", "defaultValue": "#02" },
+        { "selector": "#problem .poster-tag .name", "type": "text", "defaultValue": "@THE_WALL" },
+        { "selector": "#problem .heading-md", "type": "text", "defaultValue": "业余选手的叹息之墙" },
+        { "selector": "#problem p", "type": "text", "defaultValue": "我们懂你卡在 3.0/4.0 瓶颈期的沮丧。盲目挥拍带来的只有伤病，而不是涨球。" },
+        { "selector": "#problem li:nth-child(1) .pain-point-item", "type": "text", "defaultValue": "发力结构错误导致手腕与手肘反复劳损。" },
+        { "selector": "#problem li:nth-child(1) .pain-point-desc", "type": "text", "defaultValue": "—— 你需要生物力学的精准纠错。" },
+        { "selector": "#problem li:nth-child(2) .pain-point-item", "type": "text", "defaultValue": "训练缺乏系统，实战中战术意识一片空白。" },
+        { "selector": "#problem li:nth-child(2) .pain-point-desc", "type": "text", "defaultValue": "—— 喂球机器教不出比赛的大局观。" },
+        { "selector": "#problem li:nth-child(3) .pain-point-item", "type": "text", "defaultValue": "糟糕的硬地让你的膝盖不堪重负，不敢极限救球。" },
+        { "selector": "#problem li:nth-child(3) .pain-point-desc", "type": "text", "defaultValue": "——你需要真正能保护关节的顶级红土。" }
+      ]
+    },
+    {
+      "id": "solutions",
+      "name": "核心解决方案",
+      "description": "手绘粉笔圆圈排印样式，列举针对痛点的颠覆式服务。",
+      "elements": [
+        { "selector": "#solutions .poster-tag .num", "type": "text", "defaultValue": "#03" },
+        { "selector": "#solutions .poster-tag .name", "type": "text", "defaultValue": "@THE_WEAPON" },
+        { "selector": "#solutions .heading-md", "type": "text", "defaultValue": "职业级降维打击体系" },
+        { "selector": "#solutions .chalk-circle-card:nth-child(1) h3", "type": "text", "defaultValue": "A. 科技解析" },
+        { "selector": "#solutions .chalk-circle-card:nth-child(1) p", "type": "text", "defaultValue": "引入鹰眼与穿戴设备，1:1 重构你的击球 3D 模型，从关节发力点彻底粉碎错误动作。" },
+        { "selector": "#solutions .chalk-circle-card:nth-child(2) h3", "type": "text", "defaultValue": "B. 战术沙盘" },
+        { "selector": "#solutions .chalk-circle-card:nth-child(2) p", "type": "text", "defaultValue": "前 ATP 职业球员手把手复盘。教你如何预判线路、构建优势，而不是只会在底线死磕。" },
+        { "selector": "#solutions .chalk-circle-card:nth-child(3) h3", "type": "text", "defaultValue": "C. 大师红土" },
+        { "selector": "#solutions .chalk-circle-card:nth-child(3) p", "type": "text", "defaultValue": "在完美的红土上，学习德约科维奇式的极限滑步防守。让红土吸收冲击，解放你的双腿。" }
+      ]
+    },
+    {
+      "id": "academy",
+      "name": "集训课程阵容",
+      "description": "俱乐部核心课程板块，配有鼠标 Hover 飞出黄色网球动效。",
+      "elements": [
+        { "selector": "#academy .poster-tag .num", "type": "text", "defaultValue": "#04" },
+        { "selector": "#academy .poster-tag .name", "type": "text", "defaultValue": "@THE_ACADEMY" },
+        { "selector": "#academy .heading-md", "type": "text", "defaultValue": "精英集训阵容" },
+        { "selector": "#academy .interactive-card:nth-child(1) h3", "type": "text", "defaultValue": "红土猛兽营" },
+        { "selector": "#academy .interactive-card:nth-child(1) p", "type": "text", "defaultValue": "专注底线相持与极度上旋球训练。学习撕碎对手防线，掌握正手暴击奥义。" },
+        { "selector": "#academy .interactive-card:nth-child(2) h3", "type": "text", "defaultValue": "发球上网突击" },
+        { "selector": "#academy .interactive-card:nth-child(2) p", "type": "text", "defaultValue": "强化一发极速与切削发球，配合精准网前截击，三拍内终结悬念。" }
+      ]
+    },
+    {
+      "id": "facilities",
+      "name": "顶级场地设施",
+      "description": "俱乐部核心硬件条件罗列。",
+      "elements": [
+        { "selector": "#facilities .poster-tag .num", "type": "text", "defaultValue": "#05" },
+        { "selector": "#facilities .poster-tag .name", "type": "text", "defaultValue": "@FACILITIES" },
+        { "selector": "#facilities .service-box:first-child .heading-md", "type": "text", "defaultValue": "大师级训练主场" },
+        { "selector": "#facilities .service-box:first-child p", "type": "text", "defaultValue": "符合大满贯标准的综合训练中心，满足全天候高强度训练到赛后极速恢复的一切苛刻需求。" },
+        { "selector": "#facilities .service-box:last-child div:nth-child(1) h3", "type": "text", "defaultValue": "法网同款红土" },
+        { "selector": "#facilities .service-box:last-child div:nth-child(1) p", "type": "text", "defaultValue": "采用巴黎进口原装碎砖粉，完美滑步反馈。" },
+        { "selector": "#facilities .service-box:last-child div:nth-child(2) h3", "type": "text", "defaultValue": "全天候室内馆" },
+        { "selector": "#facilities .service-box:last-child div:nth-child(2) p", "type": "text", "defaultValue": "恒温系统加持，确保冬季训练计划不中断。" }
+      ]
+    },
+    {
+      "id": "workflow",
+      "name": "加入成长流程",
+      "description": "手绘战术虚线连结样式，描绘用户的进阶路线图。",
+      "elements": [
+        { "selector": "#workflow .poster-tag .num", "type": "text", "defaultValue": "#06" },
+        { "selector": "#workflow .poster-tag .name", "type": "text", "defaultValue": "@WORKFLOW" },
+        { "selector": "#workflow .heading-md", "type": "text", "defaultValue": "大满贯进阶之路" },
+        { "selector": "#workflow .workflow-step:nth-child(2) h3", "type": "text", "defaultValue": "全方位动态定级" },
+        { "selector": "#workflow .workflow-step:nth-child(2) p", "type": "text", "defaultValue": "进入俱乐部第一天，完成 15 项核心指标体能测试与 3 局实战对抗，锁定真实短板。" },
+        { "selector": "#workflow .workflow-step:nth-child(3) h3", "type": "text", "defaultValue": "6周微型战术周期" },
+        { "selector": "#workflow .workflow-step:nth-child(3) p", "type": "text", "defaultValue": "拒绝漫无目的的打球。为你制定为期 6 周的特训课表，每周攻克一个单一技术顽疾。" },
+        { "selector": "#workflow .workflow-step:nth-child(4) h3", "type": "text", "defaultValue": "月度天梯排位赛" },
+        { "selector": "#workflow .workflow-step:nth-child(4) p", "type": "text", "defaultValue": "所有的训练必须经过实战检验。参与内部 ATP 赛制的排位赛，打败对手，赢取专属更衣柜。" }
+      ]
+    },
+    {
+      "id": "cta",
+      "name": "行动呼吁与赛点",
+      "description": "赛点转化模块，引导用户预约订场或联系我们。",
+      "elements": [
+        { "selector": "[data-section='cta'] .poster-tag .num", "type": "text", "defaultValue": "#99" },
+        { "selector": "[data-section='cta'] .poster-tag .name", "type": "text", "defaultValue": "@MATCH_POINT" },
+        { "selector": "[data-section='cta'] h2", "type": "text", "defaultValue": "PLAY YOUR GAME" },
+        { "selector": "[data-section='cta'] p", "type": "text", "defaultValue": "预定你的场地，加入这场纯粹的网球风暴。" },
+        { "selector": "[data-section='cta'] a", "type": "text", "defaultValue": "立即预约入场" }
+      ]
+    },
+    {
+      "id": "footer",
+      "name": "社媒巨型页脚",
+      "description": "俱乐部全社媒展示、小程序引流、手绘二维码占位区。",
+      "elements": [
+        { "selector": "#footer .footer-brand", "type": "text", "defaultValue": "RED CLAY<br>TENNIS CLUB" },
+        { "selector": "#footer p:first-of-type", "type": "text", "defaultValue": "位于城市边缘的 50,000 平米大师级网球绿洲。我们不提供消遣，我们只制造赢家。" },
+        { "selector": "#footer .footer-col:nth-child(2) h4", "type": "text", "defaultValue": "CONNECT" },
+        { "selector": "#footer .footer-col:nth-child(2) a:nth-of-type(1)", "type": "text", "defaultValue": "小红书 (XHS) @RedClay_Tennis" },
+        { "selector": "#footer .footer-col:nth-child(2) a:nth-of-type(2)", "type": "text", "defaultValue": "微信公众号 @RedClayClub" },
+        { "selector": "#footer .footer-col:nth-child(2) a:nth-of-type(3)", "type": "text", "defaultValue": "hello@redclay.com" },
+        { "selector": "#footer .footer-col:nth-child(2) p", "type": "text", "defaultValue": "TEL: 400-888-0000" },
+        { "selector": "#footer .footer-col:nth-child(3) h4", "type": "text", "defaultValue": "WECHAT PRO" },
+        { "selector": "#footer .footer-col:nth-child(3) p", "type": "text", "defaultValue": "扫码进入官方小程序预定场地与课程。" },
+        { "selector": "#footer .qr-placeholder", "type": "text", "defaultValue": "SCAN TO<br>BOOK" }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,19 @@
 import fs from 'fs'
 import path from 'path'
 import { chromium } from 'playwright'
-import type { ScreenshotResponse } from '@/lib/types'
+import type {
+  ComponentStateTokens,
+  LayoutEvidence,
+  PageSection,
+  PageStyleAnalysis,
+  RadiusToken,
+  ScreenshotResponse,
+  ShadowToken,
+  SpacingToken,
+  StateTokenValue,
+  TypographyToken,
+  ViewportSlice,
+} from '@/lib/types'
 import { analyzePageStyles, analyzePageStylesFromPage, sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
 
 // Persistent file-based cache to survive server restarts (HMR/Next.js Dev)
@@ -29,6 +41,82 @@ function savePersistentCache(cache: Map<string, string>) {
 }
 
 const screenshotCache = getPersistentCache()
+const ANALYSIS_VIEWPORTS = [
+  { id: 'desktop', width: 1280, height: 960, primary: true },
+  { id: 'mobile', width: 390, height: 844, primary: false },
+] as const
+
+function mergeUniqueBy<T>(items: T[], keyFor: (item: T) => string): T[] {
+  const seen = new Set<string>()
+  const result: T[] = []
+  for (const item of items) {
+    const key = keyFor(item)
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(item)
+  }
+  return result
+}
+
+function mergeStateTokens(...sources: Array<ComponentStateTokens | undefined>): ComponentStateTokens {
+  const merged: ComponentStateTokens = {}
+  const keys: Array<keyof ComponentStateTokens> = ['button', 'link', 'input', 'card']
+
+  for (const key of keys) {
+    const entries = mergeUniqueBy(
+      sources.flatMap(source => source?.[key] || []),
+      (entry: StateTokenValue) => `${entry.state}|${entry.property}|${entry.value}`
+    )
+    if (entries.length > 0) {
+      merged[key] = entries
+    }
+  }
+
+  return merged
+}
+
+function mergePageAnalysisVariants(analyses: Array<PageStyleAnalysis | null | undefined>): PageStyleAnalysis | null {
+  const available = analyses.filter((analysis): analysis is PageStyleAnalysis => Boolean(analysis))
+  if (available.length === 0) return null
+
+  const primary = available[0]
+  const pickLongest = <T>(selector: (analysis: PageStyleAnalysis) => T[] | undefined): T[] =>
+    available
+      .map(analysis => selector(analysis) || [])
+      .reduce((best, current) => current.length > best.length ? current : best, [] as T[])
+
+  return {
+    ...primary,
+    typographyTokens: mergeUniqueBy(
+      available.flatMap(analysis => analysis.typographyTokens),
+      (token: TypographyToken) => token.id || `${token.label}|${token.fontFamily}|${token.fontSize}|${token.fontWeight}`
+    ),
+    radiusTokens: mergeUniqueBy(
+      available.flatMap(analysis => analysis.radiusTokens),
+      (token: RadiusToken) => `${token.value}|${token.label}`
+    ),
+    shadowTokens: mergeUniqueBy(
+      available.flatMap(analysis => analysis.shadowTokens),
+      (token: ShadowToken) => `${token.value}|${token.label}`
+    ),
+    spacingTokens: mergeUniqueBy(
+      available.flatMap(analysis => analysis.spacingTokens),
+      (token: SpacingToken) => `${token.value}|${token.label}`
+    ),
+    layoutEvidence: mergeUniqueBy(
+      available.flatMap(analysis => analysis.layoutEvidence),
+      (token: LayoutEvidence) => `${token.kind}|${token.label}`
+    ),
+    stateTokens: mergeStateTokens(...available.map(analysis => analysis.stateTokens)),
+    pageSections: pickLongest<PageSection>(analysis => analysis.pageSections),
+    viewportSlices: pickLongest<ViewportSlice>(analysis => analysis.viewportSlices),
+    cssTextExcerpt: available.map(analysis => analysis.cssTextExcerpt).find(Boolean) || primary.cssTextExcerpt,
+    sourceCount: {
+      inlineStyleBlocks: Math.max(...available.map(analysis => analysis.sourceCount.inlineStyleBlocks)),
+      linkedStylesheets: Math.max(...available.map(analysis => analysis.sourceCount.linkedStylesheets)),
+    },
+  }
+}
 
 function isLikelyAuthNavigation(url: string): boolean {
   const lower = url.toLowerCase()
@@ -197,7 +285,7 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 })
       await prepareSettledPageForAtomicCapture(page)
 
-      const [screenshotBuffer, analysis] = await Promise.all([
+      const [screenshotBuffer, desktopAnalysis] = await Promise.all([
         page.screenshot({
           type: 'jpeg',
           quality: 80,
@@ -210,7 +298,17 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
       ])
 
       try {
-        pageAnalysis = analysis
+        const viewportAnalyses: PageStyleAnalysis[] = [desktopAnalysis]
+        for (const viewport of ANALYSIS_VIEWPORTS.filter(item => !item.primary)) {
+          await page.setViewportSize({ width: viewport.width, height: viewport.height })
+          await prepareSettledPageForAtomicCapture(page)
+          const viewportAnalysis = await analyzePageStylesFromPage(page, targetUrl, {
+            pageAlreadySettled: true,
+            snapshotCount: 1,
+          })
+          viewportAnalyses.push(viewportAnalysis)
+        }
+        pageAnalysis = mergePageAnalysisVariants(viewportAnalyses)
       } catch (analysisError) {
         console.warn(
           '[Screenshotter] Same-page DOM analysis failed; continuing with screenshot-only local capture:',

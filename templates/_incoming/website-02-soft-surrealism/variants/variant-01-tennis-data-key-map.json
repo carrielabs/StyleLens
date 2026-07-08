@@ -1,0 +1,345 @@
+[
+  {
+    "key": "header_title_01",
+    "section": "header",
+    "role": "title",
+    "tag": "div",
+    "text": "L'éternité"
+  },
+  {
+    "key": "header_button_01",
+    "section": "header",
+    "role": "button",
+    "tag": "a",
+    "text": "哲学"
+  },
+  {
+    "key": "header_button_02",
+    "section": "header",
+    "role": "button",
+    "tag": "a",
+    "text": "画廊"
+  },
+  {
+    "key": "header_button_03",
+    "section": "header",
+    "role": "button",
+    "tag": "a",
+    "text": "回声"
+  },
+  {
+    "key": "hero_title_01",
+    "section": "hero",
+    "role": "title",
+    "tag": "h1",
+    "text": "技术与艺术的 诗意结合"
+  },
+  {
+    "key": "hero_text_01",
+    "section": "hero",
+    "role": "text",
+    "tag": "p",
+    "text": "摒弃坚硬的边界，在无垠蓝天与粉雾中寻找数字交互的艺术感。每一次点击，都如击球般柔软而充满力量。"
+  },
+  {
+    "key": "hero_button_01",
+    "section": "hero",
+    "role": "button",
+    "tag": "a",
+    "text": "进入梦境 (产品)"
+  },
+  {
+    "key": "hero_button_02",
+    "section": "hero",
+    "role": "button",
+    "tag": "a",
+    "text": "阅读文献 (Docs)"
+  },
+  {
+    "key": "philosophy_title_01",
+    "section": "philosophy",
+    "role": "title",
+    "tag": "p",
+    "text": "Philosophy"
+  },
+  {
+    "key": "philosophy_title_02",
+    "section": "philosophy",
+    "role": "title",
+    "tag": "h2",
+    "text": "\"不需要锋利的边角， 也能穿透空气。\""
+  },
+  {
+    "key": "philosophy_text_01",
+    "section": "philosophy",
+    "role": "text",
+    "tag": "p",
+    "text": "我们相信最好的产品体验就像一场精彩的网球赛。不需要繁杂的装饰，只需要在绿地与蓝天之间，精准、优雅地完成一次次互动。用模糊的边缘代替生硬的分割，让信息自由呼吸。"
+  },
+  {
+    "key": "features_title_01",
+    "section": "features",
+    "role": "title",
+    "tag": "h3",
+    "text": "动能拉丝"
+  },
+  {
+    "key": "features_text_01",
+    "section": "features",
+    "role": "text",
+    "tag": "p",
+    "text": "每一次数据的传输，都不应是枯燥的加载条。我们将运动中的“色彩残影”融入交互之中，让等待的过程变成一场视觉艺术展。"
+  },
+  {
+    "key": "core-values_title_01",
+    "section": "core-values",
+    "role": "title",
+    "tag": "h4",
+    "text": "柔性架构"
+  },
+  {
+    "key": "core-values_text_01",
+    "section": "core-values",
+    "role": "text",
+    "tag": "p",
+    "text": "彻底抛弃生硬的网格束缚，采用流体般的组件布局。元素如同漂浮在无重力空间，随用户的交互温柔响应。"
+  },
+  {
+    "key": "core-values_title_02",
+    "section": "core-values",
+    "role": "title",
+    "tag": "h4",
+    "text": "胶片质感"
+  },
+  {
+    "key": "core-values_text_02",
+    "section": "core-values",
+    "role": "text",
+    "tag": "p",
+    "text": "不仅是色彩的堆叠，更通过算法生成的微弱噪点与光学模糊，还原真实物理世界中胶片冲洗的温度与颗粒感。"
+  },
+  {
+    "key": "core-values_title_03",
+    "section": "core-values",
+    "role": "title",
+    "tag": "h4",
+    "text": "瞬息动能"
+  },
+  {
+    "key": "core-values_text_03",
+    "section": "core-values",
+    "role": "text",
+    "tag": "p",
+    "text": "捕获动作发生时的横向色彩拉丝。让数据流转的过程，成为一场富有张力的数字体育竞技。"
+  },
+  {
+    "key": "gallery_title_01",
+    "section": "gallery",
+    "role": "title",
+    "tag": "p",
+    "text": "Moments in Sky"
+  },
+  {
+    "key": "gallery_label_01",
+    "section": "gallery",
+    "role": "label",
+    "tag": "span",
+    "text": "#01 悬浮发球"
+  },
+  {
+    "key": "gallery_label_02",
+    "section": "gallery",
+    "role": "label",
+    "tag": "span",
+    "text": "#02 粉雾截击"
+  },
+  {
+    "key": "gallery_label_03",
+    "section": "gallery",
+    "role": "label",
+    "tag": "span",
+    "text": "#03 苍穹底线"
+  },
+  {
+    "key": "statistics_label_01",
+    "section": "statistics",
+    "role": "label",
+    "tag": "div",
+    "text": "99%"
+  },
+  {
+    "key": "statistics_label_02",
+    "section": "statistics",
+    "role": "label",
+    "tag": "div",
+    "text": "云端连接率"
+  },
+  {
+    "key": "statistics_label_03",
+    "section": "statistics",
+    "role": "label",
+    "tag": "div",
+    "text": "1.2s"
+  },
+  {
+    "key": "statistics_label_04",
+    "section": "statistics",
+    "role": "label",
+    "tag": "div",
+    "text": "极速挥拍响应"
+  },
+  {
+    "key": "statistics_label_05",
+    "section": "statistics",
+    "role": "label",
+    "tag": "div",
+    "text": "&infin;"
+  },
+  {
+    "key": "statistics_label_06",
+    "section": "statistics",
+    "role": "label",
+    "tag": "div",
+    "text": "无界扩展体验"
+  },
+  {
+    "key": "testimonials_title_01",
+    "section": "testimonials",
+    "role": "title",
+    "tag": "p",
+    "text": "Echoes from the field"
+  },
+  {
+    "key": "testimonials_text_01",
+    "section": "testimonials",
+    "role": "text",
+    "tag": "p",
+    "text": "这不像是在使用一个软件，而像是在欣赏一场慢动作的艺术网球赛。那些柔软的色彩过渡让人感到无比平静。"
+  },
+  {
+    "key": "testimonials_title_02",
+    "section": "testimonials",
+    "role": "title",
+    "tag": "div",
+    "text": "Studio Surreal"
+  },
+  {
+    "key": "testimonials_label_01",
+    "section": "testimonials",
+    "role": "label",
+    "tag": "div",
+    "text": "独立数字艺术家"
+  },
+  {
+    "key": "literature_title_01",
+    "section": "literature",
+    "role": "title",
+    "tag": "h2",
+    "text": "技术与艺术的 诗意结合。"
+  },
+  {
+    "key": "literature_text_01",
+    "section": "literature",
+    "role": "text",
+    "tag": "p",
+    "text": "阅读我们的设计协议和开发文档。了解如何用最基础的代码，构建出不受重力束缚的前端体验。"
+  },
+  {
+    "key": "literature_button_01",
+    "section": "literature",
+    "role": "button",
+    "tag": "a",
+    "text": "查阅文档卷宗"
+  },
+  {
+    "key": "literature_label_01",
+    "section": "literature",
+    "role": "label",
+    "tag": "div",
+    "text": "色彩理论篇"
+  },
+  {
+    "key": "literature_title_02",
+    "section": "literature",
+    "role": "title",
+    "tag": "div",
+    "text": "探讨如何利用高饱和度对比色制造梦境感。"
+  },
+  {
+    "key": "literature_label_02",
+    "section": "literature",
+    "role": "label",
+    "tag": "div",
+    "text": "CSS物理引擎"
+  },
+  {
+    "key": "literature_title_03",
+    "section": "literature",
+    "role": "title",
+    "tag": "div",
+    "text": "在网页中重现抛物线、风阻与击球瞬间的顿挫感。"
+  },
+  {
+    "key": "cta_title_01",
+    "section": "cta",
+    "role": "title",
+    "tag": "h2",
+    "text": "Game. Set. Match."
+  },
+  {
+    "key": "cta_title_02",
+    "section": "cta",
+    "role": "title",
+    "tag": "p",
+    "text": "赛点已至。加入我们，在无尽蓝天中挥出你的制胜一击。"
+  },
+  {
+    "key": "cta_button_01",
+    "section": "cta",
+    "role": "button",
+    "tag": "a",
+    "text": "开启云端构建"
+  },
+  {
+    "key": "footer_text_01",
+    "section": "footer",
+    "role": "text",
+    "tag": "div",
+    "text": "&copy; 2026 L'éternité Studio."
+  },
+  {
+    "key": "footer_button_01",
+    "section": "footer",
+    "role": "button",
+    "tag": "a",
+    "text": "Twitter (X)"
+  },
+  {
+    "key": "footer_button_02",
+    "section": "footer",
+    "role": "button",
+    "tag": "a",
+    "text": "Instagram"
+  },
+  {
+    "key": "footer_button_03",
+    "section": "footer",
+    "role": "button",
+    "tag": "a",
+    "text": "GitHub"
+  },
+  {
+    "key": "footer_button_04",
+    "section": "footer",
+    "role": "button",
+    "tag": "a",
+    "text": "Dribbble"
+  },
+  {
+    "key": "footer_title_01",
+    "section": "footer",
+    "role": "title",
+    "tag": "div",
+    "text": "Design with Softness."
+  }
+]

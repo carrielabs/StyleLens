@@ -2,24 +2,27 @@
  * @vitest-environment node
  */
 
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
 import { analyzeHeroVisualSignals } from '@/lib/api/heroVisualAnalyzer'
 import { buildSemanticColorSystem } from '@/lib/api/pageAnalyzer'
+
+const FIXTURE_DIR = path.join(process.cwd(), 'test', 'fixtures', 'visual')
+const NOTION_FIXTURE = path.join(FIXTURE_DIR, 'notion.com .jpeg')
+const REAL_PAGE_FIXTURES = [
+  NOTION_FIXTURE,
+  path.join(FIXTURE_DIR, 'linear-app.png'),
+  path.join(FIXTURE_DIR, 'supabase.png'),
+]
 
 function getBrightness(hex: string) {
   const r = Number.parseInt(hex.slice(1, 3), 16)
   const g = Number.parseInt(hex.slice(3, 5), 16)
   const b = Number.parseInt(hex.slice(5, 7), 16)
   return (r + g + b) / 3
-}
-
-function getChroma(hex: string) {
-  const r = Number.parseInt(hex.slice(1, 3), 16)
-  const g = Number.parseInt(hex.slice(3, 5), 16)
-  const b = Number.parseInt(hex.slice(5, 7), 16)
-  return Math.max(r, g, b) - Math.min(r, g, b)
 }
 
 describe('heroVisualAnalyzer', () => {
@@ -94,9 +97,8 @@ describe('heroVisualAnalyzer', () => {
     expect(contentHexes.length).toBeGreaterThan(0)
   })
 
-  it('extracts a dark hero and non-white action cues from the real Notion screenshot fixture', async () => {
-    const fixturePath = '/Users/shaobaolu/Desktop/网球网站/StyleLens/notion.com .jpeg'
-    const imageBuffer = await readFile(fixturePath)
+  it.skipIf(!existsSync(NOTION_FIXTURE))('extracts a dark hero and non-white action cues from the real Notion screenshot fixture', async () => {
+    const imageBuffer = await readFile(NOTION_FIXTURE)
     const candidates = await analyzeHeroVisualSignals(imageBuffer)
     const semantic = buildSemanticColorSystem(candidates)
 
@@ -120,14 +122,8 @@ describe('heroVisualAnalyzer', () => {
     }
   })
 
-  it('profiles the three real landing page fixtures for manual review', async () => {
-    const fixtures = [
-      '/Users/shaobaolu/Desktop/网球网站/StyleLens/notion.com .jpeg',
-      '/Users/shaobaolu/Desktop/网球网站/StyleLens/linear-app.png',
-      '/Users/shaobaolu/Desktop/网球网站/StyleLens/supabase.png',
-    ]
-
-    for (const fixturePath of fixtures) {
+  it.skipIf(REAL_PAGE_FIXTURES.some(fixturePath => !existsSync(fixturePath)))('profiles the three real landing page fixtures for manual review', async () => {
+    for (const fixturePath of REAL_PAGE_FIXTURES) {
       const imageBuffer = await readFile(fixturePath)
       const candidates = await analyzeHeroVisualSignals(imageBuffer)
       const semantic = buildSemanticColorSystem(candidates)

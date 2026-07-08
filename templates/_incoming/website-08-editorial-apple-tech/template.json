@@ -1,0 +1,163 @@
+{
+  "id": "website-08-editorial-apple-tech",
+  "name": "Editorial Apple-Tech 殿堂级科技官网模板",
+  "templateName": "EditorialAppleTechTemplate",
+  "version": "1.0.0",
+  "sourceConfigId": "tpl-editorial-ultra-premium-03",
+  "description": "融合 Apple-Like 极简科技美学、macOS 沙盒视窗、直角技术拓扑、暖灰纸白背景和宋体标题体系的高端官网模板，适合 SaaS、开发者工具、AI 工作流、企业级协作系统和技术平台产品。",
+  "pageTypes": [
+    "product-website",
+    "landing-page",
+    "saas-website",
+    "developer-tool-website",
+    "product-landing",
+    "saas-landing",
+    "developer-tool-landing"
+  ],
+  "styleTags": [
+    "editorial-apple-tech",
+    "apple-like",
+    "macos-sandbox",
+    "engineering-blueprint",
+    "serif-headline",
+    "dot-matrix",
+    "premium-tech"
+  ],
+  "theme": {
+    "colors": {
+      "skyStart": "#8DA4C2",
+      "skyEnd": "#BDCDDF",
+      "paperBg": "#F4F5F3",
+      "textPrimary": "#1E2530",
+      "textSecondary": "#5C6A7E",
+      "accentGold": "#FFE895",
+      "accentCoral": "#D16B54"
+    },
+    "fonts": {
+      "serif": "Noto Serif SC, Songti SC, STSong, SimSun, Georgia, serif",
+      "mono": "Courier New, ui-monospace, SFMono-Regular, monospace",
+      "body": "-apple-system, BlinkMacSystemFont, PingFang SC, Microsoft YaHei, Arial, sans-serif"
+    }
+  },
+  "editorTheme": {
+    "defaultColor": "#8da4c2",
+    "presets": ["#8da4c2", "#ffffff", "#1e2530", "#7c3aed", "#38bdf8", "#22c55e"],
+    "targets": {
+      "cssVariables": {
+        "--color-sky-start": "color",
+        "--color-sky-mid": "soft",
+        "--color-sky-end": "softer"
+      },
+      "colorSelectors": [
+        ".section-index",
+        ".text-sky"
+      ],
+      "backgroundSelectors": [
+        ".hero-section"
+      ],
+      "borderSelectors": [
+        ".btn-outline:hover"
+      ]
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "showHideSections": true,
+    "tabInteraction": true,
+    "canvasInteraction": true,
+    "exportHtml": true,
+    "colors": true,
+    "layout": true
+  },
+  "supportedSections": {
+    "header": {
+      "name": "顶部导航",
+      "required": true,
+      "hideable": false,
+      "elementCount": 8
+    },
+    "hero": {
+      "name": "首屏艺术主视觉",
+      "required": true,
+      "hideable": false,
+      "elementCount": 4
+    },
+    "problem": {
+      "name": "用户痛点",
+      "required": false,
+      "hideable": true,
+      "elementCount": 2
+    },
+    "solution": {
+      "name": "流转方案",
+      "required": false,
+      "hideable": true,
+      "elementCount": 9
+    },
+    "business-flow": {
+      "name": "业务技术拓扑",
+      "required": false,
+      "hideable": true,
+      "elementCount": 2
+    },
+    "features": {
+      "name": "核心功能",
+      "required": false,
+      "hideable": true,
+      "elementCount": 4
+    },
+    "product-visuals": {
+      "name": "产品界面展示",
+      "required": false,
+      "hideable": true,
+      "elementCount": 2
+    },
+    "target-users": {
+      "name": "目标用户",
+      "required": false,
+      "hideable": true,
+      "elementCount": 7
+    },
+    "use-cases": {
+      "name": "应用场景",
+      "required": false,
+      "hideable": true,
+      "elementCount": 7
+    },
+    "workflow": {
+      "name": "流转步骤",
+      "required": false,
+      "hideable": true,
+      "elementCount": 8
+    },
+    "metrics": {
+      "name": "关键指标",
+      "required": false,
+      "hideable": true,
+      "elementCount": 8
+    },
+    "pricing": {
+      "name": "价格方案",
+      "required": false,
+      "hideable": true,
+      "elementCount": 13
+    },
+    "footer": {
+      "name": "极简页脚",
+      "required": true,
+      "hideable": false,
+      "elementCount": 6
+    }
+  },
+  "optionalSections": [
+    "pricing",
+    "metrics"
+  ],
+  "slotRules": {
+    "slotCount": 80,
+    "fallback": "缺少内容时保留模板默认文案，不写占位符；外部链接由人工后续编辑，不写假链接。",
+    "richTextAllowed": [
+      "text.hero.title"
+    ]
+  }
+}
