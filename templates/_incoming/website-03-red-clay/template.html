@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RED CLAY - 顶级红土网球俱乐部</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chivo:ital,wght@0,900;1,900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* --- 极致的色彩约束 --- */
+        :root {
+            --c-clay: #B73E23;    /* 深邃红土底色 */
+            --c-chalk: #FDF9F1;   /* 温润暖质感的粉笔白 */
+            --c-neon: #D9EB26;    /* 荧光网球黄 */
+            --c-net: #1C1514;     /* 炭黑，用于球网与重色点缀 */
+
+            --font-mega: 'Chivo', 'Arial Black', Impact, sans-serif;
+            --font-body: 'Noto Sans SC', sans-serif;
+        }
+
+        /* 隐藏默认鼠标，全局平滑滚动 */
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none !important; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            background-color: var(--c-clay);
+            color: var(--c-chalk);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* --- 交互特效：真实网球光标 --- */
+        #tennis-cursor {
+            position: fixed; top: 0; left: 0;
+            width: 16px; height: 16px;
+            background-color: var(--c-neon);
+            border-radius: 50%;
+            pointer-events: none; z-index: 999999;
+            transform: translate(-50%, -50%) scale(1);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 10px rgba(217, 235, 38, 0.4);
+        }
+        #tennis-cursor.hover-state {
+            transform: translate(-50%, -50%) scale(2.5);
+            box-shadow: 0 0 15px rgba(217, 235, 38, 0.6);
+        }
+
+        /* --- 覆盖全屏的沙土颗粒质感 (混合模式魔力) --- */
+        .global-sand-texture {
+            position: fixed; inset: 0; pointer-events: none; z-index: 9998;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="1"/></svg>');
+            mix-blend-mode: overlay; opacity: 0.6;
+        }
+        .global-sand-dark {
+            position: fixed; inset: 0; pointer-events: none; z-index: 9997;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="1"/></svg>');
+            mix-blend-mode: multiply; opacity: 0.15;
+        }
+
+        /* --- 使矢量线条和边框产生粉笔手刷感的 SVG 滤镜类 --- */
+        .chalk-effect { filter: url(#chalk-filter); }
+
+        /* ==========================================
+           0. 全局导航 (Header)
+           ========================================== */
+        .main-header {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            padding: 20px 4vw;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 9990; /* 略低于沙粒覆盖层，保持物理一体性 */
+            background: rgba(183, 62, 35, 0.85); 
+            backdrop-filter: blur(8px);
+            border-bottom: 2px solid rgba(253, 249, 241, 0.2);
+        }
+        .header-logo {
+            font-family: var(--font-mega);
+            font-size: 1.5rem;
+            color: var(--c-chalk);
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+        .header-nav {
+            display: flex;
+            gap: 30px;
+        }
+        .nav-link {
+            font-family: var(--font-body);
+            font-weight: 700;
+            color: var(--c-chalk);
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 1rem;
+            position: relative;
+            padding: 4px 0;
+        }
+        /* 导航 Hover 时出现的动态手刷感粉笔下划线 */
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            left: 0; bottom: -2px;
+            width: 100%; height: 3px;
+            background-color: var(--c-neon);
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            filter: url(#chalk-filter); 
+        }
+        .nav-link:hover::after {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+
+        /* --- 页面架构：球场容器 --- */
+        .court-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            padding: 80px 4vw 0; /* 避开顶部 Header */
+        }
+
+        /* 左右双打边线（Tramlines） */
+        .court-tramline {
+            position: absolute; top: 0; bottom: 0; width: 8px; background-color: var(--c-chalk); z-index: 0;
+        }
+        .court-tramline.left { left: 4vw; }
+        .court-tramline.right { right: 4vw; }
+
+        /* 发球标线与中线 */
+        .court-hline { width: 100%; height: 8px; background-color: var(--c-chalk); margin: 0; position: relative; z-index: 1; }
+        .court-vline-center { position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 8px; background-color: var(--c-chalk); z-index: 1; }
+
+        .section-container { position: relative; z-index: 10; padding: 80px 4vw; }
+
+        /* 通用粉笔海报手抄排版标签 */
+        .poster-tag { font-family: var(--font-mega); line-height: 1; transform: rotate(-4deg); display: inline-block; margin-bottom: 20px; }
+        .poster-tag .num { color: var(--c-neon); font-size: 1.25rem; display: block; }
+        .poster-tag .name { color: var(--c-chalk); font-family: var(--font-body); font-weight: 900; font-size: 1.5rem; text-transform: uppercase; }
+
+        .heading-md { font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 900; margin-bottom: 24px; line-height: 1.2; font-family: var(--font-mega); text-transform: uppercase;}
+        .heading-sm { font-size: 1.75rem; font-weight: 900; margin-bottom: 16px; }
+        p { font-size: 1.2rem; line-height: 1.8; opacity: 0.9; font-weight: 700; }
+
+        .service-boxes { display: flex; position: relative; }
+        .service-box { flex: 1; padding: 60px 4vw; position: relative; }
+
+        /* ==========================================
+           1. 现状痛点 (Pain Points) 
+           粉笔划线擦除特效 (Strikethrough)
+           ========================================== */
+        .pain-point-list { list-style: none; margin-top: 30px; }
+        .pain-point-item {
+            font-size: 1.5rem; font-weight: 900; margin-bottom: 30px;
+            position: relative; display: inline-block; color: rgba(253, 249, 241, 0.7);
+        }
+        /* 利用带滤镜的横线代表纠错和划掉旧错误 */
+        .pain-point-item::after {
+            content: ''; position: absolute;
+            top: 50%; left: -5%; width: 110%; height: 6px;
+            background-color: var(--c-neon);
+            transform: translateY(-50%) rotate(-2deg);
+        }
+        .pain-point-desc { font-size: 1rem; color: var(--c-chalk); display: block; margin-top: 8px; font-weight: 400; }
+
+        /* 手绘质感球网 (The Net) */
+        .the-net-wrapper { position: relative; width: 110%; left: -5%; height: 70px; z-index: 20; display: flex; flex-direction: column; }
+        .net-top-tape { height: 12px; background-color: var(--c-chalk); width: 100%; }
+        .net-mesh-area { flex: 1; width: 100%; background-image: repeating-linear-gradient(90deg, var(--c-net) 0px, var(--c-net) 3px, transparent 3px, transparent 10px), repeating-linear-gradient(0deg, var(--c-net) 0px, var(--c-net) 3px, transparent 3px, transparent 10px); border-bottom: 4px solid var(--c-net); position: relative; }
+        .net-diamond { position: absolute; top: 50%; transform: translateY(-50%) rotate(45deg); width: 24px; height: 24px; border: 4px solid var(--c-chalk); background-color: transparent; }
+        .net-diamond::after { content: ""; position: absolute; top: 2px; bottom: 2px; left: 2px; right: 2px; border: 3px solid var(--c-chalk); }
+        .net-diamond.left { left: 4%; }
+        .net-diamond.right { right: 4%; }
+
+        /* ==========================================
+           2. 核心方案 (Solutions)
+           手绘椭圆粉笔圈标记 (Chalk Circles)
+           ========================================== */
+        .solutions-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 40px;
+        }
+        .chalk-circle-card {
+            padding: 50px 30px;
+            text-align: center;
+            border: 4px solid var(--c-chalk);
+            border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; /* 模拟手画圈 */
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .chalk-circle-card:hover {
+            transform: scale(1.05) rotate(3deg);
+            background-color: rgba(253, 249, 241, 0.05);
+        }
+
+        /* 3. 精英训练卡片 (The Academy) */
+        .academy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
+        .interactive-card { border: 4px solid var(--c-chalk); padding: 40px 30px; position: relative; transition: transform 0.3s, background-color 0.3s; overflow: hidden; z-index: 1; }
+        .interactive-card h3, .interactive-card p { position: relative; z-index: 2; }
+        .interactive-card h3 { font-family: var(--font-mega); color: var(--c-neon); font-size: 2.25rem; margin-bottom: 15px; text-transform: uppercase; }
+        
+        /* 击球动能微交互：完全穿透文字图层的实心球，不卡顿 */
+        .smash-ball { 
+            position: absolute; width: 28px; height: 28px; 
+            background-color: var(--c-neon); border-radius: 50%; 
+            top: 50%; left: -50px; opacity: 0; pointer-events: none; 
+            z-index: 10; box-shadow: 0 0 15px rgba(217, 235, 38, 0.6); 
+        }
+        .interactive-card:hover { transform: scale(1.03) rotate(-1deg); background-color: rgba(253, 249, 241, 0.03); }
+        .interactive-card:hover .smash-ball { animation: smash-fly 0.75s ease-in-out forwards; }
+        @keyframes smash-fly { 
+            0% { left: -50px; opacity: 1; transform: translateY(-50%) scaleX(1.5); } 
+            100% { left: 120%; opacity: 0; transform: translateY(-50%) scaleX(1); } 
+        }
+
+        /* ==========================================
+           4. 业务逻辑 (Workflow)
+           战术推演虚线连结 (Tactical Path)
+           ========================================== */
+        .workflow-container {
+            display: flex; justify-content: space-between; position: relative; margin-top: 80px; padding: 0 20px;
+        }
+        /* 连结各个步骤的战术虚线 */
+        .tactical-line {
+            position: absolute; top: 40px; left: 10%; width: 80%;
+            height: 4px;
+            background-image: repeating-linear-gradient(90deg, var(--c-chalk) 0, var(--c-chalk) 15px, transparent 15px, transparent 30px);
+            z-index: 0;
+        }
+        .workflow-step {
+            width: 30%; position: relative; z-index: 1; background-color: var(--c-clay); padding-top: 20px;
+        }
+        .step-num {
+            width: 80px; height: 80px; background-color: var(--c-neon); color: var(--c-clay);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-mega); font-size: 2.5rem; margin-bottom: 20px;
+            border: 4px solid var(--c-chalk);
+            transform: rotate(-5deg);
+        }
+
+        /* 随性、不规则边缘手绘风格按钮 */
+        .btn-chalk { 
+            display: inline-block; margin-top: 40px; padding: 16px 40px; 
+            font-family: var(--font-mega); font-size: 1.5rem; color: var(--c-chalk); 
+            background-color: transparent; border-radius: 255px 15px 225px 15px/15px 225px 15px 255px; 
+            border: 4px solid var(--c-chalk); text-decoration: none; text-transform: uppercase; 
+            transition: transform 0.2s; 
+        }
+        .btn-chalk:hover { transform: scale(1.05) rotate(-2deg); }
+        .btn-chalk:active { transform: scale(0.9) skewX(-15deg); transition: transform 0.05s; }
+
+        /* ==========================================
+           5. 巨型社媒页脚 (Expanded Footer)
+           ========================================== */
+        .footer-expanded {
+            padding: 80px 4vw 40px; border-top: 8px solid var(--c-chalk); position: relative; z-index: 10;
+            display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px;
+        }
+        .footer-brand { font-family: var(--font-mega); font-size: 3rem; line-height: 1; margin-bottom: 20px; }
+        .footer-col h4 { color: var(--c-neon); font-size: 1.25rem; margin-bottom: 20px; text-transform: uppercase; font-family: var(--font-mega); }
+        .footer-link { display: block; color: var(--c-chalk); text-decoration: none; font-size: 1.1rem; margin-bottom: 12px; font-weight: 700; transition: color 0.2s;}
+        .footer-link:hover { color: var(--c-neon); }
+        
+        /* 手绘虚线二维码框架 */
+        .qr-placeholder {
+            width: 120px; height: 120px;
+            border: 3px dashed var(--c-chalk);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: bold; text-align: center;
+            transform: rotate(2deg); margin-top: 10px;
+        }
+
+        /* 极佳的响应式网格降级 */
+        @media (max-width: 900px) {
+            .header-nav { display: none; }
+            .service-boxes, .solutions-grid, .workflow-container { flex-direction: column; grid-template-columns: 1fr; }
+            .court-vline-center, .tactical-line { display: none; }
+            .the-net-wrapper { width: 100%; left: 0; }
+            .court-tramline.left { left: 2vw; } .court-tramline.right { right: 2vw; }
+            .academy-grid { grid-template-columns: 1fr; }
+            .workflow-step { width: 100%; margin-bottom: 40px; }
+            .footer-expanded { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 真实物理质感的网球交互光标 -->
+    <div id="tennis-cursor"></div>
+
+    <!-- 隐藏的 SVG 滤镜：驱动全站的粉笔微位移扰动效果 -->
+    <svg style="width:0; height:0; position:absolute;" aria-hidden="true">
+        <filter id="chalk-filter">
+            <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+    </svg>
+
+    <!-- 全局双重沙砾噪点物理表面 -->
+    <div class="global-sand-texture"></div>
+    <div class="global-sand-dark"></div>
+
+    <!-- ==========================================
+         全局导航栏
+         ========================================== -->
+    <nav class="main-header interact-elem">
+        <a href="#" class="header-logo interact-elem" data-editable="true" data-key="header_logo">RED CLAY TENNIS CLUB</a>
+        <div class="header-nav">
+            <a href="#problem" class="nav-link interact-elem" data-editable="true" data-key="header_nav_problem">现状痛点</a>
+            <a href="#solutions" class="nav-link interact-elem" data-editable="true" data-key="header_nav_solutions">核心方案</a>
+            <a href="#academy" class="nav-link interact-elem" data-editable="true" data-key="header_nav_academy">精英集训</a>
+            <a href="#facilities" class="nav-link interact-elem" data-editable="true" data-key="header_nav_facilities">场地设施</a>
+            <a href="#workflow" class="nav-link interact-elem" data-editable="true" data-key="header_nav_workflow">加入流程</a>
+        </div>
+    </nav>
+
+    <!-- 网球主球场容器 -->
+    <div class="court-wrapper">
+        <div class="court-tramline left chalk-effect"></div>
+        <div class="court-tramline right chalk-effect"></div>
+
+        <!-- 1. 首屏海报模块 (Hero) -->
+        <section class="section-container" style="padding-top: 60px; padding-bottom: 60px;" id="hero" data-section="hero">
+            <div class="poster-tag" style="position: absolute; right: 4vw; top: 40px;">
+                <span class="num" data-editable="true" data-key="hero_tag_num">#01</span>
+                <span class="name" data-editable="true" data-key="hero_tag_name">@ROLAND_GARROS</span>
+            </div>
+            <div class="hero-sub" data-editable="true" data-key="hero_title_sub_1">SOMETIMES YOU</div>
+            <div class="hero-main" data-editable="true" data-key="hero_title_main_1">INNOVATE</div>
+            <div class="hero-sub" style="justify-content: flex-end;" data-editable="true" data-key="hero_title_sub_2">
+                <span class="tennis-ball" style="width: clamp(24px, 5vw, 40px); height: clamp(24px, 5vw, 40px); display: inline-block;"></span> SOMETIMES YOU
+            </div>
+            <div class="hero-main" style="text-align: right; margin-bottom: 0;" data-editable="true" data-key="hero_title_main_2">DISRUPT</div>
+        </section>
+
+        <!-- 双打线 -->
+        <div class="court-hline chalk-effect"></div>
+
+        <!-- 2. 金句态度宣言 (Statement) -->
+        <section class="section-container" style="text-align: center; padding: 100px 8vw;" data-section="statement">
+            <h2 style="font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900; line-height: 1.2;" data-editable="true" data-key="statement_text">
+                属于勇敢者的红土主场。<br>
+                挥拍，感受每一次心跳。
+            </h2>
+        </section>
+
+        <div class="court-hline chalk-effect"></div>
+
+        <!-- 3. 现状痛点模块 (Pain Points) -->
+        <section class="section-container" id="problem" style="padding-bottom: 120px;" data-section="problem">
+            <div class="poster-tag">
+                <span class="num" data-editable="true" data-key="problem_tag_num">#02</span>
+                <span class="name" data-editable="true" data-key="problem_tag_name">@THE_WALL</span>
+            </div>
+            <h2 class="heading-md" data-editable="true" data-key="problem_title">业余选手的叹息之墙</h2>
+            <p style="max-width: 600px;" data-editable="true" data-key="problem_subtitle">我们懂你卡在 3.0/4.0 瓶颈期的沮丧。盲目挥拍带来的只有伤病，而不是涨球。</p>
+            
+            <ul class="pain-point-list">
+                <li>
+                    <span class="pain-point-item chalk-effect interact-elem" data-editable="true" data-key="problem_item_1_title">发力结构错误导致手腕与手肘反复劳损。</span>
+                    <span class="pain-point-desc" data-editable="true" data-key="problem_item_1_desc">—— 你需要生物力学的精准纠错。</span>
+                </li>
+                <li>
+                    <span class="pain-point-item chalk-effect interact-elem" data-editable="true" data-key="problem_item_2_title">训练缺乏系统，实战中战术意识一片空白。</span>
+                    <span class="pain-point-desc" data-editable="true" data-key="problem_item_2_desc">—— 喂球机器教不出比赛的大局观。</span>
+                </li>
+                <li>
+                    <span class="pain-point-item chalk-effect interact-elem" data-editable="true" data-key="problem_item_3_title">糟糕的硬地让你的膝盖不堪重负，不敢极限救球。</span>
+                    <span class="pain-point-desc" data-editable="true" data-key="problem_item_3_desc">——你需要真正能保护关节的顶级红土。</span>
+                </li>
+            </ul>
+        </section>
+
+        <!-- 4. 标志性手作球网 (The Net) -->
+        <div class="the-net-wrapper chalk-effect" data-section="divider">
+            <div class="net-top-tape"></div>
+            <div class="net-mesh-area">
+                <div class="net-diamond left"></div>
+                <div class="net-diamond right"></div>
+            </div>
+        </div>
+
+        <!-- 5. 核心解决方案 (Solutions) -->
+        <section class="section-container" id="solutions" style="padding-top: 100px; padding-bottom: 100px;" data-section="solutions">
+            <div class="poster-tag" style="text-align: right; display: block;">
+                <span class="num" data-editable="true" data-key="solutions_tag_num">#03</span>
+                <span class="name" data-editable="true" data-key="solutions_tag_name">@THE_WEAPON</span>
+            </div>
+            <h2 class="heading-md" style="text-align: right;" data-editable="true" data-key="solutions_title">职业级降维打击体系</h2>
+            
+            <div class="solutions-grid">
+                <div class="chalk-circle-card chalk-effect interact-elem">
+                    <h3 style="font-family: var(--font-mega); font-size: 2rem; color: var(--c-neon); margin-bottom: 15px;" data-editable="true" data-key="solutions_item_1_title">A. 科技解析</h3>
+                    <p data-editable="true" data-key="solutions_item_1_desc">引入鹰眼与穿戴设备，1:1 重构你的击球 3D 模型，从关节发力点彻底粉碎错误动作。</p>
+                </div>
+                <div class="chalk-circle-card chalk-effect interact-elem">
+                    <h3 style="font-family: var(--font-mega); font-size: 2rem; color: var(--c-neon); margin-bottom: 15px;" data-editable="true" data-key="solutions_item_2_title">B. 战术沙盘</h3>
+                    <p data-editable="true" data-key="solutions_item_2_desc">前 ATP 职业球员手把手复盘。教你如何预判线路、构建优势，而不是只会在底线死磕。</p>
+                </div>
+                <div class="chalk-circle-card chalk-effect interact-elem">
+                    <h3 style="font-family: var(--font-mega); font-size: 2rem; color: var(--c-neon); margin-bottom: 15px;" data-editable="true" data-key="solutions_item_3_title">C. 大师红土</h3>
+                    <p data-editable="true" data-key="solutions_item_3_desc">在完美的红土上，学习德约科维奇式的极限滑步防守。让红土吸收冲击，解放你的双腿。</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="court-hline chalk-effect"></div>
+
+        <!-- 6. 精英训练课程 (The Academy) -->
+        <section class="section-container" id="academy" style="padding-top: 100px; padding-bottom: 100px;" data-section="academy">
+            <div class="poster-tag">
+                <span class="num" data-editable="true" data-key="academy_tag_num">#04</span>
+                <span class="name" data-editable="true" data-key="academy_tag_name">@THE_ACADEMY</span>
+            </div>
+            <h2 class="heading-md" data-editable="true" data-key="academy_title">精英集训阵容</h2>
+            <div class="academy-grid">
+                <div class="interactive-card chalk-effect interact-elem">
+                    <div class="smash-ball"></div>
+                    <h3 data-editable="true" data-key="academy_item_1_title">红土猛兽营</h3>
+                    <p data-editable="true" data-key="academy_item_1_desc">专注底线相持与极度上旋球训练。学习撕碎对手防线，掌握正手暴击奥义。</p>
+                </div>
+                <div class="interactive-card chalk-effect interact-elem">
+                    <div class="smash-ball"></div> 
+                    <h3 data-editable="true" data-key="academy_item_2_title">发球上网突击</h3>
+                    <p data-editable="true" data-key="academy_item_2_desc">强化一发极速与切削发球，配合精准网前截击，三拍内终结悬念。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 场地标线 -->
+        <div class="court-hline chalk-effect"></div>
+
+        <!-- 7. 顶级场地设施 (Facilities) -->
+        <div class="service-boxes" id="facilities" data-section="facilities">
+            <div class="court-vline-center chalk-effect"></div>
+            
+            <div class="service-box">
+                <div class="poster-tag">
+                    <span class="num" data-editable="true" data-key="facilities_tag_num">#05</span>
+                    <span class="name" data-editable="true" data-key="facilities_tag_name">@FACILITIES</span>
+                </div>
+                <h2 class="heading-md" data-editable="true" data-key="facilities_title">大师级训练主场</h2>
+                <p data-editable="true" data-key="facilities_desc">符合大满贯标准的综合训练中心，满足全天候高强度训练到赛后极速恢复的一切苛刻需求。</p>
+            </div>
+            
+            <div class="service-box" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div style="border-top: 4px solid var(--c-chalk); padding-top: 20px;" class="chalk-effect">
+                    <h3 class="heading-sm" style="color: var(--c-neon); font-size: 1.25rem;" data-editable="true" data-key="facilities_item_1_title">法网同款红土</h3>
+                    <p style="font-size: 1rem;" data-editable="true" data-key="facilities_item_1_desc">采用巴黎进口原装碎砖粉，完美滑步反馈。</p>
+                </div>
+                <div style="border-top: 4px solid var(--c-chalk); padding-top: 20px;" class="chalk-effect">
+                    <h3 class="heading-sm" style="color: var(--c-neon); font-size: 1.25rem;" data-editable="true" data-key="facilities_item_2_title">全天候室内馆</h3>
+                    <p style="font-size: 1rem;" data-editable="true" data-key="facilities_item_2_desc">恒温系统加持，确保冬季训练计划不中断。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="court-hline chalk-effect"></div>
+
+        <!-- 8. 大满贯进阶流程 (Workflow) -->
+        <section class="section-container" id="workflow" style="padding-top: 100px; padding-bottom: 100px;" data-section="workflow">
+            <div class="poster-tag">
+                <span class="num" data-editable="true" data-key="workflow_tag_num">#06</span>
+                <span class="name" data-editable="true" data-key="workflow_tag_name">@WORKFLOW</span>
+            </div>
+            <h2 class="heading-md" data-editable="true" data-key="workflow_title">大满贯进阶之路</h2>
+            
+            <div class="workflow-container">
+                <div class="tactical-line chalk-effect"></div>
+                
+                <div class="workflow-step">
+                    <div class="step-num chalk-effect interact-elem" data-editable="true" data-key="workflow_step_1_num">01</div>
+                    <h3 class="heading-sm" style="color: var(--c-neon);" data-editable="true" data-key="workflow_step_1_title">全方位动态定级</h3>
+                    <p data-editable="true" data-key="workflow_step_1_desc">进入俱乐部第一天，完成 15 项核心指标体能测试与 3 局实战对抗，锁定真实短板。</p>
+                </div>
+                <div class="workflow-step">
+                    <div class="step-num chalk-effect interact-elem" data-editable="true" data-key="workflow_step_2_num">02</div>
+                    <h3 class="heading-sm" style="color: var(--c-neon);" data-editable="true" data-key="workflow_step_2_title">6周微型战术周期</h3>
+                    <p data-editable="true" data-key="workflow_step_2_desc">拒绝漫无目的的打球。为你制定为期 6 周的特训课表，每周攻克一个单一技术顽疾。</p>
+                </div>
+                <div class="workflow-step">
+                    <div class="step-num chalk-effect interact-elem" data-editable="true" data-key="workflow_step_3_num">03</div>
+                    <h3 class="heading-sm" style="color: var(--c-neon);" data-editable="true" data-key="workflow_step_3_title">月度天梯排位赛</h3>
+                    <p data-editable="true" data-key="workflow_step_3_desc">所有的训练必须经过实战检验。参与内部 ATP 赛制的排位赛，打败对手，赢取专属更衣柜。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 底部发球区底线 -->
+        <div class="court-hline chalk-effect"></div>
+
+        <!-- 9. 行动呼吁 (CTA) -->
+        <section class="section-container" style="text-align: center; padding: 120px 4vw;" data-section="cta">
+            <div class="poster-tag" style="margin-bottom: 40px;">
+                <span class="num" data-editable="true" data-key="cta_tag_num">#99</span>
+                <span class="name" data-editable="true" data-key="cta_tag_name">@MATCH_POINT</span>
+            </div>
+            <h2 style="font-size: clamp(3rem, 10vw, 7rem); font-family: var(--font-mega); line-height: 0.9; margin-bottom: 20px; text-transform: uppercase;" data-editable="true" data-key="cta_title">
+                PLAY YOUR GAME
+            </h2>
+            <p style="max-width: 600px; margin: 0 auto;" data-editable="true" data-key="cta_desc">预定你的场地，加入这场纯粹的网球风暴。</p>
+            <a href="#footer" class="btn-chalk chalk-effect interact-elem" data-editable="true" data-key="cta_button">立即预约入场</a>
+        </section>
+
+        <!-- ==========================================
+           10. 巨型社媒页脚 (Expanded Footer)
+           ========================================== -->
+        <footer class="footer-expanded chalk-effect" id="footer" data-section="footer">
+            <div class="footer-col">
+                <div class="footer-brand" data-editable="true" data-key="footer_brand">RED CLAY<br>TENNIS CLUB</div>
+                <p style="font-weight: 400; opacity: 0.7; max-width: 300px; margin-bottom: 20px;" data-editable="true" data-key="footer_desc">
+                    位于城市边缘的 50,000 平米大师级网球绿洲。我们不提供消遣，我们只制造赢家。
+                </p>
+                <div style="font-weight: 900; opacity: 0.5;" data-editable="true" data-key="footer_copyright">© 2026 DRAWN WITH CHALK.</div>
+            </div>
+            
+            <div class="footer-col">
+                <h4 data-editable="true" data-key="footer_connect_title">CONNECT</h4>
+                <a href="#" class="footer-link interact-elem" data-editable="true" data-key="footer_link_xhs">小红书 (XHS) @RedClay_Tennis</a>
+                <a href="#" class="footer-link interact-elem" data-editable="true" data-key="footer_link_wechat">微信公众号 @RedClayClub</a>
+                <a href="mailto:hello@redclay.com" class="footer-link interact-elem" data-editable="true" data-key="footer_link_email">hello@redclay.com</a>
+                <p style="margin-top: 15px; font-weight: 400; opacity: 0.7; font-size: 1rem;" data-editable="true" data-key="footer_phone">TEL: 400-888-0000</p>
+            </div>
+
+            <div class="footer-col">
+                <h4 data-editable="true" data-key="footer_wechat_pro_title">WECHAT PRO</h4>
+                <p style="font-size: 0.9rem; font-weight: 400;" data-editable="true" data-key="footer_wechat_pro_desc">扫码进入官方小程序预定场地与课程。</p>
+                <div class="qr-placeholder chalk-effect interact-elem" data-editable="true" data-key="footer_qr_placeholder">
+                    SCAN TO<br>BOOK
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- 原生 JS：驱动网球光标追踪与状态切换 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cursor = document.getElementById('tennis-cursor');
+            
+            // 追踪鼠标位置
+            document.addEventListener('mousemove', (e) => {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            });
+
+            // 获取所有可交互元素（导航、按钮、卡片、链接等）
+            const interactives = document.querySelectorAll('.interact-elem');
+            
+            // 悬停时添加放大特效
+            interactives.forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    cursor.classList.add('hover-state');
+                });
+                el.addEventListener('mouseleave', () => {
+                    cursor.classList.remove('hover-state');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+{
+  "id": "website-05-voltflow-cyber-saas",
+  "name": "VoltFlow 精益赛博 SaaS 官网模板",
+  "templateName": "VoltflowCyberSaasTemplate",
+  "version": "1.0.0",
+  "description": "面向内容自动化、开发者工具和数据监控 SaaS 的极暗赛博官网模板，包含交互预览、痛点诊断、技术能力矩阵、系统管线、ROI 计算器、客户证明、定价和 CTA。",
+  "pageTypes": [
+    "product-website",
+    "landing-page",
+    "saas-website",
+    "developer-tool-website"
+  ],
+  "styleTags": [
+    "lean-cyber-analytics",
+    "cyber-saas",
+    "dark",
+    "volt-green",
+    "developer-tool",
+    "high-density"
+  ],
+  "theme": {
+    "colors": {
+      "pageBg": "#070A08",
+      "gridLine": "#111813",
+      "cardBg": "#0D120F",
+      "cardBorder": "#18221B",
+      "accent": "#7CFF44",
+      "alertText": "#FF5D44",
+      "alertBg": "#1C1615",
+      "textPrimary": "#FFFFFF",
+      "textSecondary": "#889E8D",
+      "textMuted": "#3E5244"
+    },
+    "fonts": {
+      "body": "Inter, PingFang SC, Microsoft YaHei, sans-serif",
+      "mono": "JetBrains Mono, ui-monospace, SFMono-Regular, monospace"
+    }
+  },
+  "editorTheme": {
+    "defaultColor": "#7cff44",
+    "presets": ["#7cff44", "#ffffff", "#38bdf8", "#22c55e", "#d9eb26", "#f43f5e"],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-cyber-volt\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-cyber-volt\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-cyber-volt\"]"
+      ],
+      "shadowSelectors": [
+        "[class*=\"shadow-\"][class*=\"124,255,68\"]"
+      ],
+      "strokeSelectors": [
+        "[stroke=\"#7CFF44\"]",
+        "[stroke=\"#7cff44\"]"
+      ],
+      "stopColorSelectors": [
+        "[stop-color=\"#7CFF44\"]",
+        "[stop-color=\"#7cff44\"]"
+      ]
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "showHideSections": true,
+    "tabInteraction": true,
+    "calculatorInteraction": true,
+    "pricingToggle": true,
+    "exportHtml": true
+  },
+  "supportedSections": {
+    "header": {
+      "name": "顶部导航",
+      "required": true,
+      "hideable": false,
+      "elementCount": 7
+    },
+    "hero": {
+      "name": "首屏主视觉",
+      "required": true,
+      "hideable": false,
+      "elementCount": 10
+    },
+    "live-preview": {
+      "name": "交互演示核心区",
+      "required": false,
+      "hideable": true,
+      "elementCount": 7
+    },
+    "problem": {
+      "name": "痛点诊断区",
+      "required": false,
+      "hideable": true,
+      "elementCount": 7
+    },
+    "features": {
+      "name": "技术能力矩阵",
+      "required": false,
+      "hideable": true,
+      "elementCount": 13
+    },
+    "architecture": {
+      "name": "系统生命管线",
+      "required": false,
+      "hideable": true,
+      "elementCount": 14
+    },
+    "calculator": {
+      "name": "ROI 投资回报模拟器",
+      "required": false,
+      "hideable": true,
+      "elementCount": 6
+    },
+    "proof": {
+      "name": "客户见证与留存表现",
+      "required": false,
+      "hideable": true,
+      "elementCount": 7
+    },
+    "pricing": {
+      "name": "定价矩阵",
+      "required": false,
+      "hideable": true,
+      "elementCount": 25
+    },
+    "cta": {
+      "name": "终极行动召唤",
+      "required": true,
+      "hideable": false,
+      "elementCount": 3
+    },
+    "footer": {
+      "name": "页脚",
+      "required": true,
+      "hideable": false,
+      "elementCount": 18
+    }
+  },
+  "slotRules": {
+    "textLimit": {
+      "hero-title": 34,
+      "hero-desc": 120,
+      "problem-card-title": 16,
+      "problem-card-desc": 54,
+      "feature-title": 16,
+      "feature-card-desc": 64,
+      "step-title": 18,
+      "step-desc": 58,
+      "cta-title": 30,
+      "cta-desc": 90
+    },
+    "fallback": "缺少内容时保留模板默认文案，不写占位符。"
+  }
+}

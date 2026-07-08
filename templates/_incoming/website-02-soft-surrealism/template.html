@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云端对决 - 柔和超现实模板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'sky-blue': '#1d70b8',   /* 晴空蓝 */
+                        'cloud-pink': '#f19ebc', /* 梦境粉 */
+                        'court-green': '#189e53',/* 草地绿 */
+                        'ball-yellow': '#eafb47',/* 亮黄点缀 */
+                        'soft-white': '#f8f7f2', /* 宣纸白 */
+                    },
+                    fontFamily: {
+                        'sans': ['-apple-system', 'BlinkMacSystemFont', '"PingFang SC"', '"Helvetica Neue"', 'sans-serif'],
+                        'serif': ['"Songti SC"', '"Noto Serif SC"', '"STSong"', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 全局平滑与柔软背景 */
+        body {
+            background-color: #1d70b8;
+            color: #f8f7f2;
+            overflow-x: hidden;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+        }
+
+        /* 统一且柔和的噪点层 */
+        .soft-noise {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.15;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.5'/%3E%3C/svg%3E");
+            mix-blend-mode: overlay;
+        }
+
+        /* 柔和的云朵/色彩晕染 */
+        .cloud-blur {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.7;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* 运动残影/拉丝擦除特效 */
+        .motion-smudge {
+            position: relative;
+        }
+        .motion-smudge::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: -50%; width: 200%; height: 120%;
+            background: linear-gradient(90deg, transparent, rgba(241,158,188,0.4), rgba(24,158,83,0.4), transparent);
+            transform: translateY(-50%) scaleX(1.5);
+            filter: blur(15px);
+            z-index: -1;
+            border-radius: 100px;
+        }
+
+        /* 柔软的按钮交互 */
+        .btn-soft {
+            border-radius: 9999px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+        .btn-soft:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px currentColor;
+        }
+
+        ::-webkit-scrollbar { width: 0px; }
+    </style>
+</head>
+<body class="antialiased selection:bg-cloud-pink selection:text-sky-blue relative">
+
+    <div class="soft-noise"></div>
+
+    <!-- 背景色彩晕染 -->
+    <div class="cloud-blur bg-cloud-pink w-[600px] h-[300px] top-[-100px] left-[-100px]"></div>
+    <div class="cloud-blur bg-court-green w-[500px] h-[500px] bottom-[20%] right-[-100px] opacity-40"></div>
+
+    <!-- Header -->
+    <header data-section="header" class="w-full fixed top-0 z-50 transition-all duration-300 bg-gradient-to-b from-sky-blue/80 to-transparent pt-6 pb-12">
+        <div class="max-w-7xl mx-auto px-8 flex justify-between items-center">
+            <div data-editable="true" data-key="brand_name" class="text-xl tracking-[0.2em] font-light text-soft-white uppercase cursor-pointer">
+                L'éternité
+            </div>
+            <nav class="hidden md:flex gap-12 text-sm tracking-widest text-soft-white/80">
+                <a href="#philosophy" data-editable="true" data-key="nav_1" class="hover:text-cloud-pink transition-colors">哲学</a>
+                <a href="#gallery" data-editable="true" data-key="nav_2" class="hover:text-cloud-pink transition-colors">画廊</a>
+                <a href="#data" data-editable="true" data-key="nav_3" class="hover:text-cloud-pink transition-colors">回声</a>
+            </nav>
+            <div class="hidden md:block w-24"></div> 
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section data-section="hero" class="relative w-full min-h-screen flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 flex items-center justify-center z-0 opacity-40 pointer-events-none">
+             <!-- 极度模糊的背景光晕代替具象球场 -->
+             <div class="w-[800px] h-[300px] bg-court-green rounded-full filter blur-[100px] transform rotate-[-15deg]"></div>
+        </div>
+
+        <div class="relative z-10 max-w-5xl mx-auto px-8 text-center mt-20">
+            <h1 data-editable="true" data-key="hero_title" class="text-6xl md:text-8xl lg:text-[140px] leading-[0.9] tracking-tight font-serif font-light text-soft-white mb-8">
+                技术与艺术的<br>
+                <span class="motion-smudge text-transparent bg-clip-text bg-gradient-to-r from-soft-white via-cloud-pink to-soft-white">诗意结合</span>
+            </h1>
+            <p data-editable="true" data-key="hero_desc" class="text-xl md:text-2xl text-soft-white/80 max-w-2xl mx-auto font-light leading-relaxed tracking-wide mb-16">
+                摒弃坚硬的边界，在无垠蓝天与粉雾中寻找数字交互的艺术感。每一次点击，都如色彩般柔软而充满张力。
+            </p>
+            
+            <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+                <a href="#" data-editable="true" data-key="hero_btn_primary" class="btn-soft bg-cloud-pink text-soft-white hover:bg-cloud-pink/90 px-10 py-4 font-medium text-lg tracking-widest min-w-[200px]">
+                    进入梦境 (产品)
+                </a>
+                <a href="#" data-editable="true" data-key="hero_btn_secondary" class="btn-soft border border-soft-white/30 text-soft-white px-10 py-4 font-medium text-lg tracking-widest hover:bg-soft-white/10 min-w-[200px]">
+                    阅读文献 (Docs)
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Philosophy -->
+    <section id="philosophy" data-section="philosophy" class="relative w-full py-40 bg-gradient-to-b from-transparent to-court-green/90">
+        <div class="cloud-blur bg-cloud-pink w-[400px] h-[400px] top-0 right-0 opacity-50"></div>
+        <div class="max-w-4xl mx-auto px-8 text-center relative z-10">
+            <p data-editable="true" data-key="phil_tag" class="text-cloud-pink text-sm tracking-[0.3em] uppercase mb-8">Philosophy</p>
+            <h2 data-editable="true" data-key="phil_title" class="text-4xl md:text-6xl font-normal leading-tight mb-12 text-soft-white">
+                "不需要锋利的边角，<br>也能穿透空气。"
+            </h2>
+            <div class="w-px h-32 bg-gradient-to-b from-soft-white/50 to-transparent mx-auto mb-12"></div>
+            <p data-editable="true" data-key="phil_desc" class="text-lg text-soft-white/80 font-light leading-loose tracking-wide">
+                我们相信最好的产品体验就像一场精彩的梦境交互。不需要繁杂的装饰，只需要在柔软的色彩之间，精准、优雅地完成一次次互动。用模糊的边缘代替生硬的分割，让信息自由呼吸。
+            </p>
+        </div>
+    </section>
+
+    <!-- Features / Motion -->
+    <section data-section="features" class="w-full py-32 bg-court-green/90 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-8 grid grid-cols-1 md:grid-cols-2 gap-24 items-center relative z-10">
+            <div>
+                <h3 data-editable="true" data-key="feat_title" class="text-5xl md:text-7xl text-soft-white font-medium mb-8 tracking-tighter motion-smudge inline-block">
+                    动能拉丝
+                </h3>
+                <p data-editable="true" data-key="feat_desc" class="text-xl text-soft-white/90 font-light leading-loose">
+                    每一次数据的传输，都不应是枯燥的加载条。我们将运动中的“色彩残影”融入交互之中，让等待的过程变成一场视觉艺术展。
+                </p>
+            </div>
+            
+            <div class="relative h-[400px] w-full flex items-center justify-center opacity-90 pointer-events-none">
+                <div class="absolute w-[160%] h-[80px] bg-cloud-pink rounded-[100%] filter blur-[50px] opacity-70 transform -translate-x-12 -translate-y-8"></div>
+                <div class="absolute w-[180%] h-[60px] bg-sky-blue rounded-[100%] filter blur-[40px] opacity-80 transform translate-x-10 translate-y-12"></div>
+                <div class="absolute w-[120%] h-[40px] bg-soft-white rounded-[100%] filter blur-[25px] opacity-90 mix-blend-overlay transform -translate-x-20 -translate-y-4"></div>
+                <div class="absolute w-[200%] h-[120px] bg-court-green rounded-[100%] filter blur-[70px] opacity-50 transform translate-x-4 translate-y-24"></div>
+                <div class="absolute w-[140%] h-[30px] bg-cloud-pink rounded-[100%] filter blur-[20px] opacity-80 transform translate-x-16 -translate-y-16"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Values -->
+    <section data-section="core-values" class="w-full py-32 bg-sky-blue relative overflow-hidden">
+        <div class="cloud-blur bg-court-green w-[400px] h-[400px] top-0 left-[-100px] opacity-30"></div>
+        <div class="max-w-7xl mx-auto px-8 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="bg-soft-white/5 backdrop-blur-md p-10 border border-soft-white/10 rounded-3xl hover:-translate-y-2 transition-transform duration-500 overflow-hidden">
+                    <div class="h-24 w-full relative mb-4 flex items-center opacity-80">
+                        <div class="absolute w-32 h-32 bg-cloud-pink rounded-full filter blur-[40px] opacity-70 transform -translate-x-4"></div>
+                        <div class="absolute w-24 h-24 bg-soft-white rounded-full filter blur-[30px] opacity-60 transform translate-x-12 mix-blend-overlay"></div>
+                    </div>
+                    <h4 data-editable="true" data-key="val1_title" class="text-2xl font-serif text-soft-white mb-4">柔性架构</h4>
+                    <p data-editable="true" data-key="val1_desc" class="text-soft-white/70 font-light leading-relaxed">
+                        彻底抛弃生硬的网格束缚，采用流体般的组件布局。元素如同漂浮在无重力空间，随用户的交互温柔响应。
+                    </p>
+                </div>
+                <!-- Card 2 -->
+                <div class="bg-soft-white/5 backdrop-blur-md p-10 border border-soft-white/10 rounded-3xl hover:-translate-y-2 transition-transform duration-500 md:translate-y-8 overflow-hidden">
+                    <div class="h-24 w-full relative mb-4 flex items-center opacity-80">
+                        <div class="absolute w-32 h-32 bg-court-green rounded-full filter blur-[40px] opacity-50 transform translate-x-8"></div>
+                        <div class="absolute w-28 h-28 bg-sky-blue rounded-full filter blur-[30px] opacity-80 transform -translate-x-4"></div>
+                    </div>
+                    <h4 data-editable="true" data-key="val2_title" class="text-2xl font-serif text-soft-white mb-4">胶片质感</h4>
+                    <p data-editable="true" data-key="val2_desc" class="text-soft-white/70 font-light leading-relaxed">
+                        不仅是色彩的堆叠，更通过算法生成的微弱噪点与光学模糊，还原真实物理世界中胶片冲洗的温度与颗粒感。
+                    </p>
+                </div>
+                <!-- Card 3 -->
+                <div class="bg-soft-white/5 backdrop-blur-md p-10 border border-soft-white/10 rounded-3xl hover:-translate-y-2 transition-transform duration-500 overflow-hidden">
+                    <div class="h-24 w-full relative mb-4 flex items-center opacity-80">
+                        <div class="absolute w-[120%] h-[60px] bg-cloud-pink rounded-[100%] filter blur-[35px] opacity-60 transform -rotate-2 -translate-x-4"></div>
+                        <div class="absolute w-[80%] h-[30px] bg-ball-yellow rounded-[100%] filter blur-[25px] opacity-40 transform rotate-1 translate-x-12 mix-blend-screen"></div>
+                    </div>
+                    <h4 data-editable="true" data-key="val3_title" class="text-2xl font-serif text-soft-white mb-4">瞬息动能</h4>
+                    <p data-editable="true" data-key="val3_desc" class="text-soft-white/70 font-light leading-relaxed">
+                        捕获动作发生时的横向色彩拉丝。让数据流转的过程，成为一场富有张力的数字体育竞技。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Gallery -->
+    <section id="gallery" data-section="gallery" class="w-full py-40 bg-sky-blue relative">
+        <div class="max-w-7xl mx-auto px-8">
+            <p data-editable="true" data-key="gal_tag" class="text-soft-white/60 text-sm tracking-[0.3em] uppercase mb-16 text-center">Moments in Sky</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="aspect-[3/4] relative overflow-hidden group cursor-pointer">
+                    <div class="absolute inset-0 bg-gradient-to-t from-court-green/60 to-transparent mix-blend-multiply transition-opacity duration-700 group-hover:opacity-0"></div>
+                    <div class="w-full h-full bg-soft-white/10 backdrop-blur-sm flex items-end p-8">
+                        <span data-editable="true" data-key="gal_1" class="text-soft-white text-xl tracking-widest font-light opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                            #01 悬浮色域
+                        </span>
+                    </div>
+                </div>
+                <div class="aspect-[3/4] relative overflow-hidden group cursor-pointer md:-translate-y-12">
+                    <div class="absolute inset-0 bg-gradient-to-b from-cloud-pink/60 to-transparent mix-blend-multiply transition-opacity duration-700 group-hover:opacity-0"></div>
+                    <div class="w-full h-full bg-cloud-pink/20 backdrop-blur-sm flex items-end p-8">
+                        <span data-editable="true" data-key="gal_2" class="text-soft-white text-xl tracking-widest font-light opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                            #02 粉雾交织
+                        </span>
+                    </div>
+                </div>
+                <div class="aspect-[3/4] relative overflow-hidden group cursor-pointer">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-sky-blue/80 to-transparent mix-blend-multiply transition-opacity duration-700 group-hover:opacity-0"></div>
+                    <div class="w-full h-full bg-soft-white/5 backdrop-blur-sm flex items-end p-8 border border-soft-white/10">
+                        <span data-editable="true" data-key="gal_3" class="text-soft-white text-xl tracking-widest font-light opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                            #03 苍穹无界
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics -->
+    <section data-section="statistics" class="w-full py-32 bg-gradient-to-b from-sky-blue to-cloud-pink/80 relative text-center">
+        <div class="max-w-5xl mx-auto px-8 grid grid-cols-1 md:grid-cols-3 gap-16">
+            <div>
+                <div data-editable="true" data-key="stat1_num" class="text-6xl md:text-8xl font-light text-soft-white mb-4">99%</div>
+                <div data-editable="true" data-key="stat1_text" class="text-sm tracking-[0.2em] text-soft-white/70 uppercase">云端连接率</div>
+            </div>
+            <div class="md:transform md:-translate-y-8">
+                <div data-editable="true" data-key="stat2_num" class="text-6xl md:text-8xl font-light text-soft-white mb-4 text-transparent bg-clip-text bg-gradient-to-b from-soft-white to-soft-white/30">1.2s</div>
+                <div data-editable="true" data-key="stat2_text" class="text-sm tracking-[0.2em] text-soft-white/70 uppercase">极速流转响应</div>
+            </div>
+            <div>
+                <div data-editable="true" data-key="stat3_num" class="text-6xl md:text-8xl font-light text-soft-white mb-4 text-transparent bg-clip-text bg-gradient-to-b from-soft-white to-soft-white/30">&infin;</div>
+                <div data-editable="true" data-key="stat3_text" class="text-sm tracking-[0.2em] text-soft-white/70 uppercase">无界扩展体验</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section id="data" data-section="testimonials" class="w-full py-40 bg-cloud-pink/80 text-sky-blue relative">
+        <div class="max-w-4xl mx-auto px-8 text-center">
+            <p data-editable="true" data-key="test_tag" class="text-sky-blue/60 text-sm tracking-[0.3em] uppercase mb-16">Echoes from the field</p>
+            
+            <div class="relative">
+                <span class="absolute top-[-40px] left-[-20px] text-[120px] text-sky-blue/20 font-serif leading-none">"</span>
+                <p data-editable="true" data-key="test_quote" class="text-3xl md:text-5xl font-light leading-relaxed mb-12 relative z-10">
+                    这不像是在使用一个软件，而像是在欣赏一场慢动作的艺术展。那些柔软的色彩过渡让人感到无比平静。
+                </p>
+                <div class="flex items-center justify-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-sky-blue/20"></div>
+                    <div class="text-left">
+                        <div data-editable="true" data-key="test_author" class="font-medium tracking-wide">Studio Surreal</div>
+                        <div data-editable="true" data-key="test_role" class="text-sm text-sky-blue/70">独立数字艺术家</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Literature -->
+    <section data-section="literature" class="w-full py-32 bg-soft-white text-sky-blue relative overflow-hidden">
+        <div class="absolute top-[-150px] left-0 w-full h-[300px] bg-cloud-pink/80 filter blur-[80px] pointer-events-none z-0"></div>
+        <div class="max-w-7xl mx-auto px-8 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-16">
+                <div class="md:col-span-5 flex flex-col justify-center">
+                    <h2 data-editable="true" data-key="lit_title" class="text-4xl md:text-5xl font-medium mb-8">技术与艺术的<br>诗意结合。</h2>
+                    <p data-editable="true" data-key="lit_desc" class="text-lg font-light leading-loose text-sky-blue/70 mb-8">
+                        阅读我们的设计协议和开发文档。了解如何用最基础的代码，构建出不受重力束缚的前端体验。
+                    </p>
+                    <a href="#" data-editable="true" data-key="lit_btn" class="btn-soft inline-block border border-sky-blue text-sky-blue px-8 py-3 w-max hover:bg-sky-blue hover:text-soft-white text-sm tracking-widest">
+                        查阅文档卷宗
+                    </a>
+                </div>
+                <div class="md:col-span-7 grid grid-cols-2 gap-4">
+                    <div class="bg-sky-blue/5 p-8 hover:bg-sky-blue/10 transition-colors cursor-pointer group">
+                        <div data-editable="true" data-key="lit_doc1_title" class="text-xl mb-4 group-hover:-translate-y-1 transition-transform">色彩理论篇</div>
+                        <div class="w-8 h-[1px] bg-sky-blue/30 mb-4"></div>
+                        <div data-editable="true" data-key="lit_doc1_desc" class="text-sm font-light text-sky-blue/60 leading-relaxed">探讨如何利用高饱和度对比色制造梦境感。</div>
+                    </div>
+                    <div class="bg-sky-blue/5 p-8 hover:bg-sky-blue/10 transition-colors cursor-pointer group mt-8">
+                        <div data-editable="true" data-key="lit_doc2_title" class="text-xl mb-4 group-hover:-translate-y-1 transition-transform">CSS物理引擎</div>
+                        <div class="w-8 h-[1px] bg-sky-blue/30 mb-4"></div>
+                        <div data-editable="true" data-key="lit_doc2_desc" class="text-sm font-light text-sky-blue/60 leading-relaxed">在网页中重现抛物线、风阻与色彩流转的张力。</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section data-section="cta" class="w-full h-screen flex flex-col items-center justify-center bg-gradient-to-b from-soft-white to-sky-blue relative overflow-hidden text-center">
+        <div class="absolute w-[800px] h-[800px] rounded-full bg-cloud-pink/30 filter blur-[100px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+        <div class="relative z-10 px-8">
+            <h2 data-editable="true" data-key="cta_title" class="text-5xl md:text-8xl font-medium text-soft-white mb-12 tracking-tighter mix-blend-overlay">
+                Infinity.<br>Beyond.
+            </h2>
+            <p data-editable="true" data-key="cta_desc" class="text-xl text-soft-white/80 font-light mb-12 max-w-lg mx-auto">
+                终局已至。加入我们，在无尽蓝天中挥出你的制胜一击。
+            </p>
+            <a href="#" data-editable="true" data-key="cta_btn" class="btn-soft bg-cloud-pink text-soft-white px-12 py-5 font-medium text-lg tracking-widest shadow-[0_0_40px_rgba(241,158,188,0.4)] hover:shadow-[0_0_60px_rgba(241,158,188,0.7)] inline-block">
+                开启云端构建
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer data-section="footer" class="w-full bg-sky-blue pt-20 pb-10 border-t border-soft-white/10">
+        <div class="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-8 text-soft-white/60 font-light text-sm">
+            <div data-editable="true" data-key="foot_copy" class="tracking-[0.2em] uppercase">
+                &copy; 2026 L'éternité Studio.
+            </div>
+            <div class="flex gap-8 tracking-widest">
+                <a href="#" class="hover:text-cloud-pink transition-colors" data-editable="true" data-key="social_1">Twitter (X)</a>
+                <a href="#" class="hover:text-cloud-pink transition-colors" data-editable="true" data-key="social_2">Instagram</a>
+                <a href="#" class="hover:text-cloud-pink transition-colors" data-editable="true" data-key="social_3">GitHub</a>
+            </div>
+            <div data-editable="true" data-key="foot_slogan" class="tracking-wider">
+                Design with Softness.
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,175 @@
+{
+  "id": "website-07-blueprint-agent-platform",
+  "name": "Blueprint Agent Platform 工程蓝图智能体官网模板",
+  "templateName": "BlueprintAgentPlatformTemplate",
+  "version": "1.0.0",
+  "description": "面向企业级 AI 基础设施、智能体平台、大模型网关和底层技术产品的工程蓝图风官网模板，包含 Hero、数据证明、目标用户、痛点、方案、亮点、流程、业务拓扑、控制台视觉、场景、路线图、社区、定价、CTA 和页脚。",
+  "pageTypes": [
+    "product-website",
+    "landing-page",
+    "saas-website",
+    "developer-tool-website",
+    "ai-infrastructure-website"
+  ],
+  "styleTags": [
+    "blueprint",
+    "engineering",
+    "agent-platform",
+    "pure-blue",
+    "serif-mono",
+    "technical"
+  ],
+  "theme": {
+    "colors": {
+      "pageBg": "#0012e8",
+      "textPrimary": "#FFFFFF",
+      "textSecondary": "rgba(255, 255, 255, 0.65)",
+      "textMuted": "rgba(255, 255, 255, 0.4)",
+      "border": "rgba(255, 255, 255, 0.25)",
+      "borderLight": "rgba(255, 255, 255, 0.1)",
+      "borderHover": "rgba(255, 255, 255, 0.8)"
+    },
+    "fonts": {
+      "serif": "Noto Serif SC, Songti SC, Times New Roman, serif",
+      "mono": "JetBrains Mono, Courier New, Courier, monospace",
+      "body": "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
+    }
+  },
+  "editorTheme": {
+    "defaultColor": "#0012e8",
+    "presets": ["#0012e8", "#ffffff", "#111827", "#7c3aed", "#38bdf8", "#22c55e"],
+    "targets": {
+      "cssVariables": {
+        "--c-bg": "color"
+      },
+      "colorSelectors": [
+        ".btn-primary",
+        ".btn-secondary:hover"
+      ],
+      "backgroundSelectors": [
+        ".btn-primary",
+        ".roadmap-item::before"
+      ],
+      "borderSelectors": [
+        ".btn-primary",
+        ".btn-secondary:hover",
+        ".card:hover"
+      ]
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "showHideSections": true,
+    "exportHtml": true
+  },
+  "supportedSections": {
+    "nav": {
+      "name": "导航",
+      "required": true,
+      "hideable": false,
+      "elementCount": 5
+    },
+    "hero": {
+      "name": "首屏主视觉",
+      "required": true,
+      "hideable": false,
+      "elementCount": 6
+    },
+    "metrics": {
+      "name": "数据证明",
+      "required": false,
+      "hideable": true,
+      "elementCount": 8
+    },
+    "target_users": {
+      "name": "目标用户",
+      "required": false,
+      "hideable": true,
+      "elementCount": 7
+    },
+    "problem": {
+      "name": "用户问题",
+      "required": false,
+      "hideable": true,
+      "elementCount": 8
+    },
+    "solution": {
+      "name": "解决方案",
+      "required": false,
+      "hideable": true,
+      "elementCount": 9
+    },
+    "highlights": {
+      "name": "核心亮点",
+      "required": false,
+      "hideable": true,
+      "elementCount": 9
+    },
+    "workflow": {
+      "name": "用户操作流程",
+      "required": false,
+      "hideable": true,
+      "elementCount": 8
+    },
+    "business_flow": {
+      "name": "业务流转拓扑",
+      "required": false,
+      "hideable": true,
+      "elementCount": 9
+    },
+    "features_visuals": {
+      "name": "功能与可视化控制台",
+      "required": false,
+      "hideable": true,
+      "elementCount": 6
+    },
+    "use_cases": {
+      "name": "使用场景",
+      "required": false,
+      "hideable": true,
+      "elementCount": 10
+    },
+    "roadmap": {
+      "name": "产品路线图",
+      "required": false,
+      "hideable": true,
+      "elementCount": 10
+    },
+    "social": {
+      "name": "社媒与社区",
+      "required": false,
+      "hideable": true,
+      "elementCount": 9
+    },
+    "pricing": {
+      "name": "价格方案",
+      "required": false,
+      "hideable": true,
+      "elementCount": 13
+    },
+    "cta": {
+      "name": "CTA",
+      "required": true,
+      "hideable": false,
+      "elementCount": 2
+    },
+    "footer": {
+      "name": "页脚",
+      "required": true,
+      "hideable": false,
+      "elementCount": 5
+    }
+  },
+  "slotRules": {
+    "textLimit": {
+      "text.hero.title": 34,
+      "text.hero.subtitle": 120,
+      "text.problem.item_title": 18,
+      "text.problem.item_desc": 64,
+      "text.solution.item_title": 18,
+      "text.solution.item_desc": 72,
+      "text.cta.title": 28
+    },
+    "fallback": "缺少内容时保留模板默认文案，不写占位符。"
+  }
+}

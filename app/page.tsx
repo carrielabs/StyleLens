@@ -4,9 +4,11 @@ import { useState, useEffect, useRef } from 'react'
 import HomeOverlays from '@/components/home/HomeOverlays'
 import HomeSidebar from '@/components/home/HomeSidebar'
 import HomeWorkspace from '@/components/home/HomeWorkspace'
+import GeneratedPagePreview from '@/components/publisher/GeneratedPagePreview'
 import SettingsView from '@/components/settings/SettingsView'
 import { useExtraction } from '@/hooks/useExtraction'
 import { useHistory } from '@/hooks/useHistory'
+import { usePublisher } from '@/hooks/usePublisher'
 import { createClient } from '@/lib/storage/supabaseClient'
 import { getGreeting, GreetingData } from '@/lib/utils/greeting'
 import type { DisplayStyleReport } from '@/lib/types'
@@ -99,7 +101,6 @@ export default function Home() {
     handleFilePreview,
     handleExtractFile,
     clearPendingFile,
-    handleDrop,
     handlePaste,
     cancelExtraction,
     extractionPhase,
@@ -113,6 +114,12 @@ export default function Home() {
     setIsSearchOpen,
     saveExtraction,
   })
+  const {
+    isGenerating,
+    generatedPage,
+    generatePage,
+    clearGeneratedPage,
+  } = usePublisher()
 
   // ── Modal Background Lock ──
   useEffect(() => {
@@ -284,11 +291,21 @@ export default function Home() {
 
         {isSettingsOpen ? (
           <SettingsView onClose={() => setIsSettingsOpen(false)} />
+        ) : generatedPage ? (
+          <main style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+            <GeneratedPagePreview
+              html={generatedPage.html}
+              title={generatedPage.title}
+              templateId={generatedPage.templateId}
+              onBack={clearGeneratedPage}
+            />
+          </main>
         ) : (
           <HomeWorkspace
             activeItemId={activeItemId}
             report={report}
             isExtracting={isExtracting}
+            isGenerating={isGenerating}
             isUrlExtracting={isUrlExtracting}
             isImageExtracting={isImageExtracting}
             extractions={extractions}
@@ -300,6 +317,7 @@ export default function Home() {
             setError={setError}
             greeting={greeting}
             handleUrlSubmit={handleUrlSubmit}
+            generatePage={generatePage}
             urlInputRef={urlInputRef}
             url={url}
             setUrl={setUrl}
@@ -309,7 +327,6 @@ export default function Home() {
             isDragging={isDragging}
             setIsDragging={setIsDragging}
             setUploadZoneHovered={setUploadZoneHovered}
-            handleDrop={handleDrop}
             user={user}
             guestTrialUsed={guestTrialUsed}
             fileInputRef={fileInputRef}

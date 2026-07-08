@@ -1,0 +1,152 @@
+{
+  "id": "website-09-blue-shift-portfolio",
+  "name": "BLUE SHIFT 新结构主义数字作品集官网模板",
+  "templateName": "BlueShiftPortfolioTemplate",
+  "version": "2.0.0",
+  "sourceConfigId": "blue-shift-minimalist-portfolio-v2",
+  "description": "黑底、直角网格、极细白线、青蓝绿紫液态光晕和参数化图纸语言的数字作品集官网模板，适合建筑事务所、空间设计、展览装置、硬件设计、先锋创意工作室和高端作品集展示。",
+  "pageTypes": [
+    "product-website",
+    "landing-page",
+    "portfolio-website",
+    "studio-website",
+    "architecture-portfolio",
+    "creative-studio-website"
+  ],
+  "styleTags": [
+    "blue-shift",
+    "minimalist-dark",
+    "new-structuralism",
+    "liquid-glow",
+    "parametric-portfolio",
+    "straight-grid",
+    "technical-metadata"
+  ],
+  "theme": {
+    "colors": {
+      "pageBg": "#000000",
+      "panelBg": "#07070A",
+      "textPrimary": "#FFFFFF",
+      "textMuted": "#8E8E96",
+      "accent": "#00F2FE",
+      "accentBlue": "#0F3CFF",
+      "accentGreen": "#00FFB4",
+      "accentPurple": "#8732FF"
+    },
+    "fonts": {
+      "mono": "JetBrains Mono, ui-monospace, SFMono-Regular, monospace",
+      "body": "Inter, system-ui, -apple-system, BlinkMacSystemFont, PingFang SC, Microsoft YaHei, Arial, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "showHideSections": true,
+    "filterInteraction": true,
+    "modalInteraction": true,
+    "exportHtml": true,
+    "colors": true,
+    "layout": true
+  },
+  "supportedSections": {
+    "navbar": {
+      "name": "顶部导航",
+      "required": true,
+      "hideable": false,
+      "elementCount": 1
+    },
+    "hero": {
+      "name": "首屏水母光晕主视觉",
+      "required": true,
+      "hideable": false,
+      "elementCount": 6
+    },
+    "philosophy": {
+      "name": "品牌哲学宣言",
+      "required": false,
+      "hideable": true,
+      "elementCount": 8
+    },
+    "works": {
+      "name": "作品分类网格",
+      "required": false,
+      "hideable": true,
+      "elementCount": 21
+    },
+    "methodology": {
+      "name": "参数化管线卡片",
+      "required": false,
+      "hideable": true,
+      "elementCount": 12
+    },
+    "metrics": {
+      "name": "动态数据仪表",
+      "required": false,
+      "hideable": true,
+      "elementCount": 15
+    },
+    "milestones": {
+      "name": "大事记与荣誉",
+      "required": false,
+      "hideable": true,
+      "elementCount": 14
+    },
+    "contact": {
+      "name": "联系与落款",
+      "required": true,
+      "hideable": false,
+      "elementCount": 8
+    }
+  },
+  "optionalSections": [
+    "philosophy",
+    "works",
+    "methodology",
+    "metrics",
+    "milestones"
+  ],
+  "slotRules": {
+    "slotCount": 89,
+    "fallback": "缺少内容时保留模板默认文案，不写占位符；外部链接由人工后续编辑，不写假链接。",
+    "richTextAllowed": [
+      "text.hero.02",
+      "text.methodology.02",
+      "text.metrics.02",
+      "text.contact.02"
+    ]
+  },
+  "editorTheme": {
+    "defaultColor": "#00F2FE",
+    "presets": [
+      "#00F2FE",
+      "#0F3CFF",
+      "#00FFB4",
+      "#8732FF",
+      "#ffffff",
+      "#8E8E96"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-cyan-400\"]"
+      ],
+      "backgroundSelectors": [
+        ".method-card:hover .stage-square"
+      ],
+      "borderSelectors": [
+        ".method-card .stage-square"
+      ],
+      "radialGlowSelectors": [
+        ".blob-cyan",
+        ".blob-blue",
+        ".blob-green",
+        ".contact-glow-field"
+      ],
+      "strokeSelectors": [
+        ".metric-ring",
+        ".metric-wave"
+      ],
+      "shadowSelectors": [
+        ".method-card:hover .stage-square"
+      ]
+    }
+  }
+}

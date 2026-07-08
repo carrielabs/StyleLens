@@ -1,0 +1,1277 @@
+<!DOCTYPE html><html lang="zh-CN"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoltFlow - 极客级内容与数据自动化管线官网</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts for High-End Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+          colors: {
+            cyber: {
+              black: '#070A08',
+              grid: '#111813',
+              card: '#0D120F',
+              border: '#18221B',
+              borderHover: '#2C3D2F',
+              volt: '#7CFF44',
+              muted: '#889E8D',
+              darkMuted: '#3E5244',
+              pillBg: '#1E351A'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 极致细腻的网格背景 */
+    .bg-grid-pattern {
+      background-color: #070A08;
+      background-image: 
+        linear-gradient(to right, #111813 1px, transparent 1px),
+        linear-gradient(to bottom, #111813 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    
+    /* 隐藏滚动条但保留功能 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #070A08;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #18221B;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2C3D2F;
+    }
+
+    /* 编辑状态焦点边框 */
+    [data-editable="true"]:focus {
+      outline: 1px dashed #7CFF44;
+      background-color: rgba(124, 255, 68, 0.05);
+      padding-left: 4px;
+      padding-right: 4px;
+      border-radius: 2px;
+    }
+
+    /* 具有微弱透光感的卡片Hover过渡 */
+    .premium-card {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .premium-card:hover {
+      border-color: #2C3D2F;
+      box-shadow: 0 10px 30px -15px rgba(124, 255, 68, 0.15);
+      transform: translateY(-2px);
+    }
+
+    /* 图表交互过渡补间 */
+    .views-line, .views-area, .rate-line {
+      transition: stroke-dasharray 0.3s ease;
+    }
+    .interactive-dot {
+      transition: r 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), stroke-width 0.2s ease, fill 0.2s ease;
+    }
+
+    /* ROI 滑块样式定制 */
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #7CFF44;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(124, 255, 68, 0.8);
+      transition: transform 0.1s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+  </style>
+</head>
+<body class="bg-grid-pattern text-white font-sans min-h-screen antialiased flex flex-col pb-16">
+
+  <!-- ================= MODULE 1: HEADER SECTION & NAVIGATION ================= -->
+  <!-- Header -->
+  <header data-section="header" class="border-b border-cyber-border bg-cyber-black/95 sticky top-0 z-50 backdrop-blur-md">
+    <div class="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+      <!-- Left Logo / Project Identifier -->
+      <div class="flex items-center space-x-3 group">
+        <div class="bg-cyber-volt text-cyber-black font-mono font-bold text-sm px-3 py-1 rounded tracking-widest uppercase transition-transform group-hover:scale-105 duration-200" data-editable="true" data-slot="logo-tag">
+          VOLTFLOW
+        </div>
+        <div class="h-4 w-[1px] bg-cyber-border"></div>
+        <span class="text-xs font-mono text-cyber-muted tracking-wider uppercase hidden sm:inline" data-editable="true" data-slot="version-tag">
+          PRO-AUTOMATION v2.5
+        </span>
+      </div>
+
+      <!-- Center Navigation Tabs with hover micro-interactions -->
+      <nav class="hidden md:flex items-center space-x-1 bg-black/40 p-1 rounded-lg border border-cyber-border">
+        <a href="#features" class="px-4 py-1.5 rounded-md text-xs font-medium text-cyber-muted hover:text-white hover:bg-cyber-card transition-all duration-150" data-slot="nav-link-1" data-editable="true">Features</a>
+        <a href="#architecture" class="px-4 py-1.5 rounded-md text-xs font-medium text-cyber-muted hover:text-white hover:bg-cyber-card transition-all duration-150" data-slot="nav-link-2" data-editable="true">Architecture</a>
+        <a href="#simulator" class="px-4 py-1.5 rounded-md text-xs font-medium text-cyber-muted hover:text-white hover:bg-cyber-card transition-all duration-150" data-slot="nav-link-3" data-editable="true">ROI Simulator</a>
+        <a href="#pricing" class="px-4 py-1.5 rounded-md text-xs font-medium text-cyber-muted hover:text-white hover:bg-cyber-card transition-all duration-150" data-slot="nav-link-4" data-editable="true">Pricing</a>
+      </nav>
+
+      <!-- Right Action CTA -->
+      <div class="flex items-center space-x-3">
+        <a href="#simulator" class="hidden sm:inline-block text-xs font-mono text-cyber-muted hover:text-cyber-volt transition-colors px-3 py-1.5" data-editable="true" data-slot="header-roi-link">
+          // CALCULATE ROI
+        </a>
+        <button onclick="window.location.href='#pricing'" class="bg-cyber-volt hover:bg-opacity-90 hover:shadow-[0_0_15px_rgba(124,255,68,0.5)] text-cyber-black font-bold text-xs px-4 py-1.5 rounded transition-all flex items-center space-x-1.5">
+          <span data-editable="true" data-slot="header-cta-text">即刻部署</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-[1400px] w-full mx-auto px-6 mt-12 flex-grow space-y-24">
+
+    <!-- ================= MODULE 2: HERO SECTION ================= -->
+    <!-- Hero -->
+    <section data-section="hero" class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center pt-8">
+      <!-- Left Content -->
+      <div class="lg:col-span-7 space-y-6">
+        <div class="inline-flex items-center space-x-2 bg-cyber-pillBg border border-cyber-volt/20 px-3 py-1 rounded-full">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyber-volt animate-ping"></span>
+          <span class="text-cyber-volt font-mono text-[10px] uppercase tracking-widest" data-editable="true" data-slot="hero-badge">2026 NEXT-GEN PIPELINE ENGINE</span>
+        </div>
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight" data-editable="true" data-slot="hero-title">
+          将繁琐的原始数据<br>
+          重构为<span class="text-cyber-volt">高频转化</span>创作管线
+        </h1>
+        <p class="text-sm sm:text-base text-cyber-muted leading-relaxed max-w-xl" data-editable="true" data-slot="hero-desc">
+          VoltFlow 是面向现代自媒体和敏捷内容团队的深度自动化与数据监控引擎。它无缝连接您的 Obsidian、数据库、小红书后台，实时捕获、诊断、并生成决策，让冷冰冰的指标成为能落地的策略。
+        </p>
+        
+        <!-- Interactive CTA Buttons -->
+        <div class="flex flex-wrap gap-4 pt-4">
+          <button onclick="window.location.href='#pricing'" class="bg-cyber-volt hover:bg-opacity-90 hover:scale-[1.02] text-cyber-black font-bold text-xs px-6 py-3 rounded transition-all shadow-[0_4px_20px_rgba(124,255,68,0.25)] flex items-center space-x-2">
+            <span data-editable="true" data-slot="hero-primary-cta">免费试用 14 天</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"></path></svg>
+          </button>
+          <button onclick="window.location.href='#architecture'" class="bg-cyber-card hover:bg-[#111813] hover:border-cyber-volt/50 border border-cyber-border text-white hover:text-cyber-volt font-bold text-xs px-6 py-3 rounded transition-all flex items-center space-x-2">
+            <span data-editable="true" data-slot="hero-secondary-cta">探索架构原理</span>
+            <span class="font-mono text-[10px] text-cyber-muted group-hover:text-cyber-volt">// DOCS</span>
+          </button>
+        </div>
+
+        <!-- Social Proof Stats Mini Grid -->
+        <div class="grid grid-cols-3 gap-6 pt-10 border-t border-cyber-border/40 max-w-lg">
+          <div>
+            <div class="text-2xl font-mono font-bold text-white" data-editable="true" data-slot="hero-stats-value-1">99.8%</div>
+            <div class="text-[11px] text-cyber-muted mt-1" data-editable="true" data-slot="hero-stats-label-1">实时数据收集准度</div>
+          </div>
+          <div>
+            <div class="text-2xl font-mono font-bold text-cyber-volt" data-editable="true" data-slot="hero-stats-value-2">3.2x</div>
+            <div class="text-[11px] text-cyber-muted mt-1" data-editable="true" data-slot="hero-stats-label-2">平均全域转化提升</div>
+          </div>
+          <div>
+            <div class="text-2xl font-mono font-bold text-white" data-editable="true" data-slot="hero-stats-value-3">&lt; 150ms</div>
+            <div class="text-[11px] text-cyber-muted mt-1" data-editable="true" data-slot="hero-stats-label-3">跨源数据刷新耗时</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Graphic / Code representation -->
+      <div class="lg:col-span-5 bg-cyber-card rounded-xl border border-cyber-border p-6 relative overflow-hidden group hover:border-cyber-borderHover transition-all shadow-[0_0_40px_rgba(124,255,68,0.03)]">
+        <div class="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-cyber-volt/5 filter blur-3xl group-hover:bg-cyber-volt/10 transition-all"></div>
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-cyber-border/40">
+          <div class="flex space-x-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500/30"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-yellow-500/30"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-green-500/30"></span>
+          </div>
+          <span class="text-[10px] font-mono text-cyber-darkMuted" data-editable="true" data-slot="hero-item-12">config_pipeline.sh</span>
+        </div>
+        <pre class="text-xs font-mono text-cyber-muted leading-relaxed select-none overflow-x-auto" data-slot="hero-terminal-output" data-editable="true"><code class="text-cyber-volt">$ voltflow init --project "BetaGifted"</code>
+<span class="text-cyber-darkMuted"># Fetching telemetry data ...</span>
+<code class="text-white">✔ Loading Obsidian repository config... done.
+✔ Initializing Red Book API bridges... done.
+✔ Deploying smart LTV analytics grid... done.</code>
+<span class="text-cyber-volt">Active Listeners:</span>
+  - obsidian-watcher : <span class="text-white">Active (Listening change)</span>
+  - conversion-analyzer : <span class="text-cyber-volt">18.19% BaseCTR</span>
+  - weekly-report-job : <span class="text-white">Scheduled for Jun 5</span>
+<span class="text-cyber-darkMuted">[SYSTEM STATUS: 100% HEALTHY]</span></pre>
+      </div>
+    </section>
+
+
+    <!-- ================= MODULE 3: LIVE INTERACTIVE PRODUCT WIDGET DEMO ================= -->
+    <!-- Widget Preview -->
+    <section data-section="live-preview" class="bg-cyber-card rounded-xl border border-cyber-border p-6 hover:border-cyber-borderHover transition-all relative">
+      <div class="absolute top-4 right-4 text-[10px] font-mono text-cyber-volt bg-cyber-pillBg border border-cyber-volt/10 px-2 py-0.5 rounded animate-pulse">
+        ● LIVE DEMO 可在下方点击交互
+      </div>
+      
+      <div class="flex flex-col xl:flex-row xl:items-center justify-between mb-8 pb-4 border-b border-cyber-border/40">
+        <div class="mb-4 xl:mb-0">
+          <span class="text-xs font-mono text-cyber-volt uppercase tracking-widest block">// PRODUCT EXPERIENCE</span>
+          <h2 class="text-xl font-bold text-white mt-1" data-editable="true" data-slot="live-preview-title">数据源快速切换：预览不同业务下的分析曲线</h2>
+        </div>
+        <!-- Tab selector -->
+        <div class="flex flex-wrap gap-2" id="demo-channel-switcher">
+          <button onclick="switchDemoChannel('obsidian')" class="demo-tab-btn px-4 py-2 bg-cyber-pillBg text-cyber-volt border border-cyber-volt/40 text-xs font-medium rounded transition-all" data-slot="demo-tab-text-1" data-editable="true">
+            AI + Obsidian 工作流
+          </button>
+          <button onclick="switchDemoChannel('brand')" class="demo-tab-btn px-4 py-2 bg-transparent text-cyber-muted border border-cyber-border hover:border-cyber-borderHover text-xs font-medium rounded transition-all" data-slot="demo-tab-text-2" data-editable="true">
+            品牌视觉创意线
+          </button>
+          <button onclick="switchDemoChannel('consult')" class="demo-tab-btn px-4 py-2 bg-transparent text-cyber-muted border border-cyber-border hover:border-cyber-borderHover text-xs font-medium rounded transition-all" data-slot="demo-tab-text-3" data-editable="true">
+            商业变现咨询渠道
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        
+        <!-- Left Sub-card: Interactive SVG Time Series Trend (8 Columns) -->
+        <div class="lg:col-span-8 bg-[#080d09] rounded-xl border border-cyber-border/60 p-5 relative overflow-hidden flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-6">
+            <span class="text-xs font-mono text-cyber-muted" data-editable="true" data-slot="live-preview-item-02">// 曝光分布时序变化曲线</span>
+            <span class="text-[10px] text-cyber-volt font-mono" id="demo-badge-update">已同步最新模型：Obsidian</span>
+          </div>
+
+          <!-- SVG Interactive Chart Container -->
+          <div class="relative w-full h-56 flex-grow flex" id="demo-chart-main-container">
+            <!-- Y labels -->
+            <div class="w-12 h-full flex flex-col justify-between text-[8px] font-mono text-cyber-darkMuted select-none pb-6">
+              <span id="y-max-val">50,000</span>
+              <span id="y-mid-max">37,500</span>
+              <span id="y-mid-val">25,000</span>
+              <span id="y-mid-min">12,500</span>
+              <span>0</span>
+            </div>
+            
+            <!-- Plotting Area -->
+            <div class="flex-grow h-full relative" id="demo-svg-chart-wrapper">
+              <!-- Grid Lines -->
+              <div class="absolute inset-x-0 top-0 bottom-6 flex flex-col justify-between pointer-events-none">
+                <div class="w-full border-t border-cyber-border/40 h-0"></div>
+                <div class="w-full border-t border-cyber-border/20 h-0"></div>
+                <div class="w-full border-t border-cyber-border/20 h-0"></div>
+                <div class="w-full border-t border-cyber-border/20 h-0"></div>
+                <div class="w-full border-t border-cyber-border/40 h-0"></div>
+              </div>
+
+              <!-- SVG Elements -->
+              <svg id="demo-svg-canvas" class="absolute inset-0 w-full h-full overflow-visible pointer-events-none">
+                <defs>
+                  <linearGradient id="demoGlowGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#7CFF44" stop-opacity="0.1"></stop>
+                    <stop offset="100%" stop-color="#7CFF44" stop-opacity="0.0"></stop>
+                  </linearGradient>
+                  <filter id="peakGlowFilterDemo" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="4" result="blur"></feGaussianBlur>
+                    <feMerge>
+                      <feMergeNode in="blur"></feMergeNode>
+                      <feMergeNode in="SourceGraphic"></feMergeNode>
+                    </feMerge>
+                  </filter>
+                </defs>
+                <path id="demo-fill-area" fill="url(#demoGlowGrad)" d=""></path>
+                <path id="demo-views-path" fill="none" stroke="#7CFF44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d=""></path>
+                <line id="demo-guide-line" x1="0" y1="0" x2="0" y2="0" stroke="#7CFF44" stroke-opacity="0.2" stroke-width="1" stroke-dasharray="2,2" class="opacity-0"></line>
+                <g id="demo-dots-group"></g>
+              </svg>
+
+              <!-- Live Tooltip -->
+              <div id="demo-chart-tooltip" class="absolute bg-cyber-card/95 border border-cyber-volt/30 rounded px-2.5 py-1.5 text-left shadow-[0_4px_20px_rgba(7,10,8,0.8)] pointer-events-none opacity-0 z-20 w-40 text-[10px]"></div>
+            </div>
+          </div>
+
+          <!-- X labels -->
+          <div class="w-full flex pl-12 h-6 items-end justify-between text-[8px] font-mono text-cyber-darkMuted select-none">
+            <span>D1</span><span>D2</span><span>D3</span><span>D4</span><span>D5</span><span>D6</span><span>D7</span>
+          </div>
+        </div>
+
+        <!-- Right Sub-card: Main KPIs Ring & Ratio (4 Columns) -->
+        <div class="lg:col-span-4 bg-[#080d09] rounded-xl border border-cyber-border/60 p-5 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-mono text-cyber-muted uppercase tracking-wider block" data-editable="true" data-slot="live-preview-item-03">// CONVERSION RATE</span>
+            <div class="text-xs font-bold text-white mt-1" id="demo-side-title" data-editable="true" data-slot="demo-side-title">Obsidian 转化诊断</div>
+          </div>
+
+          <div class="flex flex-col items-center justify-center my-6">
+            <div class="relative w-32 h-32">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                <circle class="text-cyber-border" stroke-width="2.5" stroke="currentColor" fill="none" r="16" cx="18" cy="18"></circle>
+                <circle id="demo-ring-progress" class="text-cyber-volt transition-all duration-300" stroke-width="2.5" stroke-dasharray="62, 100" stroke-linecap="round" stroke="currentColor" fill="none" r="16" cx="18" cy="18"></circle>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="demo-ring-pct-text" class="text-xl font-mono font-bold text-white" data-slot="demo-ring-pct" data-editable="true">18.19%</span>
+                <span class="text-[8px] text-cyber-muted tracking-wider uppercase">观看 / 曝光</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-center pt-3 border-t border-cyber-border/40">
+            <div class="border-r border-cyber-border/40">
+              <span class="text-[9px] text-cyber-muted block mb-0.5" data-editable="true" data-slot="live-preview-item-05">点赞率</span>
+              <span id="demo-metric-1" class="text-xs font-mono font-bold text-white" data-slot="demo-metric-like-rate" data-editable="true">6.96%</span>
+            </div>
+            <div>
+              <span class="text-[9px] text-cyber-muted block mb-0.5" data-editable="true" data-slot="live-preview-item-06">关注变现率</span>
+              <span id="demo-metric-2" class="text-xs font-mono font-bold text-cyber-volt" data-slot="demo-metric-follow-rate" data-editable="true">0.65%</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ================= MODULE 4: THE PROBLEM STATEMENT ================= -->
+    <!-- Problem -->
+    <section data-section="problem" id="features" class="space-y-8">
+      <div class="text-center max-w-xl mx-auto space-y-2">
+        <span class="text-xs font-mono text-cyber-volt uppercase tracking-widest block" data-editable="true" data-slot="problem-item-01">// PROBLEM</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white" data-editable="true" data-slot="problem-title">内容创作者与敏捷团队正在面临的数据黑洞</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Problem Card 1 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 hover:border-red-950/40 hover:bg-red-950/5 transition-all duration-300">
+          <div class="text-red-500 font-mono text-sm mb-3">// 01</div>
+          <h3 class="text-base font-bold text-white mb-2" data-editable="true" data-slot="problem-card-title-1">多渠道数据分裂</h3>
+          <p class="text-xs sm:text-sm text-cyber-muted leading-relaxed" data-editable="true" data-slot="problem-card-desc-1">
+            小红书、抖音、微信数据散落在不同后台，无法与您在 Obsidian 编写的源稿件产生任何相关性联动，数据利用率接近于零。
+          </p>
+        </div>
+        <!-- Problem Card 2 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 hover:border-red-950/40 hover:bg-red-950/5 transition-all duration-300">
+          <div class="text-red-500 font-mono text-sm mb-3">// 02</div>
+          <h3 class="text-base font-bold text-white mb-2" data-editable="true" data-slot="problem-card-title-2">决策滞后，缺乏诊断</h3>
+          <p class="text-xs sm:text-sm text-cyber-muted leading-relaxed" data-editable="true" data-slot="problem-card-desc-2">
+            等看到数据下滑时往往已过去三天。普通的分析面板只给您一堆抽象图标，却无法诊断哪一步阻碍了用户的收藏和最终转化。
+          </p>
+        </div>
+        <!-- Problem Card 3 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 hover:border-red-950/40 hover:bg-red-950/5 transition-all duration-300">
+          <div class="text-red-500 font-mono text-sm mb-3">// 03</div>
+          <h3 class="text-base font-bold text-white mb-2" data-editable="true" data-slot="problem-card-title-3">运营建议“假大空”</h3>
+          <p class="text-xs sm:text-sm text-cyber-muted leading-relaxed" data-editable="true" data-slot="problem-card-desc-3">
+            网络上的“万能爆款公式”根本不契合您的特定粉丝群。你需要的是基于您过去数十篇发布资产（Assets）计算出的私域画像和归因。
+          </p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================= MODULE 5: CORE FEATURES GRID ================= -->
+    <!-- Features -->
+    <section data-section="features" class="space-y-8">
+      <div class="flex flex-col md:flex-row justify-between md:items-end border-b border-cyber-border/40 pb-6">
+        <div>
+          <span class="text-xs font-mono text-cyber-volt uppercase tracking-widest block" data-editable="true" data-slot="features-item-01">// CORE FEATURES</span>
+          <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1" data-editable="true" data-slot="features-title">VoltFlow 的硬核优势与能力矩阵</h2>
+        </div>
+        <p class="text-xs sm:text-sm text-cyber-muted max-w-sm mt-2 md:mt-0" data-editable="true" data-slot="features-desc">
+          彻底告别华而不实的大圆角渐变，用纯粹的技术架构和极高信息密度，让您的工作效率直接飙升。
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Feature 1 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 premium-card flex flex-col justify-between">
+          <div>
+            <div class="w-8 h-8 rounded bg-cyber-pillBg border border-cyber-volt/20 flex items-center justify-center mb-4">
+              <svg class="w-4 h-4 text-cyber-volt" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"></path></svg>
+            </div>
+            <h3 class="text-sm font-bold text-white mb-1.5" data-editable="true" data-slot="feature-title-1">Obsidian 零感接入</h3>
+            <p class="text-[11px] text-cyber-muted leading-relaxed" data-editable="true" data-slot="feature-card-desc-1">
+              无需任何插件注入，只需指定本地或云端 Markdown 文档库目录，引擎自动在后台解析知识结构和写作周期。
+            </p>
+          </div>
+          <div class="text-[10px] font-mono text-cyber-volt mt-4 tracking-wider">// LOCAL API BRIDGE</div>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 premium-card flex flex-col justify-between">
+          <div>
+            <div class="w-8 h-8 rounded bg-cyber-pillBg border border-cyber-volt/20 flex items-center justify-center mb-4">
+              <svg class="w-4 h-4 text-cyber-volt" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"></path></svg>
+            </div>
+            <h3 class="text-sm font-bold text-white mb-1.5" data-editable="true" data-slot="feature-title-2">多渠道数据自动桥接</h3>
+            <p class="text-[11px] text-cyber-muted leading-relaxed" data-editable="true" data-slot="feature-card-desc-2">
+              支持各内容平台账号的一键授权获取，将观看数、曝光率、互动行为以精确到秒的频度统一聚合。
+            </p>
+          </div>
+          <div class="text-[10px] font-mono text-cyber-volt mt-4 tracking-wider">// DATAFEED AGGREGATOR</div>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 premium-card flex flex-col justify-between">
+          <div>
+            <div class="w-8 h-8 rounded bg-cyber-pillBg border border-cyber-volt/20 flex items-center justify-center mb-4">
+              <svg class="w-4 h-4 text-cyber-volt" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m9-9H3"></path></svg>
+            </div>
+            <h3 class="text-sm font-bold text-white mb-1.5" data-editable="true" data-slot="feature-title-3">双螺旋归因判定</h3>
+            <p class="text-[11px] text-cyber-muted leading-relaxed" data-editable="true" data-slot="feature-card-desc-3">
+              不仅分析外部指标，更是与您知识库中的历史主题、关键字词密度、甚至封面色值进行高维矩阵计算，探寻隐秘关联。
+            </p>
+          </div>
+          <div class="text-[10px] font-mono text-cyber-volt mt-4 tracking-wider">// MULTIDIMENSION ANALYSIS</div>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 premium-card flex flex-col justify-between">
+          <div>
+            <div class="w-8 h-8 rounded bg-cyber-pillBg border border-cyber-volt/20 flex items-center justify-center mb-4">
+              <svg class="w-4 h-4 text-cyber-volt" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z"></path></svg>
+            </div>
+            <h3 class="text-sm font-bold text-white mb-1.5" data-editable="true" data-slot="feature-title-4">智能诊断行动生成器</h3>
+            <p class="text-[11px] text-cyber-muted leading-relaxed" data-editable="true" data-slot="feature-card-desc-4">
+              自动根据数据漏洞将决策拆解为待办任务，不仅呈现在您的网页端，还能同步回写为 Obsidian 的每日 Todo 面板。
+            </p>
+          </div>
+          <div class="text-[10px] font-mono text-cyber-volt mt-4 tracking-wider">// ACTIONS WRITEBACK</div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================= MODULE 6: ARCHITECTURE FLOW WORKFLOW ================= -->
+    <!-- Architecture -->
+    <section data-section="architecture" id="architecture" class="space-y-8 relative">
+      <div class="text-center max-w-xl mx-auto space-y-2">
+        <span class="text-xs font-mono text-cyber-volt uppercase tracking-widest block" data-editable="true" data-slot="architecture-item-01">// SYSTEM ARCHITECTURE</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white" data-editable="true" data-slot="architecture-title">VoltFlow 数据自动化生命管线</h2>
+        <p class="text-xs text-cyber-muted" data-editable="true" data-slot="architecture-desc">通过极简的数据流向，打通您的灵感到商业变现链路</p>
+      </div>
+
+      <!-- Linear Visual Flow Representation -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 pt-6">
+        <!-- Flow Step 1 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 relative group hover:border-cyber-volt/40 transition-all">
+          <div class="absolute -right-3 top-1/2 transform -translate-y-1/2 text-cyber-border font-mono text-2xl hidden lg:block select-none font-bold">→</div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono text-cyber-volt bg-cyber-pillBg px-2 py-0.5 rounded" data-editable="true" data-slot="step-num-1">STEP 01</span>
+            <span class="text-[9px] font-mono text-cyber-darkMuted">INGESTION</span>
+          </div>
+          <h3 class="text-sm font-bold text-white mb-1" data-editable="true" data-slot="step-title-1">灵感获取 &amp; 知识聚合</h3>
+          <p class="text-xs text-cyber-muted leading-relaxed" data-editable="true" data-slot="step-desc-1">
+            您在本地 Obsidian 中随性书写、采集的所有笔记资产，都会通过本地 Agent 被轻量扫描和解析，生成关系图谱。
+          </p>
+        </div>
+
+        <!-- Flow Step 2 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 relative group hover:border-cyber-volt/40 transition-all">
+          <div class="absolute -right-3 top-1/2 transform -translate-y-1/2 text-cyber-border font-mono text-2xl hidden lg:block select-none font-bold">→</div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono text-cyber-volt bg-cyber-pillBg px-2 py-0.5 rounded" data-editable="true" data-slot="step-num-2">STEP 02</span>
+            <span class="text-[9px] font-mono text-cyber-darkMuted">AUTOMATION</span>
+          </div>
+          <h3 class="text-sm font-bold text-white mb-1" data-editable="true" data-slot="step-title-2">跨平台全网分发部署</h3>
+          <p class="text-xs text-cyber-muted leading-relaxed" data-editable="true" data-slot="step-desc-2">
+            当文章在本地被打上特定的运营标签时，VoltFlow 的 API 会自动化在云端调取、渲染内容，打通分发链路。
+          </p>
+        </div>
+
+        <!-- Flow Step 3 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 relative group hover:border-cyber-volt/40 transition-all">
+          <div class="absolute -right-3 top-1/2 transform -translate-y-1/2 text-cyber-border font-mono text-2xl hidden lg:block select-none font-bold">→</div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono text-cyber-volt bg-cyber-pillBg px-2 py-0.5 rounded" data-editable="true" data-slot="step-num-3">STEP 03</span>
+            <span class="text-[9px] font-mono text-cyber-darkMuted">MONITORING</span>
+          </div>
+          <h3 class="text-sm font-bold text-white mb-1" data-editable="true" data-slot="step-title-3">秒级多维漏斗捕获</h3>
+          <p class="text-xs text-cyber-muted leading-relaxed" data-editable="true" data-slot="step-desc-3">
+            平台后台的曝光推荐率、千次观看率、赞藏转比例，都会被数据模块实时采集并生成高密度的综合转化看板。
+          </p>
+        </div>
+
+        <!-- Flow Step 4 -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 relative group hover:border-cyber-volt/40 transition-all">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono text-cyber-volt bg-cyber-pillBg px-2 py-0.5 rounded" data-editable="true" data-slot="step-num-4">STEP 04</span>
+            <span class="text-[9px] font-mono text-cyber-darkMuted">FEEDBACK</span>
+          </div>
+          <h3 class="text-sm font-bold text-white mb-1" data-editable="true" data-slot="step-title-4">诊断建议与就地回写</h3>
+          <p class="text-xs text-cyber-muted leading-relaxed" data-editable="true" data-slot="step-desc-4">
+            分析大脑在后台自动算出改进策略，直接生成 3-5 条关键运营建议，实时同步回写入您个人的 Obsidian 工作流。
+          </p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================= MODULE 7: INTERACTIVE VALUE CALCULATOR (ROI) ================= -->
+    <!-- Simulator -->
+    <section data-section="calculator" id="simulator" class="bg-cyber-card rounded-xl border border-cyber-border p-6 hover:border-cyber-borderHover transition-all">
+      <div class="flex flex-col md:flex-row justify-between md:items-end mb-8 pb-4 border-b border-cyber-border/40">
+        <div>
+          <span class="text-xs font-mono text-cyber-volt uppercase tracking-widest block">// INVESTMENT CALCULATOR</span>
+          <h2 class="text-xl font-bold text-white mt-1" data-editable="true" data-slot="calculator-title">流量与收益倍增计算器</h2>
+        </div>
+        <p class="text-xs text-cyber-muted mt-2 md:mt-0" data-editable="true" data-slot="calculator-item-02">模拟您在使用管线优化后的增量变现表现</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        <!-- Interactive Sliders (7 Columns) -->
+        <div class="lg:col-span-7 space-y-6">
+          <!-- Slider 1 -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-cyber-muted" data-editable="true" data-slot="calculator-item-03">月均内容曝光总量 (Impressions)</span>
+              <span class="font-mono text-cyber-volt font-bold text-sm" id="calc-impressions-text" data-slot="calc-impressions" data-editable="true">200,000</span>
+            </div>
+            <input type="range" id="calc-impressions" min="10000" max="1000000" step="10000" value="200000" oninput="calculateROI()" class="w-full h-1 bg-cyber-border rounded-lg appearance-none cursor-pointer">
+            <div class="flex justify-between text-[9px] font-mono text-cyber-darkMuted">
+              <span>10,000</span>
+              <span>500,000</span>
+              <span>1,000,000</span>
+            </div>
+          </div>
+
+          <!-- Slider 2 -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-cyber-muted" data-editable="true" data-slot="calculator-item-04">基准观看效率 (Conversion CTR)</span>
+              <span class="font-mono text-cyber-volt font-bold text-sm" id="calc-ctr-text" data-slot="calc-ctr" data-editable="true">5.0%</span>
+            </div>
+            <input type="range" id="calc-ctr" min="0.1" max="25.0" step="0.1" value="5.0" oninput="calculateROI()" class="w-full h-1 bg-cyber-border rounded-lg appearance-none cursor-pointer">
+            <div class="flex justify-between text-[9px] font-mono text-cyber-darkMuted">
+              <span>0.1%</span>
+              <span>12.5%</span>
+              <span>25.0%</span>
+            </div>
+          </div>
+
+          <!-- Slider 3 -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-cyber-muted" data-editable="true" data-slot="calculator-item-05">单个粉丝生命周期商业回报 (单粉LTV/元)</span>
+              <span class="font-mono text-cyber-volt font-bold text-sm" id="calc-ltv-text" data-slot="calc-ltv" data-editable="true">50 元</span>
+            </div>
+            <input type="range" id="calc-ltv" min="5" max="300" step="5" value="50" oninput="calculateROI()" class="w-full h-1 bg-cyber-border rounded-lg appearance-none cursor-pointer">
+            <div class="flex justify-between text-[9px] font-mono text-cyber-darkMuted">
+              <span>5 元</span>
+              <span>150 元</span>
+              <span>300 元</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calculated Output Results (5 Columns) -->
+        <div class="lg:col-span-5 bg-[#080d09] rounded-xl border border-cyber-border/80 p-5 flex flex-col justify-between">
+          <div class="space-y-4">
+            <div class="text-xs text-cyber-muted font-mono" data-editable="true" data-slot="calculator-item-06">// SIMULATION PROJECTION PREDICTION</div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <div class="text-[10px] text-cyber-muted mb-0.5" data-editable="true" data-slot="calculator-item-07">月均直接获观量</div>
+                <div class="text-2xl font-mono font-bold text-white" id="calc-res-views" data-slot="calc-res-views" data-editable="true">10,000</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-cyber-muted mb-0.5" data-editable="true" data-slot="calculator-item-08">VoltFlow 提效获益 (元)</div>
+                <div class="text-2xl font-mono font-bold text-cyber-volt" id="calc-res-revenue" data-slot="calc-res-revenue" data-editable="true">¥5,000</div>
+              </div>
+            </div>
+
+            <div class="bg-black/30 p-3 rounded border border-cyber-border text-[11px] text-cyber-muted leading-relaxed">
+              <span class="text-cyber-volt font-bold" data-editable="true" data-slot="calculator-item-09">* 提效说明：</span>
+              <span data-editable="true" data-slot="calculator-item-10">根据大厂真实数据归因，VoltFlow 看板提供的主动策略推荐能有效帮助创作者将原有 CTR 转化为提升平均 18.2% 左右。</span>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-cyber-darkMuted pt-4 border-t border-cyber-border/40 mt-4">
+            该估值由 VoltFlow 大厂运营历史聚合大盘模型测算。
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================= MODULE 8: CASE PROOF TESTIMONIAL & RETENTION ================= -->
+    <!-- Proof -->
+    <section data-section="proof" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      <!-- Cohort Retention Visual Representation (5 Columns) -->
+      <div class="lg:col-span-5 bg-cyber-card rounded-xl border border-cyber-border p-5 hover:border-cyber-borderHover transition-all flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <span class="text-xs font-mono text-cyber-muted uppercase tracking-wider block">// PILOT RETENTION MATRIX</span>
+            <span class="text-[10px] text-cyber-volt font-bold" data-editable="true" data-slot="proof-retention-title">头部博主连载订阅存留率</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-center border-collapse text-[10px] font-mono min-w-[280px]">
+              <thead>
+                <tr class="text-cyber-muted border-b border-cyber-border/40">
+                  <th class="py-2 text-left font-sans" data-editable="true" data-slot="proof-item-02">运营周期</th>
+                  <th class="py-2">W1</th>
+                  <th class="py-2">W2</th>
+                  <th class="py-2">W3</th>
+                  <th class="py-2">W4</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-cyber-border/20 text-white">
+                <tr data-slot="proof-retention-data-1" data-editable="true">
+                  <td class="py-2 text-left font-sans text-cyber-muted" data-editable="true" data-slot="proof-item-03">接入前基准</td>
+                  <td class="py-2 bg-cyber-volt bg-opacity-20 text-cyber-muted">100%</td>
+                  <td class="py-2 bg-cyber-volt bg-opacity-10 text-cyber-darkMuted">25.3%</td>
+                  <td class="py-2 bg-cyber-volt bg-opacity-10 text-cyber-darkMuted">14.1%</td>
+                  <td class="py-2 text-cyber-darkMuted">5.8%</td>
+                </tr>
+                <tr data-slot="proof-retention-data-2" data-editable="true">
+                  <td class="py-2 text-left font-sans text-cyber-volt" data-editable="true" data-slot="proof-item-04">VoltFlow 托管</td>
+                  <td class="py-2 bg-cyber-volt bg-opacity-90 text-cyber-black font-bold">100%</td>
+                  <td class="py-2 bg-cyber-volt bg-opacity-70 text-cyber-black">55.2%</td>
+                  <td class="py-2 bg-cyber-volt bg-opacity-50 text-white">39.0%</td>
+                  <td class="py-2 bg-cyber-volt bg-opacity-40 text-white">31.2%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="text-[10px] text-cyber-darkMuted mt-4 border-t border-cyber-border/40 pt-3">
+          * 矩阵深度反映了用户持续阅读意愿。使用诊断管线后，博主的内容粘性呈倍数级稳定攀升。
+        </div>
+      </div>
+
+      <!-- Testimonial cards (7 Columns) -->
+      <div class="lg:col-span-7 bg-cyber-card rounded-xl border border-cyber-border p-6 hover:border-cyber-borderHover transition-all flex flex-col justify-between">
+        <div class="space-y-6">
+          <span class="text-xs font-mono text-cyber-muted uppercase tracking-widest block" data-editable="true" data-slot="proof-item-05">// SUCCESS REAL TESTIMONIALS</span>
+          
+          <div class="space-y-4">
+            <!-- Quote 1 -->
+            <blockquote class="border-l-2 border-cyber-volt pl-4 space-y-1.5">
+              <p class="text-xs sm:text-sm text-white italic" data-editable="true" data-slot="proof-quote-text-1">
+                "以前每天写文章就像是在开盲盒，不知道哪一篇会爆。自从把 Obsidian 的知识库接入了 VoltFlow 后，它在后台帮我算好了每一条内容线的留存情况。现在我的转化率稳在 18% 左右，真是内容团队的降维打击工具！"
+              </p>
+              <footer class="text-[10px] text-cyber-muted font-mono" data-editable="true" data-slot="proof-author-info-1">
+                — Tiancai, 知识博主 / @BetaGifted 主理人
+              </footer>
+            </blockquote>
+
+            <!-- Quote 2 -->
+            <blockquote class="border-l-2 border-cyber-volt pl-4 space-y-1.5">
+              <p class="text-xs sm:text-sm text-white italic" data-editable="true" data-slot="proof-quote-text-2">
+                "作为一个敏捷咨询团队，我们需要对多平台的转化率作实时把控。VoltFlow 的智能诊断和 LTV 测算简直太懂我们了，不仅能分析出用户的点击漏斗卡点，还能实时回写 Todo。强力推荐！"
+              </p>
+              <footer class="text-[10px] text-cyber-muted font-mono" data-editable="true" data-slot="proof-author-info-2">
+                — Elena, 生产力流咨询总监
+              </footer>
+            </blockquote>
+          </div>
+        </div>
+
+        <div class="text-[10px] text-cyber-darkMuted pt-4 border-t border-cyber-border/40 mt-4">
+          已成功帮助 1,500+ 博主与小型企业优化了其流量转化链路。
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================= MODULE 9: THE TECH PRICING PLAN MATRIX ================= -->
+    <!-- Pricing -->
+    <section data-section="pricing" id="pricing" class="space-y-8">
+      <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b border-cyber-border/40 pb-6">
+        <div>
+          <span class="text-xs font-mono text-cyber-volt uppercase tracking-widest block" data-editable="true" data-slot="pricing-item-01">// FLEXIBLE PLANS</span>
+          <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1" data-editable="true" data-slot="pricing-title">克制透明、数据驱动的定价计划</h2>
+        </div>
+        <!-- Toggle button monthly vs yearly with transition -->
+        <div class="flex items-center space-x-2 bg-black/40 p-1 rounded-lg border border-cyber-border mt-3 sm:mt-0">
+          <button onclick="toggleBillingPeriod('monthly')" id="billing-monthly-btn" class="px-3 py-1 text-xs font-medium bg-cyber-pillBg text-cyber-volt rounded-md transition-all" data-slot="price-tier-cta-1" data-editable="true">Monthly</button>
+          <button onclick="toggleBillingPeriod('yearly')" id="billing-yearly-btn" class="px-3 py-1 text-xs font-medium text-cyber-muted hover:text-white rounded-md transition-all" data-slot="price-tier-cta-2" data-editable="true">Yearly (-20%)</button>
+        </div>
+      </div>
+
+      <!-- Pricing Plans grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Tier 1: Free Starter -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 hover:border-cyber-borderHover transition-all flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-mono text-cyber-muted uppercase tracking-wider mb-2" data-editable="true" data-slot="pricing-item-03">STARTER // 个人博主</div>
+            <div class="flex items-baseline space-x-1 mb-4">
+              <span class="text-3xl font-mono font-bold text-white">$0</span>
+              <span class="text-xs text-cyber-muted">/ 永久免费</span>
+            </div>
+            <p class="text-xs text-cyber-muted mb-6" data-editable="true" data-slot="pricing-item-04">适合刚起步、寻找内容节奏并验证内容路线的单兵创作者。</p>
+            
+            <ul class="space-y-2.5 text-xs text-cyber-muted border-t border-cyber-border/40 pt-4">
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-1">单平台源账号关联 (小红书/抖音)</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-2">Obsidian 基础目录连接扫描</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-3">每日一次基础时序数据拉取</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-darkMuted">✗</span> <span class="text-cyber-darkMuted" data-editable="true" data-slot="price-feature-list-4">LTV 多维归因模型</span>
+              </li>
+            </ul>
+          </div>
+          <button class="w-full bg-cyber-border hover:bg-cyber-borderHover text-white font-bold text-xs py-2 rounded-md mt-8 transition-all" data-editable="true" data-slot="price-tier-cta-3">开始免费版</button>
+        </div>
+
+        <!-- Tier 2: Premium Creator (Most popular) -->
+        <div class="bg-[#090f0a] border-2 border-cyber-volt rounded-xl p-6 relative flex flex-col justify-between shadow-[0_0_25px_rgba(124,255,68,0.08)]">
+          <div class="absolute -top-3.5 right-6 bg-cyber-volt text-cyber-black font-mono font-bold text-[9px] px-2 py-0.5 rounded uppercase tracking-wider">
+            MOST POPULAR
+          </div>
+          <div>
+            <div class="text-xs font-mono text-cyber-volt uppercase tracking-wider mb-2" data-editable="true" data-slot="pricing-item-10">PRO // 进阶内容团队</div>
+            <div class="flex items-baseline space-x-1 mb-4">
+              <span class="text-3xl font-mono font-bold text-white" id="price-pro-val" data-slot="price-pro-cost" data-editable="true">$19</span>
+              <span class="text-xs text-cyber-muted" id="price-pro-unit" data-slot="price-pro-unit" data-editable="true">/ month</span>
+            </div>
+            <p class="text-xs text-cyber-muted mb-6" data-editable="true" data-slot="pricing-item-11">最畅销的方案，提供完整的多平台分析、交叉分析与自动任务同步。</p>
+            
+            <ul class="space-y-2.5 text-xs text-cyber-muted border-t border-cyber-border/40 pt-4">
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-5">无限制多源平台账号绑定</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-6">实时 Obsidian 目录自动监控双向同步</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-7">高频次实时数据刷新及转化率环图</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-8">大厂级 LTV 时序趋势预测与模拟</span>
+              </li>
+            </ul>
+          </div>
+          <button class="w-full bg-cyber-volt hover:bg-opacity-90 text-cyber-black font-bold text-xs py-2.5 rounded-md mt-8 transition-all" data-editable="true" data-slot="price-tier-cta-4">即刻开启 Pro 版</button>
+        </div>
+
+        <!-- Tier 3: Enterprise Scale -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 hover:border-cyber-borderHover transition-all flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-mono text-cyber-muted uppercase tracking-wider mb-2" data-editable="true" data-slot="pricing-item-17">ENTERPRISE // 大厂运营解决方案</div>
+            <div class="flex items-baseline space-x-1 mb-4">
+              <span class="text-3xl font-mono font-bold text-white" id="price-ent-val" data-slot="price-enterprise-cost" data-editable="true">$99</span>
+              <span class="text-xs text-cyber-muted" id="price-ent-unit" data-slot="price-enterprise-unit" data-editable="true">/ month</span>
+            </div>
+            <p class="text-xs text-cyber-muted mb-6" data-editable="true" data-slot="pricing-item-18">面向专业大型运营机构。提供高度自研的企业级 API 桥接及定制诊断算法。</p>
+            
+            <ul class="space-y-2.5 text-xs text-cyber-muted border-t border-cyber-border/40 pt-4">
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-9">企业专属独立私有数据网关</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-10">定制机器学习归因模型及算法定制</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-11">专属专家组月度经营分析诊断会</span>
+              </li>
+              <li class="flex items-center space-x-2">
+                <span class="text-cyber-volt">✔</span> <span data-editable="true" data-slot="price-feature-list-12">最高优先级别 24/7 技术保障热线</span>
+              </li>
+            </ul>
+          </div>
+          <button class="w-full bg-cyber-border hover:bg-cyber-borderHover text-white font-bold text-xs py-2 rounded-md mt-8 transition-all" data-editable="true" data-slot="price-tier-cta-5">联系专属服务代表</button>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================= MODULE 10: THE ACTION SUMMONING (CTA) ================= -->
+    <!-- Call to Action -->
+    <section data-section="cta" class="bg-cyber-card rounded-xl border border-cyber-border p-8 hover:border-cyber-borderHover transition-all relative overflow-hidden flex flex-col items-center justify-center text-center space-y-6">
+      <!-- Background overlay grid detail -->
+      <div class="absolute inset-0 bg-grid-pattern opacity-10"></div>
+      
+      <div class="space-y-2 relative z-10">
+        <span class="text-xs font-mono text-cyber-volt uppercase tracking-widest block" data-editable="true" data-slot="cta-item-01">// DEPLOY TODAY</span>
+        <h2 class="text-2xl sm:text-4xl font-bold text-white" data-editable="true" data-slot="cta-title">准备好重新拿回对内容数据的统治权了吗？</h2>
+        <p class="text-xs sm:text-sm text-cyber-muted max-w-lg mx-auto" data-editable="true" data-slot="cta-desc">
+          立即用 2 分钟接入您的知识流。开始构建真正能闭环转化、让灵感不再干涸的生产力体系。
+        </p>
+      </div>
+
+      <div class="w-full max-w-md flex flex-col sm:flex-row gap-3 relative z-10 pt-2">
+        <input type="email" placeholder="您的工作邮箱" class="flex-grow bg-cyber-black border border-cyber-border hover:border-cyber-borderHover focus:border-cyber-volt focus:outline-none rounded text-xs px-4 py-3 text-white placeholder-cyber-darkMuted transition-colors font-mono">
+        <button onclick="exportToImage()" class="bg-cyber-volt hover:bg-opacity-90 text-cyber-black font-bold text-xs px-6 py-3 rounded transition-all shadow-[0_4px_20px_rgba(124,255,68,0.25)] flex items-center justify-center whitespace-nowrap">
+          <span data-editable="true" data-slot="cta-button-text">开启免费体验</span>
+        </button>
+      </div>
+
+      <div class="text-[10px] text-cyber-darkMuted relative z-10" data-editable="true" data-slot="cta-item-05">
+        * 14天全功能试用期，无需绑定任何信用卡。
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- ================= MODULE 11: FOOTER & SOCIAL MEDIA SECTION ================= -->
+  <!-- Footer -->
+  <footer data-section="footer" class="border-t border-cyber-border/40 mt-24 pt-10 pb-6 bg-cyber-black/95">
+    <div class="max-w-[1400px] mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-8 text-xs pb-10">
+      
+      <!-- Footer Left Column: Logo & Social -->
+      <div class="md:col-span-4 space-y-4">
+        <div class="bg-cyber-volt text-cyber-black font-mono font-bold text-xs px-2.5 py-1 rounded tracking-wide uppercase inline-block" data-editable="true" data-slot="footer-logo-tag">
+          VOLTFLOW
+        </div>
+        <p class="text-[11px] text-cyber-muted leading-relaxed" data-editable="true" data-slot="footer-description">
+          旨在消除一切无意义的渐变包装，构建极客崇尚的“高信息密度、硬核秩序”的数据自动化和效率分析管线。
+        </p>
+        
+        <!-- Social Medias with High Fidelity SVG Icons -->
+        <div class="flex space-x-3 pt-2">
+          <!-- Github -->
+          <a href="#" class="w-7 h-7 rounded border border-cyber-border flex items-center justify-center text-cyber-muted hover:text-cyber-volt hover:border-cyber-volt transition-colors" title="GitHub" data-slot="social-links-1" data-editable="true">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.001.069-.001 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647a3.895 3.895 0 011.027 2.683c0 3.842-2.339 4.687-4.566 4.935.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"></path></svg>
+          </a>
+          <!-- Twitter / X -->
+          <a href="#" class="w-7 h-7 rounded border border-cyber-border flex items-center justify-center text-cyber-muted hover:text-cyber-volt hover:border-cyber-volt transition-colors" title="Twitter / X" data-slot="social-links-2" data-editable="true">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+          </a>
+          <!-- Discord -->
+          <a href="#" class="w-7 h-7 rounded border border-cyber-border flex items-center justify-center text-cyber-muted hover:text-cyber-volt hover:border-cyber-volt transition-colors" title="Discord" data-slot="social-links-3" data-editable="true">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Footer Columns -->
+      <div class="md:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <div>
+          <div class="font-mono text-[10px] text-cyber-volt uppercase tracking-wider mb-3">// SOLUTIONS</div>
+          <ul class="space-y-2 text-[11px] text-cyber-muted">
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-1">Obsidian 同步</a></li>
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-2">漏斗诊断引擎</a></li>
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-3">跨平台矩阵分发</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-mono text-[10px] text-cyber-volt uppercase tracking-wider mb-3">// RESOURCES</div>
+          <ul class="space-y-2 text-[11px] text-cyber-muted">
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-4">技术白皮书</a></li>
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-5">博客与案例</a></li>
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-6">开源 Agent SDK</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-mono text-[10px] text-cyber-volt uppercase tracking-wider mb-3">// COMPANY</div>
+          <ul class="space-y-2 text-[11px] text-cyber-muted">
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-7">关于 VoltFlow</a></li>
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-8">安全保障声明</a></li>
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-9">招贤纳士</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-mono text-[10px] text-cyber-volt uppercase tracking-wider mb-3">// LEGAL</div>
+          <ul class="space-y-2 text-[11px] text-cyber-muted">
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-10">服务契约条款</a></li>
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-11">隐私政策保护</a></li>
+            <li><a href="#" class="hover:text-white transition-colors" data-editable="true" data-slot="footer-link-12">服务状态监视</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Final Copyright and Tech Spec -->
+    <div class="max-w-[1400px] mx-auto px-6 pt-6 border-t border-cyber-border/20 flex flex-col sm:flex-row justify-between items-center text-[10px] text-cyber-darkMuted space-y-4 sm:space-y-0 select-none">
+      <div class="flex items-center space-x-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-cyber-volt"></span>
+        <span data-editable="true" data-slot="footer-item-15">全栈基于 RESTful API &amp; 智能边缘网关部署</span>
+      </div>
+      <div data-editable="true" data-slot="copyright-text">
+        © 2026 VoltFlow Inc. Designed strictly under Lean Cyber-Analytics Standard.
+      </div>
+    </div>
+  </footer>
+
+
+  <!-- ================= INLINE JS FOR DEEP INTERACTIVITY ================= -->
+  <script>
+    // ================= 1. THE PRODUCT LIVE PREVIEW DEMO DATA SWITCHER =================
+    // 多维业务数据源配置
+    const demoChannels = {
+      obsidian: {
+        title: "Obsidian 转化诊断",
+        badge: "已同步最新模型：Obsidian",
+        ctr: "18.19%",
+        metric1: "6.96%",
+        metric2: "0.65%",
+        chartMax: "50,000",
+        chartMid: "25,000",
+        ringDashArray: "62, 100", // 18.19%
+        data: [
+          { date: 'D1', views: 5000, rate: 0.5, desc: '源稿发布启动' },
+          { date: 'D2', views: 18000, rate: 0.8, desc: '工作流主题升温' },
+          { date: 'D3', views: 10000, rate: 0.7, desc: '引入封面诊断' },
+          { date: 'D4', views: 28000, rate: 1.2, desc: '策略回写成功' },
+          { date: 'D5', views: 22000, rate: 1.1, desc: '情感留存辅助' },
+          { date: 'D6', views: 49012, rate: 2.5, desc: 'Obsidian爆款爆发', isPeak: true },
+          { date: 'D7', views: 45000, rate: 2.3, desc: '高客单流沉淀' }
+        ]
+      },
+      brand: {
+        title: "品牌视觉转化诊断",
+        badge: "已同步最新模型：Brand Visuals",
+        ctr: "9.52%",
+        metric1: "4.31%",
+        metric2: "0.22%",
+        chartMax: "30,000",
+        chartMid: "15,000",
+        ringDashArray: "32, 100", // ~9.52%
+        data: [
+          { date: 'D1', views: 12000, rate: 0.3, desc: '配色方案上新' },
+          { date: 'D2', views: 15000, rate: 0.4, desc: '排版精益改进' },
+          { date: 'D3', views: 8000, rate: 0.2, desc: '样本对比失败' },
+          { date: 'D4', views: 26000, rate: 0.9, desc: '品牌大图重构', isPeak: true },
+          { date: 'D5', views: 14000, rate: 0.5, desc: '视觉习惯修正' },
+          { date: 'D6', views: 19000, rate: 0.7, desc: '高饱绿色流反馈' },
+          { date: 'D7', views: 11000, rate: 0.4, desc: '观察尾盘趋缓' }
+        ]
+      },
+      consult: {
+        title: "商业咨询转化诊断",
+        badge: "已同步最新模型：Consulting Funnel",
+        ctr: "24.50%",
+        metric1: "12.85%",
+        metric2: "3.15%",
+        chartMax: "10,000",
+        chartMid: "5,000",
+        ringDashArray: "82, 100", // ~24.5%
+        data: [
+          { date: 'D1', views: 1200, rate: 1.2, desc: '高净值私域诊断' },
+          { date: 'D2', views: 2500, rate: 1.8, desc: '公开案例披露' },
+          { date: 'D3', views: 4300, rate: 2.2, desc: '大厂架构连载开篇' },
+          { date: 'D4', views: 3100, rate: 1.9, desc: '咨询名额告急' },
+          { date: 'D5', views: 9812, rate: 3.1, desc: '爆款文章破圈引导', isPeak: true },
+          { date: 'D6', views: 7200, rate: 2.8, desc: '交付细节复盘' },
+          { date: 'D7', views: 6100, rate: 2.5, desc: '常态沉淀闭环' }
+        ]
+      }
+    };
+
+    let activeDemoChannel = 'obsidian';
+
+    function switchDemoChannel(channelKey) {
+      activeDemoChannel = channelKey;
+      
+      // A. 切换按钮激活状态样式
+      const container = document.getElementById('demo-channel-switcher');
+      const buttons = container.querySelectorAll('.demo-tab-btn');
+      
+      buttons.forEach((btn, idx) => {
+        // 通过点击按钮的内容匹配判断
+        const label = btn.innerText;
+        const meta = demoChannels[channelKey];
+        
+        if (channelKey === 'obsidian' && label.includes('Obsidian') ||
+            channelKey === 'brand' && label.includes('品牌') ||
+            channelKey === 'consult' && label.includes('商业')) {
+          btn.className = "demo-tab-btn px-4 py-2 bg-cyber-pillBg text-cyber-volt border border-cyber-volt/40 text-xs font-medium rounded transition-all";
+        } else {
+          btn.className = "demo-tab-btn px-4 py-2 bg-transparent text-cyber-muted border border-cyber-border hover:border-cyber-borderHover text-xs font-medium rounded transition-all";
+        }
+      });
+
+      // B. 动效更新右侧侧边卡片各项核心大数字
+      const meta = demoChannels[channelKey];
+      document.getElementById('demo-side-title').innerText = meta.title;
+      document.getElementById('demo-badge-update').innerText = meta.badge;
+      document.getElementById('demo-ring-pct-text').innerText = meta.ctr;
+      document.getElementById('demo-ring-progress').setAttribute('stroke-dasharray', meta.ringDashArray);
+      document.getElementById('demo-metric-1').innerText = meta.metric1;
+      document.getElementById('demo-metric-2').innerText = meta.metric2;
+
+      // C. 重画 SVG 矢量折线与节点
+      renderDemoChart();
+    }
+
+    function renderDemoChart() {
+      const container = document.getElementById('demo-svg-chart-wrapper');
+      const svg = document.getElementById('demo-svg-canvas');
+      if (!container || !svg) return;
+
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      // 设置 1:1 绝对物理视口尺寸
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+      const padding = { top: 15, right: 10, bottom: 24, left: 10 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      const activeMeta = demoChannels[activeDemoChannel];
+      const dataPoints = activeMeta.data;
+
+      // 动态重画 Y 轴上限标识文本数字
+      document.getElementById('y-max-val').innerText = activeMeta.chartMax;
+      document.getElementById('y-mid-val').innerText = activeMeta.chartMid;
+      
+      const maxViewsRaw = parseInt(activeMeta.chartMax.replace(/,/g, ''), 10);
+      
+      const getX = (idx) => padding.left + (idx / (dataPoints.length - 1)) * plotWidth;
+      const getYViews = (val) => padding.top + plotHeight - (val / maxViewsRaw) * plotHeight;
+
+      const points = dataPoints.map((d, idx) => ({
+        x: getX(idx),
+        yViews: getYViews(d.views),
+        ...d
+      }));
+
+      // 生成 Path Data
+      let pathD = '';
+      let fillD = '';
+
+      points.forEach((pt, idx) => {
+        if (idx === 0) {
+          pathD = `M ${pt.x} ${pt.yViews}`;
+          fillD = `M ${pt.x} ${padding.top + plotHeight} L ${pt.x} ${pt.yViews}`;
+        } else {
+          pathD += ` L ${pt.x} ${pt.yViews}`;
+          fillD += ` L ${pt.x} ${pt.yViews}`;
+        }
+        if (idx === points.length - 1) {
+          fillD += ` L ${pt.x} ${padding.top + plotHeight} Z`;
+        }
+      });
+
+      document.getElementById('demo-fill-area').setAttribute('d', fillD);
+      document.getElementById('demo-views-path').setAttribute('d', pathD);
+
+      // 生成拐点
+      const dotsGroup = document.getElementById('demo-dots-group');
+      dotsGroup.innerHTML = '';
+
+      points.forEach((pt, idx) => {
+        const dotG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        dotG.setAttribute('class', 'cursor-pointer');
+
+        // 触控热区
+        const touchCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        touchCircle.setAttribute('cx', pt.x);
+        touchCircle.setAttribute('cy', pt.yViews);
+        touchCircle.setAttribute('r', 15);
+        touchCircle.setAttribute('fill', 'transparent');
+        touchCircle.setAttribute('pointer-events', 'all');
+
+        // 实体小正圆
+        const coreCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        coreCircle.setAttribute('id', `demo-dot-${idx}`);
+        coreCircle.setAttribute('cx', pt.x);
+        coreCircle.setAttribute('cy', pt.yViews);
+        coreCircle.setAttribute('class', 'interactive-dot');
+
+        if (pt.isPeak) {
+          coreCircle.setAttribute('r', 5);
+          coreCircle.setAttribute('fill', '#ffffff');
+          coreCircle.setAttribute('stroke', '#7CFF44');
+          coreCircle.setAttribute('stroke-width', '2.5');
+          coreCircle.setAttribute('filter', 'url(#peakGlowFilterDemo)');
+        } else {
+          coreCircle.setAttribute('r', 3.5);
+          coreCircle.setAttribute('fill', '#070A08');
+          coreCircle.setAttribute('stroke', '#7CFF44');
+          coreCircle.setAttribute('stroke-width', '1.5');
+        }
+
+        dotG.appendChild(touchCircle);
+        dotG.appendChild(coreCircle);
+        dotsGroup.appendChild(dotG);
+      });
+
+      // 交互
+      const guideLine = document.getElementById('demo-guide-line');
+      const tooltip = document.getElementById('demo-chart-tooltip');
+
+      function handleHover(clientX) {
+        const rect = container.getBoundingClientRect();
+        const relativeX = clientX - rect.left;
+
+        if (relativeX < padding.left - 10 || relativeX > padding.left + plotWidth + 10) {
+          resetHover();
+          return;
+        }
+
+        const calculatedIndex = Math.round(((relativeX - padding.left) / plotWidth) * (dataPoints.length - 1));
+        const activeIdx = Math.max(0, Math.min(dataPoints.length - 1, calculatedIndex));
+        const activePt = points[activeIdx];
+
+        // 虚线对齐
+        guideLine.setAttribute('x1', activePt.x);
+        guideLine.setAttribute('x2', activePt.x);
+        guideLine.setAttribute('y1', padding.top);
+        guideLine.setAttribute('y2', padding.top + plotHeight);
+        guideLine.classList.remove('opacity-0');
+
+        // 点变换
+        points.forEach((pt, idx) => {
+          const dot = document.getElementById(`demo-dot-${idx}`);
+          if (!dot) return;
+          if (idx === activeIdx) {
+            dot.setAttribute('r', pt.isPeak ? 7 : 5.5);
+            dot.setAttribute('stroke-width', pt.isPeak ? '3.5' : '3');
+            dot.setAttribute('fill', pt.isPeak ? '#ffffff' : '#7CFF44');
+          } else {
+            if (pt.isPeak) {
+              dot.setAttribute('r', 5);
+              dot.setAttribute('stroke-width', '2.5');
+              dot.setAttribute('fill', '#ffffff');
+            } else {
+              dot.setAttribute('r', 3.5);
+              dot.setAttribute('stroke-width', '1.5');
+              dot.setAttribute('fill', '#070A08');
+            }
+          }
+        });
+
+        // 浮框更新
+        tooltip.innerHTML = `
+          <div class="text-cyber-muted mb-0.5">${activePt.date} 观测值</div>
+          <div class="font-bold text-white mb-1 truncate">${activePt.desc}</div>
+          <div class="flex justify-between items-center text-[9px] mb-0.5">
+            <span class="text-cyber-muted">获观流量 (PV)</span>
+            <span class="font-mono text-cyber-volt font-bold">${activePt.views.toLocaleString()}</span>
+          </div>
+          <div class="flex justify-between items-center text-[9px]">
+            <span class="text-cyber-muted">诊断转化率</span>
+            <span class="font-mono text-white font-semibold">${activePt.rate}%</span>
+          </div>
+        `;
+
+        let leftOffset = activePt.x - 80;
+        if (leftOffset < 5) leftOffset = 5;
+        if (leftOffset + 160 > width) leftOffset = width - 160;
+
+        tooltip.style.left = `${leftOffset}px`;
+        tooltip.style.top = `${activePt.yViews - 72}px`;
+        tooltip.style.opacity = '1';
+      }
+
+      function resetHover() {
+        guideLine.classList.add('opacity-0');
+        tooltip.style.opacity = '0';
+        points.forEach((pt, idx) => {
+          const dot = document.getElementById(`demo-dot-${idx}`);
+          if (!dot) return;
+          if (pt.isPeak) {
+            dot.setAttribute('r', 5);
+            dot.setAttribute('stroke-width', '2.5');
+            dot.setAttribute('fill', '#ffffff');
+          } else {
+            dot.setAttribute('r', 3.5);
+            dot.setAttribute('stroke-width', '1.5');
+            dot.setAttribute('fill', '#070A08');
+          }
+        });
+      }
+
+      container.addEventListener('mousemove', (e) => handleHover(e.clientX));
+      container.addEventListener('mouseleave', resetHover);
+    }
+
+
+    // ================= 2. THE INTERACTIVE VALUE ROI CALCULATOR =================
+    function calculateROI() {
+      const impressions = parseFloat(document.getElementById('calc-impressions').value);
+      const ctr = parseFloat(document.getElementById('calc-ctr').value);
+      const ltv = parseFloat(document.getElementById('calc-ltv').value);
+
+      // 显示文本变化
+      document.getElementById('calc-impressions-text').innerText = impressions.toLocaleString();
+      document.getElementById('calc-ctr-text').innerText = ctr.toFixed(1) + '%';
+      document.getElementById('calc-ltv-text').innerText = ltv + ' 元';
+
+      // 核心公式计算
+      const views = impressions * (ctr / 100);
+      
+      // VoltFlow 提效增量计算：大盘加权提效平均能提高 18.2% 多的阅读转化
+      const addedConversions = views * 0.182; 
+      const addedRevenue = addedConversions * ltv;
+
+      // 输出至卡片
+      document.getElementById('calc-res-views').innerText = Math.round(views).toLocaleString();
+      document.getElementById('calc-res-revenue').innerText = '¥' + Math.round(addedRevenue).toLocaleString();
+    }
+
+
+    // ================= 3. THE TECH PRICING SWITCHER =================
+    let activeBillingPeriod = 'monthly';
+
+    function toggleBillingPeriod(period) {
+      activeBillingPeriod = period;
+      
+      const mBtn = document.getElementById('billing-monthly-btn');
+      const yBtn = document.getElementById('billing-yearly-btn');
+
+      if (period === 'monthly') {
+        mBtn.className = "px-3 py-1 text-xs font-medium bg-cyber-pillBg text-cyber-volt rounded-md transition-all";
+        yBtn.className = "px-3 py-1 text-xs font-medium text-cyber-muted hover:text-white rounded-md transition-all";
+        
+        // 恢复月价格
+        document.getElementById('price-pro-val').innerText = "$19";
+        document.getElementById('price-pro-unit').innerText = "/ month";
+        document.getElementById('price-ent-val').innerText = "$99";
+        document.getElementById('price-ent-unit').innerText = "/ month";
+      } else {
+        yBtn.className = "px-3 py-1 text-xs font-medium bg-cyber-pillBg text-cyber-volt rounded-md transition-all";
+        mBtn.className = "px-3 py-1 text-xs font-medium text-cyber-muted hover:text-white rounded-md transition-all";
+        
+        // 渲染年付折合单月价格（打 8 折）
+        document.getElementById('price-pro-val').innerText = "$15";
+        document.getElementById('price-pro-unit').innerText = "/ month (年付)";
+        document.getElementById('price-ent-val').innerText = "$79";
+        document.getElementById('price-ent-unit').innerText = "/ month (年付)";
+      }
+    }
+
+
+    // ================= STATIC INTERACTIVE INITIALIZATION =================
+    document.addEventListener("DOMContentLoaded", () => {
+      // A. 初始化小部件图表
+      renderDemoChart();
+      window.addEventListener('resize', renderDemoChart);
+
+      // B. 初始化 ROI 计算器
+      calculateROI();
+
+      // C. 激活全站就地编辑模式；生成页存在 AHP 编辑器时交给统一运行时接管。
+      if (!document.querySelector('[data-ahp-runtime="true"]')) {
+        const editables = document.querySelectorAll('[data-editable="true"]');
+        editables.forEach(elem => {
+          elem.setAttribute("contenteditable", "true");
+          elem.setAttribute("spellcheck", "false");
+          
+          elem.addEventListener("focus", () => {
+            setTimeout(() => {
+              const range = document.createRange();
+              range.selectNodeContents(elem);
+              const sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }, 50);
+          });
+        });
+      }
+    });
+  </script>
+
+</body></html>

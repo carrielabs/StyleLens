@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blueprint - 企业级智能体架构平台</title>
+    <style>
+        /* ==========================================================================
+           1. CSS Variables & Reset
+           ========================================================================== */
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Serif+SC:wght@400;700&display=swap');
+
+        :root {
+            --c-bg: #0012e8; 
+            --c-text-main: #ffffff;
+            --c-text-muted: rgba(255, 255, 255, 0.65);
+            --c-text-dim: rgba(255, 255, 255, 0.4);
+            --c-border: rgba(255, 255, 255, 0.25);
+            --c-border-light: rgba(255, 255, 255, 0.1);
+            --c-border-hover: rgba(255, 255, 255, 0.8);
+            
+            --f-serif: 'Noto Serif SC', 'Songti SC', 'Times New Roman', serif;
+            --f-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --f-mono: 'JetBrains Mono', 'Courier New', Courier, monospace;
+
+            --layout-max-w: 1280px;
+            --section-py: 140px; /* 增加留白 */
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--c-bg);
+            color: var(--c-text-main);
+            font-family: var(--f-sans);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        a { text-decoration: none; color: inherit; }
+        ul { list-style: none; }
+        
+        /* 改进的编辑态交互：平时不干扰，点击聚焦时才提示 */
+        [contenteditable="true"] {
+            outline: none;
+            position: relative;
+            transition: all 0.2s;
+        }
+        [contenteditable="true"]:focus {
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+
+        /* ==========================================================================
+           2. Art & Background Utilities (艺术感提升)
+           ========================================================================== */
+        .bg-grid {
+            background-image: 
+                linear-gradient(var(--c-border-light) 1px, transparent 1px),
+                linear-gradient(90deg, var(--c-border-light) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center top;
+        }
+        
+        .cross-marker {
+            position: absolute;
+            width: 12px; height: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--f-mono); color: var(--c-text-dim); font-size: 10px;
+        }
+        .cross-tl { top: -6px; left: -6px; }
+        .cross-tr { top: -6px; right: -6px; }
+        .cross-bl { bottom: -6px; left: -6px; }
+        .cross-br { bottom: -6px; right: -6px; }
+
+        /* ==========================================================================
+           3. Layout & Utilities
+           ========================================================================== */
+        .container { max-width: var(--layout-max-w); margin: 0 auto; padding: 0 40px; position: relative; }
+        
+        .font-serif { font-family: var(--f-serif); }
+        .font-mono { font-family: var(--f-mono); text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        .text-center { text-align: center; }
+        .text-muted { color: var(--c-text-muted); }
+        .text-dim { color: var(--c-text-dim); }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
+        
+        .border-t { border-top: 1px solid var(--c-border); }
+        .border-b { border-bottom: 1px solid var(--c-border); }
+        .border-all { border: 1px solid var(--c-border); }
+
+        .py-section { padding-top: var(--section-py); padding-bottom: var(--section-py); }
+        .grid { display: grid; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+
+        /* ==========================================================================
+           4. Components
+           ========================================================================== */
+        /* 修复按钮间距与交互 */
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 24px; /* 修复间距挤在一起的问题 */
+            margin-top: 48px; /* 修复与上方文字挤在一起的问题 */
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 56px; /* 加大按钮，更有体量感 */
+            padding: 0 40px;
+            font-family: var(--f-mono);
+            font-size: 0.875rem;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary {
+            background: var(--c-text-main);
+            color: var(--c-bg);
+            border-color: var(--c-text-main);
+        }
+        .btn-primary:hover {
+            background: transparent;
+            color: var(--c-text-main);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .btn-secondary {
+            border-color: var(--c-border);
+            color: var(--c-text-muted);
+            background: transparent;
+        }
+        .btn-secondary:hover {
+            border-color: var(--c-text-main);
+            color: var(--c-text-main);
+            background: rgba(255,255,255,0.05); /* 次按钮不反转实心，保留图纸感 */
+            transform: translateY(-2px);
+        }
+
+        .section-header { margin-bottom: 80px; text-align: center; position: relative; z-index: 2; }
+        .section-title {
+            font-family: var(--f-serif); font-size: 3rem; font-weight: 400; margin-bottom: 24px;
+        }
+        .section-subtitle {
+            font-family: var(--f-mono); font-size: 0.875rem; color: var(--c-text-dim); letter-spacing: 0.1em;
+            display: flex; align-items: center; justify-content: center; gap: 16px;
+        }
+        .section-subtitle::before, .section-subtitle::after {
+            content: ''; display: block; width: 40px; height: 1px; background: var(--c-border);
+        }
+
+        /* 增强型 Hover 卡片 */
+        .card {
+            border: 1px solid var(--c-border);
+            padding: 48px;
+            background: transparent;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .card:hover {
+            border-color: var(--c-border-hover);
+            background: rgba(255, 255, 255, 0.03); /* 淡淡发光 */
+            transform: translateY(-8px); /* 物理上浮感 */
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .card-title { font-family: var(--f-serif); font-size: 1.75rem; margin-bottom: 20px; font-weight: 400; }
+
+        /* Grid Layouts */
+        .grid-2 { grid-template-columns: repeat(2, 1fr); gap: 32px; }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); gap: 32px; }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); gap: 32px; } 
+        
+        /* ==========================================================================
+           5. specific Sections
+           ========================================================================== */
+        nav { padding: 32px 0; border-bottom: 1px solid var(--c-border); position: relative; z-index: 100; }
+        .nav-links { gap: 40px; }
+
+        /* 1. Hero 增强艺术感 */
+        .hero-section {
+            position: relative;
+            min-height: 90vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid var(--c-border);
+            overflow: hidden;
+        }
+        .hero-bg-text {
+            position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-family: var(--f-serif);
+            font-size: 30vw; /* 超大排版张力 */
+            white-space: nowrap;
+            color: rgba(255,255,255,0.03); /* 极弱存在感，纯艺术背景 */
+            pointer-events: none;
+            user-select: none;
+            z-index: 1;
+        }
+        .hero-content {
+            position: relative; z-index: 10; max-width: 900px;
+            padding: 80px;
+            border: 1px solid var(--c-border-light);
+            background: rgba(0, 18, 232, 0.5); /* 稍微遮盖底纹，突出文字 */
+            backdrop-filter: blur(10px);
+        }
+        .hero-title {
+            font-family: var(--f-serif); font-size: 5.5rem; line-height: 1.1; font-weight: 400; margin: 32px 0;
+            text-shadow: 0 4px 24px rgba(0,0,0,0.2);
+        }
+
+        /* 2. Metrics 大字报风格 */
+        .metrics-num { font-family: var(--f-serif); font-size: 4rem; line-height: 1; margin-bottom: 12px; }
+        .metrics-item { padding: 40px; border-right: 1px solid var(--c-border); }
+        .metrics-item:last-child { border-right: none; }
+
+        /* 11. Roadmap 时间轴 */
+        .roadmap-item { position: relative; padding-left: 48px; border-left: 1px solid var(--c-border); padding-bottom: 64px; }
+        .roadmap-item::before {
+            content: ''; position: absolute; left: -5px; top: 0;
+            width: 9px; height: 9px; background: var(--c-bg); border: 2px solid var(--c-text-main);
+        }
+        .roadmap-item:last-child { padding-bottom: 0; border-left-color: transparent; }
+
+        /* Responsive Adjustments */
+        @media (max-width: 1024px) {
+            .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .metrics-item { border-right: none; border-bottom: 1px solid var(--c-border); }
+        }
+        @media (max-width: 768px) {
+            .hero-title { font-size: 3.5rem; }
+            .hero-content { padding: 40px 20px; border: none; backdrop-filter: none; background: transparent; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            .section-title { font-size: 2.5rem; }
+            .py-section { padding-top: 80px; padding-bottom: 80px; }
+            .btn-group { flex-direction: column; gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav data-section="nav">
+        <div class="container flex justify-between items-center">
+            <div class="font-serif text-xl tracking-widest" data-editable="true" contenteditable="true" data-slot="nav.logo" data-key="nav.logo">
+                N O U S
+            </div>
+            <ul class="flex nav-links font-mono text-sm text-muted" style="display: flex;">
+                <li><a href="#" data-editable="true" contenteditable="true" data-slot="nav.link1" data-key="nav.link1">研究成果</a></li>
+                <li><a href="#" data-editable="true" contenteditable="true" data-slot="nav.link2" data-key="nav.link2">引擎服务</a></li>
+                <li><a href="#" data-editable="true" contenteditable="true" data-slot="nav.link3" data-key="nav.link3">文档</a></li>
+                <li><a href="#" data-editable="true" contenteditable="true" data-slot="nav.link4" data-key="nav.link4">登录控制台</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 1. Hero -->
+    <section data-section="hero" class="hero-section bg-grid">
+        <div class="hero-bg-text" data-editable="true" contenteditable="true" data-slot="text.hero.bg_letters" data-key="text.hero.bg_letters">
+            A G E N T
+        </div>
+        <div class="container text-center hero-content">
+            <div class="cross-marker cross-tl">+</div><div class="cross-marker cross-tr">+</div>
+            <div class="cross-marker cross-bl">+</div><div class="cross-marker cross-br">+</div>
+            
+            <div class="font-mono text-sm tracking-widest text-muted mb-6" data-editable="true" contenteditable="true" data-slot="text.hero.badge" data-key="text.hero.badge">
+                CORE FRAMEWORK V2.0 · MIT LICENSE
+            </div>
+            <h1 class="hero-title" data-editable="true" contenteditable="true" data-slot="text.hero.title" data-key="text.hero.title">
+                构建企业级<br>大模型计算网络
+            </h1>
+            <p class="font-mono text-muted max-w-2xl mx-auto text-lg" style="max-width: 680px; margin-left: auto; margin-right: auto;" data-editable="true" contenteditable="true" data-slot="text.hero.subtitle" data-key="text.hero.subtitle">
+                专为重度生产环境设计的 AI 路由与调度总线。摆脱对单一模型的依赖，在私有基础设施上建立可验证、可监控的智能体神经中枢。
+            </p>
+            
+            <!-- 修复了按钮挤在一起的问题 -->
+            <div class="btn-group">
+                <a href="#" class="btn btn-primary" data-editable="true" contenteditable="true" data-slot="text.hero.btn_primary" data-key="text.hero.btn_primary">查阅技术白皮书</a>
+                <a href="#" class="btn btn-secondary" data-editable="true" contenteditable="true" data-slot="text.hero.btn_secondary" data-key="text.hero.btn_secondary">获取部署方案</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. Metrics (新增) -->
+    <section data-section="metrics" class="border-b" style="background: rgba(0,0,0,0.1);">
+        <div class="container grid grid-4" style="padding: 0;">
+            <div class="metrics-item text-center">
+                <div class="metrics-num" data-editable="true" contenteditable="true" data-slot="text.metrics.m1_val" data-key="text.metrics.m1_val">2M+</div>
+                <div class="font-mono text-xs text-dim" data-editable="true" contenteditable="true" data-slot="text.metrics.m1_desc" data-key="text.metrics.m1_desc">PEAK QPS ROUTING</div>
+            </div>
+            <div class="metrics-item text-center">
+                <div class="metrics-num" data-editable="true" contenteditable="true" data-slot="text.metrics.m2_val" data-key="text.metrics.m2_val">99.9%</div>
+                <div class="font-mono text-xs text-dim" data-editable="true" contenteditable="true" data-slot="text.metrics.m2_desc" data-key="text.metrics.m2_desc">SLA GUARANTEE</div>
+            </div>
+            <div class="metrics-item text-center">
+                <div class="metrics-num" data-editable="true" contenteditable="true" data-slot="text.metrics.m3_val" data-key="text.metrics.m3_val">&lt;40ms</div>
+                <div class="font-mono text-xs text-dim" data-editable="true" contenteditable="true" data-slot="text.metrics.m3_desc" data-key="text.metrics.m3_desc">ROUTING LATENCY OVERHEAD</div>
+            </div>
+            <div class="metrics-item text-center">
+                <div class="metrics-num" data-editable="true" contenteditable="true" data-slot="text.metrics.m4_val" data-key="text.metrics.m4_val">300+</div>
+                <div class="font-mono text-xs text-dim" data-editable="true" contenteditable="true" data-slot="text.metrics.m4_desc" data-key="text.metrics.m4_desc">ENTERPRISE CLUSTERS</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Target Users (新增) -->
+    <section data-section="target_users" class="py-section border-b">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-subtitle mb-4" data-editable="true" contenteditable="true" data-slot="text.target.subtitle" data-key="text.target.subtitle">WHO IS IT FOR</div>
+                <h2 class="section-title" data-editable="true" contenteditable="true" data-slot="text.target.section_title" data-key="text.target.section_title">为严肃的工程团队设计</h2>
+            </div>
+            <div class="grid grid-3">
+                <div class="card">
+                    <div class="font-mono text-2xl mb-6">/* AI Architect */</div>
+                    <h3 class="card-title" data-editable="true" contenteditable="true" data-slot="text.target.role1_name" data-key="text.target.role1_name">AI 架构师</h3>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.target.role1_desc" data-key="text.target.role1_desc">需要统一管理公司内部数十个异构模型，设计复杂的意图路由规则，并对整个系统的吞吐量和成本负责。</p>
+                </div>
+                <div class="card">
+                    <div class="font-mono text-2xl mb-6">/* Backend Dev */</div>
+                    <h3 class="card-title" data-editable="true" contenteditable="true" data-slot="text.target.role2_name" data-key="text.target.role2_name">后端研发工程师</h3>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.target.role2_desc" data-key="text.target.role2_desc">厌倦了频繁适配不同模型厂商的 API 变更，希望通过一个稳定的统一接口完成所有大模型能力的接入与鉴权。</p>
+                </div>
+                <div class="card">
+                    <div class="font-mono text-2xl mb-6">/* Sec & Ops */</div>
+                    <h3 class="card-title" data-editable="true" contenteditable="true" data-slot="text.target.role3_name" data-key="text.target.role3_name">安全运维团队</h3>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.target.role3_desc" data-key="text.target.role3_desc">要求每一条流入流出大模型的数据都必须脱敏并留存审计日志，且能在内网物理隔离环境下部署运行。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Problem -->
+    <section data-section="problem" class="py-section border-b bg-grid">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-subtitle mb-4" data-editable="true" contenteditable="true" data-slot="text.problem.subtitle" data-key="text.problem.subtitle">THE DILEMMA</div>
+                <h2 class="section-title" data-editable="true" contenteditable="true" data-slot="text.problem.section_title" data-key="text.problem.section_title">工程化落地的深水区困境</h2>
+            </div>
+            <div class="grid grid-3">
+                <div class="card" style="background: var(--c-bg);">
+                    <div class="font-mono text-dim text-sm mb-6">ISSUE_01</div>
+                    <h3 class="card-title" data-editable="true" contenteditable="true" data-slot="text.problem.item1_title" data-key="text.problem.item1_title">算力与模型的割裂</h3>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.problem.item1_desc" data-key="text.problem.item1_desc">企业内部存在多种异构算力与开源闭源模型，缺乏统一的调用与计费网关，导致研发资源严重浪费。</p>
+                </div>
+                <div class="card" style="background: var(--c-bg);">
+                    <div class="font-mono text-dim text-sm mb-6">ISSUE_02</div>
+                    <h3 class="card-title" data-editable="true" contenteditable="true" data-slot="text.problem.item2_title" data-key="text.problem.item2_title">黑盒化的推理过程</h3>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.problem.item2_desc" data-key="text.problem.item2_desc">业务层无法直接干预大模型推理中间态，Token 消耗不可控，且无法满足金融级可追溯审计要求。</p>
+                </div>
+                <div class="card" style="background: var(--c-bg);">
+                    <div class="font-mono text-dim text-sm mb-6">ISSUE_03</div>
+                    <h3 class="card-title" data-editable="true" contenteditable="true" data-slot="text.problem.item3_title" data-key="text.problem.item3_title">数据隔离机制匮乏</h3>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.problem.item3_desc" data-key="text.problem.item3_desc">将高密核心数据直接输入给外部 API 存在合规风险，企业急需一套能在物理隔离环境下运行的检索引擎。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Solution -->
+    <section data-section="solution" class="py-section border-b">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-subtitle mb-4" data-editable="true" contenteditable="true" data-slot="text.solution.subtitle" data-key="text.solution.subtitle">ARCHITECTURAL SOLUTION</div>
+                <h2 class="section-title" data-editable="true" contenteditable="true" data-slot="text.solution.section_title" data-key="text.solution.section_title">以架构重塑生产力</h2>
+                <p class="text-muted max-w-2xl mx-auto text-center" style="max-width: 680px; margin: 0 auto;" data-editable="true" contenteditable="true" data-slot="text.solution.section_desc" data-key="text.solution.section_desc">
+                    我们提供一套可私有化部署的底层协议层，在业务应用与底层模型之间建立防火墙与智能调度中枢。
+                </p>
+            </div>
+            
+            <div class="border-all" style="padding: 64px; position: relative;">
+                <div class="cross-marker cross-tl">+</div><div class="cross-marker cross-tr">+</div>
+                <div class="cross-marker cross-bl">+</div><div class="cross-marker cross-br">+</div>
+                
+                <div class="grid grid-3" style="gap: 64px;">
+                    <div>
+                        <h4 class="font-serif text-2xl mb-6 border-b pb-4" data-editable="true" contenteditable="true" data-slot="text.solution.item1_title" data-key="text.solution.item1_title">统一模型网关</h4>
+                        <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.solution.item1_desc" data-key="text.solution.item1_desc">抹平 OpenAI、Anthropic 及本地 vLLM 等各种接口的协议差异，实现业务侧代码零感知的模型无缝切换与负载均衡。</p>
+                    </div>
+                    <div>
+                        <h4 class="font-serif text-2xl mb-6 border-b pb-4" data-editable="true" contenteditable="true" data-slot="text.solution.item2_title" data-key="text.solution.item2_title">细粒度访问控制</h4>
+                        <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.solution.item2_desc" data-key="text.solution.item2_desc">精确到 Token 级别的使用配额管理，结合企业 RBAC 权限体系，确保每一次 API 调用的合法性与可追溯性。</p>
+                    </div>
+                    <div>
+                        <h4 class="font-serif text-2xl mb-6 border-b pb-4" data-editable="true" contenteditable="true" data-slot="text.solution.item3_title" data-key="text.solution.item3_title">本地向量隔离库</h4>
+                        <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.solution.item3_desc" data-key="text.solution.item3_desc">内置轻量级、高性能的专属向量检索引擎，所有敏感知识切片与 Embedding 过程均在企业内网闭环完成。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. Highlights -->
+    <section data-section="highlights" class="py-section border-b">
+        <div class="container">
+            <h2 class="section-title text-center mb-16" data-editable="true" contenteditable="true" data-slot="text.highlights.section_title" data-key="text.highlights.section_title">工程基建的核心优势</h2>
+            
+            <!-- 增强艺术感的网格排版 -->
+            <div class="grid grid-4" style="border: 1px solid var(--c-border); background: var(--c-bg);">
+                <div class="card" style="border: none; border-right: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border);">
+                    <div class="font-mono text-2xl text-dim mb-6">■</div>
+                    <h4 class="font-serif text-xl mb-4" data-editable="true" contenteditable="true" data-slot="text.highlights.item1_title" data-key="text.highlights.item1_title">极致高并发吞吐</h4>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.highlights.item1_desc" data-key="text.highlights.item1_desc">底层基于 Rust 重写异步调度器，单节点支持千万级 QPS 路由直通。</p>
+                </div>
+                <div class="card" style="border: none; border-right: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border);">
+                    <div class="font-mono text-2xl text-dim mb-6">▲</div>
+                    <h4 class="font-serif text-xl mb-4" data-editable="true" contenteditable="true" data-slot="text.highlights.item2_title" data-key="text.highlights.item2_title">动态回退机制</h4>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.highlights.item2_desc" data-key="text.highlights.item2_desc">当主模型出现限流或宕机时，毫秒级自动降级切换至备用本地模型。</p>
+                </div>
+                <div class="card" style="border: none; border-right: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border);">
+                    <div class="font-mono text-2xl text-dim mb-6">◆</div>
+                    <h4 class="font-serif text-xl mb-4" data-editable="true" contenteditable="true" data-slot="text.highlights.item3_title" data-key="text.highlights.item3_title">全链路可观测性</h4>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.highlights.item3_desc" data-key="text.highlights.item3_desc">兼容 OpenTelemetry 协议，提供推理耗时、首字延迟等核心指标大盘。</p>
+                </div>
+                <div class="card" style="border: none; border-bottom: 1px solid var(--c-border);">
+                    <div class="font-mono text-2xl text-dim mb-6">●</div>
+                    <h4 class="font-serif text-xl mb-4" data-editable="true" contenteditable="true" data-slot="text.highlights.item4_title" data-key="text.highlights.item4_title">插件化扩展系统</h4>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.highlights.item4_desc" data-key="text.highlights.item4_desc">提供标准化 Tool-call 接口，用 Python 或 Go 即可快速接入企业内部系统。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. Workflow (新增) -->
+    <section data-section="workflow" class="py-section border-b">
+        <div class="container">
+            <div class="section-header text-center">
+                <div class="section-subtitle mb-4" data-editable="true" contenteditable="true" data-slot="text.workflow.subtitle" data-key="text.workflow.subtitle">EASY INTEGRATION</div>
+                <h2 class="section-title" data-editable="true" contenteditable="true" data-slot="text.workflow.section_title" data-key="text.workflow.section_title">3 行代码完成接入</h2>
+            </div>
+            <div class="grid grid-3">
+                <div style="padding: 0 24px;">
+                    <div class="font-mono text-4xl mb-4 text-dim">01.</div>
+                    <h4 class="font-serif text-xl mb-4" data-editable="true" contenteditable="true" data-slot="text.workflow.step1_title" data-key="text.workflow.step1_title">启动本地/私有网关</h4>
+                    <p class="text-muted text-sm mb-6" data-editable="true" contenteditable="true" data-slot="text.workflow.step1_desc" data-key="text.workflow.step1_desc">拉取 Docker 镜像并在一分钟内启动核心调度层。</p>
+                    <div class="font-mono text-xs border-all p-4 text-muted bg-grid" style="background-color: rgba(0,0,0,0.2);">
+                        $ docker pull nous/core-agent<br>
+                        $ docker run -d -p 8080:8080 nous/core-agent
+                    </div>
+                </div>
+                <div style="padding: 0 24px;">
+                    <div class="font-mono text-4xl mb-4 text-dim">02.</div>
+                    <h4 class="font-serif text-xl mb-4" data-editable="true" contenteditable="true" data-slot="text.workflow.step2_title" data-key="text.workflow.step2_title">配置模型端点</h4>
+                    <p class="text-muted text-sm mb-6" data-editable="true" contenteditable="true" data-slot="text.workflow.step2_desc" data-key="text.workflow.step2_desc">在控制台填入你已有的商业 API Key 或本地模型地址。</p>
+                    <div class="font-mono text-xs border-all p-4 text-muted bg-grid" style="background-color: rgba(0,0,0,0.2);">
+                        router:<br>
+                        &nbsp;&nbsp;models:<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;- name: gpt-4<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;- name: llama-3-local
+                    </div>
+                </div>
+                <div style="padding: 0 24px;">
+                    <div class="font-mono text-4xl mb-4 text-dim">03.</div>
+                    <h4 class="font-serif text-xl mb-4" data-editable="true" contenteditable="true" data-slot="text.workflow.step3_title" data-key="text.workflow.step3_title">修改业务代码 BaseURL</h4>
+                    <p class="text-muted text-sm mb-6" data-editable="true" contenteditable="true" data-slot="text.workflow.step3_desc" data-key="text.workflow.step3_desc">无需重构业务代码，只需将原本请求大模型的 BaseURL 指向本地网关即可。</p>
+                    <div class="font-mono text-xs border-all p-4 text-muted bg-grid" style="background-color: rgba(0,0,0,0.2);">
+                        client = OpenAI(<br>
+                        &nbsp;&nbsp;base_url="http://localhost:8080/v1"<br>
+                        )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8. Business Flow -->
+    <section data-section="business_flow" class="py-section border-b bg-grid">
+        <div class="container">
+            <div class="section-header text-center">
+                <h2 class="section-title" data-editable="true" contenteditable="true" data-slot="text.flow.section_title" data-key="text.flow.section_title">请求流转拓扑</h2>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <!-- 桌面端水平展示 -->
+                <div style="display: flex; border: 1px solid var(--c-border); background: var(--c-bg);" class="flow-container">
+                    <div class="card" style="flex: 1; border: none; border-right: 1px solid var(--c-border);">
+                        <div class="font-mono text-xs text-dim mb-4">PHASE 01 // INPUT</div>
+                        <h4 class="font-serif text-xl mb-2" data-editable="true" contenteditable="true" data-slot="text.flow.step1_name" data-key="text.flow.step1_name">业务端发包</h4>
+                        <p class="text-sm text-muted" data-editable="true" contenteditable="true" data-slot="text.flow.step1_desc" data-key="text.flow.step1_desc">任意终端通过统一 API 接入，发起请求。</p>
+                    </div>
+                    <div class="card" style="flex: 1; border: none; border-right: 1px solid var(--c-border);">
+                        <div class="font-mono text-xs text-dim mb-4">PHASE 02 // ROUTE</div>
+                        <h4 class="font-serif text-xl mb-2" data-editable="true" contenteditable="true" data-slot="text.flow.step2_name" data-key="text.flow.step2_name">意图路由与脱敏</h4>
+                        <p class="text-sm text-muted" data-editable="true" contenteditable="true" data-slot="text.flow.step2_desc" data-key="text.flow.step2_desc">清洗 PII 数据，并根据意图选择最优成本模型。</p>
+                    </div>
+                    <div class="card" style="flex: 1; border: none; border-right: 1px solid var(--c-border);">
+                        <div class="font-mono text-xs text-dim mb-4">PHASE 03 // RAG</div>
+                        <h4 class="font-serif text-xl mb-2" data-editable="true" contenteditable="true" data-slot="text.flow.step3_name" data-key="text.flow.step3_name">内网知识增强</h4>
+                        <p class="text-sm text-muted" data-editable="true" contenteditable="true" data-slot="text.flow.step3_desc" data-key="text.flow.step3_desc">检索私有库数据，将上下文注入，确保事实准确。</p>
+                    </div>
+                    <div class="card" style="flex: 1; border: none;">
+                        <div class="font-mono text-xs text-dim mb-4">PHASE 04 // EXEC</div>
+                        <h4 class="font-serif text-xl mb-2" data-editable="true" contenteditable="true" data-slot="text.flow.step4_name" data-key="text.flow.step4_name">模型推理响应</h4>
+                        <p class="text-sm text-muted" data-editable="true" contenteditable="true" data-slot="text.flow.step4_desc" data-key="text.flow.step4_desc">执行推理，流式返回业务端，异步沉淀日志。</p>
+                    </div>
+                </div>
+            </div>
+            <style>
+                @media (max-width: 768px) {
+                    .flow-container { flex-direction: column; }
+                    .flow-container .card { border-right: none !important; border-bottom: 1px solid var(--c-border); }
+                }
+            </style>
+        </div>
+    </section>
+
+    <!-- 9. Features & Visuals -->
+    <section data-section="features_visuals" class="py-section border-b">
+        <div class="container grid grid-2 items-center" style="gap: 80px;">
+            <div>
+                <div class="section-subtitle mb-6" style="justify-content: flex-start;" data-editable="true" contenteditable="true" data-slot="text.features.subtitle" data-key="text.features.subtitle">SYSTEM INTERFACE</div>
+                <h2 class="section-title" style="text-align: left; margin-bottom: 32px; font-size: 2.5rem;" data-editable="true" contenteditable="true" data-slot="text.features.section_title" data-key="text.features.section_title">终端控制台与拓扑全景</h2>
+                <p class="text-muted mb-10 text-lg" data-editable="true" contenteditable="true" data-slot="text.features.desc" data-key="text.features.desc">
+                    通过纯粹、响应迅速的控制台，运维人员与 AI 架构师可以上帝视角俯瞰整个算力网络的状态，实时调整调度策略与鉴权密钥。
+                </p>
+                <ul class="text-muted font-mono" style="display: flex; flex-direction: column; gap: 24px;">
+                    <li style="display: flex; gap: 16px; align-items: flex-start; border-top: 1px solid var(--c-border); padding-top: 24px;">
+                        <span class="text-dim">01 /</span> 
+                        <span data-editable="true" contenteditable="true" data-slot="text.features.point1" data-key="text.features.point1">节点健康度实时探活与拓扑渲染</span>
+                    </li>
+                    <li style="display: flex; gap: 16px; align-items: flex-start; border-top: 1px solid var(--c-border); padding-top: 24px;">
+                        <span class="text-dim">02 /</span> 
+                        <span data-editable="true" contenteditable="true" data-slot="text.features.point2" data-key="text.features.point2">可视化 Prompt 实验场与版本管理</span>
+                    </li>
+                    <li style="display: flex; gap: 16px; align-items: flex-start; border-top: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border); padding: 24px 0;">
+                        <span class="text-dim">03 /</span> 
+                        <span data-editable="true" contenteditable="true" data-slot="text.features.point3" data-key="text.features.point3">全局审计日志检索与 Token 账单导出</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Product Visual UI Mock (艺术处理) -->
+            <div style="border: 1px solid var(--c-text-main); height: 600px; display: flex; flex-direction: column; background: rgba(0,0,0,0.2); position: relative; box-shadow: -20px 20px 0px rgba(0,0,0,0.3);">
+                <div style="border-bottom: 1px solid var(--c-text-main); padding: 16px 24px; display: flex; gap: 8px; align-items: center;">
+                    <div style="width: 8px; height: 8px; border: 1px solid var(--c-text-main);"></div>
+                    <div style="width: 8px; height: 8px; border: 1px solid var(--c-text-main);"></div>
+                    <div class="font-mono text-xs ml-4" data-editable="true" contenteditable="true" data-slot="text.visual.ui_title" data-key="text.visual.ui_title">NOUS PORTAL - ADMIN TERMINAL [CONNECTED]</div>
+                </div>
+                <div style="display: flex; flex: 1;">
+                    <div style="width: 280px; border-right: 1px solid var(--c-text-main); padding: 32px; font-family: var(--f-mono); font-size: 0.75rem; color: var(--c-text-dim); line-height: 2;">
+                        > SYSTEM_STATUS<br>
+                        <span style="color: #fff;">[OK] NODE_01 (vLLM)</span><br>
+                        [OK] NODE_02 (OAI_PROXY)<br>
+                        [WARN] DB_VECTOR_LATENCY<br><br>
+                        > ROUTING_RULES<br>
+                        - RULE_FINANCE -> NODE_02<br>
+                        - RULE_CODE -> NODE_01<br><br>
+                        > EXEC_QUERY<br>
+                        <span class="cursor" style="display: inline-block; width: 8px; height: 12px; background: #fff; animation: blink 1s step-end infinite;"></span>
+                    </div>
+                    <div style="flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: var(--f-mono);" class="bg-grid">
+                        <div class="font-serif text-5xl mb-6">SYSTEM NOMINAL</div>
+                        <div class="border-all p-6" style="background: var(--c-bg); width: 100%; max-width: 300px; line-height: 2;">
+                            CURRENT_TPS: <span style="float:right; color: #fff;">12,408</span><br>
+                            AVG_LATENCY: <span style="float:right; color: #fff;">42ms</span><br>
+                            CACHE_HIT: <span style="float:right; color: #fff;">34.2%</span><br>
+                            EFFICIENCY: <span style="float:right; color: #fff;">99.8%</span>
+                        </div>
+                    </div>
+                </div>
+                <style>@keyframes blink { 50% { opacity: 0; } }</style>
+            </div>
+        </div>
+    </section>
+
+    <!-- 10. Use Cases (新增) -->
+    <section data-section="use_cases" class="py-section border-b">
+        <div class="container">
+            <h2 class="section-title text-center mb-16" data-editable="true" contenteditable="true" data-slot="text.cases.section_title" data-key="text.cases.section_title">落地场景验证</h2>
+            <div class="grid grid-3">
+                <div class="card">
+                    <div class="font-mono text-xs border-all inline-block px-2 py-1 mb-6 text-dim" data-editable="true" contenteditable="true" data-slot="text.cases.case1_tags" data-key="text.cases.case1_tags">FINANCE / 金融</div>
+                    <h3 class="font-serif text-2xl mb-4" data-editable="true" contenteditable="true" data-slot="text.cases.case1_title" data-key="text.cases.case1_title">智能投研中台</h3>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.cases.case1_desc" data-key="text.cases.case1_desc">支撑券商内部千人规模的研报生成系统，实现研报数据脱敏与专属金融大模型的高并发调度，保障合规底线。</p>
+                </div>
+                <div class="card">
+                    <div class="font-mono text-xs border-all inline-block px-2 py-1 mb-6 text-dim" data-editable="true" contenteditable="true" data-slot="text.cases.case2_tags" data-key="text.cases.case2_tags">MANUFACTURE / 制造</div>
+                    <h3 class="font-serif text-2xl mb-4" data-editable="true" contenteditable="true" data-slot="text.cases.case2_title" data-key="text.cases.case2_title">工业维修知识库</h3>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.cases.case2_desc" data-key="text.cases.case2_desc">完全在无外网环境下，构建基于本地 70B 模型与隔离向量库的维修问答 Agent，保护核心工艺机密。</p>
+                </div>
+                <div class="card">
+                    <div class="font-mono text-xs border-all inline-block px-2 py-1 mb-6 text-dim" data-editable="true" contenteditable="true" data-slot="text.cases.case3_tags" data-key="text.cases.case3_tags">SOFTWARE / 软件</div>
+                    <h3 class="font-serif text-2xl mb-4" data-editable="true" contenteditable="true" data-slot="text.cases.case3_title" data-key="text.cases.case3_title">全员 AI 编程助手</h3>
+                    <p class="text-muted text-sm" data-editable="true" contenteditable="true" data-slot="text.cases.case3_desc" data-key="text.cases.case3_desc">统一代理所有开发者的 IDE Copilot 请求，自动回退与负载均衡，将代码补全的企业 API 成本降低 60%。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 11. Roadmap (新增) -->
+    <section data-section="roadmap" class="py-section border-b bg-grid">
+        <div class="container max-w-3xl mx-auto" style="max-width: 800px;">
+            <div class="section-header text-center">
+                <h2 class="section-title" data-editable="true" contenteditable="true" data-slot="text.roadmap.section_title" data-key="text.roadmap.section_title">演进路线图</h2>
+            </div>
+            
+            <div style="padding: 40px; border: 1px solid var(--c-border); background: var(--c-bg);">
+                <div class="roadmap-item">
+                    <div class="font-mono text-lg mb-4" data-editable="true" contenteditable="true" data-slot="text.roadmap.q1_time" data-key="text.roadmap.q1_time">2026 Q1 - CURRENT</div>
+                    <ul class="text-muted text-sm" style="list-style-type: square; padding-left: 20px; line-height: 2;">
+                        <li data-editable="true" contenteditable="true" data-slot="text.roadmap.q1_task1" data-key="text.roadmap.q1_task1">发布 V2.0 核心异步调度引擎</li>
+                        <li data-editable="true" contenteditable="true" data-slot="text.roadmap.q1_task2" data-key="text.roadmap.q1_task2">支持基于 Token 与并发的双重限流策略</li>
+                    </ul>
+                </div>
+                <div class="roadmap-item">
+                    <div class="font-mono text-lg mb-4" data-editable="true" contenteditable="true" data-slot="text.roadmap.q2_time" data-key="text.roadmap.q2_time">2026 Q3 - PLANNED</div>
+                    <ul class="text-muted text-sm" style="list-style-type: square; padding-left: 20px; line-height: 2;">
+                        <li data-editable="true" contenteditable="true" data-slot="text.roadmap.q2_task1" data-key="text.roadmap.q2_task1">多模态（Vision/Audio）原生路由支持</li>
+                        <li data-editable="true" contenteditable="true" data-slot="text.roadmap.q2_task2" data-key="text.roadmap.q2_task2">内置轻量级 Fine-tuning 任务队列管理</li>
+                    </ul>
+                </div>
+                <div class="roadmap-item">
+                    <div class="font-mono text-lg mb-4 text-dim" data-editable="true" contenteditable="true" data-slot="text.roadmap.q3_time" data-key="text.roadmap.q3_time">2027 FUTURE</div>
+                    <ul class="text-dim text-sm" style="list-style-type: square; padding-left: 20px; line-height: 2;">
+                        <li data-editable="true" contenteditable="true" data-slot="text.roadmap.q3_task1" data-key="text.roadmap.q3_task1">去中心化的算力联邦节点</li>
+                        <li data-editable="true" contenteditable="true" data-slot="text.roadmap.q3_task2" data-key="text.roadmap.q3_task2">完全自动化的意图成本套利引擎</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 12. Social / Community (新增) -->
+    <section data-section="social" class="py-section border-b">
+        <div class="container text-center">
+            <h2 class="section-title mb-16" data-editable="true" contenteditable="true" data-slot="text.social.section_title" data-key="text.social.section_title">由极客社区共同构建</h2>
+            <div class="grid grid-3 mb-16">
+                <div class="card text-center" style="padding: 32px;">
+                    <div class="font-mono text-3xl mb-2" data-editable="true" contenteditable="true" data-slot="text.social.stat1_val" data-key="text.social.stat1_val">14.2K</div>
+                    <div class="font-mono text-xs text-dim" data-editable="true" contenteditable="true" data-slot="text.social.stat1_desc" data-key="text.social.stat1_desc">GITHUB STARS</div>
+                </div>
+                <div class="card text-center" style="padding: 32px;">
+                    <div class="font-mono text-3xl mb-2" data-editable="true" contenteditable="true" data-slot="text.social.stat2_val" data-key="text.social.stat2_val">850+</div>
+                    <div class="font-mono text-xs text-dim" data-editable="true" contenteditable="true" data-slot="text.social.stat2_desc" data-key="text.social.stat2_desc">CONTRIBUTORS</div>
+                </div>
+                <div class="card text-center" style="padding: 32px;">
+                    <div class="font-mono text-3xl mb-2" data-editable="true" contenteditable="true" data-slot="text.social.stat3_val" data-key="text.social.stat3_val">5.8M</div>
+                    <div class="font-mono text-xs text-dim" data-editable="true" contenteditable="true" data-slot="text.social.stat3_desc" data-key="text.social.stat3_desc">DOCKER PULLS</div>
+                </div>
+            </div>
+            
+            <div class="border-all p-8 text-left inline-block max-w-2xl" style="padding: 40px;">
+                <div class="font-serif text-xl italic mb-6" data-editable="true" contenteditable="true" data-slot="text.social.quote_text" data-key="text.social.quote_text">
+                    "这是目前我们在金融内网落地的最干净、最硬核的 AI 网关。它不假设任何框架，只做最底层的流转和安全防护，设计哲学非常克制。"
+                </div>
+                <div class="font-mono text-sm text-dim" data-editable="true" contenteditable="true" data-slot="text.social.quote_author" data-key="text.social.quote_author">
+                    — @ALEX_TECH, 某头部券商基础架构负责人
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 13. Pricing -->
+    <section data-section="pricing" class="py-section border-b">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title" data-editable="true" contenteditable="true" data-slot="text.pricing.section_title" data-key="text.pricing.section_title">部署与授权方案</h2>
+            </div>
+            <div class="grid grid-3">
+                <div class="card text-center" style="display: flex; flex-direction: column;">
+                    <h3 class="font-serif text-2xl mb-4" data-editable="true" contenteditable="true" data-slot="text.pricing.tier1_name" data-key="text.pricing.tier1_name">社区开源版</h3>
+                    <div class="font-mono text-4xl mb-8" data-editable="true" contenteditable="true" data-slot="text.pricing.tier1_price" data-key="text.pricing.tier1_price">FREE</div>
+                    <ul class="text-sm text-muted font-mono mb-10" style="flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                        <li data-editable="true" contenteditable="true" data-slot="text.pricing.tier1_f1" data-key="text.pricing.tier1_f1">基础模型路由协议</li>
+                        <li data-editable="true" contenteditable="true" data-slot="text.pricing.tier1_f2" data-key="text.pricing.tier1_f2">本地并发限流 100 QPS</li>
+                        <li data-editable="true" contenteditable="true" data-slot="text.pricing.tier1_f3" data-key="text.pricing.tier1_f3">社区工单支持</li>
+                    </ul>
+                    <a href="#" class="btn btn-secondary w-full" style="width: 100%;">获取源码</a>
+                </div>
+                <div class="card text-center" style="display: flex; flex-direction: column; border-color: var(--c-text-main); background: rgba(255,255,255,0.05); transform: translateY(-16px); box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                    <div class="font-mono text-xs mb-4 text-main">RECOMMENDED</div>
+                    <h3 class="font-serif text-2xl mb-4" data-editable="true" contenteditable="true" data-slot="text.pricing.tier2_name" data-key="text.pricing.tier2_name">商业标准版</h3>
+                    <div class="font-mono text-4xl mb-8" data-editable="true" contenteditable="true" data-slot="text.pricing.tier2_price" data-key="text.pricing.tier2_price">联系获取</div>
+                    <ul class="text-sm text-muted font-mono mb-10" style="flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                        <li data-editable="true" contenteditable="true" data-slot="text.pricing.tier2_f1" data-key="text.pricing.tier2_f1">无限并发与节点高可用集群</li>
+                        <li data-editable="true" contenteditable="true" data-slot="text.pricing.tier2_f2" data-key="text.pricing.tier2_f2">高级数据可视化与全局审计看板</li>
+                        <li data-editable="true" contenteditable="true" data-slot="text.pricing.tier2_f3" data-key="text.pricing.tier2_f3">SLA 99.9% / 5x8 专家支持</li>
+                    </ul>
+                    <a href="#" class="btn btn-primary w-full" style="width: 100%;">预约演示</a>
+                </div>
+                <div class="card text-center" style="display: flex; flex-direction: column;">
+                    <h3 class="font-serif text-2xl mb-4" data-editable="true" contenteditable="true" data-slot="text.pricing.tier3_name" data-key="text.pricing.tier3_name">私有化企业版</h3>
+                    <div class="font-mono text-4xl mb-8" data-editable="true" contenteditable="true" data-slot="text.pricing.tier3_price" data-key="text.pricing.tier3_price">定制方案</div>
+                    <ul class="text-sm text-muted font-mono mb-10" style="flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                        <li data-editable="true" contenteditable="true" data-slot="text.pricing.tier3_f1" data-key="text.pricing.tier3_f1">全国产化信创服务器与芯片适配</li>
+                        <li data-editable="true" contenteditable="true" data-slot="text.pricing.tier3_f2" data-key="text.pricing.tier3_f2">定制化复杂业务流插件开发</li>
+                        <li data-editable="true" contenteditable="true" data-slot="text.pricing.tier3_f3" data-key="text.pricing.tier3_f3">原厂工程师驻场部署与 7x24 响应</li>
+                    </ul>
+                    <a href="#" class="btn btn-secondary w-full" style="width: 100%;">联系架构师</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 14. CTA & Footer -->
+    <section data-section="cta" class="py-section bg-grid" style="position: relative; overflow: hidden;">
+        <!-- 巨大背景字提升艺术感 -->
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: var(--f-serif); font-size: 20vw; color: rgba(255,255,255,0.02); white-space: nowrap; pointer-events: none;">DEPLOY NOW</div>
+        
+        <div class="container text-center" style="position: relative; z-index: 10;">
+            <h2 class="font-serif text-6xl mb-12" data-editable="true" contenteditable="true" data-slot="text.cta.title" data-key="text.cta.title">接管您的智能计算网络</h2>
+            <div class="btn-group">
+                <a href="#" class="btn btn-primary" style="height: 64px; padding: 0 48px; font-size: 1rem;" data-editable="true" contenteditable="true" data-slot="text.cta.btn" data-key="text.cta.btn">启动架构评估进程</a>
+            </div>
+        </div>
+    </section>
+
+    <footer data-section="footer" class="border-t py-12">
+        <div class="container flex justify-between items-center text-xs font-mono text-dim">
+            <div data-editable="true" contenteditable="true" data-slot="text.footer.copyright" data-key="text.footer.copyright">
+                © 2026 NOUS RESEARCH & PORTAL SYS. ALL RIGHTS RESERVED.
+            </div>
+            <div class="flex gap-6">
+                <a href="#" class="hover-white" data-editable="true" contenteditable="true" data-slot="text.footer.link1" data-key="text.footer.link1">公众号</a>
+                <a href="#" class="hover-white" data-editable="true" contenteditable="true" data-slot="text.footer.link2" data-key="text.footer.link2">官网</a>
+                <a href="#" class="hover-white" data-editable="true" contenteditable="true" data-slot="text.footer.link3" data-key="text.footer.link3">TWITTER</a>
+                <a href="#" class="hover-white" data-editable="true" contenteditable="true" data-slot="text.footer.link4" data-key="text.footer.link4">小红书</a>
+            </div>
+        </div>
+        <style>.hover-white:hover { color: var(--c-text-main); }</style>
+    </footer>
+
+</body>
+</html>

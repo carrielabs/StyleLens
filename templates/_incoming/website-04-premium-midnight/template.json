@@ -1,0 +1,129 @@
+{
+  "id": "website-04-premium-midnight",
+  "name": "Premium Midnight 高端暗夜官网模板",
+  "templateName": "StayInnPremiumMidnightTemplate",
+  "version": "2.0.0",
+  "description": "固定深邃暗夜模式的高端 SaaS 官网模板，包含拟真产品操作台、动态系统拓扑、收益占比、增长指标、痛点诊断和 CTA。",
+  "pageTypes": [
+    "product-website",
+    "landing-page",
+    "saas-website",
+    "enterprise-report-site"
+  ],
+  "styleTags": [
+    "premium-midnight",
+    "dark",
+    "saas",
+    "enterprise",
+    "topology",
+    "high-fidelity"
+  ],
+  "theme": {
+    "colors": {
+      "pageBg": "#09090B",
+      "cardBg": "#121214",
+      "cardBgAlt": "#18181B",
+      "border": "#27272A",
+      "title": "#F4F4F5",
+      "muted": "#9A9A9E",
+      "indigo": "#4F46E5",
+      "purple": "#7C3AED",
+      "green": "#10B981"
+    },
+    "fonts": {
+      "body": "system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif"
+    }
+  },
+  "editorTheme": {
+    "defaultColor": "#7c3aed",
+    "presets": ["#7c3aed", "#4f46e5", "#38bdf8", "#22c55e", "#d9eb26", "#f43f5e"],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-brand\"]",
+        "[class*=\"text-indigo\"]",
+        "[class*=\"text-purple\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-brand\"]",
+        "[class*=\"bg-indigo\"]",
+        "[class*=\"bg-purple\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-brand\"]",
+        "[class*=\"border-indigo\"]",
+        "[class*=\"border-purple\"]"
+      ],
+      "shadowSelectors": [
+        "[class*=\"shadow-brand\"]",
+        "[class*=\"shadow-indigo\"]",
+        "[class*=\"shadow-purple\"]"
+      ],
+      "gradientSelectors": [
+        ".bg-gradient-to-r[class*=\"from-\"]",
+        ".bg-gradient-to-br[class*=\"from-\"]"
+      ]
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "showHideSections": true,
+    "tabInteraction": true,
+    "exportHtml": true
+  },
+  "supportedSections": {
+    "navbar": {
+      "name": "导航栏",
+      "required": true,
+      "hideable": false,
+      "elementCount": 6
+    },
+    "hero": {
+      "name": "首屏主视觉",
+      "required": true,
+      "hideable": false,
+      "elementCount": 5
+    },
+    "product-showcase": {
+      "name": "真实系统交互操作台",
+      "required": false,
+      "hideable": true,
+      "elementCount": 13
+    },
+    "value-prop": {
+      "name": "核心优势与同心圆占比",
+      "required": false,
+      "hideable": true,
+      "elementCount": 9
+    },
+    "metrics": {
+      "name": "关键指标与增长态势",
+      "required": false,
+      "hideable": true,
+      "elementCount": 16
+    },
+    "architecture": {
+      "name": "动态脉冲链路拓扑架构",
+      "required": false,
+      "hideable": true,
+      "elementCount": 8
+    },
+    "problems-solutions": {
+      "name": "错落痛点诊断",
+      "required": false,
+      "hideable": true,
+      "elementCount": 11
+    },
+    "cta": {
+      "name": "行动呼吁",
+      "required": true,
+      "hideable": false,
+      "elementCount": 3
+    },
+    "footer": {
+      "name": "页脚",
+      "required": true,
+      "hideable": false,
+      "elementCount": 4
+    }
+  }
+}
