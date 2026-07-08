@@ -12,6 +12,7 @@ const TARGETS = [
   'https://www.apple.com',
   'https://www.notion.com/',
 ]
+const RUN_REAL_WORLD_TESTS = process.env.STYLELENS_REAL_WORLD_TESTS === '1'
 
 function createPageAnalysis(overrides: Partial<PageStyleAnalysis> = {}): PageStyleAnalysis {
   return {
@@ -224,7 +225,7 @@ describe('screenshotter viewport aggregation', () => {
   })
 })
 
-describe('pageAnalyzer real-world verification', () => {
+;(RUN_REAL_WORLD_TESTS ? describe : describe.skip)('pageAnalyzer real-world verification', () => {
   for (const url of TARGETS) {
     it(
       `extracts semantic color slots for ${url}`,

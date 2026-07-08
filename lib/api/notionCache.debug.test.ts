@@ -2,15 +2,18 @@
  * @vitest-environment node
  */
 
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import { describe, it } from 'vitest'
 import { analyzeHeroVisualSignals } from '@/lib/api/heroVisualAnalyzer'
 import { buildSemanticColorSystem } from '@/lib/api/pageAnalyzer'
 
+const CACHE_PATH = path.join(process.cwd(), '.screenshot_cache.json')
+
 describe('notion cache debug', () => {
-  it('prints semantic slots from cached notion screenshot', async () => {
-    const cachePath = '/Users/shaobaolu/Desktop/网球网站/StyleLens/.screenshot_cache.json'
-    const raw = JSON.parse(await readFile(cachePath, 'utf8')) as Record<string, string>
+  it.skipIf(!existsSync(CACHE_PATH))('prints semantic slots from cached notion screenshot', async () => {
+    const raw = JSON.parse(await readFile(CACHE_PATH, 'utf8')) as Record<string, string>
     const dataUrl = raw['https://www.notion.com/']
     const base64 = dataUrl.split(',')[1]
     const imageBuffer = Buffer.from(base64, 'base64')
