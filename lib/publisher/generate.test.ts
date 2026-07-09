@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { generateProductWebsiteHtml } from './index'
+import { loadTemplate } from './templates.mjs'
 
 const WEBSITE_TEMPLATES = [
   'website-01-fui',
@@ -33,6 +34,21 @@ const sourceText = [
   '- 编辑导出',
 ].join('\n')
 
+const originalBaseUrl = process.env.AHP_TEMPLATE_RAW_BASE_URL
+const originalForceRemote = process.env.AHP_TEMPLATE_FORCE_REMOTE
+const originalToken = process.env.AHP_TEMPLATE_GITHUB_TOKEN
+const originalFetch = globalThis.fetch
+
+afterEach(() => {
+  if (originalBaseUrl === undefined) delete process.env.AHP_TEMPLATE_RAW_BASE_URL
+  else process.env.AHP_TEMPLATE_RAW_BASE_URL = originalBaseUrl
+  if (originalForceRemote === undefined) delete process.env.AHP_TEMPLATE_FORCE_REMOTE
+  else process.env.AHP_TEMPLATE_FORCE_REMOTE = originalForceRemote
+  if (originalToken === undefined) delete process.env.AHP_TEMPLATE_GITHUB_TOKEN
+  else process.env.AHP_TEMPLATE_GITHUB_TOKEN = originalToken
+  globalThis.fetch = originalFetch
+})
+
 describe('generateProductWebsiteHtml', () => {
   it.each(WEBSITE_TEMPLATES)('generates clean HTML for %s', async templateId => {
     const result = await generateProductWebsiteHtml({ sourceText, templateId })
@@ -44,5 +60,31 @@ describe('generateProductWebsiteHtml', () => {
     expect(result.html).not.toMatch(/<script[^>]+src="https?:\/\//i)
     expect(result.html).not.toMatch(/<link[^>]+href="https?:\/\//i)
     expect(result.html).not.toMatch(/cdn\.tailwindcss|fonts\.googleapis|localhost|127\.0\.0\.1|onclick=|document\.write|href="#"/i)
+  })
+
+  it('can read templates from GitHub raw when remote mode is enabled', async () => {
+    process.env.AHP_TEMPLATE_RAW_BASE_URL = 'https://raw.githubusercontent.com/carrielabs/StyleLens/main'
+    process.env.AHP_TEMPLATE_FORCE_REMOTE = 'true'
+    process.env.AHP_TEMPLATE_GITHUB_TOKEN = 'test-token'
+
+    const urls: string[] = []
+    const fetchMock = vi.fn(async (url: string | URL | Request, options?: RequestInit) => {
+      urls.push(String(url))
+      expect(options?.headers).toEqual({ Authorization: 'Bearer test-token' })
+      if (String(url).endsWith('/template.html')) {
+        return new Response('<!doctype html><html><body>remote template</body></html>', { status: 200 })
+      }
+      return new Response(JSON.stringify({ id: 'website-01-fui' }), { status: 200 })
+    })
+    globalThis.fetch = fetchMock as typeof fetch
+
+    const template = await loadTemplate('website-01-fui')
+
+    expect(template.html).toBe('<!doctype html><html><body>remote template</body></html>')
+    expect(template.config.id).toBe('website-01-fui')
+    expect(urls).toEqual([
+      'https://raw.githubusercontent.com/carrielabs/StyleLens/main/templates/_incoming/website-01-fui/template.html',
+      'https://raw.githubusercontent.com/carrielabs/StyleLens/main/templates/_incoming/website-01-fui/template.json',
+    ])
   })
 })
