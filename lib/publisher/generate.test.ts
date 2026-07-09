@@ -1,3 +1,6 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { generateProductWebsiteHtml } from './index'
 import { loadTemplate } from './templates.mjs'
@@ -38,8 +41,10 @@ const originalBaseUrl = process.env.AHP_TEMPLATE_RAW_BASE_URL
 const originalForceRemote = process.env.AHP_TEMPLATE_FORCE_REMOTE
 const originalToken = process.env.AHP_TEMPLATE_GITHUB_TOKEN
 const originalFetch = globalThis.fetch
+const originalCwd = process.cwd()
 
-afterEach(() => {
+afterEach(async () => {
+  process.chdir(originalCwd)
   if (originalBaseUrl === undefined) delete process.env.AHP_TEMPLATE_RAW_BASE_URL
   else process.env.AHP_TEMPLATE_RAW_BASE_URL = originalBaseUrl
   if (originalForceRemote === undefined) delete process.env.AHP_TEMPLATE_FORCE_REMOTE
@@ -86,5 +91,29 @@ describe('generateProductWebsiteHtml', () => {
       'https://raw.githubusercontent.com/carrielabs/StyleLens/main/templates/_incoming/website-01-fui/template.html',
       'https://raw.githubusercontent.com/carrielabs/StyleLens/main/templates/_incoming/website-01-fui/template.json',
     ])
+  })
+
+  it('generates when the runtime cwd has no node_modules bin directory', async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), 'stylelens-vercel-runtime-'))
+
+    process.env.AHP_TEMPLATE_RAW_BASE_URL = 'https://raw.githubusercontent.com/carrielabs/StyleLens/main'
+    process.env.AHP_TEMPLATE_FORCE_REMOTE = 'true'
+    globalThis.fetch = vi.fn(async (url: string | URL | Request) => {
+      const relativePath = String(url).split('/main/')[1]
+      const text = await readFile(path.join(originalCwd, relativePath), 'utf8')
+      return new Response(text, { status: 200 })
+    }) as typeof fetch
+
+    try {
+      process.chdir(tempDir)
+
+      const result = await generateProductWebsiteHtml({ sourceText, templateId: 'website-01-fui' })
+
+      expect(result.html).toContain('data-ahp-inlined-tailwind="true"')
+      expect(result.html).not.toContain('cdn.tailwindcss.com')
+    } finally {
+      process.chdir(originalCwd)
+      await rm(tempDir, { recursive: true, force: true })
+    }
   })
 })
