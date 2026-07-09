@@ -85,8 +85,8 @@ export default function ImageUploader({ onStart, onSuccess, onError, disabled }:
         } else {
           onError(data.error || '提取失败')
         }
-      } catch (err: any) {
-        onError(err.message || '网络请求失败，请稍后重试')
+      } catch (err: unknown) {
+        onError(err instanceof Error ? err.message : '网络请求失败，请稍后重试')
       }
     }
     reader.onerror = () => {

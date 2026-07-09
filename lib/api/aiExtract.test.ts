@@ -94,7 +94,7 @@ describe('aiExtract shell recovery', () => {
           },
         ],
       }),
-    } as any)
+    })
 
     expect(prompt).toContain('stateTokens')
     expect(prompt).toContain('pageSections')

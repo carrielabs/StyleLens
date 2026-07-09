@@ -1,10 +1,15 @@
 import { createClient } from './supabaseClient'
 import type { StyleReport, LibraryRecord, SortOrder } from '@/lib/types'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+function getErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
 
 export async function saveToLibrary(
   report: StyleReport,
   imageBase64?: string,
-  supabaseIn?: any
+  supabaseIn?: SupabaseClient
 ): Promise<{ success: boolean; data?: LibraryRecord; error?: string }> {
   try {
     const supabase = supabaseIn || createClient()
@@ -58,13 +63,13 @@ export async function saveToLibrary(
     if (error) throw error
 
     return { success: true, data }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Library save error', err)
-    return { success: false, error: err.message }
+    return { success: false, error: getErrorMessage(err) }
   }
 }
 
-export async function fetchLibrary(sort: SortOrder = 'newest', supabaseIn?: any): Promise<{ data: LibraryRecord[] | null; error?: string }> {
+export async function fetchLibrary(sort: SortOrder = 'newest', supabaseIn?: SupabaseClient): Promise<{ data: LibraryRecord[] | null; error?: string }> {
   try {
     const supabase = supabaseIn || createClient()
     const { data, error } = await supabase
@@ -74,12 +79,12 @@ export async function fetchLibrary(sort: SortOrder = 'newest', supabaseIn?: any)
 
     if (error) throw error
     return { data }
-  } catch (err: any) {
-    return { data: null, error: err.message }
+  } catch (err: unknown) {
+    return { data: null, error: getErrorMessage(err) }
   }
 }
 
-export async function deleteFromLibrary(id: string, supabaseIn?: any): Promise<{ success: boolean; error?: string }> {
+export async function deleteFromLibrary(id: string, supabaseIn?: SupabaseClient): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = supabaseIn || createClient()
     const { error } = await supabase
@@ -88,13 +93,13 @@ export async function deleteFromLibrary(id: string, supabaseIn?: any): Promise<{
       .eq('id', id)
     if (error) throw error
     return { success: true }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Library delete error', err)
-    return { success: false, error: err.message }
+    return { success: false, error: getErrorMessage(err) }
   }
 }
 
-export async function renameInLibrary(id: string, newLabel: string, supabaseIn?: any): Promise<{ success: boolean; error?: string }> {
+export async function renameInLibrary(id: string, newLabel: string, supabaseIn?: SupabaseClient): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = supabaseIn || createClient()
     const { error } = await supabase
@@ -103,8 +108,8 @@ export async function renameInLibrary(id: string, newLabel: string, supabaseIn?:
       .eq('id', id)
     if (error) throw error
     return { success: true }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Library rename error', err)
-    return { success: false, error: err.message }
+    return { success: false, error: getErrorMessage(err) }
   }
 }

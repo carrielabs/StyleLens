@@ -4,6 +4,10 @@ import type { ScreenshotRequest } from '@/lib/types'
 
 export const maxDuration = 30
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Failed to capture screenshot'
+}
+
 // Block SSRF: only allow public HTTP(S) URLs, reject private/internal ranges
 function isSafeUrl(rawUrl: string): boolean {
   let parsed: URL
@@ -67,10 +71,10 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(result)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Screenshot API Error:', error)
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to capture screenshot' },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     )
   }

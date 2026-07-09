@@ -41,10 +41,10 @@ export default function DesignInspector({ report, lang, onSectionHover }: Props)
   // ── Snapshot data (DOM-measured button) ──────────────────────────────────
   const snap: ButtonSnapshot | undefined = analysis?.buttonSnapshot
   // ── Multi-variant snapshot arrays (Codex upstream, defensive access) ─────
-  const buttonSnaps: ButtonSnapshot[] = ((analysis as any)?.buttonSnapshots as ButtonSnapshot[] | undefined)?.slice(0, 3) || (snap ? [snap] : [])
-  const inputSnaps: InputSnapshot[]   = ((analysis as any)?.inputSnapshots  as InputSnapshot[]  | undefined)?.slice(0, 3) || []
-  const cardSnaps:  CardSnapshot[]    = ((analysis as any)?.cardSnapshots   as CardSnapshot[]   | undefined)?.slice(0, 3) || []
-  const tagSnaps:   TagSnapshot[]     = ((analysis as any)?.tagSnapshots    as TagSnapshot[]    | undefined)?.slice(0, 3) || []
+  const buttonSnaps: ButtonSnapshot[] = analysis?.buttonSnapshots?.slice(0, 3) || (snap ? [snap] : [])
+  const inputSnaps: InputSnapshot[]   = analysis?.inputSnapshots?.slice(0, 3) || []
+  const cardSnaps:  CardSnapshot[]    = analysis?.cardSnapshots?.slice(0, 3) || []
+  const tagSnaps:   TagSnapshot[]     = analysis?.tagSnapshots?.slice(0, 3) || []
 
   // ── Color tokens (fallback chain: colorSystem → colors array → defaults) ──
   const primaryHex   = snap?.backgroundColor
@@ -1645,7 +1645,7 @@ function WireframePreview({ purpose, layout, isHovered, hasCTA, hasImage }: {
   if (purpose === 'testimonials') {
     return (
       <div style={{ ...box, display: 'flex', flexDirection: 'column', padding: '8px 14px', gap: '5px', justifyContent: 'center' }}>
-        <div style={{ fontSize: '22px', lineHeight: 1, color: accent, fontFamily: 'Georgia, serif', opacity: 0.55 }}>"</div>
+        <div style={{ fontSize: '22px', lineHeight: 1, color: accent, fontFamily: 'Georgia, serif', opacity: 0.55 }}>&quot;</div>
         <div style={{ width: '90%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
         <div style={{ width: '72%', height: '6px', backgroundColor: secondary, borderRadius: '2px' }} />
         <div style={{ display: 'flex', gap: '5px', marginTop: '5px', alignItems: 'center' }}>

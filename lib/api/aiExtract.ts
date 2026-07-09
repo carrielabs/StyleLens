@@ -7,6 +7,14 @@ import fs from 'fs'
 import { mergeScreenshotColorSignals } from '@/lib/api/heroVisualAnalyzer'
 import { sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
 
+type FetchGlobalWithProxyFlag = typeof globalThis & {
+  __gemini_fetch_patched__?: boolean
+}
+
+type NodeFetchInitWithAgent = NonNullable<Parameters<typeof fetchNode>[1]> & {
+  agent: unknown
+}
+
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message
   if (typeof err === 'string') return err
@@ -24,7 +32,9 @@ const setupProxy = () => {
   const proxyUrl = process.env.STYLELENS_HTTP_PROXY || process.env.https_proxy || process.env.HTTPS_PROXY || process.env.http_proxy || process.env.HTTP_PROXY
   if (!proxyUrl) return
 
-  if (!(globalThis as any).__gemini_fetch_patched__) {
+  const fetchGlobal = globalThis as FetchGlobalWithProxyFlag
+
+  if (!fetchGlobal.__gemini_fetch_patched__) {
     console.log('[aiExtract] Patching global fetch to use proxy:', proxyUrl)
     const agent = new HttpsProxyAgent(proxyUrl)
     const originalFetch = globalThis.fetch
@@ -34,12 +44,12 @@ const setupProxy = () => {
       const urlStr = typeof url === 'string' ? url : url.toString()
       if (urlStr.includes('generativelanguage.googleapis.com') || urlStr.includes('screenshotone.com')) {
         console.log(`[aiExtract] Proxying request to: ${urlStr.slice(0, 60)}...`)
-        return fetchNode(url as any, { ...init, agent } as any) as any
+        return fetchNode(urlStr, { ...(init as Parameters<typeof fetchNode>[1]), agent } as NodeFetchInitWithAgent) as unknown as ReturnType<typeof originalFetch>
       }
       return originalFetch(url, init)
     }
     
-    ;(globalThis as any).__gemini_fetch_patched__ = true
+    fetchGlobal.__gemini_fetch_patched__ = true
   }
 }
 
@@ -57,7 +67,7 @@ async function fetchImageAsBase64(url: string): Promise<{ data: string; mediaTyp
     const mimeMatch = header.match(/data:([^;]+)/)
     return {
       data: base64,
-      mediaType: (mimeMatch ? mimeMatch[1] : 'image/jpeg') as any
+      mediaType: mimeMatch ? mimeMatch[1] : 'image/jpeg'
     }
   }
 

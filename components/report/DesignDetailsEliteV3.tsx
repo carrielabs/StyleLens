@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import { Target, Layers, Terminal, Boxes, Zap, MousePointer2, Layout as LayoutIcon, Palette, Type, Box, Sparkles, Code, Info } from 'lucide-react'
 import AtomicSandbox from './AtomicSandbox'
+import type { ColorToken, StyleReport } from '@/lib/types'
 
 interface Hotspot {
   id: string
@@ -119,7 +120,13 @@ const hotspots: Hotspot[] = [
   }
 ]
 
-export default function DesignDetailsEliteV3({ data, lang = 'zh', report }: any) {
+interface DesignDetailsEliteV3Props {
+  data?: unknown
+  lang?: 'zh' | 'en'
+  report: StyleReport
+}
+
+export default function DesignDetailsEliteV3({ lang = 'zh', report }: DesignDetailsEliteV3Props) {
   const [activeHotspot, setActiveHotspot] = useState<string | null>(null)
   const imageContainerRef = useRef<HTMLDivElement>(null)
   
@@ -218,7 +225,7 @@ export default function DesignDetailsEliteV3({ data, lang = 'zh', report }: any)
             {report.summaryZh}
           </p>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {report.tagsZh.map((tag: string) => (
+            {(report.tagsZh || report.tags).map((tag: string) => (
               <span key={tag} style={{ fontSize: '11px', padding: '4px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: '100px', color: '#86868B', border: '1px solid rgba(0,0,0,0.05)' }}>
                 {tag}
               </span>
@@ -230,7 +237,7 @@ export default function DesignDetailsEliteV3({ data, lang = 'zh', report }: any)
         <div style={{ marginBottom: '48px' }}>
           <SectionTitle icon={<Palette size={16} />} title="互动色盘 (Interaction Palette)" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {report.colors.map((c: any) => {
+            {report.colors.map((c: ColorToken) => {
               const hotspot = hotspots.find(h => h.id === `color_${c.role}`)
               return (
                 <div 
@@ -294,7 +301,7 @@ export default function DesignDetailsEliteV3({ data, lang = 'zh', report }: any)
               const catHotspots = hotspots.filter(h => h.category === cat)
               if (catHotspots.length === 0) return null
               
-              const catTitles: any = { layout: '布局与网格', ui: '组件与原子', light: '深度与材质', icon: '图标与肌理', motion: '动态体验' }
+              const catTitles: Record<string, string> = { layout: '布局与网格', ui: '组件与原子', light: '深度与材质', icon: '图标与肌理', motion: '动态体验' }
               
               return (
                 <div key={cat}>
@@ -348,7 +355,7 @@ export default function DesignDetailsEliteV3({ data, lang = 'zh', report }: any)
         <div style={{ marginBottom: '48px' }}>
              <SectionTitle icon={<Code size={16} />} title="代码导出 (V3 Export)" />
              <div style={{ background: '#F2F2F7', padding: '16px', borderRadius: '12px', fontSize: '11px', color: '#1D1D1F', fontFamily: 'var(--font-mono)', lineHeight: 1.6, border: '1px solid rgba(0,0,0,0.05)' }}>
-                <div style={{ color: '#86868B' }}>/* Linear DNA Tokens */</div>
+                <div style={{ color: '#86868B' }}>{'/* Linear DNA Tokens */'}</div>
                 <div>--primary: #5E6AD2;</div>
                 <div>--bg: #08090A;</div>
                 <div>--radius-btn: 4px;</div>

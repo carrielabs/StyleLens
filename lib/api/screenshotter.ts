@@ -432,8 +432,8 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
         extractedCss: pageAnalysis?.cssTextExcerpt || '',
         pageAnalysis: pageAnalysis || undefined,
       }
-    } catch (err: any) {
-      lastError = err.message
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err.message : String(err)
       if (i < apiKeys.length - 1) continue
     }
   }

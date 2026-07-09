@@ -1,5 +1,6 @@
 import { fetchLibrary } from '@/lib/storage/libraryStore'
 import { createClient } from '@/lib/storage/supabaseServer'
+import type { ColorToken, LibraryRecord } from '@/lib/types'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -77,7 +78,7 @@ export default async function LibraryPage() {
   )
 }
 
-function LibraryCard({ record }: { record: any }) {
+function LibraryCard({ record }: { record: LibraryRecord }) {
   const { style_data } = record
   
   return (
@@ -110,7 +111,7 @@ function LibraryCard({ record }: { record: any }) {
 
       <div style={{ padding: '20px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-          {style_data.colors?.slice(0, 5).map((c: any, i: number) => (
+          {style_data.colors?.slice(0, 5).map((c: ColorToken, i: number) => (
             <div key={i} style={{ 
               width: '16px', height: '16px', borderRadius: '4px', 
               background: c.hex, border: '1px solid rgba(255,255,255,0.1)' 

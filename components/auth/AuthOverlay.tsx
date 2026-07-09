@@ -11,6 +11,10 @@ interface AuthOverlayProps {
 
 const systemFont = 'var(--font-sans)';
 
+function getErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback
+}
+
 export default function AuthOverlay({ onClose }: AuthOverlayProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -40,8 +44,8 @@ export default function AuthOverlay({ onClose }: AuthOverlayProps) {
         }
       })
       if (error) throw error
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Google 登录失败' })
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: getErrorMessage(err, 'Google 登录失败') })
       setLoading(false)
     }
   }
@@ -75,8 +79,8 @@ export default function AuthOverlay({ onClose }: AuthOverlayProps) {
       
       setStep('otp')
       setMessage({ type: 'success', text: '验证码已发送至您的邮箱。' })
-    } catch (err: any) {
-      const errorText = err.message || '发送失败，请稍后重试'
+    } catch (err: unknown) {
+      const errorText = getErrorMessage(err, '发送失败，请稍后重试')
       const translated = errorText.includes('rate limit') 
         ? '发送频率超过限制，请稍后再试或检查最近邮件' 
         : errorText

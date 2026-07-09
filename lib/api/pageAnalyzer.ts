@@ -88,6 +88,18 @@ type RawDomColorCandidate = Omit<PageColorCandidate, 'layerHints' | 'roleHints'>
 
 type RawDomTypographyCandidate = PageTypographyCandidate
 
+type RawDomColorAccumulator = RawDomColorCandidate & {
+  areaWeight: number
+  viewportWeight: number
+  repetitionWeight: number
+  evidenceScore: number
+}
+
+type RawDomTypographyAccumulator = RawDomTypographyCandidate & {
+  evidenceScore: number
+  meta: TokenMeta
+}
+
 type RawValueAccumulator = {
   value: string
   count: number
@@ -2271,8 +2283,8 @@ async function extractDomSignalsFromPage(
         }
       }
 
-      const colorMap = new Map<string, any>()
-      const typoMap = new Map<string, any>()
+      const colorMap = new Map<string, RawDomColorAccumulator>()
+      const typoMap = new Map<string, RawDomTypographyAccumulator>()
       const radiusValues = new Map<string, ValueAccumulator>()
       const shadowValues = new Map<string, ValueAccumulator>()
       const spacingValues = new Map<string, ValueAccumulator>()
@@ -2962,7 +2974,6 @@ async function extractDomSignalsFromPage(
         return items
       }
 
-      let buttonSnapshot: ButtonSnapshot | undefined
       const getButtonCandidateScore = (el: HTMLElement) => {
         const s = window.getComputedStyle(el)
         const text = (el.textContent || el.getAttribute('value') || '').trim().replace(/\s+/g, ' ')
@@ -3069,7 +3080,7 @@ async function extractDomSignalsFromPage(
           mapped.paddingV || '',
         ].join('|')
       })
-      buttonSnapshot = buttonSnapshots[0]
+      const buttonSnapshot = buttonSnapshots[0]
 
       const inputElements = Array.from(document.querySelectorAll<HTMLElement>(
         'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]), textarea, select, [role="textbox"]'

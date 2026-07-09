@@ -67,8 +67,8 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
       } else {
         throw new Error(extractData.error || '风格提取失败')
       }
-    } catch (err: any) {
-      onError(err.message || '网络请求失败，请稍后重试')
+    } catch (err: unknown) {
+      onError(err instanceof Error ? err.message : '网络请求失败，请稍后重试')
     }
   }
 

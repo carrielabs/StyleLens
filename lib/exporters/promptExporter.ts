@@ -1,4 +1,4 @@
-import type { StyleReport } from '@/lib/types'
+import type { ColorToken, StyleReport } from '@/lib/types'
 
 export function generatePrompt(report: StyleReport, language: 'en' | 'zh' = 'en'): string {
   const { colors, colorSystem, typography, designDetails, gradients } = report
@@ -14,8 +14,8 @@ export function generatePrompt(report: StyleReport, language: 'en' | 'zh' = 'en'
     ? colorSystem.contentColors
     : colors.filter(c => c.role === 'accent')
 
-  const hex   = (c: any) => c ? c.hex.toUpperCase() : null
-  const named = (c: any) => c ? `${c.hex.toUpperCase()} /* ${c.name} */` : null
+  const hex   = (c: ColorToken | undefined) => c ? c.hex.toUpperCase() : null
+  const named = (c: ColorToken | undefined) => c ? `${c.hex.toUpperCase()} /* ${c.name} */` : null
 
   const radius   = designDetails.cssRadius || inferRadius(designDetails.borderRadius)
   const shadow   = designDetails.cssShadow || inferShadow(designDetails.shadowStyle)

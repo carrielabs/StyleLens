@@ -1,10 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import type { CSSProperties } from 'react'
 import { snapshotGuestHistoryForLogin } from '@/lib/storage/guestStore'
 import { createClient } from '@/lib/storage/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback
+}
 
 export default function AuthPage() {
   const [email, setEmail] = useState('')
@@ -35,8 +40,8 @@ export default function AuthPage() {
         if (error) throw error
         setError('注册成功！请检查您的邮箱进行激活。')
       }
-    } catch (err: any) {
-      setError(err.message || '认证失败')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, '认证失败'))
     } finally {
       setLoading(false)
     }
@@ -54,8 +59,8 @@ export default function AuthPage() {
         }
       })
       if (error) throw error
-    } catch (err: any) {
-      setError(err.message || 'Google 登录失败')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Google 登录失败'))
       setLoading(false)
     }
   }
@@ -96,7 +101,7 @@ export default function AuthPage() {
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              style={inputStyle as any}
+              style={inputStyle}
               onFocus={e => { e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
               onBlur={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)' }}
             />
@@ -109,7 +114,7 @@ export default function AuthPage() {
               required
               value={password}
               onChange={e => setPassword(e.target.value)}
-              style={inputStyle as any}
+              style={inputStyle}
               onFocus={e => { e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
               onBlur={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)' }}
             />
@@ -179,7 +184,7 @@ export default function AuthPage() {
   )
 }
 
-const inputStyle = {
+const inputStyle: CSSProperties = {
   width: '100%', height: '56px', padding: '0 24px',
   background: 'var(--bg-surface)', border: 'none',
   borderRadius: '16px', color: 'var(--text-primary)', fontSize: '15px', outline: 'none',
