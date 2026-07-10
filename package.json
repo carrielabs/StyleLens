@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "postbuild": "node scripts/include-tailwind-preflight-trace.mjs",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run"
