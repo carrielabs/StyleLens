@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>战略 KPI 数据分析报告 (自由颗粒版)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { bg: '#1a1a1a', card: '#2a2a2a', green: '#c7e54c', blue: '#425ab8', light: '#ffffff', muted: '#9ca3af', dark: '#111111' }
+                    },
+                    fontFamily: { sans: ['Inter', 'Helvetica Neue', 'Arial', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js & Icons & Sortable -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        body { background-color: #1a1a1a; color: #ffffff; }
+        .pattern-triangles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+        .triangle { width: 100%; aspect-ratio: 1; clip-path: polygon(100% 0, 0% 100%, 100% 100%); }
+        .triangle-inv { width: 100%; aspect-ratio: 1; clip-path: polygon(0 0, 0 100%, 100% 0); }
+        .cohort-grid { display: grid; grid-template-columns: 40px repeat(6, 1fr); gap: 4px; }
+        
+        /* Drag UI Styles */
+        .sortable-ghost { opacity: 0.2; transform: scale(0.98); background: #2a2a2a; border: 2px dashed #c7e54c; }
+        .drag-handle { cursor: grab; z-index: 50; }
+        .drag-handle:active { cursor: grabbing; }
+        
+        /* contenteditable styles */
+        [contenteditable="true"]:hover { outline: 1px dashed rgba(199,229,76,0.5); border-radius: 2px; }
+        [contenteditable="true"]:focus { outline: 1px solid #c7e54c; background: rgba(255,255,255,0.05); }
+    </style>
+</head>
+<body class="min-h-screen text-brand-light font-sans antialiased overflow-x-hidden">
+
+    <!-- Main Content -->
+    <main id="section-top" class="p-4 md:p-8 w-full max-w-7xl mx-auto">
+        
+        <!-- Header (Fixed) -->
+        <header data-section="header" class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+            <div>
+                <h1 data-editable="true" contenteditable="true" data-slot="text.header.company" class="text-2xl font-bold tracking-tight">Thynk Unlimited</h1>
+                <p data-editable="true" contenteditable="true" data-slot="text.header.period" class="text-sm text-brand-muted mt-1">2026 Q3 战略业务财报</p>
+            </div>
+            <div class="w-16 h-8 rounded-full bg-brand-green shrink-0 text-brand-dark flex items-center justify-center text-xs font-bold shadow-[0_0_15px_rgba(199,229,76,0.3)]">
+                <span data-editable="true" contenteditable="true" data-slot="text.header.badge">Q3</span>
+            </div>
+        </header>
+
+        <!-- SORTABLE ATOMIC GRID -->
+        <!-- grid-flow-dense is the magic that fills gaps when dragging differing sized items -->
+        <div id="sortable-container" class="grid grid-cols-1 md:grid-cols-12 gap-6 pb-20 auto-rows-min grid-flow-dense">
+
+            <!-- 1. 核心摘要大卡 (Span 8) -->
+            <section data-section="card-summary" class="col-span-12 xl:col-span-8 bg-brand-card rounded-3xl p-8 flex flex-col justify-between relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:border-gray-600 border border-transparent group sortable-item">
+                <div class="drag-handle absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-gray-800/80 rounded-lg text-brand-muted hover:text-white hover:bg-gray-700">
+                    <i data-lucide="grip-horizontal" class="w-5 h-5"></i>
+                </div>
+                <div class="relative z-10 w-full md:w-4/5">
+                    <h2 class="text-4xl md:text-5xl font-extrabold leading-tight mb-4 tracking-tighter">
+                        <span data-editable="true" contenteditable="true" data-slot="text.insight.summary.title">核心洞察</span> <br> 
+                        <span data-editable="true" contenteditable="true" data-slot="text.insight.summary.highlight" class="text-brand-green">增长驱动分析</span>
+                    </h2>
+                    <p data-editable="true" contenteditable="true" data-slot="text.insight.summary.desc" class="text-brand-muted leading-relaxed text-sm">
+                        本季度我们在严峻的宏观环境下实现了超预期的增长。核心产品线营收同比增长 32%，利润率稳步提升。此表现主要得益于亚太市场的新型数据战略布局以及AI自动化工具的深度整合。
+                    </p>
+                </div>
+            </section>
+
+            <!-- 2. 数据健康度 (Span 4) -->
+            <section data-section="card-health" class="col-span-12 xl:col-span-4 bg-brand-blue rounded-3xl p-6 flex flex-col justify-between border border-blue-600/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:border-blue-400 group sortable-item relative">
+                <div class="drag-handle absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-black/30 rounded-lg text-blue-200 hover:text-white hover:bg-black/50">
+                    <i data-lucide="grip-horizontal" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.health.title" class="font-bold text-white mb-1 pr-10">系统数据健康度</h3>
+                    <p data-editable="true" contenteditable="true" data-slot="text.health.subtitle" class="text-xs text-blue-200">全域埋点采集实时状态</p>
+                </div>
+                <div class="flex items-end gap-2 mt-6">
+                    <div data-editable="true" contenteditable="true" data-slot="text.health.value" class="text-6xl font-extrabold text-brand-green tracking-tighter drop-shadow-md">98.5</div>
+                    <div class="text-xl font-bold text-brand-green mb-1">%</div>
+                </div>
+                <div class="h-16 w-full mt-2 relative">
+                    <canvas id="chart-health"></canvas>
+                </div>
+            </section>
+
+            <!-- 3. 观点文本: 营收 (Span 12) -->
+            <div data-section="text-revenue" class="col-span-12 py-4 pl-6 border-l-4 border-brand-green flex flex-col justify-center relative group sortable-item bg-brand-bg hover:bg-brand-card/30 transition-colors rounded-r-xl">
+                <div class="drag-handle absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-2 text-brand-muted hover:text-white">
+                    <i data-lucide="grip-horizontal" class="w-5 h-5"></i>
+                </div>
+                <h3 data-editable="true" contenteditable="true" data-slot="text.insight.revenue.title" class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="zap" class="text-brand-green w-5 h-5"></i> 利润空间持续扩大</h3>
+                <p data-editable="true" contenteditable="true" data-slot="text.insight.revenue.desc" class="text-sm text-brand-muted max-w-5xl pr-12">营收规模 (ARR) 突破 1.28B，同时通过供应链优化，综合成本曲线明显下放，Q3 单季度净利润率 (NPM) 稳定在 24.5%。高净值客户的持续复购是 LTV 保持行业领先的核心因素。</p>
+            </div>
+
+            <!-- 4-7. 独立 KPI 卡片 (Each Span 3) -->
+            <section data-section="kpi-arr" class="col-span-12 md:col-span-6 xl:col-span-3 bg-brand-card border border-gray-700 rounded-2xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg hover:border-gray-500 group sortable-item relative">
+                <div class="drag-handle absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-white"><i data-lucide="grip-horizontal" class="w-4 h-4"></i></div>
+                <div>
+                    <p data-editable="true" contenteditable="true" data-slot="text.kpi.arr.label" class="text-xs text-brand-muted mb-1">总营业收入 (ARR)</p>
+                    <div class="flex items-end gap-2">
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.kpi.arr.value" class="text-2xl font-extrabold text-white">¥1.28B</h3>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.arr.trend" class="text-brand-green text-[10px] font-bold mb-1">+12%</span>
+                    </div>
+                </div>
+            </section>
+
+            <section data-section="kpi-npm" class="col-span-12 md:col-span-6 xl:col-span-3 bg-brand-card border border-gray-700 rounded-2xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg hover:border-gray-500 group sortable-item relative">
+                <div class="drag-handle absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-white"><i data-lucide="grip-horizontal" class="w-4 h-4"></i></div>
+                <div>
+                    <p data-editable="true" contenteditable="true" data-slot="text.kpi.npm.label" class="text-xs text-brand-muted mb-1">净利润率 (NPM)</p>
+                    <div class="flex items-end gap-2">
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.kpi.npm.value" class="text-2xl font-extrabold text-white">24.5%</h3>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.npm.trend" class="text-gray-400 text-[10px] font-bold mb-1 bg-gray-800 px-2 py-0.5 rounded-full">稳定</span>
+                    </div>
+                </div>
+            </section>
+
+            <section data-section="kpi-cac" class="col-span-12 md:col-span-6 xl:col-span-3 bg-brand-card border border-gray-700 rounded-2xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg hover:border-red-400/50 group sortable-item relative">
+                <div class="drag-handle absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-white"><i data-lucide="grip-horizontal" class="w-4 h-4"></i></div>
+                <div>
+                    <p data-editable="true" contenteditable="true" data-slot="text.kpi.cac.label" class="text-xs text-brand-muted mb-1">单客获取成本 (CAC)</p>
+                    <div class="flex items-end gap-2">
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.kpi.cac.value" class="text-2xl font-extrabold text-white">¥342</h3>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.cac.trend" class="text-red-400 text-[10px] font-bold mb-1">+5.2%</span>
+                    </div>
+                </div>
+            </section>
+
+            <section data-section="kpi-ltv" class="col-span-12 md:col-span-6 xl:col-span-3 bg-brand-green text-brand-dark rounded-2xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-white group sortable-item relative">
+                <div class="drag-handle absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-2 text-brand-dark/50 hover:text-brand-dark"><i data-lucide="grip-horizontal" class="w-4 h-4"></i></div>
+                <div>
+                    <p data-editable="true" contenteditable="true" data-slot="text.kpi.ltv.label" class="text-xs font-bold mb-1 opacity-80">生命周期价值 (LTV)</p>
+                    <div class="flex items-end gap-2">
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.kpi.ltv.value" class="text-2xl font-extrabold">¥2,850</h3>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.ltv.trend" class="bg-brand-dark text-white text-[10px] px-2 py-0.5 rounded-full font-bold mb-1">极佳</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 8. 面积图卡片 (Span 8) -->
+            <section data-section="chart-area-card" class="col-span-12 xl:col-span-8 bg-brand-card border border-gray-700 rounded-3xl p-6 flex flex-col transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.8)] min-h-[300px] group sortable-item relative">
+                <div class="drag-handle absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-gray-800/80 rounded-lg text-brand-muted hover:text-white"><i data-lucide="grip-horizontal" class="w-5 h-5"></i></div>
+                <div class="flex justify-between items-start mb-4 pr-10">
+                    <div>
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.chart.area.title" class="font-bold text-lg text-white">营收与成本剪刀差</h3>
+                        <p data-editable="true" contenteditable="true" data-slot="text.chart.area.subtitle" class="text-xs text-brand-muted">利润空间持续扩大趋势</p>
+                    </div>
+                </div>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="chart-area"></canvas>
+                </div>
+            </section>
+
+            <!-- 9. 环形图卡片 (Span 4) -->
+            <section data-section="chart-comp-card" class="col-span-12 xl:col-span-4 bg-brand-card border border-gray-700 rounded-3xl p-6 flex flex-col transition-all hover:-translate-y-1 hover:shadow-2xl min-h-[300px] group sortable-item relative">
+                <div class="drag-handle absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-gray-800/80 rounded-lg text-brand-muted hover:text-white"><i data-lucide="grip-horizontal" class="w-5 h-5"></i></div>
+                <div>
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.chart.composition.title" class="font-bold text-md text-white mb-1 pr-10">全球市场营收结构</h3>
+                    <p data-editable="true" contenteditable="true" data-slot="text.chart.composition.subtitle" class="text-xs text-brand-muted mb-4">按大区划分</p>
+                </div>
+                <div class="flex-1 relative w-full flex items-center justify-center">
+                    <canvas id="chart-composition"></canvas>
+                </div>
+            </section>
+
+            <!-- 10. 观点文本: 增长 (Span 12) -->
+            <div data-section="text-growth" class="col-span-12 py-4 pl-6 border-l-4 border-brand-green flex flex-col justify-center relative group sortable-item bg-brand-bg hover:bg-brand-card/30 transition-colors rounded-r-xl">
+                <div class="drag-handle absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-2 text-brand-muted hover:text-white"><i data-lucide="grip-horizontal" class="w-5 h-5"></i></div>
+                <h3 data-editable="true" contenteditable="true" data-slot="text.insight.growth.title" class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="trending-up" class="text-brand-green w-5 h-5"></i> 核心产品自然增长强劲</h3>
+                <p data-editable="true" contenteditable="true" data-slot="text.insight.growth.desc" class="text-sm text-brand-muted max-w-5xl pr-12">自然流量带来的活跃用户比例本月提升至 65%。值得关注的是，第一季度激活的企业级用户群，在第 6 个月的留存率依然维持在 35% 左右，展现了极高的产品粘性。</p>
+            </div>
+
+            <!-- 11. 柱状图卡片 (Span 7) -->
+            <section data-section="chart-trend-card" class="col-span-12 xl:col-span-7 bg-white rounded-3xl p-6 flex flex-col min-h-[300px] transition-all hover:-translate-y-1 hover:shadow-2xl group sortable-item relative">
+                <div class="drag-handle absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-gray-100 rounded-lg text-gray-500 hover:text-black"><i data-lucide="grip-horizontal" class="w-5 h-5"></i></div>
+                <div class="flex justify-between items-start mb-6 pr-10">
+                    <div>
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.chart.trend.title" class="font-bold text-lg text-gray-900">月度活跃用户趋势 (MAU)</h3>
+                        <p data-editable="true" contenteditable="true" data-slot="text.chart.trend.subtitle" class="text-sm text-gray-500">2026年 1月 - 6月 表现</p>
+                    </div>
+                </div>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="chart-trend"></canvas>
+                </div>
+            </section>
+
+            <!-- 12. 留存热力图卡片 (Span 5) -->
+            <section data-section="chart-cohort-card" class="col-span-12 xl:col-span-5 bg-brand-card border border-gray-700 rounded-3xl p-6 flex flex-col transition-all hover:-translate-y-1 hover:shadow-2xl group sortable-item relative">
+                <div class="drag-handle absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-gray-800/80 rounded-lg text-brand-muted hover:text-white"><i data-lucide="grip-horizontal" class="w-5 h-5"></i></div>
+                <div class="flex justify-between items-start mb-6 pr-10">
+                    <div>
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.chart.cohort.title" class="font-bold text-lg text-white mb-1">客户留存热力图</h3>
+                        <p data-editable="true" contenteditable="true" data-slot="text.chart.cohort.subtitle" class="text-xs text-brand-muted">按激活月份追踪</p>
+                    </div>
+                </div>
+                <div id="chart-cohort" class="flex-1 flex flex-col justify-center text-xs w-full overflow-x-auto">
+                    <div class="min-w-[300px]">
+                        <div class="cohort-grid mb-1 text-brand-muted font-medium text-center">
+                            <div></div><div>M1</div><div>M2</div><div>M3</div><div>M4</div><div>M5</div><div>M6</div>
+                        </div>
+                        <div class="cohort-grid mb-1">
+                            <div class="flex items-center text-brand-muted">Feb</div>
+                            <div class="bg-brand-green text-brand-dark font-bold flex items-center justify-center rounded">100%</div>
+                            <div class="bg-brand-green/80 flex items-center justify-center rounded">72%</div>
+                            <div class="bg-brand-green/60 flex items-center justify-center rounded">58%</div>
+                            <div class="bg-brand-green/40 flex items-center justify-center rounded">45%</div>
+                            <div class="bg-brand-green/30 flex items-center justify-center rounded">38%</div>
+                            <div class="bg-brand-green/20 flex items-center justify-center rounded">35%</div>
+                        </div>
+                        <div class="cohort-grid mb-1">
+                            <div class="flex items-center text-brand-muted">Mar</div>
+                            <div class="bg-brand-green text-brand-dark font-bold flex items-center justify-center rounded">100%</div>
+                            <div class="bg-brand-green/90 flex items-center justify-center rounded">85%</div>
+                            <div class="bg-brand-green/70 flex items-center justify-center rounded">62%</div>
+                            <div class="bg-brand-green/50 flex items-center justify-center rounded">51%</div>
+                            <div class="bg-brand-green/30 flex items-center justify-center rounded">40%</div>
+                            <div class="bg-gray-800 rounded"></div>
+                        </div>
+                        <div class="cohort-grid mb-1">
+                            <div class="flex items-center text-brand-muted">Apr</div>
+                            <div class="bg-brand-green text-brand-dark font-bold flex items-center justify-center rounded h-6">100%</div>
+                            <div class="bg-brand-green/80 flex items-center justify-center rounded h-6">78%</div>
+                            <div class="bg-brand-green/60 flex items-center justify-center rounded h-6">55%</div>
+                            <div class="bg-brand-green/40 flex items-center justify-center rounded h-6">48%</div>
+                            <div class="bg-gray-800 rounded h-6"></div>
+                            <div class="bg-gray-800 rounded h-6"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 13. 观点文本: 市场竞争 (Span 12) -->
+            <div data-section="text-market" class="col-span-12 py-4 pl-6 border-l-4 border-brand-green flex flex-col justify-center relative group sortable-item bg-brand-bg hover:bg-brand-card/30 transition-colors rounded-r-xl">
+                <div class="drag-handle absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-2 text-brand-muted hover:text-white"><i data-lucide="grip-horizontal" class="w-5 h-5"></i></div>
+                <h3 data-editable="true" contenteditable="true" data-slot="text.insight.market.title" class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="globe" class="text-brand-green w-5 h-5"></i> 北美市场渗透加速，壁垒稳固</h3>
+                <p data-editable="true" contenteditable="true" data-slot="text.insight.market.desc" class="text-sm text-brand-muted max-w-5xl pr-12">在竞品 A 进行低价倾销的策略下，我们的核心技术壁垒与响应速度优势凸显，保证了亚太与北美的 TAM 覆盖率持续攀升，未受明显影响。</p>
+            </div>
+
+            <!-- 14. 渗透率卡片 (Span 4) -->
+            <section data-section="chart-penetration-card" class="col-span-12 xl:col-span-4 bg-brand-card border border-gray-700 rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-2xl group sortable-item relative min-h-[250px]">
+                <div class="drag-handle absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-gray-800/80 rounded-lg text-brand-muted hover:text-white"><i data-lucide="grip-horizontal" class="w-5 h-5"></i></div>
+                <div>
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.chart.penetration.title" class="font-bold text-md text-white mb-1 pr-10">核心市场渗透率</h3>
+                    <p data-editable="true" contenteditable="true" data-slot="text.chart.penetration.subtitle" class="text-xs text-brand-muted mb-6">总可寻址市场覆盖</p>
+                </div>
+                <div id="chart-penetration" class="space-y-5">
+                    <div>
+                        <div class="flex justify-between text-xs mb-2"><span class="font-bold">北美市场</span><span class="text-brand-green font-bold">42%</span></div>
+                        <div class="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden"><div class="bg-brand-green h-full" style="width: 42%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-2"><span class="font-bold">亚太市场</span><span class="text-brand-blue font-bold">28%</span></div>
+                        <div class="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden"><div class="bg-brand-blue h-full" style="width: 28%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-2"><span class="font-bold">欧洲市场</span><span class="text-white font-bold">15%</span></div>
+                        <div class="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden"><div class="bg-white h-full" style="width: 15%"></div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 15. 雷达图卡片 (Span 8) -->
+            <section data-section="chart-radar-card" class="col-span-12 xl:col-span-8 bg-brand-card border border-gray-700 rounded-3xl p-6 flex flex-col transition-all hover:-translate-y-1 hover:shadow-2xl group sortable-item relative min-h-[250px]">
+                <div class="drag-handle absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-gray-800/80 rounded-lg text-brand-muted hover:text-white"><i data-lucide="grip-horizontal" class="w-5 h-5"></i></div>
+                <div>
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.chart.radar.title" class="font-bold text-lg text-white pr-10">产品竞争力分析</h3>
+                    <p data-editable="true" contenteditable="true" data-slot="text.chart.radar.subtitle" class="text-xs text-brand-muted">我方 vs 竞品A</p>
+                </div>
+                <div class="flex-1 relative w-full h-full min-h-[200px] flex justify-center items-center mt-2">
+                    <canvas id="chart-radar"></canvas>
+                </div>
+            </section>
+
+            <!-- 16. 观点文本: 行动计划 (Span 12) -->
+            <div data-section="text-action" class="col-span-12 py-4 pl-6 border-l-4 border-brand-green flex flex-col justify-center relative group sortable-item bg-brand-bg hover:bg-brand-card/30 transition-colors rounded-r-xl mt-4">
+                <div class="drag-handle absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-2 text-brand-muted hover:text-white"><i data-lucide="grip-horizontal" class="w-5 h-5"></i></div>
+                <h3 data-editable="true" contenteditable="true" data-slot="text.insight.action.title" class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="target" class="text-brand-green w-5 h-5"></i> Q4 执行动作追踪</h3>
+                <p data-editable="true" contenteditable="true" data-slot="text.insight.action.desc" class="text-sm text-brand-muted max-w-5xl pr-12">根据上述洞察，我们将继续锁定核心 API 的性能底线，并优化支付链路以减少流失，确保全年 100% 战略目标达成。</p>
+            </div>
+
+            <!-- 17-20. 行动计划卡片 (Each Span 3) -->
+            <section data-section="action-1" class="col-span-12 md:col-span-6 xl:col-span-3 bg-brand-blue rounded-2xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg group sortable-item relative">
+                <div class="drag-handle absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-2 text-white/50 hover:text-white"><i data-lucide="grip-horizontal" class="w-4 h-4"></i></div>
+                <div class="flex justify-between items-start mb-4 pr-6">
+                    <i data-lucide="activity" class="w-5 h-5 text-white"></i>
+                    <span class="text-[10px] font-bold bg-white/20 text-white px-2 py-1 rounded">运行中</span>
+                </div>
+                <div>
+                    <div class="text-3xl font-extrabold mb-1"><span data-editable="true" contenteditable="true" data-slot="text.action.1.value">12</span><span data-editable="true" contenteditable="true" data-slot="text.action.1.unit" class="text-sm font-normal text-blue-200 ml-1">ms</span></div>
+                    <h4 data-editable="true" contenteditable="true" data-slot="text.action.1.title" class="font-bold text-sm text-white">核心API响应延迟</h4>
+                    <p data-editable="true" contenteditable="true" data-slot="text.action.1.desc" class="text-xs text-blue-200 mt-1">监控实时进度</p>
+                </div>
+            </section>
+            
+            <section data-section="action-2" class="col-span-12 md:col-span-6 xl:col-span-3 bg-brand-card border border-gray-700 rounded-2xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg hover:border-red-400 group sortable-item relative">
+                <div class="drag-handle absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-white"><i data-lucide="grip-horizontal" class="w-4 h-4"></i></div>
+                <div class="flex justify-between items-start mb-4 pr-6">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-red-400"></i>
+                    <span class="text-[10px] font-bold bg-red-400/20 text-red-400 px-2 py-1 rounded">需关注</span>
+                </div>
+                <div>
+                    <div class="text-3xl font-extrabold mb-1 text-white"><span data-editable="true" contenteditable="true" data-slot="text.action.2.value">3</span><span data-editable="true" contenteditable="true" data-slot="text.action.2.unit" class="text-sm font-normal text-brand-muted ml-1">起</span></div>
+                    <h4 data-editable="true" contenteditable="true" data-slot="text.action.2.title" class="font-bold text-sm text-white">支付链路异常告警</h4>
+                    <p data-editable="true" contenteditable="true" data-slot="text.action.2.desc" class="text-xs text-brand-muted mt-1">早期问题识别</p>
+                </div>
+            </section>
+
+            <section data-section="action-3" class="col-span-12 md:col-span-6 xl:col-span-3 bg-brand-card border border-gray-700 rounded-2xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg hover:border-brand-green group sortable-item relative">
+                <div class="drag-handle absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-white"><i data-lucide="grip-horizontal" class="w-4 h-4"></i></div>
+                <div class="flex justify-between items-start mb-4 pr-6">
+                    <i data-lucide="zap" class="w-5 h-5 text-brand-green"></i>
+                    <span class="text-[10px] font-bold bg-brand-green/20 text-brand-green px-2 py-1 rounded">已优化</span>
+                </div>
+                <div>
+                    <div class="text-3xl font-extrabold mb-1 text-white"><span data-editable="true" contenteditable="true" data-slot="text.action.3.value">1.8</span><span data-editable="true" contenteditable="true" data-slot="text.action.3.unit" class="text-sm font-normal text-brand-muted ml-1">天</span></div>
+                    <h4 data-editable="true" contenteditable="true" data-slot="text.action.3.title" class="font-bold text-sm text-white">平均线索转化周期</h4>
+                    <p data-editable="true" contenteditable="true" data-slot="text.action.3.desc" class="text-xs text-brand-muted mt-1">优化决策链路</p>
+                </div>
+            </section>
+
+            <section data-section="action-4" class="col-span-12 md:col-span-6 xl:col-span-3 bg-brand-card border border-gray-700 rounded-2xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg hover:border-brand-green group sortable-item relative">
+                <div class="drag-handle absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-white"><i data-lucide="grip-horizontal" class="w-4 h-4"></i></div>
+                <div class="flex justify-between items-start mb-4 pr-6">
+                    <i data-lucide="check-circle" class="w-5 h-5 text-brand-green"></i>
+                    <span class="text-[10px] font-bold bg-brand-green/20 text-brand-green px-2 py-1 rounded">达标</span>
+                </div>
+                <div>
+                    <div class="text-3xl font-extrabold mb-1 text-white"><span data-editable="true" contenteditable="true" data-slot="text.action.4.value">85</span><span data-editable="true" contenteditable="true" data-slot="text.action.4.unit" class="text-sm font-normal text-brand-muted ml-1">%</span></div>
+                    <h4 data-editable="true" contenteditable="true" data-slot="text.action.4.title" class="font-bold text-sm text-white">Q3战略目标达成率</h4>
+                    <p data-editable="true" contenteditable="true" data-slot="text.action.4.desc" class="text-xs text-brand-muted mt-1">支撑战略规划</p>
+                </div>
+            </section>
+
+        </div> <!-- End of Sortable Grid Container -->
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // 1. Initialize SortableJS for completely independent cards
+        new Sortable(document.getElementById('sortable-container'), {
+            animation: 350,
+            handle: '.drag-handle', // Strictly lock drag action to the grip icon
+            ghostClass: 'sortable-ghost',
+            easing: "cubic-bezier(1, 0, 0, 1)",
+            // Prevent interference with contenteditable
+            filter: '[contenteditable="true"]',
+            preventOnFilter: false
+        });
+
+        // 2. Chart.js Configurations
+        Chart.defaults.font.family = "'Inter', 'Helvetica Neue', 'Arial', sans-serif";
+        Chart.defaults.color = '#9ca3af';
+        Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.05)';
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(26, 26, 26, 0.9)';
+        Chart.defaults.plugins.tooltip.titleColor = '#ffffff';
+        Chart.defaults.plugins.tooltip.padding = 10;
+        Chart.defaults.plugins.tooltip.cornerRadius = 6;
+
+        // chart-health (Sparkline)
+        new Chart(document.getElementById('chart-health').getContext('2d'), {
+            type: 'line',
+            data: { labels: ['1','2','3','4','5','6','7','8','9','10'], datasets: [{ data: [95, 96, 94, 98, 97, 99, 98.5, 99, 98, 98.5], borderColor: '#c7e54c', borderWidth: 2, tension: 0.4, pointRadius: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false, min: 90 } }, plugins: { legend: { display: false }, tooltip: { enabled: false } }, layout: { padding: 0 } }
+        });
+
+        // chart-area (Revenue vs Cost)
+        new Chart(document.getElementById('chart-area').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: ['Q1', 'Q2', 'Q3', 'Q4(预)', '明年Q1(预)'],
+                datasets: [
+                    { label: '总营收', data: [100, 130, 180, 240, 320], borderColor: '#c7e54c', backgroundColor: 'rgba(199, 229, 76, 0.15)', borderWidth: 2, fill: true, tension: 0.4 },
+                    { label: '综合成本', data: [80, 95, 110, 130, 145], borderColor: '#f87171', backgroundColor: 'transparent', borderWidth: 2, fill: false, tension: 0.4, borderDash: [5, 5] }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false } }, y: { border: { display: false }, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+        });
+
+        // chart-trend (MAU)
+        new Chart(document.getElementById('chart-trend').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [
+                    { label: '自然增长', data: [15, 22, 18, 30, 25, 35], backgroundColor: '#c7e54c', barPercentage: 0.5 },
+                    { label: '投放获取', data: [10, 12, 15, 25, 20, 18], backgroundColor: '#425ab8', barPercentage: 0.5 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, border: { display: false } } }, plugins: { legend: { display: false } } }
+        });
+
+        // chart-composition (Doughnut)
+        new Chart(document.getElementById('chart-composition').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: ['亚太区', '北美区', '欧洲区'], datasets: [{ data: [45, 30, 25], backgroundColor: ['#c7e54c', '#425ab8', '#6b7280'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, padding: 15 } } } }
+        });
+
+        // chart-radar (Competitor Analysis)
+        new Chart(document.getElementById('chart-radar').getContext('2d'), {
+            type: 'radar',
+            data: {
+                labels: ['技术壁垒', '市场份额', '用户体验', '响应速度', '价格优势', '生态'],
+                datasets: [
+                    { label: '我方', data: [90, 75, 85, 95, 70, 80], backgroundColor: 'rgba(199, 229, 76, 0.2)', borderColor: '#c7e54c', borderWidth: 2 },
+                    { label: '竞品A', data: [70, 85, 75, 80, 90, 65], backgroundColor: 'rgba(66, 90, 184, 0.2)', borderColor: '#425ab8', borderWidth: 2 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { r: { angleLines: { color: 'rgba(255, 255, 255, 0.1)' }, grid: { color: 'rgba(255, 255, 255, 0.1)' }, pointLabels: { font: { size: 10 } }, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Executive Analytics 高级业务数据分析看板</title>
+    <!-- 引入 Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 ECharts (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <!-- 引入 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        // 高级业务数据分析模板配色
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // 增长 / 积极数据
+                        sage: {
+                            50: '#f2fbf6',
+                            100: '#dcf5e8',
+                            200: '#b7e7ce',
+                            400: '#6cc995',
+                            500: '#2fa86d', 
+                            600: '#23875a',
+                        },
+                        // 风险 / 预警数据
+                        rose: {
+                            50: '#fff1f0',
+                            100: '#fde2e0',
+                            200: '#f7c4c0',
+                            400: '#eb7b73',
+                            500: '#d83931',
+                            600: '#ad2b25',
+                        },
+                        // 主品牌色 / 核心业务
+                        wine: {
+                            400: '#5f8cff',
+                            500: '#3370ff',
+                            600: '#2454c7',
+                        },
+                        // 专业中性灰
+                        gray: {
+                            50: '#fafafa',
+                            100: '#f5f6f7', 
+                            200: '#dee0e3',
+                            300: '#c9cdd4',
+                            500: '#646a73',
+                            800: '#1f2329',
+                        }
+                    },
+                    boxShadow: {
+                        'card': '0 2px 12px -4px rgba(0, 0, 0, 0.04)',
+                        'hover': '0 8px 24px -8px rgba(0, 0, 0, 0.08)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif; 
+            background-color: #f5f6f7;
+            color: #1f2329; 
+            -webkit-font-smoothing: antialiased;
+        }
+        /* 数字字体优化，显得更专业 */
+        .num-font { font-family: "DIN Alternate", "Helvetica Neue", Arial, sans-serif; }
+        
+        /* 滚动条隐匿与美化 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #c9cdd4; border-radius: 3px; }
+        
+        /* 模块统一层级 */
+        .card-module { transition: box-shadow 0.15s ease, border-color 0.15s ease; }
+        .card-module:hover { box-shadow: 0 4px 12px -6px rgba(31, 35, 41, 0.12); border-color: #c9cdd4; }
+        
+        /* 图表容器底座 */
+        .chart-container { min-height: 280px; width: 100%; }
+        
+        /* 自定义 Echarts Tooltip 样式，去除默认的黑框 */
+        .custom-tooltip {
+            background: rgba(255, 255, 255, 0.95) !important;
+            border: 1px solid #dee0e3 !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+            border-radius: 6px !important;
+            padding: 12px !important;
+            color: #1f2329 !important;
+            font-size: 12px !important;
+        }
+    </style>
+</head>
+<body class="pb-24">
+
+    <main class="max-w-[1440px] mx-auto px-6 py-8 space-y-6">
+
+        <!-- Header Titles -->
+        <section id="page-title" data-section="page-title" class="mb-2">
+            <div class="flex items-baseline space-x-3">
+                <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight" data-editable="true" contenteditable="true" data-slot="text.001">模块化的优势就是重复利用</h1>
+                <p class="text-gray-500 text-sm border-l-2 border-gray-300 pl-3" data-editable="true" contenteditable="true" data-slot="text.002">2025 年度 SaaS 业务增长与健康度述职报告</p>
+            </div>
+        </section>
+
+        <!-- [新增] Key Takeaways 核心洞察 -->
+        <section id="key-takeaways" data-section="key-takeaways" class="bg-[#f8f9fa] border border-gray-200 rounded-lg p-5 shadow-sm relative overflow-hidden">
+            <div class="absolute left-0 top-0 h-full w-1 bg-wine-500"></div>
+            <div class="flex items-start">
+                <div class="bg-white p-2 rounded-lg shadow-sm border border-gray-100 mr-4">
+                    <i data-lucide="lightbulb" class="w-5 h-5 text-wine-500"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-gray-800 mb-2 flex items-center" data-editable="true" contenteditable="true" data-slot="text.003">
+                        Key Takeaways (核心高管洞察)
+                    </h3>
+                    <ul class="text-sm text-gray-600 space-y-1.5 list-disc pl-4" data-editable="true" contenteditable="true" data-slot="text.004">
+                        <li><strong class="text-gray-800">增长质量：</strong> NDR 连续 4 季度攀升至 118%，交叉销售（尤其是 AI 插件）贡献显著，"Land & Expand" 战略全面验证。</li>
+                        <li><strong class="text-gray-800">产品与体验：</strong> "智能报表" 渗透率突破 85% 构建极强护城河；AI 赋能使内部三大核心职能人效平均提升 40%，释放极高价值工时。</li>
+                        <li><strong class="text-gray-800">财务与效率：</strong> 裂变系统 (K-factor > 1.2) 推动私域低成本获客，UE 模型中履约成本压缩，单均边际贡献 (CM) 翻倍至 25%，具备规模化盈利基础。</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- KPI Overview (4 Cards) -->
+        <section id="kpi-overview" data-section="kpi-overview" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="card-module bg-white border border-gray-200 rounded-lg p-5 shadow-card">
+                <div class="text-xs text-gray-500 mb-2 flex justify-between" data-editable="true" contenteditable="true" data-slot="text.005"><span>经常性收入 (ARR)</span><i data-lucide="bar-chart-2" class="w-3.5 h-3.5 opacity-50"></i></div>
+                <div class="flex items-end justify-between">
+                    <div class="text-3xl font-bold text-gray-800 num-font" data-editable="true" contenteditable="true" data-slot="text.006">104<span class="text-sm font-normal text-gray-500 ml-1">Million</span></div>
+                    <div class="text-sage-600 text-xs flex items-center font-bold bg-sage-50 px-1.5 py-0.5 rounded border border-sage-100"><i data-lucide="trending-up" class="w-3 h-3 mr-1"></i>45%</div>
+                </div>
+            </div>
+            <div class="card-module bg-white border border-gray-200 rounded-lg p-5 shadow-card">
+                <div class="text-xs text-gray-500 mb-2 flex justify-between" data-editable="true" contenteditable="true" data-slot="text.007"><span>净收入留存率 (NDR)</span><i data-lucide="refresh-cw" class="w-3.5 h-3.5 opacity-50"></i></div>
+                <div class="flex items-end justify-between">
+                    <div class="text-3xl font-bold text-gray-800 num-font" data-editable="true" contenteditable="true" data-slot="text.008">118<span class="text-sm font-normal text-gray-500 ml-1">%</span></div>
+                    <div class="text-sage-600 text-xs flex items-center font-bold bg-sage-50 px-1.5 py-0.5 rounded border border-sage-100"><i data-lucide="trending-up" class="w-3 h-3 mr-1"></i>14 pts</div>
+                </div>
+            </div>
+            <div class="card-module bg-white border border-gray-200 rounded-lg p-5 shadow-card relative overflow-hidden">
+                <div class="text-xs text-gray-500 mb-2 flex justify-between" data-editable="true" contenteditable="true" data-slot="text.009"><span>获客成本回收期 (CAC Payback)</span><i data-lucide="clock" class="w-3.5 h-3.5 opacity-50"></i></div>
+                <div class="flex items-end justify-between">
+                    <div class="text-3xl font-bold text-gray-800 num-font" data-editable="true" contenteditable="true" data-slot="text.010">8.2<span class="text-sm font-normal text-gray-500 ml-1">mo</span></div>
+                    <div class="text-sage-600 text-xs flex items-center font-bold bg-sage-50 px-1.5 py-0.5 rounded border border-sage-100"><i data-lucide="trending-down" class="w-3 h-3 mr-1"></i>1.5 mo</div>
+                </div>
+            </div>
+            <div class="card-module bg-white border border-gray-200 rounded-lg p-5 shadow-card">
+                <div class="text-xs text-gray-500 mb-2 flex justify-between" data-editable="true" contenteditable="true" data-slot="text.011"><span>年化流失率 (Churn)</span><i data-lucide="user-minus" class="w-3.5 h-3.5 opacity-50"></i></div>
+                <div class="flex items-end justify-between">
+                    <div class="text-3xl font-bold text-gray-800 num-font" data-editable="true" contenteditable="true" data-slot="text.012">2.5<span class="text-sm font-normal text-gray-500 ml-1">%</span></div>
+                    <div class="text-gray-500 text-xs flex items-center font-bold bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200"><i data-lucide="minus" class="w-3 h-3 mr-1"></i>持平</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- [卡片 1]: NDR Trend -->
+        <section id="ndr-trend" data-section="ndr-trend" class="card-module bg-white border border-gray-200 rounded-lg shadow-card overflow-hidden">
+            <div class="px-6 py-4 flex items-center justify-between">
+                <h2 class="text-[15px] font-bold text-gray-800 flex items-center" data-editable="true" contenteditable="true" data-slot="text.013">
+                    <span class="text-xl mr-2 text-wine-500 leading-none">▍</span>NDR指标：成功验证 "Land & Expand" 战略有效性
+                </h2>
+                <div class="text-xs text-gray-400 font-mono">Data: Q1-Q4 2025</div>
+            </div>
+            <div class="border-t border-gray-100"></div>
+            <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <div id="chart-ndr" class="chart-container"></div>
+                </div>
+                <div class="space-y-4 pt-2">
+                    <!-- 侧边洞察块 -->
+                    <div class="border border-sage-100 rounded-lg bg-sage-50/50 p-4">
+                        <h3 class="font-bold text-sm text-gray-800 mb-2 flex items-center" data-editable="true" contenteditable="true" data-slot="text.014">
+                            <span class="w-2 h-2 rounded-full bg-sage-500 mr-2"></span>Upsell (向上销售)
+                        </h3>
+                        <div class="text-xs text-gray-600 space-y-1.5" data-editable="true" contenteditable="true" data-slot="text.015">
+                            <p><strong>Logic:</strong> 客户业务扩张，席位用量自然增长。</p>
+                            <p><strong>Data:</strong> 核心客户平均 Seat 增长 15%。</p>
+                            <p><strong>Action:</strong> 实施“Tiered Pricing”，鼓励升级 Pro 版。</p>
+                        </div>
+                    </div>
+                    <div class="border border-rose-100 rounded-lg bg-rose-50/50 p-4">
+                        <h3 class="font-bold text-sm text-gray-800 mb-2 flex items-center" data-editable="true" contenteditable="true" data-slot="text.016">
+                            <span class="w-2 h-2 rounded-full bg-rose-500 mr-2"></span>Cross-sell (交叉销售)
+                        </h3>
+                        <div class="text-xs text-gray-600 space-y-1.5" data-editable="true" contenteditable="true" data-slot="text.017">
+                            <p><strong>Data:</strong> AI Plugin 的渗透率在老客户中达到 40%。</p>
+                            <p><strong>Insight:</strong> 客户为“降本增效”愿意额外订阅 AI 功能。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2 Column Grid for Cards 2 & 3 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- [卡片 2]: Product Penetration -->
+            <section id="product-penetration" data-section="product-penetration" class="card-module bg-white border border-gray-200 rounded-lg shadow-card flex flex-col">
+                <div class="px-6 py-4">
+                    <h2 class="text-[15px] font-bold text-gray-800 flex items-center" data-editable="true" contenteditable="true" data-slot="text.018">
+                        <span class="text-xl mr-2 text-wine-500 leading-none">▍</span>产品渗透：核心模块“智能报表”跨越鸿沟
+                    </h2>
+                </div>
+                <div class="border-t border-gray-100"></div>
+                <div class="p-6 flex-1 flex flex-col">
+                    <div id="chart-matrix" class="chart-container h-[260px]"></div>
+                    <div class="mt-4 bg-gray-50 rounded-lg p-4 text-xs text-gray-600 flex items-start gap-4 border border-gray-100">
+                        <div class="flex-1">
+                            <span class="font-bold text-gray-800 block mb-1" data-editable="true" contenteditable="true" data-slot="text.019">核心壁垒 (Stickiness)</span>
+                            <span data-editable="true" contenteditable="true" data-slot="text.020">智能报表渗透率85%，一旦用户习惯了每天看这个报表，转换成本极高。</span>
+                        </div>
+                        <div class="w-[1px] bg-gray-200 h-10"></div>
+                        <div class="flex-1">
+                            <span class="font-bold text-gray-800 block mb-1" data-editable="true" contenteditable="true" data-slot="text.021">资产清理 (Sunsetting)</span>
+                            <span data-editable="true" contenteditable="true" data-slot="text.022">旧看板模块几无使用，维护成本高。决定 Q1 下架释放研发资源给 AI。</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- [卡片 3]: CS Health -->
+            <section id="customer-health" data-section="customer-health" class="card-module bg-white border border-gray-200 rounded-lg shadow-card flex flex-col">
+                <div class="px-6 py-4">
+                    <h2 class="text-[15px] font-bold text-gray-800 flex items-center" data-editable="true" contenteditable="true" data-slot="text.023">
+                        <span class="text-xl mr-2 text-wine-500 leading-none">▍</span>CS健康度：QBR覆盖率提升带动 NPS 飙升
+                    </h2>
+                </div>
+                <div class="border-t border-gray-100"></div>
+                <div class="p-6 flex-1 flex flex-col">
+                    <div id="chart-cs" class="chart-container h-[260px]"></div>
+                    <div class="mt-4 text-xs bg-white border border-gray-100 rounded-lg overflow-hidden">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-gray-500 border-b border-gray-100">
+                                <tr>
+                                    <th class="py-2 px-3 font-medium">Customer Tier</th>
+                                    <th class="py-2 px-3 font-medium">Service Model</th>
+                                    <th class="py-2 px-3 font-medium">NPS 贡献</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-gray-700">
+                                <tr class="border-b border-gray-50">
+                                    <td class="py-2 px-3 font-bold bg-rose-50/30 text-wine-500">KA (头部)</td>
+                                    <td class="py-2 px-3">High Touch (专属CSM + 现场)</td>
+                                    <td class="py-2 px-3"><span class="bg-sage-100 text-sage-600 px-1.5 rounded font-bold">+40 pts</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3 font-bold bg-sage-50/30 text-sage-600">SMB (长尾)</td>
+                                    <td class="py-2 px-3">Tech Touch (AI客服 + 社区)</td>
+                                    <td class="py-2 px-3"><span class="bg-sage-100 text-sage-600 px-1.5 rounded font-bold">+15 pts</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- [卡片 4]: AI Empowerment (Custom HTML Flow) -->
+        <section id="ai-empowerment" data-section="ai-empowerment" class="card-module bg-white border border-gray-200 rounded-lg shadow-card">
+            <div class="px-6 py-4 flex justify-between items-center bg-gray-50/50 rounded-t-xl">
+                <h2 class="text-[15px] font-bold text-gray-800 flex items-center" data-editable="true" contenteditable="true" data-slot="text.024">
+                    <span class="text-xl mr-2 text-wine-500 leading-none">▍</span>AI赋能：三大核心职能人效平均提升 40%
+                </h2>
+                <div class="flex items-center text-xs text-gray-500 space-x-4">
+                    <div class="flex items-center"><span class="w-2 h-2 bg-rose-400 rounded-sm mr-1"></span>Before (人工)</div>
+                    <div class="flex items-center"><span class="w-2 h-2 bg-sage-500 rounded-sm mr-1"></span>After (AI辅助)</div>
+                </div>
+            </div>
+            <div class="border-t border-gray-100"></div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x border-gray-100">
+                <!-- Col 1 -->
+                <div class="md:pr-6 py-2">
+                    <div class="flex items-center mb-5">
+                        <div class="w-10 h-10 bg-sage-50 rounded flex items-center justify-center mr-3"><i data-lucide="headphones" class="text-sage-600"></i></div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-sm" data-editable="true" contenteditable="true" data-slot="text.025">智能客服</h3>
+                            <div class="text-[11px] text-gray-400" data-editable="true" contenteditable="true" data-slot="text.026">L1级基础咨询</div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="relative pt-1">
+                            <div class="flex justify-between text-xs mb-1 text-gray-600"><span>拦截率 (Before)</span><span class="font-mono">10%</span></div>
+                            <div class="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden"><div class="bg-rose-400 h-full" style="width: 10%"></div></div>
+                        </div>
+                        <div class="relative pt-1">
+                            <div class="flex justify-between text-xs mb-1 text-gray-800 font-bold"><span>拦截率 (After)</span><span class="font-mono text-sage-600">75%</span></div>
+                            <div class="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden"><div class="bg-sage-500 h-full" style="width: 75%"></div></div>
+                        </div>
+                    </div>
+                    <div class="mt-5 text-[11px] text-gray-500 bg-gray-50 p-2 rounded" data-editable="true" contenteditable="true" data-slot="text.027">响应时效：从平均 3 分钟降至 0 秒 (即时)</div>
+                </div>
+                <!-- Col 2 -->
+                <div class="md:px-6 py-2">
+                    <div class="flex items-center mb-5">
+                        <div class="w-10 h-10 bg-rose-50 rounded flex items-center justify-center mr-3"><i data-lucide="pen-tool" class="text-rose-500"></i></div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-sm" data-editable="true" contenteditable="true" data-slot="text.028">创意设计</h3>
+                            <div class="text-[11px] text-gray-400" data-editable="true" contenteditable="true" data-slot="text.029">营销Banner/海报</div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="relative pt-1">
+                            <div class="flex justify-between text-xs mb-1 text-gray-600"><span>单图耗时 (Before)</span><span class="font-mono">4h</span></div>
+                            <div class="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden"><div class="bg-rose-400 h-full" style="width: 100%"></div></div>
+                        </div>
+                        <div class="relative pt-1">
+                            <div class="flex justify-between text-xs mb-1 text-gray-800 font-bold"><span>单图耗时 (After)</span><span class="font-mono text-sage-600">0.5h</span></div>
+                            <div class="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden"><div class="bg-sage-500 h-full" style="width: 12.5%"></div></div>
+                        </div>
+                    </div>
+                    <div class="mt-5 text-[11px] text-gray-500 bg-gray-50 p-2 rounded" data-editable="true" contenteditable="true" data-slot="text.030">生产效率提升 8x，单图成本从 ¥300 降至 ¥15。</div>
+                </div>
+                <!-- Col 3 -->
+                <div class="md:pl-6 py-2">
+                    <div class="flex items-center mb-5">
+                        <div class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center mr-3"><i data-lucide="code-2" class="text-gray-600"></i></div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-sm" data-editable="true" contenteditable="true" data-slot="text.031">研发效能</h3>
+                            <div class="text-[11px] text-gray-400" data-editable="true" contenteditable="true" data-slot="text.032">代码生成与单测</div>
+                        </div>
+                    </div>
+                    <div class="space-y-3 mt-3">
+                        <div class="flex justify-between items-center border-b border-dashed border-gray-200 pb-2">
+                            <span class="text-xs text-gray-600" data-editable="true" contenteditable="true" data-slot="text.033">代码采纳率</span>
+                            <span class="font-mono font-bold text-sage-600 bg-sage-50 px-1 rounded">42%</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-dashed border-gray-200 pb-2">
+                            <span class="text-xs text-gray-600" data-editable="true" contenteditable="true" data-slot="text.034">需求交付周期缩短</span>
+                            <span class="font-mono font-bold text-sage-600 bg-sage-50 px-1 rounded">20%</span>
+                        </div>
+                        <div class="flex justify-between items-center pb-1">
+                            <span class="text-xs text-gray-600" data-editable="true" contenteditable="true" data-slot="text.035">单元测试覆盖率</span>
+                            <span class="text-xs font-bold text-gray-800">60% <i data-lucide="arrow-right" class="inline w-3 h-3 text-gray-400 mx-1"></i> <span class="text-sage-600">95%</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2 Column Grid for Cards 5 & 6 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- [卡片 5]: System Stability -->
+            <section id="system-stability" data-section="system-stability" class="card-module bg-white border border-gray-200 rounded-lg shadow-card flex flex-col">
+                <div class="px-6 py-4 flex justify-between items-center">
+                    <h2 class="text-[15px] font-bold text-gray-800 flex items-center" data-editable="true" contenteditable="true" data-slot="text.036">
+                        <span class="text-xl mr-2 text-wine-500 leading-none">▍</span>系统稳定性：核心 SLA 维持 99.99%
+                    </h2>
+                    <div class="bg-rose-50 text-wine-500 text-[10px] font-bold px-2 py-1 rounded border border-rose-100" data-editable="true" contenteditable="true" data-slot="text.037">P0 重大事故 = 0 起</div>
+                </div>
+                <div class="border-t border-gray-100"></div>
+                <div class="p-6 flex-1">
+                    <div id="chart-stability" class="chart-container h-[220px]"></div>
+                    <div class="mt-4 flex space-x-4">
+                        <div class="flex-1 bg-gray-50 border border-gray-100 rounded-lg p-3">
+                            <div class="text-[11px] text-gray-500 mb-1" data-editable="true" contenteditable="true" data-slot="text.038">平均故障恢复时间 (MTTR)</div>
+                            <div class="text-lg font-bold text-gray-800 num-font" data-editable="true" contenteditable="true" data-slot="text.039">15 <span class="text-xs font-normal text-gray-500">mins</span> <span class="text-[10px] text-sage-600 ml-2 bg-sage-100 px-1 rounded">-50%</span></div>
+                        </div>
+                        <div class="flex-1 bg-gray-50 border border-gray-100 rounded-lg p-3">
+                            <div class="text-[11px] text-gray-500 mb-1" data-editable="true" contenteditable="true" data-slot="text.040">峰值 QPS (双十一)</div>
+                            <div class="text-lg font-bold text-gray-800 num-font" data-editable="true" contenteditable="true" data-slot="text.041">37,000 <span class="text-[10px] text-gray-400 ml-2 bg-gray-200 px-1 rounded">YoY +80%</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- [卡片 6]: Private Domain Growth -->
+            <section id="private-domain-growth" data-section="private-domain-growth" class="card-module bg-white border border-gray-200 rounded-lg shadow-card flex flex-col">
+                <div class="px-6 py-4">
+                    <h2 class="text-[15px] font-bold text-gray-800 flex items-center" data-editable="true" contenteditable="true" data-slot="text.042">
+                        <span class="text-xl mr-2 text-wine-500 leading-none">▍</span>私域增长：用户规模扩容与 ARPU 双提升
+                    </h2>
+                </div>
+                <div class="border-t border-gray-100"></div>
+                <div class="p-6 flex-1">
+                    <div id="chart-private" class="chart-container h-[240px]"></div>
+                    <div class="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                        <div class="bg-sage-50/50 border border-sage-100 rounded py-2">
+                            <div class="text-gray-500 mb-1" data-editable="true" contenteditable="true" data-slot="text.043">年均 ARPU</div>
+                            <div class="font-bold text-gray-800" data-editable="true" contenteditable="true" data-slot="text.044">¥ 850</div>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-100 rounded py-2">
+                            <div class="text-gray-500 mb-1" data-editable="true" contenteditable="true" data-slot="text.045">复购率</div>
+                            <div class="font-bold text-gray-800" data-editable="true" contenteditable="true" data-slot="text.046">42%</div>
+                        </div>
+                        <div class="bg-rose-50/50 border border-rose-100 rounded py-2">
+                            <div class="text-gray-500 mb-1" data-editable="true" contenteditable="true" data-slot="text.047">LTV</div>
+                            <div class="font-bold text-wine-500" data-editable="true" contenteditable="true" data-slot="text.048">¥ 2,400</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- [卡片 7 & 8]: Viral & Content Marketing -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- [卡片 7]: Viral K-Factor -->
+            <section id="viral-k-factor" data-section="viral-k-factor" class="card-module bg-white border border-gray-200 rounded-lg shadow-card">
+                <div class="px-6 py-4 bg-gray-50/50 rounded-t-xl">
+                    <h2 class="text-[15px] font-bold text-gray-800 flex items-center" data-editable="true" contenteditable="true" data-slot="text.049">
+                        <span class="text-xl mr-2 text-wine-500 leading-none">▍</span>裂变效应：K-factor 突破 1.2
+                    </h2>
+                </div>
+                <div class="border-t border-gray-100"></div>
+                <div class="p-6">
+                    <div id="chart-viral" class="chart-container h-[200px]"></div>
+                    <div class="mt-4 text-[11px] text-gray-500 bg-gray-50 p-3 rounded border border-gray-100" data-editable="true" contenteditable="true" data-slot="text.050">
+                        <strong>结论：</strong> 裂变不再是锦上添花，而是核心增长引擎。MGM 渠道获客成本仅为付费投放的 40%。
+                    </div>
+                </div>
+            </section>
+
+            <!-- [卡片 8]: Content Marketing -->
+            <section id="content-marketing" data-section="content-marketing" class="card-module bg-white border border-gray-200 rounded-lg shadow-card">
+                <div class="px-6 py-4 bg-gray-50/50 rounded-t-xl">
+                    <h2 class="text-[15px] font-bold text-gray-800 flex items-center" data-editable="true" contenteditable="true" data-slot="text.051">
+                        <span class="text-xl mr-2 text-wine-500 leading-none">▍</span>内容营销：构建“常青内容”资产库
+                    </h2>
+                </div>
+                <div class="border-t border-gray-100"></div>
+                <div class="p-6">
+                    <div id="chart-content" class="chart-container h-[200px]"></div>
+                    <div class="mt-4 text-[11px] text-gray-500 bg-gray-50 p-3 rounded border border-gray-100" data-editable="true" contenteditable="true" data-slot="text.052">
+                        <strong>洞察：</strong> 长尾流量占比攀升至 40%，实现零边际成本的持续获客。
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- [卡片 9 & 10]: Customer Stratification & ROI Allocation -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- [卡片 9]: Customer Stratification (Tornado) -->
+            <section id="customer-stratification" data-section="customer-stratification" class="card-module bg-white border border-gray-200 rounded-lg shadow-card">
+                <div class="px-6 py-4">
+                    <h2 class="text-[15px] font-bold text-gray-800 flex items-center" data-editable="true" contenteditable="true" data-slot="text.053">
+                        <span class="text-xl mr-2 text-wine-500 leading-none">▍</span>客户分层：KA 压舱石 vs SMB 新引擎
+                    </h2>
+                </div>
+                <div class="border-t border-gray-100"></div>
+                <div class="p-6">
+                    <div id="chart-strata" class="chart-container h-[220px]"></div>
+                    <div class="mt-2 grid grid-cols-2 gap-4 text-xs">
+                        <div class="border border-wine-200 bg-rose-50/30 p-3 rounded">
+                            <div class="font-bold text-wine-500 mb-1" data-editable="true" contenteditable="true" data-slot="text.054">KA 策略 (深耕)</div>
+                            <div class="text-gray-600" data-editable="true" contenteditable="true" data-slot="text.055">1+N 铁三角服务，开放 API 满足深度集成。</div>
+                        </div>
+                        <div class="border border-sage-200 bg-sage-50/30 p-3 rounded">
+                            <div class="font-bold text-sage-600 mb-1" data-editable="true" contenteditable="true" data-slot="text.056">SMB 策略 (放量)</div>
+                            <div class="text-gray-600" data-editable="true" contenteditable="true" data-slot="text.057">Lite 版本降门槛，营销自动化工具批量孵化。</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- [卡片 10]: ROI Budget Allocation -->
+            <section id="channel-roi" data-section="channel-roi" class="card-module bg-white border border-gray-200 rounded-lg shadow-card">
+                <div class="px-6 py-4">
+                    <h2 class="text-[15px] font-bold text-gray-800 flex items-center" data-editable="true" contenteditable="true" data-slot="text.058">
+                        <span class="text-xl mr-2 text-wine-500 leading-none">▍</span>ROI 视图：投资效能矩阵与预算倾斜
+                    </h2>
+                </div>
+                <div class="border-t border-gray-100"></div>
+                <div class="p-6">
+                    <div id="chart-roi" class="chart-container h-[240px]"></div>
+                    <div class="mt-4 text-[11px] text-gray-500 flex items-start gap-2" data-editable="true" contenteditable="true" data-slot="text.059">
+                        <i data-lucide="target" class="w-4 h-4 text-sage-500 flex-shrink-0 mt-0.5"></i>
+                        <p>资源向高 ROI 的 SaaS 研发与精准营销倾斜，果断削减传统广告与行政开支 (Bleeding Zone)。</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- 图表初始化与丰富细节配置 -->
+    <script>
+        lucide.createIcons();
+
+        function initCharts() {
+        // 统一使用高级业务数据分析模板配色
+        const C = {
+            sage: { light: '#dcf5e8', main: '#2fa86d', dark: '#23875a' },
+            rose: { light: '#fde2e0', main: '#d83931', dark: '#ad2b25' },
+            wine: { light: '#eb7b73', main: '#3370ff' },
+            gray: { grid: '#dee0e3', textMain: '#1f2329', textSub: '#646a73', bg: '#f5f6f7' }
+        };
+
+        // 统一的基础坐标轴与高质感字体配置
+        const baseAxis = {
+            axisLine: { lineStyle: { color: C.gray.grid, width: 1 } },
+            axisLabel: { color: C.gray.textSub, fontSize: 10, fontFamily: 'DIN Alternate, sans-serif' },
+            axisTick: { show: false },
+            splitLine: { lineStyle: { color: C.gray.grid, type: 'dashed' } }
+        };
+
+        // 统一的精致 Tooltip 样式配置
+        const tooltipStyle = {
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            borderColor: C.gray.grid,
+            borderWidth: 1,
+            padding: [10, 14],
+            textStyle: { color: C.gray.textMain, fontSize: 12 },
+            extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 6px;'
+        };
+
+        // ==========================================
+        // 1. NDR Trend (折柱混合，带阴影和圆角)
+        // ==========================================
+        const chartNdr = echarts.init(document.getElementById('chart-ndr'));
+        chartNdr.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(139,170,160,0.05)' } }, ...tooltipStyle },
+            legend: { bottom: 0, icon: 'circle', itemWidth: 8, textStyle: { color: C.gray.textSub, fontSize: 11 } },
+            grid: { left: '3%', right: '3%', bottom: '12%', top: '15%', containLabel: true },
+            xAxis: { ...baseAxis, type: 'category', data: ['Q1', 'Q2', 'Q3', 'Q4'] },
+            yAxis: [
+                { ...baseAxis, type: 'value', name: '金额 (m)', nameTextStyle: { color: C.gray.textSub, fontSize: 10 } },
+                { ...baseAxis, type: 'value', min: 90, max: 125, splitLine: { show: false }, axisLabel: { formatter: '{value}%', color: C.gray.textSub, fontSize: 10 } }
+            ],
+            series: [
+                { 
+                    name: 'Upsell/Cross-sell', type: 'bar', stack: 'total', barWidth: '35%', 
+                    itemStyle: { color: C.sage.light, borderRadius: [2, 2, 0, 0] }, // 顶部微圆角
+                    data: [4, 15, 18, 21] 
+                },
+                { 
+                    name: 'Churn (流失)', type: 'bar', stack: 'total', 
+                    itemStyle: { color: C.gray.grid, borderRadius: [0, 0, 2, 2] }, 
+                    data: [-8, -6, -4, -3] 
+                },
+                { 
+                    name: 'NDR Rate', type: 'line', yAxisIndex: 1, symbol: 'emptyCircle', symbolSize: 6, 
+                    itemStyle: { color: C.wine.main, borderWidth: 2 }, 
+                    lineStyle: { width: 3, shadowColor: 'rgba(138, 75, 75, 0.2)', shadowBlur: 8, shadowOffsetY: 4 }, // 阴影线
+                    label: { show: true, position: 'top', formatter: '{c}%', color: C.wine.main, fontWeight: 'bold', fontFamily: 'DIN Alternate' },
+                    data: [104, 109, 114, 118] 
+                }
+            ]
+        });
+
+        // ==========================================
+        // 2. 产品渗透矩阵 (散点图带四象限背景色块)
+        // ==========================================
+        const chartMatrix = echarts.init(document.getElementById('chart-matrix'));
+        chartMatrix.setOption({
+            tooltip: { 
+                formatter: function(p) { return `<div style="font-weight:bold;margin-bottom:4px;">${p.data.name}</div>渗透率: ${p.data.value[0]}%<br/>使用频次: ${p.data.value[1]}次/周`; },
+                ...tooltipStyle
+            },
+            grid: { left: '8%', right: '8%', bottom: '15%', top: '8%' },
+            xAxis: { ...baseAxis, name: '渗透率 Penetration (%)', nameLocation: 'middle', nameGap: 25, min: 0, max: 100 },
+            yAxis: { ...baseAxis, name: '频次 Usage', min: 0, max: 30 },
+            series: [{
+                type: 'scatter',
+                symbolSize: function(data) { return Math.sqrt(data[2]) * 7; },
+                label: { show: true, formatter: '{b}', position: 'bottom', color: C.gray.textMain, fontSize: 10 },
+                itemStyle: { opacity: 0.85, borderWidth: 1, borderColor: '#fff', shadowColor: 'rgba(0,0,0,0.1)', shadowBlur: 4 },
+                data: [
+                    { name: 'Smart Report\n(Core)', value: [85, 15.0, 100], itemStyle: { color: C.rose.main } },
+                    { name: 'AI Copilot\n(Star)', value: [40, 22.0, 60], itemStyle: { color: C.sage.main } },
+                    { name: 'Data Export\n(Basic)', value: [70, 2.0, 40], itemStyle: { color: C.gray.grid } },
+                    { name: 'Old Dash\n(Trash)', value: [20, 0.5, 30], itemStyle: { color: C.gray.grid } }
+                ],
+                markLine: {
+                    silent: true, symbol: 'none', lineStyle: { color: C.gray.textSub, type: 'dashed', width: 1 },
+                    data: [{ xAxis: 50 }, { yAxis: 10 }]
+                },
+                markArea: { // 四象限质感背景
+                    silent: true,
+                    data: [
+                        [{ xAxis: 50, yAxis: 10, itemStyle: { color: 'rgba(212,163,163,0.05)' } }, { xAxis: 100, yAxis: 30 }], // 右上 (高高)
+                        [{ xAxis: 0, yAxis: 0, itemStyle: { color: 'rgba(225,227,230,0.1)' } }, { xAxis: 50, yAxis: 10 }]      // 左下 (低低)
+                    ]
+                }
+            }]
+        });
+
+        // ==========================================
+        // 3. CS 健康度 (堆积柱状图)
+        // ==========================================
+        const chartCs = echarts.init(document.getElementById('chart-cs'));
+        chartCs.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...tooltipStyle },
+            legend: { bottom: 0, icon: 'circle', itemWidth: 8, textStyle: { fontSize: 10 } },
+            grid: { left: '3%', right: '3%', bottom: '15%', top: '15%', containLabel: true },
+            xAxis: { ...baseAxis, type: 'category', data: ['Q1', 'Q2', 'Q3', 'Q4'] },
+            yAxis: [
+                { ...baseAxis, type: 'value', max: 100, axisLabel: { formatter: '{value}%' } },
+                { ...baseAxis, type: 'value', min: 40, max: 80, splitLine: { show: false } }
+            ],
+            series: [
+                { name: 'QBR 覆盖率', type: 'bar', barWidth: '30%', itemStyle: { color: C.sage.light, borderRadius: [2,2,0,0] }, data: [45, 60, 90, 100] },
+                { name: 'NPS 分数', type: 'line', yAxisIndex: 1, symbol: 'circle', symbolSize: 6, itemStyle: { color: C.sage.main }, lineStyle: { width: 3 }, data: [50, 55, 62, 65], label: { show: true, position: 'top', color: C.sage.dark, fontFamily: 'DIN Alternate' } }
+            ]
+        });
+
+        // ==========================================
+        // 5. 系统稳定性 SLA (带面积渐变的平滑折线)
+        // ==========================================
+        const chartStability = echarts.init(document.getElementById('chart-stability'));
+        chartStability.setOption({
+            tooltip: { trigger: 'axis', ...tooltipStyle },
+            grid: { left: '3%', right: '5%', bottom: '5%', top: '15%', containLabel: true },
+            xAxis: { ...baseAxis, type: 'category', boundaryGap: false, data: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'] },
+            yAxis: { ...baseAxis, type: 'value', min: 99.9, max: 100, axisLabel: { formatter: '{value}%' } },
+            series: [{
+                name: 'SLA', type: 'line', smooth: true, symbol: 'none',
+                itemStyle: { color: C.sage.main },
+                lineStyle: { width: 2 },
+                areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: 'rgba(139,170,160,0.3)'}, {offset: 1, color: 'rgba(139,170,160,0)'}]) },
+                data: [99.95, 99.96, 99.99, 99.98, 99.99, 99.95, 99.99, 99.99, 99.99, 99.95, 99.91, 99.99],
+                markLine: {
+                    silent: true, symbol: 'none',
+                    label: { position: 'start', formatter: '99.95% 红线', color: C.rose.main, fontSize: 10 },
+                    lineStyle: { color: C.rose.main, type: 'dashed' },
+                    data: [{ yAxis: 99.95 }]
+                }
+            }]
+        });
+
+        // ==========================================
+        // 6. 私域增长 (双轴条形+折线)
+        // ==========================================
+        const chartPrivate = echarts.init(document.getElementById('chart-private'));
+        chartPrivate.setOption({
+            tooltip: { trigger: 'axis', ...tooltipStyle },
+            grid: { left: '3%', right: '3%', bottom: '5%', top: '15%', containLabel: true },
+            xAxis: { ...baseAxis, type: 'category', data: ['Q1', 'Q2', 'Q3', 'Q4'] },
+            yAxis: [
+                { ...baseAxis, type: 'value', name: '用户(万)' },
+                { ...baseAxis, type: 'value', splitLine: { show: false }, axisLabel: { formatter: '{value}%' } }
+            ],
+            series: [
+                { name: '私域人数', type: 'bar', barWidth: '30%', itemStyle: { color: C.gray.grid, borderRadius: [2,2,0,0] }, data: [30, 60, 90, 100] },
+                { name: '转化率', type: 'line', yAxisIndex: 1, symbol: 'circle', itemStyle: { color: C.sage.main }, lineStyle: { width: 2 }, data: [15, 18, 17, 20] }
+            ]
+        });
+
+        // ==========================================
+        // 7. 裂变 K-Factor (包含阈值线)
+        // ==========================================
+        const chartViral = echarts.init(document.getElementById('chart-viral'));
+        chartViral.setOption({
+            tooltip: { trigger: 'axis', ...tooltipStyle },
+            grid: { left: '5%', right: '5%', bottom: '5%', top: '15%', containLabel: true },
+            xAxis: { ...baseAxis, type: 'category', data: ['Q1', 'Q2', 'Q3', 'Q4'] },
+            yAxis: { ...baseAxis, type: 'value', min: 0.4, max: 1.4 },
+            series: [{
+                name: 'K-factor', type: 'line', smooth: true, symbol: 'circle', symbolSize: 6,
+                itemStyle: { color: C.sage.main }, lineStyle: { width: 3, shadowColor: 'rgba(139,170,160,0.3)', shadowBlur: 5, shadowOffsetY: 3 },
+                data: [0.6, 0.8, 1.2, 0.9],
+                markLine: {
+                    symbol: 'none', label: { formatter: '引爆点 (K=1)', position: 'insideStartTop', color: C.wine.main, fontSize: 10 },
+                    lineStyle: { color: C.wine.main, type: 'dashed' }, data: [{ yAxis: 1.0 }]
+                }
+            }]
+        });
+
+        // ==========================================
+        // 8. 内容营销资产 (堆叠面积图)
+        // ==========================================
+        const chartContent = echarts.init(document.getElementById('chart-content'));
+        chartContent.setOption({
+            tooltip: { trigger: 'axis', ...tooltipStyle },
+            grid: { left: '3%', right: '3%', bottom: '5%', top: '10%', containLabel: true },
+            xAxis: { ...baseAxis, type: 'category', boundaryGap: false, data: ['Jan', 'Mar', 'Jun', 'Sep', 'Dec'] },
+            yAxis: { ...baseAxis, type: 'value' },
+            series: [
+                { name: '新增流量', type: 'line', stack: 'Total', areaStyle: { color: C.gray.grid }, lineStyle: { width: 0 }, symbol: 'none', data: [800, 700, 600, 500, 400] },
+                { name: '长尾存量', type: 'line', stack: 'Total', areaStyle: { color: C.sage.light }, lineStyle: { width: 2, color: C.sage.main }, symbol: 'none', data: [200, 600, 1200, 1800, 2400] }
+            ]
+        });
+
+        // ==========================================
+        // 9. 客户分层 (Tornado Chart / 双侧条形图)
+        // ==========================================
+        const chartStrata = echarts.init(document.getElementById('chart-strata'));
+        chartStrata.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...tooltipStyle },
+            legend: { bottom: 0, icon: 'circle', itemWidth: 8, textStyle: { fontSize: 10 } },
+            grid: { left: '3%', right: '3%', bottom: '15%', top: '10%', containLabel: true },
+            xAxis: { type: 'value', show: false, min: -100, max: 100 }, // 隐藏 X 轴
+            yAxis: { type: 'category', data: ['营收占比', 'NDR留存', 'YoY增速'], axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: C.gray.textMain, fontWeight: 'bold' } },
+            series: [
+                {
+                    name: 'KA 大客户', type: 'bar', barWidth: '40%', stack: 'Total',
+                    itemStyle: { color: C.rose.main, borderRadius: [4, 0, 0, 4] },
+                    label: { show: true, position: 'left', formatter: function(p){ return Math.abs(p.value) + '%'; }, color: C.gray.textSub, fontSize: 10 },
+                    data: [-75, -120, -19]
+                },
+                {
+                    name: 'SMB 小客户', type: 'bar', barWidth: '40%', stack: 'Total',
+                    itemStyle: { color: C.sage.main, borderRadius: [0, 4, 4, 0] },
+                    label: { show: true, position: 'right', formatter: '{c}%', color: C.gray.textSub, fontSize: 10 },
+                    data: [25, 90, 45]
+                }
+            ]
+        });
+
+        // ==========================================
+        // 10. ROI 效能矩阵 (气泡图)
+        // ==========================================
+        const chartRoi = echarts.init(document.getElementById('chart-roi'));
+        chartRoi.setOption({
+            tooltip: { formatter: function(p){ return `<b>${p.data.name}</b><br/>投入金额: ¥${p.data.value[2]}万<br/>ROI回报率: ${p.data.value[1]}%`; }, ...tooltipStyle },
+            grid: { left: '10%', right: '8%', bottom: '15%', top: '10%' },
+            xAxis: { ...baseAxis, name: '相对市场份额 (价值区)', nameLocation: 'middle', nameGap: 25 },
+            yAxis: { ...baseAxis, name: 'ROI 回报率 (%)', min: 0, max: 600 },
+            series: [{
+                type: 'scatter',
+                symbolSize: function(data) { return Math.sqrt(data[2]) * 3; },
+                label: { show: true, formatter: '{b}', position: 'bottom', color: C.gray.textMain, fontSize: 10 },
+                itemStyle: { opacity: 0.8, borderColor: '#fff', borderWidth: 1, shadowColor: 'rgba(0,0,0,0.1)', shadowBlur: 4 },
+                data: [
+                    { name: 'SaaS研发', value: [80, 450, 4000], itemStyle: { color: C.sage.main } }, // 高价值 高ROI
+                    { name: 'AI客服', value: [30, 600, 500], itemStyle: { color: C.sage.light, borderColor: C.sage.main } }, // 低份额 高ROI (Quick Win)
+                    { name: '传统广告', value: [20, 80, 1500], itemStyle: { color: C.gray.grid } }, // 低低 (Bleeding)
+                    { name: '老旧产研', value: [60, 110, 3000], itemStyle: { color: C.rose.main } } // 高份额 低ROI
+                ],
+                markLine: {
+                    silent: true, symbol: 'none', lineStyle: { color: C.gray.grid, type: 'dashed' },
+                    data: [{ xAxis: 50 }, { yAxis: 200 }]
+                },
+                markArea: {
+                    silent: true,
+                    data: [
+                        [{ xAxis: 50, yAxis: 200, itemStyle: { color: 'rgba(139,170,160,0.05)' } }, { xAxis: 100, yAxis: 600 }], // 赢家区
+                        [{ xAxis: 0, yAxis: 0, itemStyle: { color: 'rgba(212,163,163,0.05)' } }, { xAxis: 50, yAxis: 200 }]      // 止损区
+                    ]
+                }
+            }]
+        });
+
+        // 统一响应式 Resize
+        window.addEventListener('resize', function() {
+            [chartNdr, chartMatrix, chartCs, chartStability, chartPrivate, chartViral, chartContent, chartStrata, chartRoi].forEach(chart => {
+                if(chart) chart.resize();
+            });
+        });
+        }
+
+        initCharts();
+    </script>
+</body>
+</html>

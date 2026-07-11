@@ -1,0 +1,195 @@
+{
+  "id": "dashboard-09-editorial-corporate-analytics",
+  "name": "Editorial Corporate Analytics 编辑型企业数据报告看板",
+  "templateName": "EditorialCorporateAnalyticsDashboardTemplate",
+  "version": "1.0.0",
+  "description": "浅灰底、白卡片、绿色强调和极简原生 CSS 图表的数据报告模板，适合战略咨询报告、管理层汇报、行业趋势分析和经营复盘。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "consulting-report",
+    "business-review",
+    "trend-analysis"
+  ],
+  "styleTags": [
+    "editorial-corporate",
+    "consulting-report",
+    "light-dashboard",
+    "green-accent",
+    "css-charts",
+    "editable-dashboard"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "战略咨询报告",
+    "管理层汇报",
+    "行业趋势分析",
+    "经营复盘",
+    "Excel 数据报告可视化"
+  ],
+  "requiredRuntime": [
+    "No external CDN",
+    "HTML",
+    "CSS"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#f4f5f6",
+      "cardSurface": "#ffffff",
+      "blackSurface": "#0a0a0a",
+      "primaryText": "#1f2329",
+      "secondaryText": "#646a73",
+      "border": "#dee0e3",
+      "primary": "#25a858",
+      "secondary": "#1b8544"
+    },
+    "fonts": {
+      "body": "Inter, PingFang SC, Microsoft YaHei, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": false,
+    "excelSlotMapping": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "header": {
+      "desc": "报告主标题、副标题、日期和数据源",
+      "required": true,
+      "hideable": false
+    },
+    "key-takeaways": {
+      "desc": "三栏核心发现卡片",
+      "required": true,
+      "hideable": true
+    },
+    "chart-split-bar": {
+      "desc": "黑底洞察加横向柱状分布",
+      "required": true,
+      "hideable": true
+    },
+    "chart-split-donut": {
+      "desc": "核心百分比半环形强调图",
+      "required": true,
+      "hideable": true
+    },
+    "archetypes": {
+      "desc": "人群或阶段分层",
+      "required": true,
+      "hideable": true
+    },
+    "data-table": {
+      "desc": "数据明细下钻表格",
+      "required": true,
+      "hideable": true
+    },
+    "trend-chart": {
+      "desc": "CSS 柱状趋势图",
+      "required": true,
+      "hideable": true
+    },
+    "funnel-analysis": {
+      "desc": "B2B 销售管线转化漏斗",
+      "required": true,
+      "hideable": true
+    },
+    "progress-trackers": {
+      "desc": "战略目标和 OKR 进度追踪",
+      "required": true,
+      "hideable": true
+    },
+    "vs-comparison": {
+      "desc": "左右业务对比模块",
+      "required": true,
+      "hideable": true
+    },
+    "quadrant-matrix": {
+      "desc": "产品组合四象限矩阵",
+      "required": true,
+      "hideable": true
+    },
+    "leaderboard": {
+      "desc": "区域或业务排行榜",
+      "required": true,
+      "hideable": true
+    },
+    "insight-quote": {
+      "desc": "核心观点引用",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字，已补齐 data-slot 和 contenteditable"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "header、核心发现、分布图、半环图、分层、表格、趋势、漏斗、进度、对比、矩阵、排行榜和引用"
+    },
+    "charts": {
+      "type": "html-css",
+      "desc": "图表由 HTML/CSS 实现，无外部图表库"
+    }
+  },
+  "slotLimits": {
+    "page-title": 32,
+    "page-summary": 56,
+    "metric-value": 16,
+    "section-title": 36,
+    "insight-text": 160,
+    "table-cell": 32
+  },
+  "llmInjectionRules": [
+    "替换文本时优先使用 data-slot，不要删除 data-section。",
+    "替换 CSS 图表数值时，同步调整相邻 style 中的 width、height 或 conic-gradient 角度。",
+    "不要新增原始 HTML 未提供的分析模块，除非用户明确要求扩展。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "pastedDuplicateArchived": true,
+    "geminiDesignStandardArchived": true,
+    "geminiSlotNotesArchived": true,
+    "sourceAndPastedHtmlSameHash": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "editableElementCount": 129,
+    "sectionCount": 13,
+    "originalSlotNotesCoveredSections": 6,
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png。"
+  },
+  "editorTheme": {
+    "defaultColor": "#25a858",
+    "presets": [
+      "#25a858",
+      "#1b8544",
+      "#3370ff",
+      "#7c3aed",
+      "#f97316",
+      "#111827"
+    ],
+    "targets": {
+      "cssVariables": {
+        "--color-green-light": "color",
+        "--color-green-dark": "color"
+      },
+      "colorSelectors": [
+        "[style*=\"var(--color-green\"]"
+      ],
+      "backgroundSelectors": [
+        "[style*=\"var(--color-green\"]"
+      ],
+      "borderSelectors": [
+        "[style*=\"var(--color-green\"]"
+      ]
+    }
+  }
+}

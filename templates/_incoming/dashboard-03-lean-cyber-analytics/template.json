@@ -1,0 +1,214 @@
+{
+  "id": "dashboard-03-lean-cyber-analytics",
+  "name": "Lean Cyber-Analytics 精益数据主义数据看板",
+  "templateName": "LeanCyberAnalyticsDashboardTemplate",
+  "version": "1.0.0",
+  "description": "极暗森林绿背景、荧光绿强调、高信息密度的数据报告看板模板，适合运营复盘、内容增长分析和管理层数据汇报。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "bi-dashboard",
+    "content-analytics-report"
+  ],
+  "styleTags": [
+    "lean-cyber-analytics",
+    "dark",
+    "volt-green",
+    "high-density",
+    "monospace-data"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "运营数据复盘",
+    "内容增长分析",
+    "管理层汇报",
+    "高密度 BI 看板"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "Google Fonts CDN",
+    "Native SVG"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#070A08",
+      "gridLine": "#111813",
+      "cardBg": "#0D120F",
+      "cardBorder": "#18221B",
+      "voltGreen": "#7CFF44",
+      "mutedGreen": "#1E351A",
+      "textPrimary": "#FFFFFF",
+      "textSecondary": "#889E8D",
+      "textMuted": "#3E5244"
+    },
+    "fonts": {
+      "body": "Inter, PingFang SC, Microsoft YaHei, sans-serif",
+      "mono": "JetBrains Mono, ui-monospace, SFMono-Regular, monospace"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": true,
+    "showHideSections": true,
+    "printToPdf": true
+  },
+  "supportedSections": {
+    "global-header": {
+      "desc": "报告标题、副标题、导航 Tab 和日期筛选器",
+      "required": true,
+      "hideable": false
+    },
+    "hero-summary": {
+      "desc": "主欢迎语、全局核心 KPI 和关键标签",
+      "required": true,
+      "hideable": false
+    },
+    "top-kpi-cards": {
+      "desc": "顶置独立指标卡片",
+      "required": true,
+      "hideable": false
+    },
+    "focus-content": {
+      "desc": "重点单项数据钻取",
+      "required": true,
+      "hideable": true
+    },
+    "metric-progress": {
+      "desc": "核心指标二级拆解",
+      "required": true,
+      "hideable": true
+    },
+    "conversion-ring": {
+      "desc": "转化效率环形分析",
+      "required": true,
+      "hideable": true
+    },
+    "content-lines": {
+      "desc": "内容线判断",
+      "required": false,
+      "hideable": true
+    },
+    "top-notes-list": {
+      "desc": "重点内容列表",
+      "required": false,
+      "hideable": true
+    },
+    "next-actions": {
+      "desc": "运营或分析建议清单",
+      "required": true,
+      "hideable": true
+    },
+    "trend-analysis": {
+      "desc": "时序变化趋势分析",
+      "required": false,
+      "hideable": true
+    },
+    "funnel-analysis": {
+      "desc": "综合转化漏斗",
+      "required": false,
+      "hideable": true
+    },
+    "cohort-heatmap": {
+      "desc": "用户生命周期或同期群存留分析矩阵",
+      "required": false,
+      "hideable": true
+    },
+    "category-table": {
+      "desc": "业务多维对比明细表格",
+      "required": false,
+      "hideable": true
+    },
+    "footer-status": {
+      "desc": "数据源与模板状态说明",
+      "required": false,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "project_name": {
+      "type": "text",
+      "slot": "project-tag",
+      "maxLength": 24,
+      "desc": "项目或品牌名"
+    },
+    "report_date": {
+      "type": "text",
+      "slot": "report-date",
+      "maxLength": 24,
+      "desc": "报告日期或时间窗口"
+    },
+    "welcome_title": {
+      "type": "text",
+      "slot": "welcome-message",
+      "maxLength": 60,
+      "desc": "主欢迎语或报告标题"
+    },
+    "core_metrics": {
+      "type": "object",
+      "desc": "包含观看转化率、互动率和内容主线"
+    },
+    "top_stats": {
+      "type": "array",
+      "desc": "顶置 KPI 数组，例如 Notes、Views、Followers"
+    },
+    "progress_metrics": {
+      "type": "array",
+      "desc": "收藏、点赞、分享、评论等进度指标"
+    },
+    "next_actions": {
+      "type": "array",
+      "desc": "行动建议清单，包含任务、说明和完成状态"
+    },
+    "trend_points": {
+      "type": "array",
+      "desc": "时序趋势点数组，对应模板内 chartData"
+    },
+    "cohort_matrix": {
+      "type": "array",
+      "desc": "同期群热力图二维数组"
+    },
+    "category_rows": {
+      "type": "array",
+      "desc": "类目对比表格行数据"
+    }
+  },
+  "audit": {
+    "matchesLeanCyberAnalytics": true,
+    "editableElementsHaveContenteditable": true,
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png。"
+  },
+  "editorTheme": {
+    "defaultColor": "#7cff44",
+    "presets": [
+      "#7cff44",
+      "#38bdf8",
+      "#22c55e",
+      "#d9eb26",
+      "#f97316",
+      "#f43f5e"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-cyber-volt\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-cyber-volt\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-cyber-volt\"]"
+      ],
+      "strokeSelectors": [
+        "[stroke=\"#7CFF44\"]",
+        "[stroke=\"#7cff44\"]"
+      ],
+      "stopColorSelectors": [
+        "[stop-color=\"#7CFF44\"]",
+        "[stop-color=\"#7cff44\"]"
+      ]
+    }
+  }
+}

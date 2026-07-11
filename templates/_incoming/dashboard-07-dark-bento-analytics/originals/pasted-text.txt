@@ -1,0 +1,73 @@
+视觉风格与设计标准 (Design Standard) V6.0
+
+基于暗黑科技 Bento Grid 风格的网页生成标准（全景 15 卡片 + 全局 Tooltip 规范）
+
+1. 黄金阅读动线 (Golden Layout)
+
+大厂数据报告必须遵循严谨的阅读逻辑，本模板采用 15 模块标准排版：
+
+Row 1 [结论层]: Key Takeaways 关键结论 (通栏跨 4 列)，结论先行。
+
+Row 2 [核心层]: 北极星指标大盘 (2x2) + 辅助指标 (1x1) + 辅助指标 (1x1)。
+
+Row 3 [转化层]: 商业化漏斗 (2x1) + 月度营收柱状图 (2x1)。
+
+Row 4 [竞争层]: 核心流量多线对比 (2x2，加高) + 波士顿业务矩阵 (2x2，加高)。
+
+Row 5 [洞察层]: 活跃热力图 (2x1) + 营收占比环形图 (1x1) + UE 单元经济 (1x1)。
+
+Row 6 [微观层]: 异动归因瀑布 (2x1) + A/B 实验 (1x1) + 实时预警 (1x1)。
+
+2. 全局悬浮组件 (Universal Tooltip Protocol)
+
+为解决“假图”和信息缺失问题，确立标准 CSS .ui-tooltip 规范：
+
+触发机制: 任何需要数据的图表节点需包裹在 group 类中，内部放置 .ui-tooltip。
+
+样式规范: #222 深灰底色，#444 细边框，圆角 6px，带毛玻璃透明度和 drop-shadow。
+
+层级管理: Z-index 设置为 50，保证弹出的数据面板永远压在其他图表之上。
+
+3. 防重叠隔离布局 (Anti-Overlap Layout)
+
+带有背景趋势图的卡片，严禁使用绝对定位覆盖数字。必须使用 flex-col，头部标题与超级数据置于上方，底部图表使用 flex-grow 或明确 min-height 占据剩余空间，实现物理隔离。
+
+HTML 模板模块与插槽定义 (Template Slots) V6.0
+
+完整包含 15 个高阶数据分析模块，所有插槽已适配全局 Tooltip 和高度拉伸。
+
+模块插槽清单 (共 15 个)
+
+data-section="key-takeaways" (4x1): [置顶] 高管摘要。包含三个核心业务结论。
+
+data-section="market-overview" (2x2): 北极星大盘。包含 HTML 数据切片和 .ui-tooltip。
+
+data-section="metric-card-1" (1x1): 总营收。
+
+data-section="metric-card-2" (1x1): MAU。
+
+data-section="funnel-analysis" (2x1): 转化漏斗。带转化率指引。
+
+data-section="bar-chart" (2x1): 月度营收。默认高亮最新月份。
+
+data-section="multi-line-chart" (2x2): 主竞品走势。高度已调整为 min-h-[350px]，防止拥挤。
+
+data-section="quadrant-analysis" (2x2): 波士顿矩阵。高度拉长，所有散点新增 .ui-tooltip 详情面板。
+
+data-section="activity-heatmap" (2x1): 高频热力图。每个热力方块悬浮可查看具体日期与活跃度。
+
+data-section="revenue-donut" (1x1): 营收环形图。
+
+data-section="unit-economics" (1x1): UE 模型 (LTV/CAC)。
+
+data-section="attribution-waterfall" (2x1): 归因瀑布图。
+
+data-section="ab-testing" (1x1): A/B 实验对比。
+
+data-section="radar-chart" (1x1): 能力雷达图。
+
+data-section="realtime-alerts" (1x1): 实时监控池。
+
+LLM 数据注入规则
+
+LLM 在填充 波士顿矩阵 和 热力图 时，除了修改位置和颜色类名外，必须同步修改其内部 .ui-tooltip 节点中的文本内容，以保证 Hover 数据的真实性。

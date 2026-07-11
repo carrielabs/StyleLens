@@ -1,0 +1,195 @@
+{
+  "id": "dashboard-05-premium-cyber-dark",
+  "name": "Premium Cyber Dark 聊天分析数据报告看板",
+  "templateName": "PremiumCyberDarkDashboardTemplate",
+  "version": "1.0.0",
+  "description": "高端暗色毛玻璃风格的数据分析报告模板，支持聊天分析、用户画像、业务运营分析和管理层汇报场景。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "bi-dashboard",
+    "chat-analytics-report",
+    "user-profile-report"
+  ],
+  "styleTags": [
+    "premium-cyber-dark",
+    "dark",
+    "glassmorphism",
+    "executive-dashboard",
+    "chatlab",
+    "native-svg"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "聊天记录分析",
+    "用户画像报告",
+    "业务运营复盘",
+    "管理层数据汇报",
+    "Excel 数据报告可视化"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "Native SVG",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "backgroundStart": "#0b0f19",
+      "backgroundEnd": "#1a1122",
+      "cardBg": "rgba(255, 255, 255, 0.03)",
+      "cardBorder": "rgba(255, 255, 255, 0.06)",
+      "cyan": "#38bdf8",
+      "rose": "#f43f5e",
+      "amber": "#fbbf24",
+      "emerald": "#34d399",
+      "violet": "#a78bfa"
+    },
+    "fonts": {
+      "body": "system-ui, PingFang SC, Microsoft YaHei, sans-serif",
+      "mono": "SFMono-Regular, Consolas, Menlo, ui-monospace, monospace"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "hoverInteractions": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "report-header": {
+      "desc": "报告标题、类型标签、日期范围和四个巨型 KPI",
+      "required": true,
+      "hideable": false
+    },
+    "activity-heatmap": {
+      "desc": "7x53 周期活跃度热力图",
+      "required": true,
+      "hideable": false
+    },
+    "key-metrics": {
+      "desc": "八张核心指标卡片",
+      "required": true,
+      "hideable": false
+    },
+    "initiative-trend": {
+      "desc": "发起主动性总结、双主体 PK 和趋势折线",
+      "required": true,
+      "hideable": true
+    },
+    "behavioral-profiling": {
+      "desc": "双主体行为画像对比",
+      "required": true,
+      "hideable": true
+    },
+    "message-profiles": {
+      "desc": "内容长度、消息类型和 24 小时活跃分布",
+      "required": true,
+      "hideable": true
+    },
+    "topic-profile": {
+      "desc": "Top 关键词、词云、词汇丰富度和风格归纳",
+      "required": true,
+      "hideable": true
+    },
+    "radar-profile": {
+      "desc": "口头禅、语言气质和多维雷达对比",
+      "required": true,
+      "hideable": true
+    },
+    "executive-summary": {
+      "desc": "管理层摘要与核心洞察",
+      "required": false,
+      "hideable": true
+    },
+    "footer-status": {
+      "desc": "模板来源与数据引擎状态",
+      "required": false,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "report_header": {
+      "type": "object",
+      "slots": [
+        "report-title",
+        "report-meta-type",
+        "report-date-range",
+        "grand-kpi-1-val",
+        "grand-kpi-2-val",
+        "grand-kpi-3-val",
+        "grand-kpi-4-val"
+      ],
+      "desc": "报告主体、分析类型、时间范围和顶部核心指标"
+    },
+    "heatmap_grid": {
+      "type": "array",
+      "selector": "[data-slot=\"heatmap-grid\"] > div",
+      "desc": "热力图单元格，字段为 data-value 和 data-level"
+    },
+    "key_metric_cards": {
+      "type": "array",
+      "selector": "[data-section=\"key-metrics\"] .glass-panel",
+      "desc": "核心指标卡片，包含指标名称、主数值、单位和说明"
+    },
+    "trend_sparkline": {
+      "type": "svg",
+      "selector": "[data-section=\"initiative-trend\"] svg",
+      "desc": "主动性趋势 SVG 曲线"
+    },
+    "word_cloud": {
+      "type": "svg",
+      "selector": "[data-section=\"topic-profile\"] svg",
+      "desc": "词云 SVG 文本群"
+    },
+    "radar_chart": {
+      "type": "svg",
+      "selector": "[data-section=\"radar-profile\"] svg",
+      "desc": "多维行为雷达图"
+    }
+  },
+  "slotLimits": {
+    "report-title": 24,
+    "report-meta-type": 24,
+    "report-date-range": 32,
+    "card-label": 16,
+    "card-subtext": 40,
+    "summary-text": 120
+  },
+  "audit": {
+    "sourceFileArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "heatmapDeterministic": true,
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png。"
+  },
+  "editorTheme": {
+    "defaultColor": "#38bdf8",
+    "presets": [
+      "#38bdf8",
+      "#a78bfa",
+      "#34d399",
+      "#fbbf24",
+      "#f43f5e",
+      "#ffffff"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-blue\"]",
+        "[class*=\"text-cyan\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-blue\"]",
+        "[class*=\"bg-cyan\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-blue\"]",
+        "[class*=\"border-cyan\"]"
+      ]
+    }
+  }
+}

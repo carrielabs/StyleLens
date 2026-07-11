@@ -9,12 +9,12 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     const sourceText = String(body.sourceText || '')
-    const templateId = String(body.templateId || 'website-01-fui')
     const pageType = String(body.pageType || 'product-website')
+    const templateId = String(body.templateId || (pageType === 'dashboard' ? 'dashboard-01-blue-business' : 'website-01-fui'))
 
-    if (pageType !== 'product-website') {
+    if (!['product-website', 'dashboard'].includes(pageType)) {
       return NextResponse.json(
-        { success: false, error: '第一版只支持生成产品官网' },
+        { success: false, error: `暂不支持的页面类型：${pageType}` },
         { status: 400 }
       )
     }
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const result = await generateProductWebsiteHtml({
       sourceText,
       templateId,
-      pageType: 'product-website',
+      pageType: pageType as 'product-website' | 'dashboard',
     })
 
     return NextResponse.json({ success: true, result })

@@ -8,12 +8,13 @@ export async function generateProductWebsiteHtml(
     throw new Error('缺少文本材料')
   }
 
-  if (options.pageType && options.pageType !== 'product-website') {
-    throw new Error('第一版只支持生成产品官网')
+  if (options.pageType && !['product-website', 'dashboard'].includes(options.pageType)) {
+    throw new Error(`暂不支持的页面类型：${options.pageType}`)
   }
 
   return buildProductWebsiteHtml({
     sourceText: options.sourceText,
-    templateId: options.templateId || 'website-01-fui',
+    templateId: options.templateId || (options.pageType === 'dashboard' ? 'dashboard-01-blue-business' : 'website-01-fui'),
+    pageType: options.pageType || 'product-website',
   })
 }

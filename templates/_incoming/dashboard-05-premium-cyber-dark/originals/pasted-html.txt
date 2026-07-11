@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Cyber Dark 数据分析报告</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+                        mono: ['SFMono-Regular', 'Consolas', '"Liberation Mono"', 'Menlo', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 自定义毛玻璃和高光背景 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-panel:hover {
+            background: rgba(255, 255, 255, 0.045);
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* 闪烁呼吸动画 */
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+        .pulse-subtle {
+            animation: pulse-subtle 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-[#0b0f19] bg-gradient-to-br from-[#0b0f19] via-[#0f111a] to-[#180f1e] text-slate-100 min-h-screen font-sans selection:bg-rose-500/30 selection:text-white relative overflow-x-hidden">
+
+    <!-- 背景微光放射装饰 -->
+    <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-rose-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto px-4 md:px-8 py-10 relative z-10">
+
+        <!-- ========================================== -->
+        <!-- 1. Header (头部总览槽位) -->
+        <!-- ========================================== -->
+        <header data-section="report-header" class="mb-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 pb-8 border-b border-white/5">
+            <div>
+                <!-- 主标题 & 标签 -->
+                <div class="flex items-center gap-3 mb-2 flex-wrap">
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white" data-editable="true" id="report-title">
+                        小红
+                    </h1>
+                    <span class="px-2.5 py-0.5 rounded text-xs font-medium tracking-wider uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20" data-editable="true" id="report-meta-type">
+                        WECHAT · 私聊
+                    </span>
+                </div>
+                <!-- 日期范围 -->
+                <div class="flex items-center gap-2 text-slate-400 text-sm">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <span data-editable="true" id="report-date-range">2020/04/01 – 2026/04/13</span>
+                </div>
+            </div>
+
+            <!-- 顶部核心大指标 -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 lg:gap-10">
+                <div class="text-left min-w-[100px]">
+                    <div class="text-3xl md:text-4xl font-semibold tracking-tight text-white font-mono" data-editable="true" id="grand-kpi-1-val">29,069</div>
+                    <div class="text-xs text-slate-400 mt-1" data-editable="true" id="grand-kpi-1-label">消息总数</div>
+                </div>
+                <div class="text-left min-w-[100px]">
+                    <div class="text-3xl md:text-4xl font-semibold tracking-tight text-white font-mono" data-editable="true" id="grand-kpi-2-val">365</div>
+                    <div class="text-xs text-slate-400 mt-1" data-editable="true" id="grand-kpi-2-label">跨度天数</div>
+                </div>
+                <div class="text-left min-w-[100px]">
+                    <div class="text-3xl md:text-4xl font-semibold tracking-tight text-white font-mono" data-editable="true" id="grand-kpi-3-val">285</div>
+                    <div class="text-xs text-slate-400 mt-1" data-editable="true" id="grand-kpi-3-label">活跃天数</div>
+                </div>
+                <div class="text-left min-w-[100px]">
+                    <div class="text-3xl md:text-4xl font-semibold tracking-tight text-white font-mono" data-editable="true" id="grand-kpi-4-val">80</div>
+                    <div class="text-xs text-slate-400 mt-1" data-editable="true" id="grand-kpi-4-label">日均消息</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ========================================== -->
+        <!-- 2. Activity Heatmap (周期活跃度热力图) -->
+        <!-- ========================================== -->
+        <section data-section="activity-heatmap" class="mb-10 glass-panel rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-slate-400 tracking-wider uppercase" data-editable="true">ACTIVITY HEATMAP</h3>
+                <div class="text-xs text-slate-500 font-mono flex items-center gap-2">
+                    <span data-editable="true">低频</span>
+                    <div class="flex gap-1">
+                        <div class="w-2.5 h-2.5 bg-rose-500/10 rounded-[2px]"></div>
+                        <div class="w-2.5 h-2.5 bg-rose-500/30 rounded-[2px]"></div>
+                        <div class="w-2.5 h-2.5 bg-rose-500/60 rounded-[2px]"></div>
+                        <div class="w-2.5 h-2.5 bg-rose-500 rounded-[2px]"></div>
+                    </div>
+                    <span data-editable="true">高频</span>
+                </div>
+            </div>
+
+            <!-- 热力图容器 (自适应滚动) -->
+            <div class="overflow-x-auto no-scrollbar pb-2">
+                <div class="min-w-[850px] flex gap-2">
+                    <!-- 左侧星期标签 -->
+                    <div class="grid grid-rows-7 gap-[3px] text-[10px] text-slate-500 pr-1 select-none font-medium pt-5">
+                        <span class="h-[10px] leading-[10px]">周一</span>
+                        <span class="h-[10px] leading-[10px]">周二</span>
+                        <span class="h-[10px] leading-[10px]">周三</span>
+                        <span class="h-[10px] leading-[10px]">周四</span>
+                        <span class="h-[10px] leading-[10px]">周五</span>
+                        <span class="h-[10px] leading-[10px]">周六</span>
+                        <span class="h-[10px] leading-[10px]">周日</span>
+                    </div>
+
+                    <!-- 热力主体网格 -->
+                    <div class="flex-1">
+                        <!-- 月份刻度 -->
+                        <div class="grid grid-cols-13 gap-1 text-[10px] text-slate-500 mb-1.5 select-none font-medium">
+                            <span class="pl-1">4月</span><span>5月</span><span>6月</span><span>7月</span><span>8月</span><span>9月</span><span>10月</span><span>11月</span><span>12月</span><span>1月</span><span>2月</span><span>3月</span><span class="text-right pr-2">4月</span>
+                        </div>
+                        <!-- 网格点 (53列 x 7行) -->
+                        <div class="grid grid-flow-col grid-rows-7 gap-[3px]" id="heatmap-grid-container">
+                            <!-- JS 会自动填充，或由 Codex 直接注入静态 DOM。这里先预埋生成 371 个节点，以展示视觉样式 -->
+                            <!-- 每个点附带不同活跃度等级：bg-rose-500/[0.05] (无) 到 bg-rose-500 (巅峰) -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center justify-between text-xs text-slate-400 border-t border-white/5 pt-4">
+                <span data-editable="true">💡 统计表明：周四是整周中交流欲望最强烈的时刻。</span>
+                <span data-editable="true" class="font-mono">最热单日：554 条消息 (04/21)</span>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 3. Key Metrics Grid (核心指标网格) -->
+        <!-- ========================================== -->
+        <section data-section="key-metrics" class="mb-10">
+            <h3 class="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-6" data-editable="true">KEY METRICS</h3>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Card 1 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between min-h-[120px]">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-slate-400 font-medium" data-editable="true">日均消息</span>
+                        <span class="p-1 rounded-lg bg-blue-500/10 text-blue-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                        </span>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-2xl font-semibold text-white tracking-tight"><span class="text-blue-400" data-editable="true">80</span> <span class="text-xs text-slate-400 font-normal">条</span></div>
+                        <div class="text-xs text-slate-400 mt-1" data-editable="true">共计分析 365 天</div>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between min-h-[120px]">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-slate-400 font-medium" data-editable="true">图片消息</span>
+                        <span class="p-1 rounded-lg bg-rose-500/10 text-rose-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </span>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-2xl font-semibold text-white tracking-tight"><span class="text-rose-400" data-editable="true">1,936</span> <span class="text-xs text-slate-400 font-normal">张</span></div>
+                        <div class="text-xs text-slate-400 mt-1" data-editable="true">最活跃时段: 11:00</div>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between min-h-[120px]">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-slate-400 font-medium" data-editable="true">最活跃星期</span>
+                        <span class="p-1 rounded-lg bg-amber-500/10 text-amber-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </span>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-2xl font-semibold text-white tracking-tight"><span class="text-amber-400" data-editable="true">周四</span></div>
+                        <div class="text-xs text-slate-400 mt-1" data-editable="true">累计发送 6,741 条消息</div>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between min-h-[120px]">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-slate-400 font-medium" data-editable="true">周末活跃度</span>
+                        <span class="p-1 rounded-lg bg-emerald-500/10 text-emerald-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m2.828-9.9a5 5 0 117.072 0l-.707.707M6.343 6.343l.707.707m12.728 12.728l-.707.707" /></svg>
+                        </span>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-2xl font-semibold text-white tracking-tight"><span class="text-emerald-400" data-editable="true">6%</span></div>
+                        <div class="text-xs text-slate-400 mt-1" data-editable="true">周末消息占比较低</div>
+                    </div>
+                </div>
+
+                <!-- Card 5 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between min-h-[120px]">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-slate-400 font-medium" data-editable="true">最活跃日期</span>
+                        <span class="p-1 rounded-lg bg-rose-500/10 text-rose-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        </span>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-2xl font-semibold text-white tracking-tight"><span class="text-rose-400" data-editable="true">04/21</span></div>
+                        <div class="text-xs text-slate-400 mt-1" data-editable="true">单日创峰值 554 条</div>
+                    </div>
+                </div>
+
+                <!-- Card 6 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between min-h-[120px]">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-slate-400 font-medium" data-editable="true">深夜聊天</span>
+                        <span class="p-1 rounded-lg bg-purple-500/10 text-purple-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                        </span>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-2xl font-semibold text-white tracking-tight"><span class="text-purple-400" data-editable="true">1,114</span> <span class="text-xs text-slate-400 font-normal">条</span></div>
+                        <div class="text-xs text-slate-400 mt-1" data-editable="true">深夜(22:00-04:00)消息占4%</div>
+                    </div>
+                </div>
+
+                <!-- Card 7 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between min-h-[120px]">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-slate-400 font-medium" data-editable="true">连续打卡</span>
+                        <span class="p-1 rounded-lg bg-amber-500/10 text-amber-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        </span>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-2xl font-semibold text-white tracking-tight"><span class="text-amber-400" data-editable="true">20</span> <span class="text-xs text-slate-400 font-normal">天</span></div>
+                        <div class="text-xs text-slate-400 mt-1" data-editable="true">最长连续活跃天数</div>
+                    </div>
+                </div>
+
+                <!-- Card 8 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between min-h-[120px]">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-slate-400 font-medium" data-editable="true">活跃率</span>
+                        <span class="p-1 rounded-lg bg-emerald-500/10 text-emerald-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 114 0v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                        </span>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-2xl font-semibold text-white tracking-tight"><span class="text-emerald-400" data-editable="true">13%</span></div>
+                        <div class="text-xs text-slate-400 mt-1" data-editable="true">有消息的天数占比</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 4. Initiative & Trend (主动性走势模块) -->
+        <!-- ========================================== -->
+        <section data-section="initiative-trend" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+            <!-- 左栏：发起统计 -->
+            <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <span class="text-xs text-slate-400 font-semibold tracking-wider uppercase block mb-1">2025/04 – 2026/04</span>
+                    <h2 class="text-2xl font-bold text-white leading-snug">
+                        你们共进行了 <span class="text-blue-400 font-mono" data-editable="true">1,032</span> 次对话<br>
+                        其中有 <span class="text-rose-400 font-mono" data-editable="true">60%</span> 的开场白由 <span class="text-rose-400" data-editable="true">小红</span> 发起
+                    </h2>
+                </div>
+
+                <!-- PK 进度条组件 -->
+                <div class="my-8">
+                    <div class="flex justify-between items-end mb-2">
+                        <div>
+                            <span class="text-xs text-slate-400" data-editable="true">小红</span>
+                            <div class="text-2xl font-semibold text-blue-400 font-mono" data-editable="true">617</div>
+                            <span class="text-[10px] text-slate-500" data-editable="true">次发起</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-500 select-none pb-4">VS</span>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400" data-editable="true">地瓜</span>
+                            <div class="text-2xl font-semibold text-rose-400 font-mono" data-editable="true">415</div>
+                            <span class="text-[10px] text-slate-500" data-editable="true">次发起</span>
+                        </div>
+                    </div>
+                    <!-- 比例条 -->
+                    <div class="w-full h-2.5 bg-white/5 rounded-full overflow-hidden flex">
+                        <div class="bg-blue-400 h-full transition-all duration-500" style="width: 60%"></div>
+                        <div class="bg-rose-400 h-full transition-all duration-500" style="width: 40%"></div>
+                    </div>
+                </div>
+
+                <div class="text-xs text-slate-500" data-editable="true">
+                    * 对话发起定义：静默超过4小时后的首次发话。
+                </div>
+            </div>
+
+            <!-- 右栏：主动性走势图表 -->
+            <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h4 class="text-sm font-semibold text-white" data-editable="true">主动性趋势</h4>
+                        <span class="text-xs text-slate-500" data-editable="true">蓝线为小红的月度主动发起占比，50%线为均衡基准</span>
+                    </div>
+                </div>
+
+                <!-- 自适应 SVG 曲线图 -->
+                <div class="w-full h-44 mt-4 relative">
+                    <svg class="w-full h-full" viewBox="0 0 500 150" preserveAspectRatio="none">
+                        <defs>
+                            <!-- 渐变遮罩 -->
+                            <linearGradient id="trend-grad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.2"/>
+                                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- 基准线 50% -->
+                        <line x1="0" y1="75" x2="500" y2="75" stroke="rgba(255, 255, 255, 0.1)" stroke-dasharray="4,4" />
+                        
+                        <!-- 渐变填色区域 -->
+                        <path d="M 0,150 L 0,85 Q 50,90 100,80 T 200,60 T 300,75 T 400,90 T 500,65 L 500,150 Z" fill="url(#trend-grad)" />
+                        <!-- 趋势主曲线 -->
+                        <path d="M 0,85 Q 50,90 100,80 T 200,60 T 300,75 T 400,90 T 500,65" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
+                        
+                        <!-- 终点高亮指示器 -->
+                        <circle cx="500" cy="65" r="4" fill="#38bdf8" />
+                        <circle cx="500" cy="65" r="8" fill="#38bdf8" class="pulse-subtle" opacity="0.4" />
+                    </svg>
+                    <!-- Y轴刻度 -->
+                    <div class="absolute left-0 top-0 h-full flex flex-col justify-between text-[9px] text-slate-500 font-mono pointer-events-none pr-2">
+                        <span>100%</span>
+                        <span>50%</span>
+                        <span>0%</span>
+                    </div>
+                </div>
+
+                <!-- X轴标签 -->
+                <div class="flex justify-between text-[10px] text-slate-500 font-mono mt-2 border-t border-white/5 pt-2">
+                    <span>4月</span>
+                    <span>6月</span>
+                    <span>8月</span>
+                    <span>10月</span>
+                    <span>12月</span>
+                    <span>2月</span>
+                    <span>4月</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 5. Behavioral Profiling (行为特征深度对比) -->
+        <!-- ========================================== -->
+        <section data-section="behavioral-profiling" class="mb-10">
+            <h3 class="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-6" data-editable="true">BEHAVIORAL PROFILING</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <!-- Card 1: 话题终结者 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="p-1 rounded bg-blue-500/10 text-blue-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                        </span>
+                        <h5 class="text-xs text-white font-semibold" data-editable="true">话题终结者</h5>
+                    </div>
+                    <div class="flex justify-between items-end mb-3">
+                        <div>
+                            <div class="text-[10px] text-slate-500" data-editable="true">小红</div>
+                            <div class="text-xl font-semibold text-blue-400 font-mono" data-editable="true">390</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-slate-500" data-editable="true">地瓜</div>
+                            <div class="text-xl font-semibold text-rose-400 font-mono" data-editable="true">642</div>
+                        </div>
+                    </div>
+                    <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden flex">
+                        <div class="bg-blue-400" style="width: 38%"></div>
+                        <div class="bg-rose-400 flex-1"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-3" data-editable="true">统计话题结束时最后发言的人。</p>
+                </div>
+
+                <!-- Card 2: 破冰达人 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="p-1 rounded bg-rose-500/10 text-rose-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        </span>
+                        <h5 class="text-xs text-white font-semibold" data-editable="true">破冰达人</h5>
+                    </div>
+                    <div class="flex justify-between items-end mb-3">
+                        <div>
+                            <div class="text-[10px] text-slate-500" data-editable="true">小红</div>
+                            <div class="text-xl font-semibold text-blue-400 font-mono" data-editable="true">35</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-slate-500" data-editable="true">地瓜</div>
+                            <div class="text-xl font-semibold text-rose-400 font-mono" data-editable="true">31</div>
+                        </div>
+                    </div>
+                    <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden flex">
+                        <div class="bg-blue-400" style="width: 53%"></div>
+                        <div class="bg-rose-400 flex-1"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-3" data-editable="true">超过24小时沉默后主动打破僵局的次数。</p>
+                </div>
+
+                <!-- Card 3: 平均响应时延 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="p-1 rounded bg-amber-500/10 text-amber-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </span>
+                        <h5 class="text-xs text-white font-semibold" data-editable="true">平均响应时延</h5>
+                    </div>
+                    <div class="flex justify-between items-end mb-3">
+                        <div>
+                            <div class="text-[10px] text-slate-500" data-editable="true">小红</div>
+                            <div class="text-xl font-semibold text-blue-400 font-mono" data-editable="true">2分钟</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-slate-500" data-editable="true">地瓜</div>
+                            <div class="text-xl font-semibold text-rose-400 font-mono" data-editable="true">1分钟</div>
+                        </div>
+                    </div>
+                    <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden flex">
+                        <div class="bg-blue-400" style="width: 66%"></div>
+                        <div class="bg-rose-400 flex-1"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-3" data-editable="true">对方发来消息后，平均回复等待时长。</p>
+                </div>
+
+                <!-- Card 4: 锲而不舍 -->
+                <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="p-1 rounded bg-purple-500/10 text-purple-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" /></svg>
+                        </span>
+                        <h5 class="text-xs text-white font-semibold flex items-center gap-1.5">
+                            <span data-editable="true">锲而不舍</span>
+                            <span class="px-1.5 py-0.2 bg-white/10 text-[9px] rounded font-mono text-slate-300">5m</span>
+                        </h5>
+                    </div>
+                    <div class="flex justify-between items-end mb-3">
+                        <div>
+                            <div class="text-[10px] text-slate-500" data-editable="true">小红</div>
+                            <div class="text-xl font-semibold text-blue-400 font-mono" data-editable="true">107</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-slate-500" data-editable="true">地瓜</div>
+                            <div class="text-xl font-semibold text-rose-400 font-mono" data-editable="true">150</div>
+                        </div>
+                    </div>
+                    <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden flex">
+                        <div class="bg-blue-400" style="width: 41%"></div>
+                        <div class="bg-rose-400 flex-1"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-3" data-editable="true">对方5分钟内未回复，自己又连发一次消息的次数。</p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 6. Message Profiles (内容与时段分布) -->
+        <!-- ========================================== -->
+        <section data-section="message-profiles" class="mb-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- 栏 1：文字表达力指标 -->
+            <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between lg:col-span-1">
+                <div>
+                    <h4 class="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-1" data-editable="true">MESSAGE PROFILE</h4>
+                    <p class="text-xl font-bold text-white mb-6 leading-snug">
+                        你们共留下了 <span class="text-indigo-400 font-mono" data-editable="true">29,069</span> 条消息<br>
+                        每条平均 <span class="text-indigo-400 font-mono" data-editable="true">11.2</span> 个字，其中有 <span class="text-rose-400 font-mono" data-editable="true">13%</span> 是非文字消息
+                    </p>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- 子指标 1 -->
+                    <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                        <div>
+                            <span class="text-xs text-white font-medium" data-editable="true">11.2 字/条</span>
+                            <span class="block text-[10px] text-slate-500" data-editable="true">文字表达力 (最长消息2112字)</span>
+                        </div>
+                        <span class="text-xs text-blue-400 font-semibold" data-editable="true">极高</span>
+                    </div>
+                    <!-- 子指标 2 -->
+                    <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                        <div>
+                            <span class="text-xs text-white font-medium" data-editable="true">31% 短语率</span>
+                            <span class="block text-[10px] text-slate-500" data-editable="true">短消息达人，共计 7866 条 &le; 5字</span>
+                        </div>
+                        <span class="text-xs text-amber-400 font-semibold" data-editable="true">偏高</span>
+                    </div>
+                    <!-- 子指标 3 -->
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="text-xs text-white font-medium" data-editable="true">1,224 篇长作</span>
+                            <span class="block text-[10px] text-slate-500" data-editable="true">小作文爱好者，字数 &ge; 30 字的消息</span>
+                        </div>
+                        <span class="text-xs text-rose-400 font-semibold" data-editable="true">核心输出</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 栏 2：消息类型分布环形图 -->
+            <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between lg:col-span-1">
+                <div>
+                    <h4 class="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-1" data-editable="true">消息类型</h4>
+                    <span class="text-xs text-slate-500" data-editable="true">多媒体丰富度：文字占比 87%，图片 12%，其他 1%</span>
+                </div>
+
+                <!-- 极简 SVG 环形图 -->
+                <div class="flex items-center justify-center my-6 relative">
+                    <svg class="w-36 h-36 transform -rotate-90">
+                        <circle cx="72" cy="72" r="55" stroke="rgba(255,255,255,0.03)" stroke-width="12" fill="none"/>
+                        <!-- 文字消息 87% (周长 = 2 * PI * 55 = 345.5) -->
+                        <circle cx="72" cy="72" r="55" stroke="#38bdf8" stroke-width="12" stroke-dasharray="345.5" stroke-dashoffset="45" fill="none" stroke-linecap="round"/>
+                        <!-- 图片消息 12% (345.5 * 0.12 = 41.4) -->
+                        <circle cx="72" cy="72" r="55" stroke="#f43f5e" stroke-width="12" stroke-dasharray="41.4 345.5" stroke-dashoffset="-300" fill="none" stroke-linecap="round"/>
+                    </svg>
+                    <div class="absolute flex flex-col items-center">
+                        <span class="text-2xl font-bold text-white font-mono" data-editable="true">87%</span>
+                        <span class="text-[9px] text-slate-400" data-editable="true">纯文本为主</span>
+                    </div>
+                </div>
+
+                <!-- 颜色图例 -->
+                <div class="grid grid-cols-3 gap-2 text-[10px] text-slate-400 border-t border-white/5 pt-3">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                        <span data-editable="true">文本</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                        <span data-editable="true">图片</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+                        <span data-editable="true">语音视频</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 栏 3：24h 活跃柱状图 -->
+            <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between lg:col-span-1">
+                <div>
+                    <h4 class="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-1" data-editable="true">24H 活跃度</h4>
+                    <span class="text-xs text-slate-500" data-editable="true">最活跃时段：11:00 > 15:00 > 16:00</span>
+                </div>
+
+                <!-- 极简柱状图 -->
+                <div class="h-32 flex items-end gap-1.5 mt-6 mb-2">
+                    <!-- 模拟 24 小时的精简表现 (12组柱子，代表每2小时一组) -->
+                    <div class="flex-1 h-full flex flex-col justify-end items-center group">
+                        <div class="w-full bg-white/5 group-hover:bg-rose-500/30 rounded-t-sm h-[10%] transition-all"></div>
+                        <span class="text-[8px] text-slate-600 mt-1.5 group-hover:text-slate-400">0</span>
+                    </div>
+                    <div class="flex-1 h-full flex flex-col justify-end items-center group">
+                        <div class="w-full bg-white/5 group-hover:bg-rose-500/30 rounded-t-sm h-[5%] transition-all"></div>
+                        <span class="text-[8px] text-slate-600 mt-1.5">4</span>
+                    </div>
+                    <div class="flex-1 h-full flex flex-col justify-end items-center group">
+                        <div class="w-full bg-white/10 group-hover:bg-rose-500/30 rounded-t-sm h-[30%] transition-all"></div>
+                        <span class="text-[8px] text-slate-600 mt-1.5">8</span>
+                    </div>
+                    <div class="flex-1 h-full flex flex-col justify-end items-center group">
+                        <div class="w-full bg-rose-500/80 group-hover:bg-rose-500 rounded-t-sm h-[95%] transition-all relative">
+                            <span class="absolute top-[-16px] left-1/2 transform -translate-x-1/2 text-[9px] text-rose-400 font-semibold font-mono">Peak</span>
+                        </div>
+                        <span class="text-[8px] text-slate-400 mt-1.5 font-semibold">12</span>
+                    </div>
+                    <div class="flex-1 h-full flex flex-col justify-end items-center group">
+                        <div class="w-full bg-white/20 group-hover:bg-rose-500/30 rounded-t-sm h-[75%] transition-all"></div>
+                        <span class="text-[8px] text-slate-600 mt-1.5">16</span>
+                    </div>
+                    <div class="flex-1 h-full flex flex-col justify-end items-center group">
+                        <div class="w-full bg-white/25 group-hover:bg-rose-500/30 rounded-t-sm h-[80%] transition-all"></div>
+                        <span class="text-[8px] text-slate-600 mt-1.5">20</span>
+                    </div>
+                    <div class="flex-1 h-full flex flex-col justify-end items-center group">
+                        <div class="w-full bg-white/15 group-hover:bg-rose-500/30 rounded-t-sm h-[40%] transition-all"></div>
+                        <span class="text-[8px] text-slate-600 mt-1.5">24</span>
+                    </div>
+                </div>
+
+                <p class="text-[10px] text-slate-400" data-editable="true">
+                    下午午休阶段及晚饭前后是互动的高峰时点。
+                </p>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 7. Topic Profile (话题画像与词云) -->
+        <!-- ========================================== -->
+        <section data-section="topic-profile" class="glass-panel rounded-2xl p-6 mb-10 grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- 左侧内容 -->
+            <div class="lg:col-span-2 flex flex-col justify-between">
+                <div>
+                    <h4 class="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-1" data-editable="true">TOPIC PROFILE</h4>
+                    <p class="text-xl font-bold text-white mb-6 leading-snug">
+                        共分析了 <span class="text-amber-400 font-mono" data-editable="true">25,334</span> 条消息<br>
+                        产生了 <span class="text-amber-400 font-mono" data-editable="true">2,301</span> 个不同词汇
+                    </p>
+                    <div class="space-y-1.5 mb-6">
+                        <div class="text-xs text-slate-400" data-editable="true">你们最常提及的热词是：</div>
+                        <div class="flex flex-wrap gap-2 pt-1">
+                            <span class="px-2 py-1 rounded bg-blue-500/10 text-blue-400 text-xs font-medium" data-editable="true">公司</span>
+                            <span class="px-2 py-1 rounded bg-rose-500/10 text-rose-400 text-xs font-medium" data-editable="true">代码</span>
+                            <span class="px-2 py-1 rounded bg-amber-500/10 text-amber-400 text-xs font-medium" data-editable="true">项目</span>
+                            <span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-medium" data-editable="true">产品</span>
+                            <span class="px-2 py-1 rounded bg-purple-500/10 text-purple-400 text-xs font-medium" data-editable="true">功能</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block" data-editable="true">词汇丰富度</span>
+                        <span class="text-lg font-semibold text-white font-mono" data-editable="true">12%</span>
+                        <span class="block text-[9px] text-slate-400 mt-1" data-editable="true">不重复词 2,301 / 总词数 19,870</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block" data-editable="true">聊天风格归纳</span>
+                        <span class="text-lg font-semibold text-white" data-editable="true">均衡型</span>
+                        <span class="block text-[9px] text-slate-400 mt-1" data-editable="true">聊天内容多元，各类话题分布均衡</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧词云模拟器 (高保真 SVG 词云，可高宽自适应) -->
+            <div class="lg:col-span-3 flex items-center justify-center bg-white/[0.01] rounded-xl border border-white/5 p-4 min-h-[220px]">
+                <svg class="w-full max-w-[400px] h-[220px]" viewBox="0 0 400 220" style="background:transparent;">
+                    <style>
+                        .cloud-text { font-family: system-ui; font-weight: bold; transition: all 0.2s ease; cursor: default; }
+                        .cloud-text:hover { fill: #ffffff !important; filter: drop-shadow(0 0 8px rgba(255,255,255,0.4)); }
+                    </style>
+                    <!-- 中央主导词 -->
+                    <text x="200" y="115" font-size="34" fill="#a78bfa" class="cloud-text" text-anchor="middle" data-editable="true">公司</text>
+                    <text x="200" y="70" font-size="28" fill="#38bdf8" class="cloud-text" text-anchor="middle" data-editable="true">代码</text>
+                    <text x="110" y="125" font-size="24" fill="#f43f5e" class="cloud-text" text-anchor="middle" data-editable="true">项目</text>
+                    <text x="290" y="120" font-size="22" fill="#34d399" class="cloud-text" text-anchor="middle" data-editable="true">产品</text>
+                    <text x="210" y="165" font-size="20" fill="#fbbf24" class="cloud-text" text-anchor="middle" data-editable="true">功能</text>
+                    
+                    <!-- 次要高频词 -->
+                    <text x="90" y="75" font-size="14" fill="#64748b" class="cloud-text" text-anchor="middle" data-editable="true">聊天记录</text>
+                    <text x="310" y="70" font-size="15" fill="#94a3b8" class="cloud-text" text-anchor="middle" data-editable="true">电脑</text>
+                    <text x="130" y="175" font-size="14" fill="#f43f5e" opacity="0.8" class="cloud-text" text-anchor="middle" data-editable="true">麻烦</text>
+                    <text x="280" y="170" font-size="13" fill="#38bdf8" opacity="0.8" class="cloud-text" text-anchor="middle" data-editable="true">域名</text>
+                    <text x="200" y="30" font-size="13" fill="#a78bfa" opacity="0.7" class="cloud-text" text-anchor="middle" data-editable="true">成都</text>
+
+                    <!-- 外围微词 -->
+                    <text x="40" y="110" font-size="11" fill="#475569" class="cloud-text" text-anchor="middle" data-editable="true">女朋友</text>
+                    <text x="360" y="110" font-size="11" fill="#475569" class="cloud-text" text-anchor="middle" data-editable="true">开源</text>
+                    <text x="50" y="150" font-size="10" fill="#475569" class="cloud-text" text-anchor="middle" data-editable="true">干嘛</text>
+                    <text x="350" y="150" font-size="10" fill="#475569" class="cloud-text" text-anchor="middle" data-editable="true">便宜</text>
+                </svg>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 8. Language & Radar (语言偏好与特征雷达图) -->
+        <!-- ========================================== -->
+        <section data-section="radar-profile" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+            <!-- 左侧：口头禅与文本调性统计 -->
+            <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <h4 class="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-6" data-editable="true">口头禅与性格</h4>
+                    
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <!-- 栏 1：地瓜 -->
+                        <div class="border-r border-white/5 pr-4">
+                            <span class="text-xs font-bold text-blue-400 block mb-3" data-editable="true">地瓜 的热门口头禅</span>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-white" data-editable="true">#1 「可以」</span>
+                                    <span class="text-slate-500 font-mono">x98</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-white" data-editable="true">#2 「确实」</span>
+                                    <span class="text-slate-500 font-mono">x66</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-white" data-editable="true">#3 「啊哈哈」</span>
+                                    <span class="text-slate-500 font-mono">x57</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 栏 2：小红 -->
+                        <div class="pl-2">
+                            <span class="text-xs font-bold text-rose-400 block mb-3" data-editable="true">小红 的热门口头禅</span>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-white" data-editable="true">#1 「[旺柴]」</span>
+                                    <span class="text-slate-500 font-mono">x144</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-white" data-editable="true">#2 「[捂脸]」</span>
+                                    <span class="text-slate-500 font-mono">x86</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-white" data-editable="true">#3 「[破涕为笑]」</span>
+                                    <span class="text-slate-500 font-mono">x41</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-center text-xs border-t border-white/5 pt-4">
+                    <div>
+                        <span class="text-[10px] text-slate-500 block" data-editable="true">词汇深度</span>
+                        <div class="font-medium text-white mt-1" data-editable="true">地瓜 12.68%</div>
+                        <div class="text-[9px] text-slate-500" data-editable="true">vs 小红 12.25%</div>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 block" data-editable="true">聊天气质</span>
+                        <div class="font-medium text-blue-400 mt-1" data-editable="true">均衡派</div>
+                        <div class="text-[9px] text-slate-500" data-editable="true">偏爱助词: 吧, 吗, 呢, 呀</div>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 block" data-editable="true">标点性格</span>
+                        <div class="font-medium text-rose-400 mt-1" data-editable="true">意识流型</div>
+                        <div class="text-[9px] text-slate-500" data-editable="true">常用标点: . ? ... !</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：五维多维特征雷达图 -->
+            <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <h4 class="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-1" data-editable="true">多维行为雷达</h4>
+                    <span class="text-xs text-slate-500" data-editable="true">基于文本语义深度推导得出的聊天人格特质分布</span>
+                </div>
+
+                <!-- 自适应 SVG 雷达图 -->
+                <div class="w-full h-48 my-2 relative flex items-center justify-center">
+                    <svg class="w-48 h-48" viewBox="0 0 120 120">
+                        <!-- 雷达背景多边形 (三层网格) -->
+                        <!-- 外网格 -->
+                        <polygon points="60,10 107,44 89,100 31,100 13,44" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+                        <!-- 中网格 -->
+                        <polygon points="60,35 91,58 79,90 41,90 29,58" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>
+                        <!-- 内网格 -->
+                        <polygon points="60,60 60,60 60,60 60,60 60,60" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+                        
+                        <!-- 轴线 -->
+                        <line x1="60" y1="60" x2="60" y2="10" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+                        <line x1="60" y1="60" x2="107" y2="44" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+                        <line x1="60" y1="60" x2="89" y2="100" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+                        <line x1="60" y1="60" x2="31" y2="100" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+                        <line x1="60" y1="60" x2="13" y2="44" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+
+                        <!-- 主体 1：地瓜的雷达图 (蓝色) -->
+                        <polygon points="60,25 95,49 83,92 45,85 25,48" fill="rgba(56,189,248,0.2)" stroke="#38bdf8" stroke-width="1.5"/>
+
+                        <!-- 主体 2：小红的雷达图 (粉色) -->
+                        <polygon points="60,18 90,52 75,88 38,82 22,52" fill="rgba(244,63,94,0.15)" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="2,2"/>
+
+                        <!-- 标签文字 -->
+                        <text x="60" y="8" font-size="5" fill="#94a3b8" text-anchor="middle" font-weight="bold">事实性</text>
+                        <text x="111" y="45" font-size="5" fill="#94a3b8" text-anchor="start" font-weight="bold">程度感</text>
+                        <text x="92" y="105" font-size="5" fill="#94a3b8" text-anchor="start" font-weight="bold">亲和力</text>
+                        <text x="28" y="105" font-size="5" fill="#94a3b8" text-anchor="end" font-weight="bold">描述欲</text>
+                        <text x="9" y="45" font-size="5" fill="#94a3b8" text-anchor="end" font-weight="bold">行动感</text>
+                    </svg>
+                </div>
+
+                <!-- 图例说明 -->
+                <div class="flex justify-center gap-6 text-[10px] text-slate-400 mt-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-0.5 bg-blue-400 inline-block"></span>
+                        <span data-editable="true">地瓜</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-0.5 border-t border-dashed border-rose-400 inline-block"></span>
+                        <span data-editable="true">小红</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 9. Enterprise Expansion: Executive Summary & Action Items -->
+        <!--    (企业深度维度拓展：高管汇报总结与后续建议) -->
+        <!-- ========================================== -->
+        <section data-section="executive-summary" class="glass-panel rounded-2xl p-6 mb-10">
+            <h3 class="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-4" data-editable="true">EXECUTIVE SUMMARY</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- 洞察 1 -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                        <h5 class="text-xs font-semibold text-white" data-editable="true">核心洞察：主动性与粘性极强</h5>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed" data-editable="true">
+                        从小作文比重（1,224篇）和平均响应时间（1~2分钟）来看，该对话具有极强的信息载荷与极高的即时黏性，未回复再发倾向较高（地瓜150次），显现出积极稳定的沟通姿态。
+                    </p>
+                </div>
+                <!-- 洞察 2 -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                        <h5 class="text-xs font-semibold text-white" data-editable="true">话题演变：工作与技术为主轴</h5>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed" data-editable="true">
+                        词云分析与雷达多维表明，“公司”、“代码”、“项目”和“产品”占据绝对话题主轴，沟通风格高度写实且极具专业感（地瓜在“事实性”维度领先）。
+                    </p>
+                </div>
+                <!-- 洞察 3 -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        <h5 class="text-xs font-semibold text-white" data-editable="true">建议改进：平衡周末沟通分配</h5>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed" data-editable="true">
+                        当前周末活跃度（6%）显著低于工作日，显示出双主体在生活-工作边界划分上极其明确，或暗示周末互动场景仍有拓宽、均衡的潜力。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- Footer (页脚) -->
+        <!-- ========================================== -->
+        <footer class="text-center text-xs text-slate-600 mt-16 border-t border-white/5 pt-8">
+            <p data-editable="true">聊天分析实验室 · chatlab.fun</p>
+            <p class="mt-1 font-mono select-none" data-editable="true">Data Engine v2.5.0-Preview</p>
+        </footer>
+
+    </div>
+
+    <!-- JS: 负责热力图渲染及交互，保持纯原生无任何依赖 -->
+    <script>
+        // DOM 加载就绪后自动绘制 53周x7天 的高保真热力图格子
+        window.addEventListener('DOMContentLoaded', () => {
+            const gridContainer = document.getElementById('heatmap-grid-container');
+            
+            // 7行 53列 ＝ 371 天
+            // 模拟每天的活跃度值 (1 - 554)
+            const daysCount = 371;
+            
+            // 模拟随机生成一定程度聚集的趋势
+            for (let i = 0; i < daysCount; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'w-2.5 h-2.5 rounded-[2px] transition-all duration-300 hover:scale-125 cursor-pointer relative group';
+                
+                // 产生一定的连续分布活跃级别 (0: 未活跃, 1: 低频, 2: 中频, 3: 高频, 4: 巅峰)
+                let level = 0;
+                const r = Math.random();
+                if (r > 0.93) level = 4;
+                else if (r > 0.82) level = 3;
+                else if (r > 0.60) level = 2;
+                else if (r > 0.25) level = 1;
+                
+                // 给 X轴的 4月，也就是两端增加一些明显的极高频亮点 (模拟和截图相似的开头结尾红区)
+                if (i < 14 && Math.random() > 0.5) {
+                    level = Math.random() > 0.5 ? 4 : 3;
+                }
+                if (i > 350 && Math.random() > 0.6) {
+                    level = Math.random() > 0.5 ? 4 : 3;
+                }
+
+                // 根据级别绑定背景色类
+                if (level === 0) {
+                    cell.classList.add('bg-white/[0.04]');
+                } else if (level === 1) {
+                    cell.classList.add('bg-rose-500/[0.15]');
+                } else if (level === 2) {
+                    cell.classList.add('bg-rose-500/[0.35]');
+                } else if (level === 3) {
+                    cell.classList.add('bg-rose-500/[0.65]');
+                } else if (level === 4) {
+                    cell.classList.add('bg-rose-500');
+                    // 额外给最高频加个小阴影
+                    cell.style.boxShadow = '0 0 6px rgba(244, 63, 94, 0.6)';
+                }
+
+                // 添加极简原生 Tooltip
+                const tooltip = document.createElement('span');
+                tooltip.className = 'absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-slate-900 border border-white/10 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-20 whitespace-nowrap font-mono';
+                const simulatedMessages = level === 0 ? 0 : Math.floor(level * 110 + Math.random() * 80);
+                tooltip.textContent = `第 ${i+1} 天 : ${simulatedMessages} 条消息`;
+                cell.appendChild(tooltip);
+
+                gridContainer.appendChild(cell);
+            }
+        });
+    </script>
+</body>
+</html>

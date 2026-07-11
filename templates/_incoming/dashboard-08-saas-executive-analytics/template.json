@@ -1,0 +1,205 @@
+{
+  "id": "dashboard-08-saas-executive-analytics",
+  "name": "SaaS Executive Analytics 高级业务数据分析看板",
+  "templateName": "SaasExecutiveAnalyticsDashboardTemplate",
+  "version": "1.0.0",
+  "description": "浅灰底、白卡片、细边框的高级业务数据分析模板，适合 SaaS 经营分析、管理层述职、业务健康度复盘和咨询式数据报告。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "bi-dashboard",
+    "business-review",
+    "saas-analytics"
+  ],
+  "styleTags": [
+    "saas-executive",
+    "consulting-report",
+    "light-dashboard",
+    "saas-analytics",
+    "high-density",
+    "editable-dashboard"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "SaaS 经营分析",
+    "管理层述职",
+    "业务健康度复盘",
+    "Excel 数据报告可视化",
+    "咨询式业务分析报告"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "ECharts CDN",
+    "Lucide Icons CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#f5f6f7",
+      "cardSurface": "#ffffff",
+      "border": "#dee0e3",
+      "primaryText": "#1f2329",
+      "secondaryText": "#646a73",
+      "primary": "#3370ff",
+      "comparison": "#8f959e",
+      "success": "#2fa86d",
+      "danger": "#d83931",
+      "orange": "#e89531",
+      "purple": "#635db1"
+    },
+    "fonts": {
+      "body": "PingFang SC, Microsoft YaHei, sans-serif",
+      "number": "DIN Alternate, Helvetica Neue, Arial, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "page-title": {
+      "desc": "页面主标题和报告摘要",
+      "required": true,
+      "hideable": false
+    },
+    "key-takeaways": {
+      "desc": "高管摘要洞察",
+      "required": true,
+      "hideable": true
+    },
+    "kpi-overview": {
+      "desc": "4 个核心 KPI 指标卡片",
+      "required": true,
+      "hideable": false
+    },
+    "ndr-trend": {
+      "desc": "NDR 净收入留存趋势与增长拆解",
+      "required": true,
+      "hideable": true
+    },
+    "product-penetration": {
+      "desc": "产品渗透率矩阵和模块取舍洞察",
+      "required": true,
+      "hideable": true
+    },
+    "customer-health": {
+      "desc": "客户成功健康度、QBR 覆盖率和 NPS",
+      "required": true,
+      "hideable": true
+    },
+    "ai-empowerment": {
+      "desc": "AI 赋能前后的人效对比",
+      "required": true,
+      "hideable": true
+    },
+    "system-stability": {
+      "desc": "系统 SLA、MTTR 和峰值 QPS",
+      "required": true,
+      "hideable": true
+    },
+    "private-domain-growth": {
+      "desc": "私域规模、转化率、ARPU、复购率和 LTV",
+      "required": true,
+      "hideable": true
+    },
+    "viral-k-factor": {
+      "desc": "裂变 K-factor 和获客效率",
+      "required": true,
+      "hideable": true
+    },
+    "content-marketing": {
+      "desc": "内容营销资产和长尾流量",
+      "required": true,
+      "hideable": true
+    },
+    "customer-stratification": {
+      "desc": "KA 与 SMB 客户分层对比",
+      "required": true,
+      "hideable": true
+    },
+    "channel-roi": {
+      "desc": "渠道 ROI / 投资效能矩阵",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字，已补齐 data-slot 和 contenteditable"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "标题、洞察、KPI 和 10 个核心业务分析模块"
+    },
+    "charts": {
+      "type": "object",
+      "entry": "initCharts()",
+      "desc": "底部 initCharts() 内集中维护 ECharts option"
+    }
+  },
+  "slotLimits": {
+    "page-title": 28,
+    "page-summary": 48,
+    "kpi-label": 28,
+    "kpi-value": 16,
+    "section-title": 36,
+    "insight-text": 140,
+    "table-cell": 32
+  },
+  "llmInjectionRules": [
+    "替换文本时优先使用 data-slot，不要删除 data-section。",
+    "替换图表数据时修改 initCharts() 内对应 option，并同步更新相邻洞察文字。",
+    "不要新增原始 HTML 未提供的分析模块，除非用户明确要求扩展。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "referenceScreenshotArchived": true,
+    "topNavigationRemoved": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "initChartsAdded": true,
+    "coreAnalysisSections": 10,
+    "originalSlotSpecClaimedCoreDimensions": 15,
+    "missingOriginalSpecSections": [
+      "churn-analysis",
+      "sales-funnel",
+      "unit-economics",
+      "cost-breakdown"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png。"
+  },
+  "editorTheme": {
+    "defaultColor": "#3370ff",
+    "presets": [
+      "#3370ff",
+      "#635db1",
+      "#2fa86d",
+      "#e89531",
+      "#d83931",
+      "#111827"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[style*=\"#3370ff\"]",
+        "[style*=\"#3370FF\"]"
+      ],
+      "backgroundSelectors": [
+        "[style*=\"#3370ff\"]",
+        "[style*=\"#3370FF\"]"
+      ],
+      "borderSelectors": [
+        "[style*=\"#3370ff\"]",
+        "[style*=\"#3370FF\"]"
+      ]
+    }
+  }
+}

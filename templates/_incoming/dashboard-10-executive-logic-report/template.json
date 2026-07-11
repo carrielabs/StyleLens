@@ -1,0 +1,171 @@
+{
+  "id": "dashboard-10-executive-logic-report",
+  "name": "Executive Logic Report 高管数据逻辑分析看板",
+  "templateName": "ExecutiveLogicReportDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向高管汇报和 Excel 数据分析的企业级数据报告模板，采用深蓝主色、橙黄强调、结论先行结构，覆盖 KPI、趋势、排行、漏斗、瀑布图、画像、流程和明细表。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "business-review",
+    "okr-review",
+    "excel-analysis"
+  ],
+  "styleTags": [
+    "executive-report",
+    "blue-business",
+    "data-report",
+    "echarts",
+    "kpi-dashboard",
+    "excel-ready"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "高管汇报",
+    "经营分析",
+    "OKR 追踪",
+    "业务复盘",
+    "Excel 数据报告可视化"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "ECharts CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#F4F6FA",
+      "cardBg": "#FFFFFF",
+      "primary": "#18319D",
+      "accent": "#F5A623",
+      "success": "#14B56F",
+      "danger": "#F53F3F",
+      "textMain": "#1F2329",
+      "textSub": "#4B535E",
+      "textMuted": "#8F959E"
+    },
+    "fonts": {
+      "body": "PingFang SC, Microsoft YaHei, system-ui, sans-serif",
+      "number": "DIN Alternate, Helvetica Neue, Arial, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "report-header": {
+      "desc": "报告抬头，包含报告名称、生成时间、汇报对象",
+      "required": true,
+      "hideable": false
+    },
+    "key-takeaways": {
+      "desc": "核心观点摘要",
+      "required": true,
+      "hideable": false
+    },
+    "kpi-summary": {
+      "desc": "核心指标看板",
+      "required": true,
+      "hideable": true
+    },
+    "trend-analysis": {
+      "desc": "关键数据历史趋势与结构占比",
+      "required": true,
+      "hideable": true
+    },
+    "target-ranking": {
+      "desc": "目标达成追踪与排行榜",
+      "required": true,
+      "hideable": true
+    },
+    "conversion-growth": {
+      "desc": "转化漏斗与增长归因拆解",
+      "required": true,
+      "hideable": true
+    },
+    "multi-dim": {
+      "desc": "客群画像与业务结构演变",
+      "required": true,
+      "hideable": true
+    },
+    "process-flow": {
+      "desc": "业务执行路径或阶段复盘",
+      "required": false,
+      "hideable": true
+    },
+    "data-table": {
+      "desc": "明细数据下钻表格",
+      "required": false,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "editable_text": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文本，已补齐 data-slot 和 contenteditable"
+    },
+    "chart_containers": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "ECharts 图表容器"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "9 个核心报告模块"
+    }
+  },
+  "slotLimits": {
+    "report-title": 36,
+    "section-title": 28,
+    "metric-value": 16,
+    "metric-label": 28,
+    "takeaway-text": 120,
+    "table-cell": 24
+  },
+  "llmInjectionRules": [
+    "优先填充 key-takeaways，再填充 KPI 与图表数据。",
+    "图表数据更新时，必须同步更新同模块标题、说明和表格明细。",
+    "瀑布图、漏斗图和排行榜必须保留可解释的业务口径，不能只替换数值。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "placeholderTextCleaned": true,
+    "editableCount": 71,
+    "sectionCount": 9,
+    "chartCount": 8,
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#18319d",
+    "presets": [
+      "#18319d",
+      "#f5a623",
+      "#14b56f",
+      "#f53f3f",
+      "#3370ff",
+      "#111827"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-primary\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-primary\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-primary\"]"
+      ]
+    }
+  }
+}

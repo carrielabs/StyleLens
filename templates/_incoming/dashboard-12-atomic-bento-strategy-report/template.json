@@ -1,0 +1,237 @@
+{
+  "id": "dashboard-12-atomic-bento-strategy-report",
+  "name": "Atomic Bento Strategy Report 原子便当战略数据报告看板",
+  "templateName": "AtomicBentoStrategyReportDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向战略复盘、经营分析和高管汇报的深色原子化 Bento 数据报告模板，采用独立可拖拽卡片、深色背景、荧光绿强调、蓝色对比和 Chart.js 图表。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "strategy-review",
+    "business-review",
+    "kpi-dashboard"
+  ],
+  "styleTags": [
+    "atomic-bento",
+    "strategy-report",
+    "dark-dashboard",
+    "chartjs",
+    "sortable-dashboard",
+    "kpi-dashboard"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-sortable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "战略数据报告",
+    "经营复盘",
+    "高管汇报",
+    "KPI 分析",
+    "SaaS 业务健康度分析"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "Chart.js CDN",
+    "Lucide Icons CDN",
+    "SortableJS CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#1a1a1a",
+      "cardBg": "#2a2a2a",
+      "accentGreen": "#c7e54c",
+      "accentBlue": "#425ab8",
+      "textMain": "#ffffff",
+      "textMuted": "#9ca3af",
+      "dark": "#111111"
+    },
+    "fonts": {
+      "body": "Inter, Helvetica Neue, Arial, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "sortableCards": true,
+    "dragHandleOnly": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "header": {
+      "desc": "顶部固定报告信息",
+      "required": true,
+      "hideable": false
+    },
+    "card-summary": {
+      "desc": "核心摘要观点卡",
+      "required": true,
+      "hideable": true
+    },
+    "card-health": {
+      "desc": "系统数据健康度与健康趋势图",
+      "required": true,
+      "hideable": true
+    },
+    "text-revenue": {
+      "desc": "营收观点文本",
+      "required": true,
+      "hideable": true
+    },
+    "kpi-arr": {
+      "desc": "ARR 指标卡",
+      "required": true,
+      "hideable": true
+    },
+    "kpi-npm": {
+      "desc": "净利润率指标卡",
+      "required": true,
+      "hideable": true
+    },
+    "kpi-cac": {
+      "desc": "获客成本指标卡",
+      "required": true,
+      "hideable": true
+    },
+    "kpi-ltv": {
+      "desc": "生命周期价值指标卡",
+      "required": true,
+      "hideable": true
+    },
+    "chart-area-card": {
+      "desc": "营收与成本剪刀差图表",
+      "required": true,
+      "hideable": true
+    },
+    "chart-comp-card": {
+      "desc": "全球市场营收结构环形图",
+      "required": true,
+      "hideable": true
+    },
+    "text-growth": {
+      "desc": "增长观点文本",
+      "required": true,
+      "hideable": true
+    },
+    "chart-trend-card": {
+      "desc": "月度活跃用户趋势图",
+      "required": true,
+      "hideable": true
+    },
+    "chart-cohort-card": {
+      "desc": "客户留存热力图",
+      "required": true,
+      "hideable": true
+    },
+    "text-market": {
+      "desc": "市场竞争观点文本",
+      "required": true,
+      "hideable": true
+    },
+    "chart-penetration-card": {
+      "desc": "核心市场渗透率进度图",
+      "required": true,
+      "hideable": true
+    },
+    "chart-radar-card": {
+      "desc": "产品竞争力雷达图",
+      "required": true,
+      "hideable": true
+    },
+    "text-action": {
+      "desc": "行动计划观点文本",
+      "required": true,
+      "hideable": true
+    },
+    "action-1": {
+      "desc": "行动计划指标卡 1",
+      "required": true,
+      "hideable": true
+    },
+    "action-2": {
+      "desc": "行动计划指标卡 2",
+      "required": true,
+      "hideable": true
+    },
+    "action-3": {
+      "desc": "行动计划指标卡 3",
+      "required": true,
+      "hideable": true
+    },
+    "action-4": {
+      "desc": "行动计划指标卡 4",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字，已补齐 data-slot 和 contenteditable"
+    },
+    "sortableCards": {
+      "type": "array",
+      "selector": "#sortable-container > [data-section]",
+      "desc": "20 个可拖拽原子卡片节点"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "Chart.js 图表与 HTML 图表挂载节点"
+    }
+  },
+  "slotLimits": {
+    "header-title": 28,
+    "section-title": 36,
+    "metric-label": 28,
+    "metric-value": 16,
+    "insight-text": 180
+  },
+  "llmInjectionRules": [
+    "保持 #sortable-container 的直接子节点扁平结构，不要在外层新增大区块。",
+    "所有新增可编辑文字必须同时包含 data-editable=\"true\"、contenteditable=\"true\" 和 data-slot。",
+    "拖拽只能绑定 .drag-handle，避免和正文编辑手势冲突。",
+    "图表数据更新时，必须同步更新对应标题、说明和业务口径。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "sidebarRemoved": true,
+    "sortableDirectChildren": 20,
+    "directChildrenMissingDataSection": 0,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "editableCount": 57,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 21,
+    "chartCount": 7,
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#c7e54c",
+    "presets": [
+      "#c7e54c",
+      "#425ab8",
+      "#38bdf8",
+      "#22c55e",
+      "#f43f5e",
+      "#ffffff"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-brand-green\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-brand-green\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-brand-green\"]"
+      ]
+    }
+  }
+}

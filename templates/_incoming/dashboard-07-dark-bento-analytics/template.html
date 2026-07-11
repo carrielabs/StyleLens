@@ -1,0 +1,663 @@
+<!DOCTYPE html><html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Bento Analytics 数据洞察看板模板</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'tesla-red': '#E31937',
+                        'bento-bg': '#111111',
+                    },
+                    gridTemplateColumns: {
+                        'heatmap': 'repeat(16, minmax(0, 1fr))',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #000000; color: #FFFFFF; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        
+        .bento-card {
+            background-color: #111111;
+            border: 1px solid #262626;
+            border-radius: 16px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .bento-card:hover {
+            border-color: #444444;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8);
+        }
+        
+        .text-super { font-size: clamp(3.5rem, 5vw, 5rem); font-weight: 800; line-height: 1; letter-spacing: -1px; }
+        .motion-hide { opacity: 0; transform: translateY(30px); }
+
+        /* ================= 全局统一悬浮面板 (Universal Tooltip) ================= */
+        .ui-tooltip {
+            position: absolute;
+            bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(5px);
+            background: rgba(34, 34, 34, 0.95); backdrop-filter: blur(4px);
+            border: 1px solid #444; border-radius: 8px; padding: 8px 12px;
+            font-size: 12px; white-space: nowrap; color: #fff; text-align: left;
+            opacity: 0; pointer-events: none; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 50; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        }
+        /* 针对右侧边缘元素的 tooltip 偏转 */
+        .ui-tooltip.align-right { left: auto; right: -10px; transform: translateY(5px); }
+        .group:hover > .ui-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .group:hover > .ui-tooltip.align-right { transform: translateY(0); }
+
+        /* ================= 专门修复：大盘图表的 HTML 绝对切片层 ================= */
+        .hover-slice-container { display: flex; width: 100%; height: 100%; position: absolute; inset: 0; z-index: 20; }
+        .hover-slice { flex: 1; position: relative; cursor: crosshair; }
+        .hover-slice:hover { background-color: rgba(255,255,255,0.03); }
+        
+        .data-dot {
+            position: absolute; left: 50%; width: 12px; height: 12px; border-radius: 50%;
+            transform: translate(-50%, -50%) scale(0.5); opacity: 0; transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+        }
+        .hover-slice:hover .data-dot { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .data-dot.main { background: #E31937; border: 2px solid #fff; box-shadow: 0 0 12px rgba(227,25,55,1); }
+        .data-dot.sub { background: #666; border: 2px solid #222; }
+        
+        .guide-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; border-left: 1px dashed rgba(255,255,255,0.2); opacity: 0; pointer-events: none; }
+        .hover-slice:hover .guide-line { opacity: 1; }
+
+        /* ================= 柱状图状态机 ================= */
+        .bar-group .chart-bar { transition: all 0.3s ease; fill: #E31937; filter: drop-shadow(0 0 2px rgba(227,25,55,0.3)); }
+        .bar-group text.data-label { transition: opacity 0.3s; fill: #E31937; }
+        .bar-container:hover .bar-group .chart-bar { fill: #333333; filter: none; }
+        .bar-container:hover .bar-group text.data-label { opacity: 0; }
+        .bar-container .bar-group:hover .chart-bar { fill: #E31937 !important; filter: drop-shadow(0 0 12px rgba(227,25,55,0.9)) !important; }
+        .bar-container .bar-group:hover text.data-label { opacity: 1 !important; fill: #E31937 !important; font-weight: 900; }
+
+        /* ================= 业务图表微交互 ================= */
+        .quadrant-bubble { transition: all 0.3s; cursor: crosshair; }
+        .quadrant-bubble:hover { filter: brightness(1.2); z-index: 10; transform: scale(1.15) !important; }
+        
+        .donut-segment { transition: all 0.3s; cursor: pointer; }
+        .donut-container:hover .donut-segment { opacity: 0.3; }
+        .donut-container .donut-segment:hover { opacity: 1; stroke-width: 24; filter: drop-shadow(0 0 10px rgba(255,255,255,0.3)); }
+        
+        .heatmap-cell { transition: all 0.2s; cursor: crosshair; }
+        .heatmap-cell:hover { transform: scale(1.4); z-index: 10; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.8); }
+
+        .waterfall-block { transition: all 0.3s; opacity: 0.8; cursor: pointer; }
+        .waterfall-container:hover .waterfall-block { opacity: 0.3; }
+        .waterfall-container .waterfall-block:hover { opacity: 1; transform: translateY(-4px); filter: drop-shadow(0 4px 10px rgba(227,25,55,0.5)); }
+    
+
+        [data-editable="true"] { outline: none; }
+        [data-editable="true"]:focus { box-shadow: 0 0 0 2px rgba(227, 25, 55, 0.35); border-radius: 4px; }
+</style>
+
+    <meta name="description" content="Dark Bento Analytics 暗黑科技 Bento Grid 数据报告模板，包含 15 个数据分析模块和全局 Tooltip。"></head>
+<body class="min-h-screen p-4 md:p-6 lg:p-8 pb-24 font-sans">
+
+    <!-- Header 标题 -->
+    <header data-section="header" class="max-w-[1500px] mx-auto mb-6 motion-hide">
+        <div class="flex flex-col md:flex-row justify-between items-end">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold tracking-tight mb-2">
+                    <span data-editable="true" class="text-tesla-red" data-slot="header-text-01" contenteditable="true">业务生态</span> 全景洞察
+                </h1>
+                <p data-editable="true" class="text-gray-400 text-sm tracking-widest uppercase" data-slot="header-text-02" contenteditable="true">Business Ecosystem Dashboard V6.0</p>
+            </div>
+            <div class="text-right text-xs text-gray-500 hidden md:block">
+                <p>Data refreshed: 2 mins ago</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主容器：4 列网格体系 -->
+    <main data-section="bento-grid" class="max-w-[1500px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 auto-rows-[minmax(200px,auto)]">
+
+        <!-- ================= 卡片 1: [置顶 C位] 高管摘要 Key Takeaways (跨4列) ================= -->
+        <article data-section="key-takeaways" class="bento-card motion-hide col-span-1 md:col-span-2 lg:col-span-4 bg-gradient-to-r from-[#1a1111] to-[#111111] p-6 border-l-4 border-l-tesla-red flex flex-col md:flex-row gap-6 items-center">
+            <div class="shrink-0 flex items-center justify-center w-16 h-16 rounded-full bg-tesla-red/10 border border-tesla-red/20">
+                <i class="fa-solid fa-lightbulb text-2xl text-tesla-red"></i>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-300 flex-grow">
+                <div>
+                    <h3 class="text-white font-bold mb-1">大盘高速破局</h3>
+                    <p data-editable="true" data-slot="key-takeaways-text-03" contenteditable="true">本月营收达成率 <span class="text-tesla-red font-bold">112%</span>，单月净增突破 $42.5M，主要得益于商业化漏斗底部的支付转化率提升。</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold mb-1">矩阵战略奏效</h3>
+                    <p data-editable="true" data-slot="key-takeaways-text-04" contenteditable="true">波士顿矩阵显示，<span class="text-white font-bold">「新零售业务」</span>已跨越盈亏平衡点，正式迈入“明星”象限，建议下放 30% 增长预算。</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold mb-1 text-amber-500">下沉市场阻击战</h3>
+                    <p data-editable="true" data-slot="key-takeaways-text-05" contenteditable="true">预警：核心竞品在下沉市场发力导致我们 <span class="text-white font-bold">次月留存小幅下跌 1.2%</span>，A/B 实验组显示新策略有显著挽回效果。</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- ================= 卡片 2: 宏观大盘 (解决重叠，包含万能 Tooltip) ================= -->
+        <article data-section="market-overview" class="bento-card motion-hide col-span-1 md:col-span-2 row-span-2 p-6 flex flex-col">
+            <!-- 头部：完全物理隔离 -->
+            <div class="flex justify-between items-start z-10">
+                <div>
+                    <h2 data-editable="true" class="text-xl font-bold" data-slot="market-overview-text-06" contenteditable="true">全线活跃企业客户数</h2>
+                    <p data-editable="true" class="text-gray-500 text-xs mt-1" data-slot="market-overview-text-07" contenteditable="true">North Star Metric (Jan - Jun)</p>
+                </div>
+                <div class="px-3 py-1 bg-green-500/10 text-green-500 text-xs rounded-full border border-green-500/20">+12.4% MoM</div>
+            </div>
+            
+            <div class="mt-4 mb-2 z-10">
+                <div class="flex items-baseline gap-4">
+                    <div data-editable="true" class="text-super text-tesla-red" data-slot="market-overview-text-08" contenteditable="true">3,288</div>
+                    <div class="text-gray-400 text-sm">家 (000s)</div>
+                </div>
+            </div>
+
+            <!-- 图表区：占据剩余空间，且 relative 保证绝对定位切片不溢出 -->
+            <div class="flex-grow relative mt-2 w-full min-h-[140px]">
+                <svg viewBox="0 0 400 100" preserveAspectRatio="none" class="absolute inset-0 w-full h-full opacity-90">
+                    <defs>
+                        <linearGradient id="redGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#E31937" stop-opacity="0.4"></stop>
+                            <stop offset="100%" stop-color="#E31937" stop-opacity="0"></stop>
+                        </linearGradient>
+                    </defs>
+                    <path fill="url(#redGrad)" d="M0,80 L66,75 L133,78 L200,55 L266,45 L333,25 L400,10 L400,100 L0,100 Z"></path>
+                    <path fill="none" stroke="#E31937" stroke-width="2" d="M0,80 L66,75 L133,78 L200,55 L266,45 L333,25 L400,10"></path>
+                </svg>
+
+                <!-- HTML 切片层与 Tooltip -->
+                <div class="hover-slice-container">
+                    <div class="hover-slice group">
+                        <div class="guide-line"></div><div class="data-dot main" style="top: 80%"></div>
+                        <div class="ui-tooltip" data-tooltip-slot="market-overview-tooltip-01"><strong>Jan</strong><br>客户数: 1,850k</div>
+                    </div>
+                    <div class="hover-slice group">
+                        <div class="guide-line"></div><div class="data-dot main" style="top: 75%"></div>
+                        <div class="ui-tooltip" data-tooltip-slot="market-overview-tooltip-02"><strong>Feb</strong><br>客户数: 2,100k</div>
+                    </div>
+                    <div class="hover-slice group">
+                        <div class="guide-line"></div><div class="data-dot main" style="top: 78%"></div>
+                        <div class="ui-tooltip" data-tooltip-slot="market-overview-tooltip-03"><strong>Mar</strong><br>客户数: 1,980k</div>
+                    </div>
+                    <div class="hover-slice group">
+                        <div class="guide-line"></div><div class="data-dot main" style="top: 55%"></div>
+                        <div class="ui-tooltip" data-tooltip-slot="market-overview-tooltip-04"><strong>Apr</strong><br>客户数: 2,600k</div>
+                    </div>
+                    <div class="hover-slice group">
+                        <div class="guide-line"></div><div class="data-dot main" style="top: 45%"></div>
+                        <div class="ui-tooltip" data-tooltip-slot="market-overview-tooltip-05"><strong>May</strong><br>客户数: 2,850k</div>
+                    </div>
+                    <div class="hover-slice group">
+                        <div class="guide-line"></div><div class="data-dot main" style="top: 25%"></div>
+                        <div class="ui-tooltip align-right" data-tooltip-slot="market-overview-tooltip-06"><strong>Jun</strong><br><span class="text-tesla-red font-bold">客户数: 3,288k</span></div>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- 卡片 3: 次级指标 -->
+        <article data-section="metric-card-1" class="bento-card motion-hide p-6 flex flex-col justify-center group cursor-default">
+            <h2 data-editable="true" class="text-lg font-bold" data-slot="metric-card-1-text-09" contenteditable="true">总营收预估</h2>
+            <p data-editable="true" class="text-gray-500 text-xs mt-1" data-slot="metric-card-1-text-10" contenteditable="true">Est. Revenue</p>
+            <div class="mt-6 mb-2 text-4xl font-bold text-white">$42.5M</div>
+            <div class="w-full bg-gray-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div class="bg-tesla-red h-full rounded-full transition-all duration-500 group-hover:scale-x-105 origin-left" style="width: 85%"></div>
+            </div>
+            <div class="ui-tooltip" data-tooltip-slot="metric-card-1-tooltip-07">完成年度目标的 85%</div>
+        </article>
+
+        <!-- 卡片 4: 次级指标 -->
+        <article data-section="metric-card-2" class="bento-card motion-hide p-6 flex flex-col justify-center">
+            <h2 data-editable="true" class="text-lg font-bold" data-slot="metric-card-2-text-11" contenteditable="true">月活跃用户</h2>
+            <p data-editable="true" class="text-gray-500 text-xs mt-1" data-slot="metric-card-2-text-12" contenteditable="true">MAU Growth</p>
+            <div class="mt-6">
+                <div data-editable="true" class="text-4xl font-bold text-white mb-1" data-slot="metric-card-2-text-13" contenteditable="true">1.24M</div>
+                <p data-editable="true" class="text-xs text-tesla-red" data-slot="metric-card-2-text-14" contenteditable="true"><i class="fa-solid fa-arrow-up mr-1"></i>+5.2% vs last month</p>
+            </div>
+        </article>
+
+        <!-- ================= 卡片 5: 转化漏斗 (跨2列) ================= -->
+        <article data-section="funnel-analysis" class="bento-card motion-hide p-6 col-span-1 md:col-span-2 flex flex-col justify-center">
+            <h2 data-editable="true" class="text-lg font-bold" data-slot="funnel-analysis-text-15" contenteditable="true">全链路商业化漏斗</h2>
+            <p data-editable="true" class="text-gray-500 text-xs mt-1 mb-6" data-slot="funnel-analysis-text-16" contenteditable="true">User Conversion Path</p>
+            
+            <div class="space-y-2 relative">
+                <div class="w-full group">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-gray-300">曝光 (Impression)</span> <span class="font-bold text-gray-400">10,000</span>
+                    </div>
+                    <div class="w-full bg-gray-800 h-3 rounded-full overflow-hidden">
+                        <div class="bg-gray-600 h-full w-full transition-all group-hover:bg-gray-500"></div>
+                    </div>
+                </div>
+                
+                <div class="h-5 ml-8 border-l-2 border-gray-700 border-dashed pl-3 flex items-center text-[10px] text-gray-500">
+                    <i class="fa-solid fa-arrow-down mr-1.5"></i> 转化率: <span class="text-white ml-1 font-bold">45.0%</span>
+                </div>
+
+                <div class="w-full group">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-gray-300">点击 (Click)</span> <span class="font-bold text-gray-400">4,500</span>
+                    </div>
+                    <div class="w-full bg-gray-800 h-3 rounded-full overflow-hidden">
+                        <div class="bg-gray-500 h-full w-[45%] transition-all group-hover:bg-gray-400"></div>
+                    </div>
+                </div>
+
+                <div class="h-5 ml-8 border-l-2 border-gray-700 border-dashed pl-3 flex items-center text-[10px] text-gray-500">
+                    <i class="fa-solid fa-arrow-down mr-1.5"></i> 支付率: <span class="text-tesla-red ml-1 font-bold">27.7%</span>
+                </div>
+
+                <div class="w-full group">
+                    <div class="flex justify-between text-xs mb-1 text-tesla-red font-bold">
+                        <span>付费 (Purchase)</span> <span>1,250</span>
+                    </div>
+                    <div class="w-full bg-gray-800 h-3 rounded-full overflow-hidden">
+                        <div class="bg-tesla-red h-full w-[12.5%] transition-all shadow-[0_0_8px_#E31937] group-hover:brightness-125"></div>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- 卡片 6: 营收柱状图 -->
+        <article data-section="bar-chart" class="bento-card motion-hide col-span-1 md:col-span-2 p-6 flex flex-col">
+            <div class="mb-4">
+                <h2 data-editable="true" class="text-lg font-bold" data-slot="bar-chart-text-17" contenteditable="true">月度总营收趋势</h2>
+                <p data-editable="true" class="text-gray-500 text-xs mt-1" data-slot="bar-chart-text-18" contenteditable="true">Monthly Revenue ($ Millions)</p>
+            </div>
+            <div class="flex-grow w-full bar-container relative pt-4 cursor-crosshair">
+                <svg viewBox="0 0 600 150" class="w-full h-full overflow-visible">
+                    <line x1="0" y1="30" x2="600" y2="30" stroke="#222" stroke-dasharray="4"></line>
+                    <line x1="0" y1="80" x2="600" y2="80" stroke="#222" stroke-dasharray="4"></line>
+                    <line x1="0" y1="130" x2="600" y2="130" stroke="#444"></line>
+                    
+                    <g class="bar-group">
+                        <rect x="30" y="70" width="40" height="60" rx="4" class="chart-bar"></rect>
+                        <text x="50" y="60" font-size="14" text-anchor="middle" class="font-bold data-label">21.5</text>
+                        <text x="50" y="145" fill="#666" font-size="12" text-anchor="middle">Jan</text>
+                    </g>
+                    <g class="bar-group">
+                        <rect x="130" y="50" width="40" height="80" rx="4" class="chart-bar"></rect>
+                        <text x="150" y="40" font-size="14" text-anchor="middle" class="font-bold data-label">35.2</text>
+                        <text x="150" y="145" fill="#666" font-size="12" text-anchor="middle">Feb</text>
+                    </g>
+                    <g class="bar-group">
+                        <rect x="230" y="80" width="40" height="50" rx="4" class="chart-bar"></rect>
+                        <text x="250" y="70" font-size="14" text-anchor="middle" class="font-bold data-label">18.4</text>
+                        <text x="250" y="145" fill="#666" font-size="12" text-anchor="middle">Mar</text>
+                    </g>
+                    <g class="bar-group">
+                        <rect x="330" y="30" width="40" height="100" rx="4" class="chart-bar"></rect>
+                        <text x="350" y="20" font-size="14" text-anchor="middle" class="font-bold data-label">52.8</text>
+                        <text x="350" y="145" fill="#666" font-size="12" text-anchor="middle">Apr</text>
+                    </g>
+                    <g class="bar-group">
+                        <rect x="430" y="60" width="40" height="70" rx="4" class="chart-bar"></rect>
+                        <text x="450" y="50" font-size="14" text-anchor="middle" class="font-bold data-label">28.9</text>
+                        <text x="450" y="145" fill="#666" font-size="12" text-anchor="middle">May</text>
+                    </g>
+                    <g class="bar-group">
+                        <rect x="530" y="40" width="40" height="90" rx="4" class="chart-bar"></rect>
+                        <text x="550" y="30" font-size="14" text-anchor="middle" class="font-bold data-label">42.5</text>
+                        <text x="550" y="145" fill="#666" font-size="12" text-anchor="middle">Jun</text>
+                    </g>
+                </svg>
+            </div>
+        </article>
+
+        <!-- ================= 卡片 7: 多线对比图 (加高 min-h-[350px]) ================= -->
+        <article data-section="multi-line-chart" class="bento-card motion-hide col-span-1 md:col-span-2 p-6 flex flex-col min-h-[350px]">
+            <div class="flex justify-between items-start mb-4 z-10">
+                <div>
+                    <h2 data-editable="true" class="text-lg font-bold" data-slot="multi-line-chart-text-19" contenteditable="true">核心App流量走势 (DAU)</h2>
+                    <p data-editable="true" class="text-gray-500 text-xs mt-1" data-slot="multi-line-chart-text-20" contenteditable="true">Traffic Trends: Douyin vs Kuaishou (Millions)</p>
+                </div>
+                <div class="flex gap-4 text-xs bg-[#1a1a1a] px-3 py-1.5 rounded-md border border-gray-800">
+                    <div class="flex items-center gap-1.5"><div class="w-3 h-0.5 bg-tesla-red"></div> <span class="text-white">抖音</span></div>
+                    <div class="flex items-center gap-1.5"><div class="w-3 h-0.5 bg-gray-500"></div> <span class="text-gray-400">竞品 K</span></div>
+                </div>
+            </div>
+            
+            <div class="flex-grow relative w-full mt-4">
+                <svg viewBox="0 0 500 150" preserveAspectRatio="none" class="absolute inset-0 w-full h-full">
+                    <line x1="0" y1="120" x2="500" y2="120" stroke="#333" stroke-dasharray="2"></line>
+                    <!-- 竞品K (灰线) -->
+                    <path fill="none" stroke="#666" stroke-width="2" d="M0,115 L125,110 L250,105 L375,110 L500,95"></path>
+                    <!-- 抖音 (红线) -->
+                    <path fill="none" stroke="#E31937" stroke-width="3" filter="drop-shadow(0 4px 6px rgba(227,25,55,0.4))" d="M0,120 L125,90 L250,60 L375,65 L500,30"></path>
+                </svg>
+
+                <div class="hover-slice-container">
+                    <div class="hover-slice group">
+                        <div class="guide-line"></div><div class="data-dot main" style="top: 80%"></div><div class="data-dot sub" style="top: 76%"></div>
+                        <div class="ui-tooltip" data-tooltip-slot="multi-line-chart-tooltip-08">
+                            <div class="text-gray-400 mb-1 border-b border-gray-600 pb-1">Q1</div>
+                            <div class="text-tesla-red font-bold">抖音: 710M</div>
+                            <div class="text-gray-300">竞品 K: 380M</div>
+                        </div>
+                    </div>
+                    <div class="hover-slice group">
+                        <div class="guide-line"></div><div class="data-dot main" style="top: 60%"></div><div class="data-dot sub" style="top: 73%"></div>
+                        <div class="ui-tooltip" data-tooltip-slot="multi-line-chart-tooltip-09">
+                            <div class="text-gray-400 mb-1 border-b border-gray-600 pb-1">Q2</div>
+                            <div class="text-tesla-red font-bold">抖音: 780M</div>
+                            <div class="text-gray-300">竞品 K: 395M</div>
+                        </div>
+                    </div>
+                    <div class="hover-slice group">
+                        <div class="guide-line"></div><div class="data-dot main" style="top: 40%"></div><div class="data-dot sub" style="top: 70%"></div>
+                        <div class="ui-tooltip" data-tooltip-slot="multi-line-chart-tooltip-10">
+                            <div class="text-gray-400 mb-1 border-b border-gray-600 pb-1">Q3</div>
+                            <div class="text-tesla-red font-bold">抖音: 765M</div>
+                            <div class="text-gray-300">竞品 K: 370M</div>
+                        </div>
+                    </div>
+                    <div class="hover-slice group">
+                        <div class="guide-line"></div><div class="data-dot main" style="top: 20%"></div><div class="data-dot sub" style="top: 63%"></div>
+                        <div class="ui-tooltip align-right" data-tooltip-slot="multi-line-chart-tooltip-11">
+                            <div class="text-gray-400 mb-1 border-b border-gray-600 pb-1">Q4 (Now)</div>
+                            <div class="text-tesla-red font-bold">抖音: 850M</div>
+                            <div class="text-gray-300">竞品 K: 410M</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- ================= 卡片 8: 波士顿矩阵 (加高 min-h-[350px] + Tooltip) ================= -->
+        <article data-section="quadrant-analysis" class="bento-card motion-hide col-span-1 md:col-span-2 p-6 flex flex-col min-h-[350px]">
+            <h2 data-editable="true" class="text-lg font-bold" data-slot="quadrant-analysis-text-21" contenteditable="true">集团核心业务矩阵 (波士顿)</h2>
+            <p data-editable="true" class="text-gray-500 text-xs mt-1 mb-6" data-slot="quadrant-analysis-text-22" contenteditable="true">ByteDance Business Units: Market Share vs. Growth</p>
+            
+            <div class="flex-grow relative w-full border-l border-b border-gray-600 rounded-sm">
+                <!-- 四象限背景 -->
+                <div class="absolute inset-0 grid grid-cols-2 grid-rows-2">
+                    <div class="border-r border-b border-gray-700 bg-white/[0.02] flex p-3 text-xs text-gray-500">问题 (Question Marks)</div>
+                    <div class="border-b border-gray-700 bg-tesla-red/[0.03] flex justify-end p-3 text-xs text-tesla-red/50">明星 (Stars)</div>
+                    <div class="border-r border-gray-700 bg-transparent flex items-end p-3 text-xs text-gray-600">瘦狗 (Dogs)</div>
+                    <div class="bg-white/[0.01] flex items-end justify-end p-3 text-xs text-gray-500">现金牛 (Cash Cows)</div>
+                </div>
+                
+                <span class="absolute -left-8 top-1/2 -translate-y-1/2 -rotate-90 text-xs text-gray-400">市场增长率</span>
+                <span class="absolute bottom-[-24px] left-1/2 -translate-x-1/2 text-xs text-gray-400">相对市场份额</span>
+
+                <!-- 真实业务数据散点 (自带通用 Tooltip) -->
+                
+                <!-- 抖音 -->
+                <div class="absolute quadrant-bubble group" style="top: 20%; left: 80%; transform: translate(-50%, -50%);">
+                    <div class="w-16 h-16 bg-tesla-red rounded-full opacity-90 shadow-[0_0_20px_rgba(227,25,55,0.6)] flex items-center justify-center">
+                        <span class="text-xs font-bold text-white">抖音</span>
+                    </div>
+                    <div class="ui-tooltip" data-tooltip-slot="quadrant-analysis-tooltip-12">
+                        <div class="text-white font-bold mb-1 border-b border-gray-600 pb-1">抖音 (Stars)</div>
+                        <div class="text-gray-300">市场份额: <span class="text-tesla-red">80%</span></div>
+                        <div class="text-gray-300">年增长率: <span class="text-tesla-red">80%</span></div>
+                        <div class="text-gray-400 mt-1">当前集团最大增长引擎</div>
+                    </div>
+                </div>
+
+                <!-- 巨量引擎 -->
+                <div class="absolute quadrant-bubble group" style="top: 75%; left: 70%; transform: translate(-50%, -50%);">
+                    <div class="w-12 h-12 bg-gray-500 rounded-full opacity-80 flex items-center justify-center">
+                        <span class="text-[10px] text-white">巨量</span>
+                    </div>
+                    <div class="ui-tooltip" data-tooltip-slot="quadrant-analysis-tooltip-13">
+                        <div class="text-white font-bold mb-1 border-b border-gray-600 pb-1">巨量引擎 (Cash Cows)</div>
+                        <div class="text-gray-300">市场份额: 70%</div>
+                        <div class="text-gray-300">年增长率: 25%</div>
+                        <div class="text-gray-400 mt-1">核心现金流来源，高净利</div>
+                    </div>
+                </div>
+
+                <!-- 飞书 -->
+                <div class="absolute quadrant-bubble group" style="top: 30%; left: 25%; transform: translate(-50%, -50%);">
+                    <div class="w-10 h-10 bg-tesla-red/70 rounded-full border border-tesla-red flex items-center justify-center">
+                        <span class="text-[10px] text-white">飞书</span>
+                    </div>
+                    <div class="ui-tooltip" data-tooltip-slot="quadrant-analysis-tooltip-14">
+                        <div class="text-white font-bold mb-1 border-b border-gray-600 pb-1">飞书 (Question Marks)</div>
+                        <div class="text-gray-300">市场份额: 25%</div>
+                        <div class="text-gray-300">年增长率: <span class="text-tesla-red">70%</span></div>
+                        <div class="text-gray-400 mt-1">高增长潜力，需大量投入</div>
+                    </div>
+                </div>
+
+                <!-- PICO -->
+                <div class="absolute quadrant-bubble group" style="top: 85%; left: 15%; transform: translate(-50%, -50%);">
+                    <div class="w-6 h-6 bg-gray-700 rounded-full"></div>
+                    <span class="absolute top-full mt-1 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">PICO</span>
+                    <div class="ui-tooltip" data-tooltip-slot="quadrant-analysis-tooltip-15">
+                        <div class="text-white font-bold mb-1 border-b border-gray-600 pb-1">PICO (Dogs)</div>
+                        <div class="text-gray-300">市场份额: 15%</div>
+                        <div class="text-gray-300">年增长率: 15%</div>
+                        <div class="text-gray-400 mt-1">硬件探索期，低速慢跑</div>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- ================= 卡片 9: 活跃热力图 (带 Hover Tooltips) ================= -->
+        <article data-section="activity-heatmap" class="bento-card motion-hide col-span-1 md:col-span-2 p-6 flex flex-col justify-center">
+            <div class="flex justify-between items-end mb-4">
+                <div>
+                    <h2 data-editable="true" class="text-lg font-bold" data-slot="activity-heatmap-text-23" contenteditable="true">开发者平台高频活跃热力图</h2>
+                    <p data-editable="true" class="text-gray-500 text-xs mt-1" data-slot="activity-heatmap-text-24" contenteditable="true">Platform Activity Matrix (Last 16 Weeks)</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-2">
+                <div class="flex flex-col justify-between text-[10px] text-gray-600 py-1">
+                    <span>Mon</span><span>Wed</span><span>Fri</span>
+                </div>
+                <div class="grid grid-cols-heatmap gap-1 flex-grow">
+                    <!-- 为节省代码体积，这里仅展示部分带有 Tooltip 的高亮交互方块，其余为普通方块 -->
+                    
+                    <!-- 普通方块 (代表旧数据) -->
+                    <div class="aspect-square bg-gray-800 rounded-[2px] heatmap-cell"></div>
+                    <div class="aspect-square bg-tesla-red/20 rounded-[2px] heatmap-cell"></div>
+                    <div class="aspect-square bg-tesla-red/40 rounded-[2px] heatmap-cell"></div>
+                    <div class="aspect-square bg-gray-800 rounded-[2px] heatmap-cell"></div>
+                    
+                    <!-- 带有高级 Tooltip 的方块 (示范) -->
+                    <div class="aspect-square bg-tesla-red/80 rounded-[2px] heatmap-cell group relative">
+                        <div class="ui-tooltip w-32" data-tooltip-slot="activity-heatmap-tooltip-16"><strong>Oct 12</strong><br>API 调用: 45,210 次<br><span class="text-tesla-red">活动峰值日</span></div>
+                    </div>
+                    <div class="aspect-square bg-tesla-red rounded-[2px] heatmap-cell group relative shadow-[0_0_5px_#E31937]">
+                        <div class="ui-tooltip w-32" data-tooltip-slot="activity-heatmap-tooltip-17"><strong>Oct 13</strong><br>API 调用: 68,900 次<br><span class="text-tesla-red">历史最高点</span></div>
+                    </div>
+                    <div class="aspect-square bg-tesla-red/60 rounded-[2px] heatmap-cell group relative">
+                        <div class="ui-tooltip w-32" data-tooltip-slot="activity-heatmap-tooltip-18"><strong>Oct 14</strong><br>API 调用: 32,100 次</div>
+                    </div>
+                    
+                    <!-- 批量填充剩余格子形成矩阵感 -->
+                    <script>
+                        // 仅用于模板占位渲染，实际应用由 LLM 注入 112 个真实 div
+                        for(let i=0; i<105; i++) {
+                            const opacity = [20, 40, 60, 80, 100];
+                            const randomOpacity = Math.random() > 0.4 ? opacity[Math.floor(Math.random() * opacity.length)] : 0;
+                            let cls = randomOpacity ? `bg-tesla-red/${randomOpacity}` : 'bg-gray-800';
+                            if (randomOpacity === 100) cls = 'bg-tesla-red';
+                            document.write(`<div class="aspect-square ${cls} rounded-[2px] heatmap-cell group relative"><div class="ui-tooltip" data-tooltip-slot="activity-heatmap-dynamic-tooltip-${i}">活跃点 ${i}</div></div>`);
+                        }
+                    </script>
+                </div>
+            </div>
+        </article>
+
+        <!-- ================= 卡片 10: 营收环形图 ================= -->
+        <article data-section="revenue-donut" class="bento-card motion-hide col-span-1 p-6 flex flex-col justify-center donut-container">
+            <h2 data-editable="true" class="text-lg font-bold" data-slot="revenue-donut-text-25" contenteditable="true">业务营收占比</h2>
+            <div class="flex flex-col items-center mt-4">
+                <div class="relative w-32 h-32 group">
+                    <svg viewBox="0 0 100 100" class="w-full h-full transform -rotate-90">
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#222" stroke-width="15"></circle>
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#E31937" stroke-width="15" stroke-dasharray="125 251" stroke-dashoffset="0" class="donut-segment"></circle>
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#666" stroke-width="15" stroke-dasharray="75 251" stroke-dashoffset="-125" class="donut-segment"></circle>
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#333" stroke-width="15" stroke-dasharray="51 251" stroke-dashoffset="-200" class="donut-segment"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                        <span class="text-xl font-bold text-white">50%</span>
+                        <span class="text-[10px] text-gray-500 uppercase mt-0.5">SaaS</span>
+                    </div>
+                </div>
+                <div class="flex gap-4 mt-6 text-xs text-gray-300">
+                    <div class="flex items-center gap-1"><div class="w-2 h-2 bg-tesla-red"></div> SaaS</div>
+                    <div class="flex items-center gap-1"><div class="w-2 h-2 bg-gray-500"></div> Ads</div>
+                    <div class="flex items-center gap-1"><div class="w-2 h-2 bg-gray-800 border border-gray-600"></div> H/W</div>
+                </div>
+            </div>
+        </article>
+
+        <!-- ================= 卡片 11: UE 单元经济 (LTV/CAC) ================= -->
+        <article data-section="unit-economics" class="bento-card motion-hide col-span-1 p-6 flex flex-col justify-center">
+            <h2 data-editable="true" class="text-lg font-bold" data-slot="unit-economics-text-26" contenteditable="true">单元经济模型 (UE)</h2>
+            <p data-editable="true" class="text-gray-500 text-xs mt-1 mb-5" data-slot="unit-economics-text-27" contenteditable="true">LTV vs. CAC Health Check</p>
+            
+            <div class="flex items-end justify-around h-28 border-b border-gray-800 pb-2">
+                <div class="flex flex-col items-center group w-1/3 relative">
+                    <div class="w-10 h-12 bg-gray-600 rounded-t transition-all group-hover:bg-gray-400"></div>
+                    <span class="text-[10px] text-gray-500 mt-2 font-bold">CAC</span>
+                    <div class="ui-tooltip" data-tooltip-slot="unit-economics-tooltip-19">获客成本 (CAC): <br>$120 / User</div>
+                </div>
+                <div class="flex flex-col items-center group w-1/3 relative">
+                    <div class="w-10 h-24 bg-tesla-red rounded-t transition-all group-hover:shadow-[0_0_12px_#E31937]"></div>
+                    <span class="text-[10px] text-gray-500 mt-2 font-bold text-tesla-red">LTV</span>
+                    <div class="ui-tooltip" data-tooltip-slot="unit-economics-tooltip-20">生命周期价值 (LTV): <br><span class="text-tesla-red">$450 / User</span></div>
+                </div>
+            </div>
+            <div class="text-center mt-4 text-xs text-gray-400">LTV/CAC Ratio: <span class="font-bold text-white text-lg ml-1">3.75x</span></div>
+        </article>
+
+        <!-- ================= 卡片 12: 异动归因瀑布图 (跨2列) ================= -->
+        <article data-section="attribution-waterfall" class="bento-card motion-hide col-span-1 md:col-span-2 p-6 flex flex-col">
+            <h2 data-editable="true" class="text-lg font-bold" data-slot="attribution-waterfall-text-28" contenteditable="true">月度利润异动归因</h2>
+            <div class="flex-grow w-full flex items-end justify-between waterfall-container pt-8 pb-4 relative mt-4 border-b border-gray-800 border-dashed">
+                
+                <div class="w-[18%] flex flex-col items-center group relative">
+                    <div class="w-full h-16 bg-gray-700 rounded-t-sm waterfall-block"></div>
+                    <span class="text-[10px] text-gray-400 mt-2">上月基线</span>
+                    <div class="ui-tooltip" data-tooltip-slot="attribution-waterfall-tooltip-21">上月利润基准: 100k</div>
+                </div>
+                
+                <div class="w-[18%] flex flex-col items-center group relative" style="margin-bottom: 64px;">
+                    <div class="w-full h-10 bg-tesla-red rounded-sm waterfall-block"></div>
+                    <span class="text-[10px] text-gray-400 mt-2 absolute -bottom-6">新品上市</span>
+                    <div class="ui-tooltip" data-tooltip-slot="attribution-waterfall-tooltip-22">增量贡献: <span class="text-tesla-red">+25k</span></div>
+                </div>
+                
+                <div class="w-[18%] flex flex-col items-center group relative" style="margin-bottom: 104px;">
+                    <div class="w-full h-6 bg-tesla-red/70 rounded-sm waterfall-block"></div>
+                    <span class="text-[10px] text-gray-400 mt-2 absolute -bottom-6">降本增效</span>
+                    <div class="ui-tooltip" data-tooltip-slot="attribution-waterfall-tooltip-23">成本节约: <span class="text-tesla-red">+12k</span></div>
+                </div>
+                
+                <div class="w-[18%] flex flex-col items-center group relative" style="margin-bottom: 110px;">
+                    <div class="w-full h-8 bg-gray-600 rounded-sm waterfall-block"></div>
+                    <span class="text-[10px] text-gray-400 mt-2 absolute -bottom-6">竞品冲击</span>
+                    <div class="ui-tooltip" data-tooltip-slot="attribution-waterfall-tooltip-24">流失损失: -18k</div>
+                </div>
+                
+                <div class="w-[18%] flex flex-col items-center group relative">
+                    <div class="w-full h-24 bg-white/10 border border-white/20 rounded-t-sm waterfall-block"></div>
+                    <span class="text-[10px] text-white font-bold mt-2">本月结余</span>
+                    <div class="ui-tooltip" data-tooltip-slot="attribution-waterfall-tooltip-25">最终利润: 119k</div>
+                </div>
+            </div>
+        </article>
+
+        <!-- ================= 卡片 13: A/B 实验对比 ================= -->
+        <article data-section="ab-testing" class="bento-card motion-hide col-span-1 p-6 flex flex-col justify-center">
+            <h2 data-editable="true" class="text-lg font-bold" data-slot="ab-testing-text-29" contenteditable="true">策略 A/B 实验</h2>
+            <p data-editable="true" class="text-gray-500 text-xs mt-1 mb-6" data-slot="ab-testing-text-30" contenteditable="true">Exp 042 (CTR)</p>
+            
+            <div class="space-y-5">
+                <div class="group relative">
+                    <div class="flex justify-between text-xs mb-1 text-gray-400">
+                        <span>Control (对照组)</span> <span>3.2%</span>
+                    </div>
+                    <div class="w-full bg-gray-800 h-2 rounded-full"><div class="bg-gray-500 h-full w-[40%]"></div></div>
+                </div>
+                
+                <div class="group relative">
+                    <div class="flex justify-between text-xs mb-1 text-tesla-red font-bold">
+                        <span>Variant A (实验组)</span> <span>4.8% <i class="fa-solid fa-caret-up ml-1"></i></span>
+                    </div>
+                    <div class="w-full bg-gray-800 h-2 rounded-full"><div class="bg-tesla-red h-full w-[65%] shadow-[0_0_8px_#E31937]"></div></div>
+                    <div class="ui-tooltip" data-tooltip-slot="ab-testing-tooltip-26">显著性 P-value &lt; 0.05</div>
+                </div>
+            </div>
+        </article>
+
+        <!-- ================= 卡片 14: 能力雷达图 ================= -->
+        <article data-section="radar-chart" class="bento-card motion-hide col-span-1 p-6 flex flex-col items-center justify-center">
+            <div class="w-full text-left mb-2">
+                <h2 data-editable="true" class="text-lg font-bold" data-slot="radar-chart-text-31" contenteditable="true">生态竞争力模型</h2>
+            </div>
+            <div class="relative w-32 h-32 mt-2 group cursor-crosshair">
+                <svg viewBox="0 0 100 100" class="w-full h-full overflow-visible">
+                    <polygon points="50,10 88,38 74,82 26,82 12,38" fill="none" stroke="#222" stroke-width="1"></polygon>
+                    <line x1="50" y1="50" x2="50" y2="10" stroke="#222"></line>
+                    <line x1="50" y1="50" x2="88" y2="38" stroke="#222"></line>
+                    <line x1="50" y1="50" x2="74" y2="82" stroke="#222"></line>
+                    <line x1="50" y1="50" x2="26" y2="82" stroke="#222"></line>
+                    <line x1="50" y1="50" x2="12" y2="38" stroke="#222"></line>
+                    
+                    <polygon points="50,18 78,38 60,70 30,60 20,40" fill="rgba(227,25,55,0.2)" stroke="#E31937" stroke-width="2" filter="drop-shadow(0 0 4px rgba(227,25,55,0.5))"></polygon>
+                    
+                    <text x="50" y="5" fill="#666" font-size="8" text-anchor="middle">技术</text>
+                    <text x="96" y="38" fill="#666" font-size="8" text-anchor="middle">留存</text>
+                    <text x="80" y="90" fill="#666" font-size="8" text-anchor="middle">商业</text>
+                    <text x="20" y="90" fill="#666" font-size="8" text-anchor="middle">活跃</text>
+                    <text x="4" y="38" fill="#666" font-size="8" text-anchor="middle">口碑</text>
+                </svg>
+                <div class="ui-tooltip w-32" data-tooltip-slot="radar-chart-tooltip-27"><strong>综合评分: 8.5</strong><br>商业化能力突出，口碑稍有短板。</div>
+            </div>
+        </article>
+
+        <!-- ================= 卡片 15: 实时预警池 ================= -->
+        <article data-section="realtime-alerts" class="bento-card motion-hide col-span-1 md:col-span-4 lg:col-span-4 p-6 flex flex-col md:flex-row items-center gap-6 border border-gray-800 bg-[#161111]">
+            <h2 class="text-lg font-bold flex items-center gap-2 whitespace-nowrap shrink-0">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> 实时预警
+            </h2>
+            <div class="flex-grow flex flex-wrap gap-4 text-xs">
+                <div class="bg-black/50 px-3 py-1.5 rounded border border-gray-800 flex items-center gap-2 group relative">
+                    <span class="text-gray-500 font-mono">10:24</span> <span>支付链路延迟 &gt;200ms</span>
+                    <div class="ui-tooltip" data-tooltip-slot="realtime-alerts-tooltip-28">影响范围: 华东区节点</div>
+                </div>
+                <div class="bg-tesla-red/10 px-3 py-1.5 rounded border border-tesla-red/20 flex items-center gap-2 group relative">
+                    <span class="text-gray-500 font-mono">09:12</span> <span class="text-tesla-red">广告点击率跌破 1% 阈值</span>
+                    <div class="ui-tooltip" data-tooltip-slot="realtime-alerts-tooltip-29">算法组已介入排查</div>
+                </div>
+            </div>
+        </article>
+
+    </main>
+
+    <footer class="max-w-[1500px] mx-auto mt-12 text-center text-gray-600 text-xs motion-hide">
+        <p>AI Generated Dashboard • Powered by Data Engine V6.0 (15-Card Mastery Edition)</p>
+    </footer>
+
+    <script type="module">
+        import { animate, inView } from "https://cdn.jsdelivr.net/npm/motion@11.11.13/+esm";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const elements = document.querySelectorAll('.motion-hide');
+            inView(elements, (info) => {
+                animate(info.target, 
+                    { opacity: 1, y: 0 }, 
+                    { duration: 0.6, easing: [0.16, 1, 0.3, 1] }
+                );
+            });
+        });
+    </script>
+
+</body></html>

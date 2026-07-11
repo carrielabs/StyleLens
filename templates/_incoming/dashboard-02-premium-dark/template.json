@@ -1,0 +1,143 @@
+{
+  "id": "dashboard-02-premium-dark",
+  "name": "Premium Dark 企业级数据报告看板",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "bi-dashboard"
+  ],
+  "styleTags": [
+    "premium-dark",
+    "spotify-dark",
+    "high-density",
+    "enterprise-bi"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "管理层经营汇报",
+    "运营数据分析",
+    "BI 自动化报告",
+    "深色大屏展示"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "Chart.js CDN",
+    "Lucide Icons CDN"
+  ],
+  "editableCapabilities": {
+    "textEdit": true,
+    "chartDataDrive": true,
+    "showHideSections": true,
+    "themeDrivenByGlobal": true
+  },
+  "integrationNotes": {
+    "localToolbarRemoved": true,
+    "reason": "原始文件自带预览、编辑、主题切换和导出工具箱；这些属于平台全局能力，入库版只保留模板页面和可编辑标记。",
+    "previewSource": "用户提供的局部截图，未运行浏览器重新生成完整预览。"
+  },
+  "supportedSections": {
+    "header": {
+      "desc": "报告标题、Logo、数据时间和覆盖范围",
+      "required": true,
+      "hideable": false
+    },
+    "kpi": {
+      "desc": "核心 KPI 指标卡",
+      "required": true,
+      "hideable": false
+    },
+    "ai-insights": {
+      "desc": "智能分析与管理层结论",
+      "required": true,
+      "hideable": true
+    },
+    "visual-grid-left": {
+      "desc": "地理热力分布与时间趋势图",
+      "required": true,
+      "hideable": false
+    },
+    "visual-grid-right": {
+      "desc": "双排行榜图表区",
+      "required": true,
+      "hideable": false
+    },
+    "data-table": {
+      "desc": "可下钻验证的数据明细表",
+      "required": true,
+      "hideable": true
+    },
+    "footer": {
+      "desc": "报告归档信息与说明链接",
+      "required": false,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "report_title": {
+      "type": "text",
+      "maxLength": 80,
+      "desc": "报告主标题"
+    },
+    "report_subtitle": {
+      "type": "text",
+      "maxLength": 120,
+      "desc": "报告副标题、数据周期或技术来源"
+    },
+    "metric_cards": {
+      "type": "array",
+      "desc": "KPI 卡片列表，包含标题、数值、趋势和说明"
+    },
+    "insights": {
+      "type": "array",
+      "desc": "结构化分析结论列表"
+    },
+    "trend_chart": {
+      "type": "chart",
+      "chartId": "trendChart",
+      "desc": "时间序列趋势图数据"
+    },
+    "ranking_primary": {
+      "type": "chart",
+      "chartId": "rankingChartPrimary",
+      "desc": "主排行榜横向柱状图"
+    },
+    "ranking_secondary": {
+      "type": "chart",
+      "chartId": "rankingChartSecondary",
+      "desc": "次排行榜横向柱状图"
+    },
+    "data_rows": {
+      "type": "array",
+      "desc": "明细下钻表格数据"
+    }
+  },
+  "editorTheme": {
+    "defaultColor": "#1db954",
+    "presets": [
+      "#1db954",
+      "#38bdf8",
+      "#7c3aed",
+      "#f97316",
+      "#d9eb26",
+      "#f43f5e"
+    ],
+    "targets": {
+      "cssVariables": {
+        "--accent-color": "color",
+        "--accent-glow": "glow"
+      },
+      "colorSelectors": [
+        "[class*=\"text-brand\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-brand\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-brand\"]",
+        "[class*=\"border-l-brand\"]"
+      ]
+    }
+  }
+}

@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级数据逻辑分析报告</title>
+    <!-- 引入 Tailwind CSS 进行极速样式开发，保持无构建工具依赖 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 ECharts 用于高质量数据可视化，大厂标配 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    
+    <script>
+        // Tailwind 主题配置，严格还原设计标准
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#18319D', // 深宇航蓝
+                        accent: '#F5A623',  // 活力橙黄
+                        bgray: '#F4F6FA',   // 浅灰蓝背景
+                        tmain: '#1F2329',   // 主文本色
+                        tsub: '#4B535E',    // 副文本色
+                        tmut: '#8F959E',    // 注释文本
+                        success: '#14B56F', // 上涨
+                        danger: '#F53F3F',  // 下降
+                    },
+                    boxShadow: {
+                        'card': '0 2px 10px rgba(0, 0, 0, 0.04)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 补充少量自定义 CSS 处理特定形状 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background-color: #F4F6FA; }
+        
+        /* 卡片全局 Hover 交互动效 */
+        .shadow-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .shadow-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08); }
+
+        .arrow-box {
+            position: relative;
+            background: #18319D;
+        }
+        .arrow-box:after {
+            left: 100%; top: 50%; border: solid transparent; content: " "; height: 0; width: 0;
+            position: absolute; pointer-events: none; border-color: rgba(24, 49, 157, 0);
+            border-left-color: #18319D; border-width: 20px; margin-top: -20px; z-index: 10;
+        }
+    </style>
+</head>
+<body class="p-6 md:p-10 text-tsub">
+
+    <!-- 顶宽容器 -->
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- Report Header -->
+        <header data-section="report-header" class="flex justify-between items-end mb-8 border-b-2 border-primary pb-4">
+            <div>
+                <div class="flex items-center space-x-3 mb-2">
+                    <div class="w-8 h-8 bg-primary text-white font-bold flex items-center justify-center rounded-sm">GN</div>
+                    <span class="text-primary font-bold tracking-widest text-sm" data-editable="true">DOMESTIC TRANSPORTATION INDUSTRY</span>
+                </div>
+                <h1 class="text-3xl font-bold text-tmain" data-editable="true">2026年度业务数据逻辑分析报告</h1>
+                <p class="text-tmut mt-2" data-editable="true">单击此处输入你的正文，文字是您思想的提炼，请尽量言简意赅。</p>
+            </div>
+            <div class="text-right">
+                <div class="text-tmut text-sm" data-editable="true">汇报周期: 2025.Q1 - 2026.Q1</div>
+                <div class="text-tmain font-bold mt-1 bg-white px-4 py-1 rounded-full border border-gray-200 inline-block shadow-sm" data-editable="true">DOUGE.01</div>
+            </div>
+        </header>
+
+        <!-- Key Takeaways (核心观点摘要) -->
+        <section data-section="key-takeaways" class="bg-[#F0F4FF] border-l-4 border-primary p-6 rounded-r-lg shadow-card mb-6 flex items-start space-x-4">
+            <div class="flex-shrink-0 mt-1">
+                <!-- 💡 灯泡图标代表核心洞察 -->
+                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-tmain mb-3" data-editable="true">核心观点摘要 (Executive Summary)</h2>
+                <ul class="list-none text-sm text-tsub space-y-2">
+                    <li class="flex items-start">
+                        <span class="text-accent mr-2 mt-1">✦</span>
+                        <span data-editable="true"><strong class="text-tmain">营收稳步增长：</strong>本年度总营收达 8,888 万，同比增长 68%，主要得益于 Q3 创新业务的大幅发力。</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-accent mr-2 mt-1">✦</span>
+                        <span data-editable="true"><strong class="text-tmain">转化漏斗瓶颈：</strong>从“点击访问”到“加入意向”的流失率高达 33%，需在下阶段重点优化产品引导链路。</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-accent mr-2 mt-1">✦</span>
+                        <span data-editable="true"><strong class="text-tmain">客群结构健康：</strong>高净值用户与大众用户呈 4:6 分布，其中高净值用户在客单价和忠诚度上表现尤为突出。</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- KPI Summary (核心指标) -->
+        <section data-section="kpi-summary" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- KPI Card 1 -->
+            <div class="bg-primary text-white p-6 rounded-lg shadow-card">
+                <div class="text-sm opacity-80 mb-2" data-editable="true">年度总营收 (¥)</div>
+                <div class="text-3xl font-bold mb-4" data-editable="true">88,888,888</div>
+                <div class="flex justify-between items-center text-xs opacity-90 border-t border-blue-800 pt-3">
+                    <span data-editable="true">同比去年</span>
+                    <span class="flex items-center"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> 68%</span>
+                </div>
+            </div>
+            <!-- KPI Card 2 -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100">
+                <div class="text-tmut text-sm mb-2" data-editable="true">累计新增用户 (万)</div>
+                <div class="text-3xl font-bold text-tmain mb-4" data-editable="true">1,250.4</div>
+                <div class="flex justify-between items-center text-xs border-t border-gray-100 pt-3">
+                    <span class="text-tmut" data-editable="true">同比去年</span>
+                    <span class="flex items-center text-success font-bold"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> 25%</span>
+                </div>
+            </div>
+            <!-- KPI Card 3 -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100">
+                <div class="text-tmut text-sm mb-2" data-editable="true">核心转化率 (%)</div>
+                <div class="text-3xl font-bold text-tmain mb-4" data-editable="true">42.8%</div>
+                <div class="flex justify-between items-center text-xs border-t border-gray-100 pt-3">
+                    <span class="text-tmut" data-editable="true">同比去年</span>
+                    <span class="flex items-center text-danger font-bold"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg> -3.2%</span>
+                </div>
+            </div>
+            <!-- KPI Card 4 -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-16 h-16 bg-accent opacity-10 rounded-bl-full"></div>
+                <div class="text-tmut text-sm mb-2" data-editable="true">大盘市占率 (%)</div>
+                <div class="text-3xl font-bold text-accent mb-4" data-editable="true">36.5%</div>
+                <div class="flex justify-between items-center text-xs border-t border-gray-100 pt-3">
+                    <span class="text-tmut" data-editable="true">行业排名</span>
+                    <span class="font-bold text-tmain" data-editable="true">Top 1</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Analysis Charts -->
+        <section data-section="trend-analysis" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <!-- Chart 1: 趋势分析 -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-tmain border-l-4 border-primary pl-3" data-editable="true">各类型业务增长趋势</h2>
+                        <p class="text-xs text-tmut mt-1 pl-4" data-editable="true">单击此处输入你的正文，文字是您思想的提炼。</p>
+                    </div>
+                </div>
+                <!-- ECharts 容器 -->
+                <div id="chart-trend" class="w-full h-64"></div>
+            </div>
+
+            <!-- Chart 2: 分布与构成 -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-tmain border-l-4 border-accent pl-3" data-editable="true">核心客群占比分布</h2>
+                        <p class="text-xs text-tmut mt-1 pl-4" data-editable="true">为了最终演示发布的良好效果，请尽量言简意赅。</p>
+                    </div>
+                </div>
+                <!-- ECharts 容器 -->
+                <div id="chart-pie" class="w-full h-64"></div>
+            </div>
+        </section>
+
+        <!-- Target & Ranking (目标与排行) -->
+        <section data-section="target-ranking" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <!-- Chart 3: OKR Target (Gauge + 进度条) -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-tmain border-l-4 border-primary pl-3" data-editable="true">Q1 核心战役目标达成率</h2>
+                        <p class="text-xs text-tmut mt-1 pl-4" data-editable="true">核心业务指标 OKR 追踪</p>
+                    </div>
+                </div>
+                <div class="flex">
+                    <div id="chart-gauge" class="w-1/2 h-64"></div>
+                    <div class="w-1/2 flex flex-col justify-center space-y-5 pr-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1"><span class="text-tsub">拉新目标</span><span class="font-bold text-tmain">85%</span></div>
+                            <div class="w-full bg-bgray rounded-full h-2.5"><div class="bg-primary h-2.5 rounded-full" style="width: 85%"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1"><span class="text-tsub">营收目标</span><span class="font-bold text-tmain">112%</span></div>
+                            <div class="w-full bg-bgray rounded-full h-2.5"><div class="bg-success h-2.5 rounded-full" style="width: 100%"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1"><span class="text-tsub">留存目标</span><span class="font-bold text-tmain">60%</span></div>
+                            <div class="w-full bg-bgray rounded-full h-2.5"><div class="bg-accent h-2.5 rounded-full" style="width: 60%"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 4: Ranking -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-tmain border-l-4 border-primary pl-3" data-editable="true">各战区业绩贡献 TOP 5</h2>
+                        <p class="text-xs text-tmut mt-1 pl-4" data-editable="true">单击此处输入你的正文，文字是您思想的提炼。</p>
+                    </div>
+                </div>
+                <div id="chart-bar-horizontal" class="w-full h-64"></div>
+            </div>
+        </section>
+
+        <!-- Conversion & Growth (转化与增长拆解) -->
+        <section data-section="conversion-growth" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <!-- Chart 5: Funnel -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-tmain border-l-4 border-accent pl-3" data-editable="true">核心业务转化漏斗分析</h2>
+                        <p class="text-xs text-tmut mt-1 pl-4" data-editable="true">分析各链路节点的流失情况。</p>
+                    </div>
+                </div>
+                <div id="chart-funnel" class="w-full h-64"></div>
+            </div>
+
+            <!-- Chart 6: Waterfall -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-tmain border-l-4 border-primary pl-3" data-editable="true">月度营收增长精细拆解 (万)</h2>
+                        <p class="text-xs text-tmut mt-1 pl-4" data-editable="true">归因分析：对比上月，各项因素产生的具体影响值。</p>
+                    </div>
+                </div>
+                <div id="chart-waterfall" class="w-full h-64"></div>
+            </div>
+        </section>
+
+        <!-- Multi-dim & Structure (多维与结构分析) -->
+        <section data-section="multi-dim" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <!-- Chart 7: Radar -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-tmain border-l-4 border-primary pl-3" data-editable="true">主力客群特征与偏好画像</h2>
+                        <p class="text-xs text-tmut mt-1 pl-4" data-editable="true">多维度对比不同圈层用户的行为习惯。</p>
+                    </div>
+                </div>
+                <div id="chart-radar" class="w-full h-64"></div>
+            </div>
+
+            <!-- Chart 8: Stacked Area -->
+            <div class="bg-white p-6 rounded-lg shadow-card border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-tmain border-l-4 border-accent pl-3" data-editable="true">各产品线营收结构演变</h2>
+                        <p class="text-xs text-tmut mt-1 pl-4" data-editable="true">观察各业务条线随时间推移的占比变化。</p>
+                    </div>
+                </div>
+                <div id="chart-stacked" class="w-full h-64"></div>
+            </div>
+        </section>
+
+        <!-- Process Flow (业务执行路径 - 还原截图2视觉) -->
+        <section data-section="process-flow" class="bg-white p-8 rounded-lg shadow-card border border-gray-100 mt-6">
+            <div class="text-center mb-8">
+                <h2 class="text-xl font-bold text-tmain mb-2" data-editable="true">业务流转模型分析</h2>
+                <p class="text-sm text-tmut" data-editable="true">单击此处输入你的正文，文字是您思想的提炼</p>
+            </div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4">
+                <!-- Step 1 -->
+                <div class="flex-1 w-full relative">
+                    <div class="arrow-box text-white p-6 text-center shadow-md">
+                        <div class="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center font-bold mx-auto -mt-10 mb-4 border-4 border-white shadow-sm">1</div>
+                        <h3 class="font-bold text-lg mb-2" data-editable="true">输入内容</h3>
+                        <p class="text-xs opacity-80" data-editable="true">单击此处输入你的正文，文字是您思想的提炼</p>
+                    </div>
+                </div>
+                <!-- Step 2 -->
+                <div class="flex-1 w-full relative">
+                    <div class="arrow-box text-white p-6 text-center shadow-md ml-0 md:ml-4" style="background: #2546D3;">
+                        <div class="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center font-bold mx-auto -mt-10 mb-4 border-4 border-white shadow-sm">2</div>
+                        <h3 class="font-bold text-lg mb-2" data-editable="true">输入内容</h3>
+                        <p class="text-xs opacity-80" data-editable="true">单击此处输入你的正文，文字是您思想的提炼</p>
+                    </div>
+                </div>
+                <!-- Step 3 -->
+                <div class="flex-1 w-full relative">
+                    <div class="bg-primary text-white p-6 text-center shadow-md ml-0 md:ml-8" style="background: #3B5FEE; clip-path: polygon(0 0, 90% 0, 100% 50%, 90% 100%, 0 100%, 10% 50%); padding-left: 30px;">
+                        <div class="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center font-bold mx-auto -mt-10 mb-4 border-4 border-white shadow-sm">3</div>
+                        <h3 class="font-bold text-lg mb-2" data-editable="true">输入内容</h3>
+                        <p class="text-xs opacity-80" data-editable="true">单击此处输入你的正文，文字是您思想的提炼</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Detailed Data Table (数据明细) -->
+        <section data-section="data-table" class="bg-white p-6 rounded-lg shadow-card border border-gray-100 mt-6 mb-12">
+            <h2 class="text-lg font-bold text-tmain border-l-4 border-primary pl-3 mb-6" data-editable="true">关键节点数据明细</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-tsub uppercase bg-bgray">
+                        <tr>
+                            <th scope="col" class="px-6 py-4 rounded-tl-md font-bold" data-editable="true">业务类型</th>
+                            <th scope="col" class="px-6 py-4 font-bold" data-editable="true">第一季度 (Q1)</th>
+                            <th scope="col" class="px-6 py-4 font-bold" data-editable="true">第二季度 (Q2)</th>
+                            <th scope="col" class="px-6 py-4 font-bold" data-editable="true">第三季度 (Q3)</th>
+                            <th scope="col" class="px-6 py-4 font-bold" data-editable="true">第四季度 (Q4)</th>
+                            <th scope="col" class="px-6 py-4 rounded-tr-md font-bold" data-editable="true">年度评级</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="bg-white border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-tmain" data-editable="true">输入正文</td>
+                            <td class="px-6 py-4" data-editable="true">40</td>
+                            <td class="px-6 py-4" data-editable="true">20</td>
+                            <td class="px-6 py-4" data-editable="true">16</td>
+                            <td class="px-6 py-4" data-editable="true">18</td>
+                            <td class="px-6 py-4 text-success font-bold" data-editable="true">优秀</td>
+                        </tr>
+                        <tr class="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition-colors">
+                            <td class="px-6 py-4 font-medium text-tmain" data-editable="true">输入正文</td>
+                            <td class="px-6 py-4" data-editable="true">21</td>
+                            <td class="px-6 py-4" data-editable="true">5</td>
+                            <td class="px-6 py-4" data-editable="true">7</td>
+                            <td class="px-6 py-4" data-editable="true">15</td>
+                            <td class="px-6 py-4 text-accent font-bold" data-editable="true">达标</td>
+                        </tr>
+                        <tr class="bg-white border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-tmain" data-editable="true">输入正文</td>
+                            <td class="px-6 py-4" data-editable="true">23</td>
+                            <td class="px-6 py-4" data-editable="true">6</td>
+                            <td class="px-6 py-4" data-editable="true">5</td>
+                            <td class="px-6 py-4" data-editable="true">7</td>
+                            <td class="px-6 py-4 text-danger font-bold" data-editable="true">预警</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ECharts 初始化脚本 -->
+    <script>
+        // 模拟后续工具通过配置直接替换数据
+        document.addEventListener("DOMContentLoaded", () => {
+            
+            // 初始化趋势折线图 (还原截图中的线稿风格)
+            const trendChart = echarts.init(document.getElementById('chart-trend'));
+            const trendOption = {
+                color: ['#18319D', '#F5A623', '#2546D3'],
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['类型1', '类型2', '类型3'], bottom: 0, itemWidth: 12, itemHeight: 4 },
+                grid: { left: '3%', right: '4%', bottom: '15%', top: '5%', containLabel: true },
+                xAxis: { type: 'category', boundaryGap: false, data: ['类目A', '类目B', '类目C', '类目D'], axisLine: { lineStyle: { color: '#E5E7EB' } }, axisLabel: { color: '#8F959E' } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#F4F6FA' } }, axisLabel: { color: '#8F959E' } },
+                series: [
+                    { name: '类型1', type: 'line', smooth: true, symbolSize: 8, lineStyle: { width: 3 }, data: [40, 20, 16, 18] },
+                    { name: '类型2', type: 'line', smooth: true, symbolSize: 8, lineStyle: { width: 3 }, data: [21, 5, 7, 15] },
+                    { name: '类型3', type: 'line', smooth: true, symbolSize: 8, lineStyle: { width: 3 }, data: [23, 6, 5, 7] }
+                ]
+            };
+            trendChart.setOption(trendOption);
+
+            // 初始化分布图 (还原截图中的环形分布图)
+            const pieChart = echarts.init(document.getElementById('chart-pie'));
+            const pieOption = {
+                color: ['#18319D', '#3B5FEE', '#7A9DF4', '#F5A623'],
+                tooltip: { trigger: 'item' },
+                legend: { top: '5%', left: 'center', itemWidth: 10, itemHeight: 10 },
+                series: [
+                    {
+                        name: '数据分布',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 4,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: { show: false, position: 'center' },
+                        emphasis: { label: { show: true, fontSize: '18', fontWeight: 'bold' } },
+                        labelLine: { show: false },
+                        data: [
+                            { value: 1048, name: '数据1' },
+                            { value: 735, name: '数据2' },
+                            { value: 580, name: '数据3' },
+                            { value: 300, name: '数据4' }
+                        ]
+                    }
+                ]
+            };
+            pieChart.setOption(pieOption);
+
+            // 1. Gauge Chart (OKR Target)
+            const gaugeChart = echarts.init(document.getElementById('chart-gauge'));
+            const gaugeOption = {
+                series: [{
+                    type: 'gauge',
+                    startAngle: 180, endAngle: 0,
+                    min: 0, max: 100, splitNumber: 5,
+                    itemStyle: { color: '#18319D' },
+                    progress: { show: true, width: 12 },
+                    pointer: { show: false },
+                    axisLine: { lineStyle: { width: 12, color: [[1, '#F4F6FA']] } },
+                    axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false },
+                    detail: { valueAnimation: true, formatter: '{value}%', fontSize: 24, fontWeight: 'bold', color: '#1F2329', offsetCenter: [0, '-10%'] },
+                    data: [{ value: 78, name: '总体达成率', title: { offsetCenter: [0, '20%'], fontSize: 12, color: '#8F959E' } }]
+                }]
+            };
+            gaugeChart.setOption(gaugeOption);
+
+            // 2. Horizontal Bar Chart (Ranking)
+            const barChart = echarts.init(document.getElementById('chart-bar-horizontal'));
+            const barOption = {
+                color: ['#2546D3'],
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '3%', right: '12%', bottom: '0%', top: '5%', containLabel: true },
+                xAxis: { type: 'value', show: false },
+                yAxis: { type: 'category', data: ['华东战区', '华南战区', '华北战区', '西南战区', '华中战区'].reverse(), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#4B535E', fontWeight: 'bold' } },
+                series: [{
+                    name: '营收 (万)', type: 'bar', barWidth: '40%',
+                    label: { show: true, position: 'right', color: '#1F2329', fontWeight: 'bold' },
+                    itemStyle: { borderRadius: [0, 4, 4, 0] },
+                    data: [850, 720, 680, 540, 410].reverse()
+                }]
+            };
+            barChart.setOption(barOption);
+
+            // 3. Funnel Chart (Conversion)
+            const funnelChart = echarts.init(document.getElementById('chart-funnel'));
+            const funnelOption = {
+                color: ['#18319D', '#2546D3', '#3B5FEE', '#7A9DF4', '#F5A623'],
+                tooltip: { trigger: 'item', formatter: '{b} : {c}%' },
+                series: [{
+                    name: '转化漏斗', type: 'funnel', left: '10%', top: '5%', bottom: '5%', width: '80%',
+                    min: 0, max: 100, minSize: '0%', maxSize: '100%', sort: 'descending', gap: 2,
+                    label: { show: true, position: 'inside', formatter: '{b} ({c}%)', color: '#fff' },
+                    itemStyle: { borderColor: '#fff', borderWidth: 1 },
+                    data: [
+                        { value: 100, name: '曝光人数' },
+                        { value: 75, name: '点击访问' },
+                        { value: 50, name: '加入意向' },
+                        { value: 25, name: '完成交易' }
+                    ]
+                }]
+            };
+            funnelChart.setOption(funnelOption);
+
+            // 4. Waterfall Chart (Growth Decomposition)
+            const waterfallChart = echarts.init(document.getElementById('chart-waterfall'));
+            const waterfallOption = {
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: function (params) {
+                    let tar = params[1];
+                    return tar.name + '<br/>' + tar.seriesName + ' : ' + tar.value;
+                }},
+                grid: { left: '3%', right: '4%', bottom: '5%', top: '10%', containLabel: true },
+                xAxis: { type: 'category', splitLine: { show: false }, data: ['上月总计', '新客增长', '复购增加', '流失抵扣', '成本波动', '本月总计'], axisLabel: { color: '#8F959E', interval: 0, fontSize: 11 } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#F4F6FA' } }, axisLabel: { color: '#8F959E' } },
+                series: [
+                    { name: '辅助', type: 'bar', stack: 'Total', itemStyle: { borderColor: 'transparent', color: 'transparent' }, emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' } },
+                      data: [0, 900, 1100, 1000, 1000, 0] },
+                    { name: '影响值', type: 'bar', stack: 'Total', label: { show: true, position: 'top', color: '#1F2329' },
+                      itemStyle: { borderRadius: 2 },
+                      data: [
+                          {value: 900, itemStyle: { color: '#1F2329' }}, // Last month
+                          {value: 200, itemStyle: { color: '#14B56F' }}, // +
+                          {value: 150, itemStyle: { color: '#14B56F' }}, // +
+                          {value: 250, itemStyle: { color: '#F53F3F' }, label: {position: 'bottom'}}, // - (Red)
+                          {value: 50, itemStyle: { color: '#14B56F' }},  // +
+                          {value: 1050, itemStyle: { color: '#18319D' }} // This month
+                      ]
+                    }
+                ]
+            };
+            waterfallChart.setOption(waterfallOption);
+
+            // 5. Radar Chart (Persona)
+            const radarChart = echarts.init(document.getElementById('chart-radar'));
+            const radarOption = {
+                color: ['#18319D', '#F5A623'],
+                tooltip: { trigger: 'item' },
+                legend: { bottom: 0, data: ['高净值用户', '大众用户'], itemWidth: 12, itemHeight: 4 },
+                radar: {
+                    indicator: [
+                        { name: '消费频次', max: 100 }, { name: '客单价', max: 100 }, { name: '忠诚度', max: 100 },
+                        { name: '互动活跃', max: 100 }, { name: '价格敏感', max: 100 }, { name: '拉新意愿', max: 100 }
+                    ],
+                    radius: '65%', center: ['50%', '45%'],
+                    axisName: { color: '#4B535E' },
+                    splitLine: { lineStyle: { color: ['#F4F6FA', '#E5E7EB'] } },
+                    splitArea: { show: false }, axisLine: { lineStyle: { color: '#E5E7EB' } }
+                },
+                series: [{
+                    name: '用户画像', type: 'radar',
+                    data: [
+                        { value: [85, 90, 80, 70, 30, 60], name: '高净值用户', areaStyle: { color: 'rgba(24, 49, 157, 0.2)' } },
+                        { value: [50, 40, 50, 85, 90, 80], name: '大众用户', areaStyle: { color: 'rgba(245, 166, 35, 0.2)' } }
+                    ]
+                }]
+            };
+            radarChart.setOption(radarOption);
+
+            // 6. Stacked Area Chart (Revenue Structure)
+            const stackedChart = echarts.init(document.getElementById('chart-stacked'));
+            const stackedOption = {
+                color: ['#18319D', '#3B5FEE', '#7A9DF4'],
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } } },
+                legend: { data: ['2B 业务', '2C 业务', '创新业务'], bottom: 0, itemWidth: 12, itemHeight: 4 },
+                grid: { left: '3%', right: '4%', bottom: '15%', top: '5%', containLabel: true },
+                xAxis: [{ type: 'category', boundaryGap: false, data: ['Q1', 'Q2', 'Q3', 'Q4'], axisLine: { lineStyle: { color: '#E5E7EB' } }, axisLabel: { color: '#8F959E' } }],
+                yAxis: [{ type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#F4F6FA' } }, axisLabel: { color: '#8F959E' } }],
+                series: [
+                    { name: '2B 业务', type: 'line', stack: 'Total', areaStyle: { opacity: 0.8 }, emphasis: { focus: 'series' }, data: [120, 132, 101, 134] },
+                    { name: '2C 业务', type: 'line', stack: 'Total', areaStyle: { opacity: 0.8 }, emphasis: { focus: 'series' }, data: [220, 182, 191, 234] },
+                    { name: '创新业务', type: 'line', stack: 'Total', areaStyle: { opacity: 0.8 }, emphasis: { focus: 'series' }, data: [150, 232, 201, 154] }
+                ]
+            };
+            stackedChart.setOption(stackedOption);
+
+            // 监听窗口大小变化自动重绘图表
+            window.addEventListener('resize', () => {
+                trendChart.resize();
+                pieChart.resize();
+                gaugeChart.resize();
+                barChart.resize();
+                funnelChart.resize();
+                waterfallChart.resize();
+                radarChart.resize();
+                stackedChart.resize();
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+{
+  "id": "dashboard-04-premium-midnight",
+  "name": "StayInn Premium Midnight 空间资产数智数据大盘",
+  "templateName": "StayInnPremiumMidnightDashboardTemplate",
+  "version": "1.0.0",
+  "description": "高端暗夜风格的酒店与空间资产经营数据大盘，支持 Excel 字段注入 KPI、趋势、渠道、入住热力、散点、雷达和 AI 洞察槽位。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "bi-dashboard",
+    "hotel-analytics-dashboard",
+    "space-asset-dashboard"
+  ],
+  "styleTags": [
+    "premium-midnight",
+    "dark",
+    "stayinn",
+    "hotel-analytics",
+    "monospace-data",
+    "interactive-dashboard"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "酒店经营复盘",
+    "空间资产运营分析",
+    "Excel 数据报告转大盘",
+    "管理层经营汇报"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "Native SVG",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#09090B",
+      "cardBg": "#121214",
+      "cardBorder": "#27272A",
+      "dataIndigo": "#6366F1",
+      "dataViolet": "#8B5CF6",
+      "warningRose": "#F43F5E",
+      "successEmerald": "#10B981"
+    },
+    "fonts": {
+      "body": "system-ui, PingFang SC, Microsoft YaHei, sans-serif",
+      "mono": "SFMono-Regular, Consolas, Menlo, ui-monospace, monospace"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "hoverInteractions": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "kpi-grid": {
+      "desc": "顶部核心 KPI 指标卡",
+      "required": true,
+      "hideable": false
+    },
+    "trends-and-channels": {
+      "desc": "动态营收趋势、渠道同心圆、价格散点气泡和五维健康雷达",
+      "required": true,
+      "hideable": false
+    },
+    "acquisition-funnel": {
+      "desc": "获客与转化漏斗",
+      "required": false,
+      "hideable": true
+    },
+    "occupancy-heatgrid": {
+      "desc": "31 天入住热力日历",
+      "required": true,
+      "hideable": false
+    },
+    "cohort-matrix": {
+      "desc": "客户留存热力矩阵",
+      "required": false,
+      "hideable": true
+    },
+    "raw-data-explorer": {
+      "desc": "原始数据下钻明细表",
+      "required": false,
+      "hideable": true
+    },
+    "ai-insights": {
+      "desc": "AI 智能诊断洞察",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "kpi_cards": {
+      "type": "object",
+      "desc": "包含总营收、ADR、入住率、RevPAR 及趋势文本"
+    },
+    "trend_points": {
+      "type": "array",
+      "selector": ".trend-point",
+      "desc": "每日营收趋势点，字段为 data-date、data-revenue、data-occupancy"
+    },
+    "channel_segments": {
+      "type": "array",
+      "selector": ".ring-segment",
+      "desc": "渠道收入圆环段，字段为 data-segment-name、data-segment-value、data-segment-ratio"
+    },
+    "occupancy_days": {
+      "type": "array",
+      "selector": ".group/cell",
+      "desc": "31 天入住热力格，字段为 data-day、data-occ、data-tag"
+    },
+    "scatter_points": {
+      "type": "array",
+      "selector": ".scatter-point",
+      "desc": "价格与入住率散点气泡，字段为 data-room、data-price、data-occ、data-rev"
+    },
+    "radar_vertices": {
+      "type": "array",
+      "selector": ".radar-vertex",
+      "desc": "五维运营健康雷达顶点，字段为 data-name、data-score、data-desc"
+    },
+    "ai_insights": {
+      "type": "object",
+      "desc": "警报标签与两条核心诊断洞察"
+    }
+  },
+  "audit": {
+    "sourceFileArchived": true,
+    "dataEditableHasContenteditable": true,
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png。"
+  },
+  "editorTheme": {
+    "defaultColor": "#6366f1",
+    "presets": [
+      "#6366f1",
+      "#8b5cf6",
+      "#38bdf8",
+      "#10b981",
+      "#d9eb26",
+      "#f43f5e"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-brand\"]",
+        "[class*=\"text-indigo\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-brand\"]",
+        "[class*=\"bg-indigo\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-brand\"]",
+        "[class*=\"border-indigo\"]"
+      ],
+      "shadowSelectors": [
+        "[class*=\"shadow-brand\"]",
+        "[class*=\"shadow-indigo\"]"
+      ]
+    }
+  }
+}

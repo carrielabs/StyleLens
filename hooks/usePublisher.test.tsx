@@ -29,4 +29,34 @@ describe('usePublisher', () => {
     expect(result.current.generatedPage?.title).toBe('Demo')
     expect(result.current.isGenerating).toBe(false)
   })
+
+  it('sends dashboard page type when requested', async () => {
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ({
+        success: true,
+        result: {
+          html: '<!DOCTYPE html><html><body>Dashboard</body></html>',
+          title: 'Dashboard',
+          templateId: 'dashboard-01-blue-business',
+        },
+      }),
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderHook(() => usePublisher())
+
+    await act(async () => {
+      await result.current.generatePage('# Dashboard', 'dashboard-01-blue-business', 'dashboard')
+    })
+
+    expect(fetchMock).toHaveBeenCalled()
+    const calls = fetchMock.mock.calls as unknown as Array<[string, RequestInit]>
+    const [, init] = calls[0]
+
+    expect(JSON.parse(String(init.body))).toEqual({
+      sourceText: '# Dashboard',
+      templateId: 'dashboard-01-blue-business',
+      pageType: 'dashboard',
+    })
+  })
 })

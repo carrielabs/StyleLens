@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Analysis - 自动化数据报告系统</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js for High-End Data Viz -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: 'var(--accent-color, #1DB954)', // Dynamic accent color
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* CSS Custom Properties for Brand Themes */
+    :root {
+      --accent-color: #1DB954; /* Default: Spotify Green */
+      --accent-glow: rgba(29, 185, 84, 0.15);
+    }
+
+    body {
+      background-color: #09090b;
+      color: #f4f4f5;
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #09090b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46;
+    }
+
+    /* Active Highlight Border */
+    .premium-card {
+      background-color: #121214;
+      border: 1px solid rgba(39, 39, 42, 0.4);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .premium-card:hover {
+      border-color: rgba(63, 63, 70, 0.6);
+      box-shadow: 0 4px 20px -2px var(--accent-glow);
+    }
+
+    /* Editable Outline on Hover when in edit mode */
+    .edit-mode [data-editable="true"] {
+      outline: 1px dashed rgba(255, 255, 255, 0.3);
+      outline-offset: 2px;
+      cursor: pointer;
+    }
+    .edit-mode [data-editable="true"]:hover {
+      outline: 1px dashed var(--accent-color);
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Soft pulses for state indicators */
+    .pulse-indicator {
+      box-shadow: 0 0 0 0 rgba(29, 185, 84, 0.7);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(29, 185, 84, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(29, 185, 84, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(29, 185, 84, 0);
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+  <!-- Top Global Configuration Control Panel (Fixed / Hidden on Export) -->
+  <div class="bg-zinc-900 border-b border-zinc-800 px-6 py-3 flex flex-wrap items-center justify-between gap-4 z-50">
+    <div class="flex items-center gap-3">
+      <div class="bg-brand/20 p-1.5 rounded-md">
+        <i data-lucide="sliders" class="w-4 h-4 text-brand"></i>
+      </div>
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-zinc-400">报告工具箱</h4>
+        <p class="text-xxs text-zinc-500">双击页面虚线框内容可直接修改</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-6">
+      <!-- Theme Switcher -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-zinc-400">品牌主色:</span>
+        <div class="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-md border border-zinc-800">
+          <button onclick="setTheme('#1DB954', 'rgba(29, 185, 84, 0.15)')" class="w-4 h-4 rounded-full bg-[#1DB954] hover:scale-110 transition-transform" title="Spotify 绿"></button>
+          <button onclick="setTheme('#3B82F6', 'rgba(59, 130, 246, 0.15)')" class="w-4 h-4 rounded-full bg-[#3B82F6] hover:scale-110 transition-transform" title="字节蓝"></button>
+          <button onclick="setTheme('#06B6D4', 'rgba(6, 182, 212, 0.15)')" class="w-4 h-4 rounded-full bg-[#06B6D4] hover:scale-110 transition-transform" title="腾讯青"></button>
+          <button onclick="setTheme('#EF4444', 'rgba(239, 68, 68, 0.15)')" class="w-4 h-4 rounded-full bg-[#EF4444] hover:scale-110 transition-transform" title="网易红"></button>
+        </div>
+      </div>
+
+      <!-- Mode Switcher -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-zinc-400">操作模式:</span>
+        <div class="inline-flex bg-zinc-950 p-0.5 rounded-md border border-zinc-800 text-xs">
+          <button id="btn-preview" onclick="toggleEditMode(false)" class="px-3 py-1 rounded bg-brand text-zinc-950 font-bold transition-all">
+            预览视图
+          </button>
+          <button id="btn-edit" onclick="toggleEditMode(true)" class="px-3 py-1 rounded text-zinc-400 hover:text-zinc-100 transition-all">
+            排版编辑
+          </button>
+        </div>
+      </div>
+
+      <!-- Save Indicator -->
+      <button onclick="exportJSON()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-all">
+        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+        导出修改配置
+      </button>
+    </div>
+  </div>
+
+  <!-- Global Toast Alert Portal (No-Alert Guardrail) -->
+  <div id="toast" class="fixed top-20 right-6 z-50 bg-zinc-900 border border-zinc-800 text-zinc-100 px-4 py-3 rounded-md shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="w-2 h-2 rounded-full bg-brand pulse-indicator"></div>
+    <span id="toast-text" class="text-xs font-medium">配置已更新</span>
+  </div>
+
+  <!-- Main Container -->
+  <main class="flex-grow p-6 md:p-8 max-w-[1600px] w-full mx-auto space-y-6">
+
+    <!-- ========================================== -->
+    <!-- 1. HEADER SECTION                          -->
+    <!-- ========================================== -->
+    <header data-section="header" class="premium-card p-6 rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div class="flex items-center gap-4">
+        <!-- Brand Logo Dynamic Block -->
+        <div class="bg-zinc-950 border border-zinc-800 w-12 h-12 rounded-lg flex items-center justify-center text-brand">
+          <!-- Inline SVG representing generic corporate metric node -->
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xxs font-bold text-brand uppercase tracking-widest px-2 py-0.5 bg-brand/10 border border-brand/20 rounded">BI-INTELLIGENCE</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-indicator"></span>
+            <span class="text-xxs text-zinc-500 font-semibold">数据正常同步中</span>
+          </div>
+          <h1 data-editable="true" class="text-xl md:text-2xl font-bold tracking-tight text-zinc-100 mt-1">
+            Spotify 核心流媒体运营数据看板与深度分析汇报
+          </h1>
+          <p data-editable="true" class="text-xs text-zinc-400 mt-0.5">
+            数据流：Spotify Python Data Pipeline · 报告分析颗粒度：2026年Q2周度汇总
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4 border-t md:border-t-0 border-zinc-800 pt-4 md:pt-0">
+        <div class="text-left md:text-right">
+          <p class="text-xxs text-zinc-500 uppercase tracking-wider">数据采集时间</p>
+          <p data-editable="true" class="text-xs font-semibold text-zinc-300">2026-07-06 21:30</p>
+          <p class="text-xxs text-zinc-500 mt-0.5">覆盖范围: Global Standard API</p>
+        </div>
+        <div class="h-8 w-[1px] bg-zinc-800 hidden md:block"></div>
+        <div class="flex items-center gap-2">
+          <span class="text-xxs bg-zinc-950 px-2 py-1 rounded border border-zinc-800 text-zinc-400 font-mono">MD-001-AUTO</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- 2. CORE KPI CARDS SECTION                  -->
+    <!-- ========================================== -->
+    <section data-section="kpi" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- KPI Card 1 -->
+      <div class="premium-card p-5 rounded-lg flex flex-col justify-between">
+        <div class="flex items-center justify-between text-zinc-400">
+          <span data-editable="true" class="text-xs font-semibold">总播放次数 (Total Streams)</span>
+          <i data-lucide="play-circle" class="w-4 h-4 text-brand"></i>
+        </div>
+        <div class="mt-4">
+          <h2 data-editable="true" class="text-3xl font-extrabold tracking-tight text-zinc-100 font-mono">
+            1.42B
+          </h2>
+          <div class="flex items-center gap-1.5 mt-2">
+            <span class="text-xxs text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded flex items-center font-bold">
+              <i data-lucide="arrow-up-right" class="w-3 h-3 mr-0.5"></i> +12.4%
+            </span>
+            <span class="text-xxs text-zinc-500">同比上季度走高</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Card 2 -->
+      <div class="premium-card p-5 rounded-lg flex flex-col justify-between">
+        <div class="flex items-center justify-between text-zinc-400">
+          <span data-editable="true" class="text-xs font-semibold">活跃听众数 (Active Listeners)</span>
+          <i data-lucide="users" class="w-4 h-4 text-brand"></i>
+        </div>
+        <div class="mt-4">
+          <h2 data-editable="true" class="text-3xl font-extrabold tracking-tight text-zinc-100 font-mono">
+            42.8M
+          </h2>
+          <div class="flex items-center gap-1.5 mt-2">
+            <span class="text-xxs text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded flex items-center font-bold">
+              <i data-lucide="arrow-up-right" class="w-3 h-3 mr-0.5"></i> +8.1%
+            </span>
+            <span class="text-xxs text-zinc-500">DAU/MAU 粘度攀升</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Card 3 -->
+      <div class="premium-card p-5 rounded-lg flex flex-col justify-between">
+        <div class="flex items-center justify-between text-zinc-400">
+          <span data-editable="true" class="text-xs font-semibold">付费订阅占比 (Premium Ratio)</span>
+          <i data-lucide="credit-card" class="w-4 h-4 text-brand"></i>
+        </div>
+        <div class="mt-4">
+          <h2 data-editable="true" class="text-3xl font-extrabold tracking-tight text-zinc-100 font-mono">
+            46.2%
+          </h2>
+          <div class="flex items-center gap-1.5 mt-2">
+            <span class="text-xxs text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded flex items-center font-bold">
+              <i data-lucide="arrow-up-right" class="w-3 h-3 mr-0.5"></i> +2.3%
+            </span>
+            <span class="text-xxs text-zinc-500">ARPU 值高位稳定</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Card 4 -->
+      <div class="premium-card p-5 rounded-lg flex flex-col justify-between">
+        <div class="flex items-center justify-between text-zinc-400">
+          <span data-editable="true" class="text-xs font-semibold">异动流失预测率 (Churn Risk)</span>
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500"></i>
+        </div>
+        <div class="mt-4">
+          <h2 data-editable="true" class="text-3xl font-extrabold tracking-tight text-zinc-100 font-mono">
+            1.82%
+          </h2>
+          <div class="flex items-center gap-1.5 mt-2">
+            <span class="text-xxs text-rose-500 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded flex items-center font-bold">
+              <i data-lucide="arrow-down-right" class="w-3 h-3 mr-0.5"></i> -0.45%
+            </span>
+            <span class="text-xxs text-zinc-500">预警模型控制良好</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. AI INSIGHTS & EXPLAINER (Large Company Style) -->
+    <!-- ========================================== -->
+    <section data-section="ai-insights" class="premium-card p-5 rounded-lg border-l-4 border-l-brand">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="bg-brand/10 p-1 rounded">
+          <i data-lucide="brain-circuit" class="w-4 h-4 text-brand"></i>
+        </div>
+        <h3 class="text-sm font-bold text-zinc-200">AI 智能报告异动诊断 (Executive Analytical Insights)</h3>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-zinc-400">
+        <div class="space-y-1">
+          <div class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand"></span>
+            <span data-editable="true" class="font-semibold text-zinc-200">1. 北美与拉丁美洲区域爆发式增长</span>
+          </div>
+          <p data-editable="true" class="pl-3 leading-relaxed">
+            由于拉丁美洲（主要是巴西）当地热门单曲的大规模流媒体转播，Streams 指标周环比大涨 14.8%。建议在运营层面追加拉美本土化艺人的推荐资源。
+          </p>
+        </div>
+        <div class="space-y-1">
+          <div class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand"></span>
+            <span data-editable="true" class="font-semibold text-zinc-200">2. 艺人集中度风险 (Jul 引流效应强)</span>
+          </div>
+          <p data-editable="true" class="pl-3 leading-relaxed">
+            Jul、Drake 以及 Future 三人贡献了排名前 15% 的播放流量。需警惕头部效应引起的尾部艺人流失，建议优化流媒体算法（如引入长尾冷启动推荐）。
+          </p>
+        </div>
+        <div class="space-y-1">
+          <div class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+            <span data-editable="true" class="font-semibold text-zinc-200">3. 时间周期波动（5月中旬谷值下探）</span>
+          </div>
+          <p data-editable="true" class="pl-3 leading-relaxed">
+            走势图显示，2017年5月中旬流媒体播放量发生大幅下砸异动，定位为北美核心服务器数据回调导致的计算延时，非真实业务下滑。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 4. VISUALIZATION GRID (The Main Area)      -->
+    <!-- ========================================== -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- LEFT VISUAL COLUMN: Geography & Trends (7/12 Width) -->
+      <div data-section="visual-grid-left" class="lg:col-span-7 space-y-6">
+        
+        <!-- Geographic Distribution (Custom Canvas high-tech dots world-map) -->
+        <div class="premium-card p-5 rounded-lg flex flex-col h-[400px]">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 data-editable="true" class="text-sm font-bold text-zinc-200">Spotify 全球每日流媒体地理热力分布 (Streams Map)</h3>
+              <p data-editable="true" class="text-xxs text-zinc-500">点阵密度代表流量占比，悬停区域展示具体分析值</p>
+            </div>
+            <!-- Dynamic map legend -->
+            <div class="flex items-center gap-3 text-xxs">
+              <span class="flex items-center gap-1 text-zinc-400">
+                <span class="w-2.5 h-2.5 bg-brand/30 border border-brand/50 rounded-sm"></span> 稳定流量
+              </span>
+              <span class="flex items-center gap-1 text-zinc-400">
+                <span class="w-2.5 h-2.5 bg-brand rounded-sm"></span> 高爆发流量区
+              </span>
+            </div>
+          </div>
+          
+          <div class="relative flex-grow bg-zinc-950 rounded border border-zinc-800/40 overflow-hidden flex items-center justify-center">
+            <!-- Simulated high-tech dot matrix world map with canvas -->
+            <canvas id="worldMapCanvas" class="w-full h-full absolute inset-0"></canvas>
+            
+            <!-- Dynamic floating popup replicating the user's provided screenshot -->
+            <div class="absolute bottom-4 right-4 bg-[#121214]/90 border border-zinc-800 px-3 py-2 rounded shadow-lg text-xxs backdrop-blur-md">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-brand"></span>
+                <span class="text-zinc-400 font-semibold">拉美活跃市场</span>
+              </div>
+              <div class="mt-1 space-y-0.5">
+                <p>国家/地区: <span class="text-zinc-200 font-bold">巴西 (Brazil)</span></p>
+                <p>周播放量: <span class="text-brand font-mono font-bold">20,917,864,761</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Line Trend analysis -->
+        <div class="premium-card p-5 rounded-lg h-[320px] flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 data-editable="true" class="text-sm font-bold text-zinc-200">Spotify 播放总量演进趋势 (Streams Over Time)</h3>
+              <p data-editable="true" class="text-xxs text-zinc-500">横轴：日期周期 · 纵轴：百万播放次数(Millions)</p>
+            </div>
+            <div class="text-xxs bg-zinc-950 px-2 py-1 rounded border border-zinc-800 flex items-center gap-2">
+              <span class="flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-brand"></span> 实际流媒体量 (M)
+              </span>
+            </div>
+          </div>
+          <div class="flex-grow relative min-h-0">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT VISUAL COLUMN: Multi-dimensional rankings (5/12 Width) -->
+      <div data-section="visual-grid-right" class="lg:col-span-5 space-y-6">
+        
+        <!-- Popular Artists (Ranking Chart 1) -->
+        <div class="premium-card p-5 rounded-lg flex flex-col h-[360px]">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 data-editable="true" class="text-sm font-bold text-zinc-200">全网最受欢迎艺人排行 (Most Popular Artists)</h3>
+              <p data-editable="true" class="text-xxs text-zinc-500">依据独立追踪 URL 计数的全网流媒体聚合</p>
+            </div>
+            <span class="text-xxs bg-brand/10 border border-brand/20 text-brand font-bold px-2 py-0.5 rounded">
+              TOP 20
+            </span>
+          </div>
+          <div class="flex-grow relative min-h-0">
+            <canvas id="rankingChartPrimary"></canvas>
+          </div>
+        </div>
+
+        <!-- Popular Tracks (Ranking Chart 2) -->
+        <div class="premium-card p-5 rounded-lg flex flex-col h-[360px]">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 data-editable="true" class="text-sm font-bold text-zinc-200">全网最受欢迎单曲排行 (Most Popular Tracks)</h3>
+              <p data-editable="true" class="text-xxs text-zinc-500">总计流媒体点播总量排行 (Streams Sum)</p>
+            </div>
+            <span class="text-xxs bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-bold px-2 py-0.5 rounded">
+              MILLION
+            </span>
+          </div>
+          <div class="flex-grow relative min-h-0">
+            <canvas id="rankingChartSecondary"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 5. DETAILED DATA DRILLDOWN (Spreadsheet-like) -->
+    <!-- ========================================== -->
+    <section data-section="data-table" class="premium-card p-5 rounded-lg">
+      <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
+        <div>
+          <h3 data-editable="true" class="text-sm font-bold text-zinc-200">核心流媒体数据明细与维度透视 (Data Drilldown)</h3>
+          <p data-editable="true" class="text-xxs text-zinc-500">支持多维交叉分析，含百分比可视化横条</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xxs text-zinc-500">筛选维度:</span>
+          <div class="bg-zinc-950 border border-zinc-800 text-xxs rounded px-2 py-1 text-zinc-300">
+            流媒体次数 &gt; 1,000,000
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-zinc-800 text-zinc-400 font-semibold bg-zinc-950/40">
+              <th class="py-3 px-4">序号</th>
+              <th class="py-3 px-4">单曲名称 (Track Name)</th>
+              <th class="py-3 px-4">艺人 (Artist)</th>
+              <th class="py-3 px-4">流媒体播放次数 (Streams)</th>
+              <th class="py-3 px-4">全网份额占比 (Market Share %)</th>
+              <th class="py-3 px-4">核心国家分布</th>
+              <th class="py-3 px-4 text-right">状态特征</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-zinc-800/40 text-zinc-300 font-medium">
+            <tr class="hover:bg-zinc-900/40 transition-colors">
+              <td class="py-3 px-4 text-zinc-500 font-mono">01</td>
+              <td data-editable="true" class="py-3 px-4 text-white font-bold">Shape of You</td>
+              <td data-editable="true" class="py-3 px-4">Ed Sheeran</td>
+              <td data-editable="true" class="py-3 px-4 font-mono font-bold">4,128,194,102</td>
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                  <span class="w-8 font-mono">14.2%</span>
+                  <div class="flex-grow bg-zinc-800 h-1.5 rounded-full overflow-hidden max-w-[120px]">
+                    <div class="bg-brand h-full rounded-full" style="width: 82%;"></div>
+                  </div>
+                </div>
+              </td>
+              <td data-editable="true" class="py-3 px-4 text-zinc-400">UK / US / BR</td>
+              <td class="py-3 px-4 text-right">
+                <span class="text-xxs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">常青流媒体</span>
+              </td>
+            </tr>
+            <tr class="hover:bg-zinc-900/40 transition-colors">
+              <td class="py-3 px-4 text-zinc-500 font-mono">02</td>
+              <td data-editable="true" class="py-3 px-4 text-white font-bold">Perfect</td>
+              <td data-editable="true" class="py-3 px-4">Ed Sheeran</td>
+              <td data-editable="true" class="py-3 px-4 font-mono font-bold">2,410,294,881</td>
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                  <span class="w-8 font-mono">8.3%</span>
+                  <div class="flex-grow bg-zinc-800 h-1.5 rounded-full overflow-hidden max-w-[120px]">
+                    <div class="bg-brand h-full rounded-full" style="width: 48%;"></div>
+                  </div>
+                </div>
+              </td>
+              <td data-editable="true" class="py-3 px-4 text-zinc-400">US / DE / FR</td>
+              <td class="py-3 px-4 text-right">
+                <span class="text-xxs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">常青流媒体</span>
+              </td>
+            </tr>
+            <tr class="hover:bg-zinc-900/40 transition-colors">
+              <td class="py-3 px-4 text-zinc-500 font-mono">03</td>
+              <td data-editable="true" class="py-3 px-4 text-white font-bold">Despacito - Remix</td>
+              <td data-editable="true" class="py-3 px-4">Luis Fonsi ft. Daddy Yankee</td>
+              <td data-editable="true" class="py-3 px-4 font-mono font-bold">1,980,184,271</td>
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                  <span class="w-8 font-mono">6.8%</span>
+                  <div class="flex-grow bg-zinc-800 h-1.5 rounded-full overflow-hidden max-w-[120px]">
+                    <div class="bg-brand h-full rounded-full" style="width: 39%;"></div>
+                  </div>
+                </div>
+              </td>
+              <td data-editable="true" class="py-3 px-4 text-zinc-400">BR / MX / ES</td>
+              <td class="py-3 px-4 text-right">
+                <span class="text-xxs bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded font-bold">拉美高峰波动</span>
+              </td>
+            </tr>
+            <tr class="hover:bg-zinc-900/40 transition-colors">
+              <td class="py-3 px-4 text-zinc-500 font-mono">04</td>
+              <td data-editable="true" class="py-3 px-4 text-white font-bold">HUMBLE.</td>
+              <td data-editable="true" class="py-3 px-4">Kendrick Lamar</td>
+              <td data-editable="true" class="py-3 px-4 font-mono font-bold">1,820,948,119</td>
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                  <span class="w-8 font-mono">6.2%</span>
+                  <div class="flex-grow bg-zinc-800 h-1.5 rounded-full overflow-hidden max-w-[120px]">
+                    <div class="bg-brand h-full rounded-full" style="width: 35%;"></div>
+                  </div>
+                </div>
+              </td>
+              <td data-editable="true" class="py-3 px-4 text-zinc-400">US / CA / AU</td>
+              <td class="py-3 px-4 text-right">
+                <span class="text-xxs bg-blue-500/10 border border-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-bold">圈层核心聚集</span>
+              </td>
+            </tr>
+            <tr class="hover:bg-zinc-900/40 transition-colors">
+              <td class="py-3 px-4 text-zinc-500 font-mono">05</td>
+              <td data-editable="true" class="py-3 px-4 text-white font-bold">New Rules</td>
+              <td data-editable="true" class="py-3 px-4">Dua Lipa</td>
+              <td data-editable="true" class="py-3 px-4 font-mono font-bold">1,610,291,102</td>
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                  <span class="w-8 font-mono">5.5%</span>
+                  <div class="flex-grow bg-zinc-800 h-1.5 rounded-full overflow-hidden max-w-[120px]">
+                    <div class="bg-brand h-full rounded-full" style="width: 31%;"></div>
+                  </div>
+                </div>
+              </td>
+              <td data-editable="true" class="py-3 px-4 text-zinc-400">EU / UK / KR</td>
+              <td class="py-3 px-4 text-right">
+                <span class="text-xxs bg-brand/10 border border-brand/20 text-brand px-2 py-0.5 rounded font-bold">高速增长关注</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- 6. FOOTER SECTION                          -->
+  <!-- ========================================== -->
+  <footer data-section="footer" class="border-t border-zinc-900 bg-zinc-950 py-6 px-8 mt-12 text-center text-xs text-zinc-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+      <span data-editable="true">报告归档编号：BI-RP-2026-N987 · 数据源：Global Analytics Pipeline</span>
+    </div>
+    <div data-editable="true" class="flex gap-4">
+      <span class="hover:text-zinc-400 cursor-pointer">服务免责声明</span>
+      <span>|</span>
+      <span class="hover:text-zinc-400 cursor-pointer">数据脱敏规范</span>
+      <span>|</span>
+      <span class="hover:text-zinc-400 cursor-pointer">联系分析团队 (BI-Desk)</span>
+    </div>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- CLIENT-SIDE SCRIPTS (Interactivity & Viz)   -->
+  <!-- ========================================== -->
+  <script>
+    // Theme accent configuration variables
+    let currentAccentColor = '#1DB954';
+    let currentAccentGlow = 'rgba(29, 185, 84, 0.15)';
+
+    // Global Chart.js Instances (so we can destroy/re-create on theme switch)
+    let trendChartInstance = null;
+    let rankingChartPrimaryInstance = null;
+    let rankingChartSecondaryInstance = null;
+
+    // Wait until DOM is fully loaded
+    window.onload = function() {
+      // Init Icons
+      lucide.createIcons();
+      
+      // Init Visual Components
+      initWorldMap();
+      initAllCharts();
+      setupInPlaceEditing();
+    }
+
+    // Dynamic brand styling applicator
+    function setTheme(hexColor, glowColor) {
+      currentAccentColor = hexColor;
+      currentAccentGlow = glowColor;
+
+      // Update CSS Variables dynamically
+      document.documentElement.style.setProperty('--accent-color', hexColor);
+      document.documentElement.style.setProperty('--accent-glow', glowColor);
+
+      // Re-initialize Charts with updated brand styling color presets
+      initAllCharts();
+      showToast(`已成功切换品牌主题色: ${hexColor}`);
+    }
+
+    // Switch Editor/Preview Panel
+    function toggleEditMode(isEdit) {
+      const body = document.body;
+      const btnPreview = document.getElementById('btn-preview');
+      const btnEdit = document.getElementById('btn-edit');
+
+      if (isEdit) {
+        body.classList.add('edit-mode');
+        btnEdit.className = "px-3 py-1 rounded bg-brand text-zinc-950 font-bold transition-all";
+        btnPreview.className = "px-3 py-1 rounded text-zinc-400 hover:text-zinc-100 transition-all";
+        showToast("已启用编辑模式。双击虚线标红的文字即可自由进行修改！");
+      } else {
+        body.classList.remove('edit-mode');
+        btnPreview.className = "px-3 py-1 rounded bg-brand text-zinc-950 font-bold transition-all";
+        btnEdit.className = "px-3 py-1 rounded text-zinc-400 hover:text-zinc-100 transition-all";
+        showToast("已返回专业预览视角。");
+      }
+    }
+
+    // Custom In-place text editing controller
+    function setupInPlaceEditing() {
+      document.querySelectorAll('[data-editable="true"]').forEach(elem => {
+        elem.addEventListener('dblclick', function() {
+          // Verify current operational state
+          if (!document.body.classList.contains('edit-mode')) {
+            // Auto switch to edit mode to lower barrier
+            toggleEditMode(true);
+          }
+
+          const originalText = this.innerText;
+          const input = document.createElement('textarea');
+          input.value = originalText;
+          input.className = "bg-zinc-900 border border-brand text-zinc-100 p-1.5 rounded w-full text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand";
+          
+          // Replicate sizing to minimize layout shifts
+          input.style.height = `${this.offsetHeight + 10}px`;
+
+          const saveChanges = () => {
+            const val = input.value.trim();
+            if (val) {
+              this.innerText = val;
+            } else {
+              this.innerText = originalText;
+            }
+            input.remove();
+            this.style.display = '';
+            showToast("单元数据已修改成功");
+          };
+
+          input.addEventListener('blur', saveChanges);
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              saveChanges();
+            }
+          });
+
+          this.style.display = 'none';
+          this.parentNode.insertBefore(input, this);
+          input.focus();
+        });
+      });
+    }
+
+    // High fidelity Canvas dotted particle map rendering (No Mapbox/Leaflet slow loads)
+    function initWorldMap() {
+      const canvas = document.getElementById('worldMapCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      // Sync sizing to bounding container
+      const resizeMap = () => {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+        drawMapContent();
+      };
+
+      // Custom pseudo world-map coordinate generator to represent Spotify presence clusters
+      const clusters = [
+        // LatAm (Heavy Green cluster)
+        { cx: 0.32, cy: 0.72, density: 42, label: "巴西 (Brazil)", size: 30, power: 1.0 },
+        { cx: 0.28, cy: 0.62, density: 15, label: "哥伦比亚", size: 18, power: 0.6 },
+        // North America
+        { cx: 0.22, cy: 0.35, density: 35, label: "美国", size: 35, power: 0.8 },
+        { cx: 0.25, cy: 0.25, density: 12, label: "加拿大", size: 20, power: 0.5 },
+        // Europe
+        { cx: 0.48, cy: 0.28, density: 30, label: "英国/西欧", size: 28, power: 0.9 },
+        { cx: 0.53, cy: 0.33, density: 25, label: "东欧", size: 22, power: 0.7 },
+        // Asia / Oceania
+        { cx: 0.78, cy: 0.42, density: 20, label: "东南亚区", size: 24, power: 0.6 },
+        { cx: 0.82, cy: 0.75, density: 18, label: "澳大利亚", size: 22, power: 0.75 }
+      ];
+
+      function drawMapContent() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 1. Draw a clean, sci-fi analytical coordinate grid lines
+        ctx.strokeStyle = 'rgba(63, 63, 70, 0.15)';
+        ctx.lineWidth = 1;
+        const gridGap = 40;
+        for (let x = 0; x < canvas.width; x += gridGap) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height);
+          ctx.stroke();
+        }
+        for (let y = 0; y < canvas.height; y += gridGap) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+          ctx.stroke();
+        }
+
+        // 2. Draw high-tech analytical particles representing countries
+        clusters.forEach(cluster => {
+          const mapX = cluster.cx * canvas.width;
+          const mapY = cluster.cy * canvas.height;
+
+          // Ambient halo glow beneath high-value clusters
+          const glowGrad = ctx.createRadialGradient(mapX, mapY, 2, mapX, mapY, cluster.size * 1.8);
+          glowGrad.addColorStop(0, currentAccentColor.replace(')', ', 0.25)').replace('rgb', 'rgba'));
+          glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = glowGrad;
+          ctx.beginPath();
+          ctx.arc(mapX, mapY, cluster.size * 1.8, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Dotted grid cluster structure representing coordinates
+          for (let i = 0; i < cluster.density; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            // Standard deviation distribution for density visual
+            const r = (Math.pow(Math.random(), 1.5)) * cluster.size;
+            const ptX = mapX + Math.cos(angle) * r;
+            const ptY = mapY + Math.sin(angle) * r;
+
+            // Varying opacity to look complex and dynamic
+            ctx.fillStyle = `rgba(${hexToRgb(currentAccentColor)}, ${0.1 + Math.random() * cluster.power})`;
+            ctx.beginPath();
+            ctx.arc(ptX, ptY, 1.5 + Math.random() * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Render coordinate labels
+          ctx.font = 'bold 8px monospace';
+          ctx.fillStyle = 'rgba(161, 161, 170, 0.6)';
+          ctx.fillText(`LOC-${cluster.label.substring(0,2).toUpperCase()}`, mapX - 15, mapY - cluster.size - 4);
+        });
+      }
+
+      window.addEventListener('resize', resizeMap);
+      resizeMap();
+    }
+
+    // Helper: Hex translation to raw RGB values
+    function hexToRgb(hex) {
+      const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+      const fullHex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(fullHex);
+      return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '29, 185, 84';
+    }
+
+    // Initialize all standard ChartJS canvases
+    function initAllCharts() {
+      
+      // Destroy previous structures if present (needed on theme swap)
+      if (trendChartInstance) trendChartInstance.destroy();
+      if (rankingChartPrimaryInstance) rankingChartPrimaryInstance.destroy();
+      if (rankingChartSecondaryInstance) rankingChartSecondaryInstance.destroy();
+
+      const fontConfig = {
+        family: 'Inter, system-ui, sans-serif',
+        size: 9
+      };
+
+      // 1. Time Trends Chart setup
+      const ctxTrend = document.getElementById('trendChart').getContext('2d');
+      
+      // Dynamic gradient for trendline
+      const lineGradiant = ctxTrend.createLinearGradient(0, 0, 0, 240);
+      lineGradiant.addColorStop(0, `rgba(${hexToRgb(currentAccentColor)}, 0.25)`);
+      lineGradiant.addColorStop(1, `rgba(${hexToRgb(currentAccentColor)}, 0)`);
+
+      trendChartInstance = new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+          labels: ['5月14日', '6月20日', '7月15日', '8月10日', '9月05日', '10月12日', '11月18日', '12月25日', '1月15日', '2月20日', '3月15日', '5月12日'],
+          datasets: [{
+            label: '周播放总量 (Millions)',
+            data: [32, 40, 38, 28, 41, 39, 44, 42, 45, 48, 43, 49],
+            borderColor: currentAccentColor,
+            borderWidth: 2,
+            pointBackgroundColor: currentAccentColor,
+            pointBorderColor: '#09090b',
+            pointHoverRadius: 6,
+            tension: 0.35,
+            fill: true,
+            backgroundColor: lineGradiant
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#18181b',
+              titleColor: '#f4f4f5',
+              bodyColor: '#a1a1aa',
+              borderColor: '#27272a',
+              borderWidth: 1,
+              padding: 8,
+              boxWidth: 8,
+              boxHeight: 8,
+              cornerRadius: 4
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#a1a1aa', font: fontConfig }
+            },
+            y: {
+              grid: { color: 'rgba(39, 39, 42, 0.25)' },
+              ticks: { color: '#a1a1aa', font: fontConfig }
+            }
+          }
+        }
+      });
+
+      // 2. Primary Horizontal Bar Chart: Popular Artists
+      const ctxRankPrimary = document.getElementById('rankingChartPrimary').getContext('2d');
+      rankingChartPrimaryInstance = new Chart(ctxRankPrimary, {
+        type: 'bar',
+        data: {
+          labels: ['Jul', 'Drake', 'Future', 'Capital Bra', 'BTS', 'Logic', 'Neirfeu', 'Imagine Dragons', 'Mayday', 'Avicii'],
+          datasets: [{
+            data: [168, 114, 110, 105, 98, 88, 86, 85, 82, 80],
+            backgroundColor: currentAccentColor,
+            borderRadius: 3,
+            borderSkipped: false,
+            barThickness: 10
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: '#18181b' }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(39, 39, 42, 0.15)' },
+              ticks: { color: '#a1a1aa', font: fontConfig }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: '#f4f4f5', font: fontConfig }
+            }
+          }
+        }
+      });
+
+      // 3. Secondary Horizontal Bar Chart: Popular Tracks
+      const ctxRankSecondary = document.getElementById('rankingChartSecondary').getContext('2d');
+      rankingChartSecondaryInstance = new Chart(ctxRankSecondary, {
+        type: 'bar',
+        data: {
+          labels: ['Shape of You', 'Perfect', 'Despacito', 'HUMBLE.', 'New Rules', 'SAD!', 'Better Now', 'Congratulations', 'Happier', 'Say You Won\'t'],
+          datasets: [{
+            data: [4128, 2410, 1980, 1820, 1610, 1580, 1520, 1490, 1450, 1410],
+            backgroundColor: '#06B6D4', // Deep Complementary Teal color
+            borderRadius: 3,
+            borderSkipped: false,
+            barThickness: 10
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: '#18181b' }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(39, 39, 42, 0.15)' },
+              ticks: { color: '#a1a1aa', font: fontConfig }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: '#f4f4f5', font: fontConfig }
+            }
+          }
+        }
+      });
+    }
+
+    // Alert micro-framework
+    function showToast(text) {
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toast-text');
+      
+      toastText.innerText = text;
+      toast.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    // Export payload utility (allows Codex/AI agent to parse modified changes easily)
+    function exportJSON() {
+      const output = [];
+      document.querySelectorAll('[data-section]').forEach(sec => {
+        const sectionId = sec.getAttribute('data-section');
+        const textElements = [];
+        sec.querySelectorAll('[data-editable="true"]').forEach((el, index) => {
+          textElements.push({
+            id: index,
+            elementTagName: el.tagName,
+            content: el.innerText.trim()
+          });
+        });
+        output.push({
+          section: sectionId,
+          mutations: textElements
+        });
+      });
+
+      // Construct output dynamic schema
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(output, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `dashboard-report-config.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      showToast("已生成导出 JSON 序列。包含全部双击编辑后的文字节点！");
+    }
+  </script>
+</body>
+</html>

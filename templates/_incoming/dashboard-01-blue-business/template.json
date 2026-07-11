@@ -1,0 +1,269 @@
+{
+  "id": "dashboard-01-blue-business",
+  "name": "投行级硅光与网络架构业务分析数据看板",
+  "pageTypes": [
+    "data-report",
+    "infographic",
+    "executive-dashboard"
+  ],
+  "styleTags": [
+    "navy-blue",
+    "isometric-diagram",
+    "flat-infographic",
+    "tight-spacing"
+  ],
+  "editableCapabilities": {
+    "textEdit": true,
+    "chartDataDrive": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "hero": {
+      "desc": "报告主标题与一句话结论区域",
+      "required": true,
+      "hideable": false
+    },
+    "top-charts": {
+      "desc": "网络成本堆叠柱状图与指数级增长箭头图",
+      "required": true,
+      "hideable": false
+    },
+    "content-drivers": {
+      "desc": "网络成本份额横向占比拆分，含 ELS / Shufflebox 细分块",
+      "required": true,
+      "hideable": true
+    },
+    "market-architecture": {
+      "desc": "SiPh 市场渗透率曲线与 EML / SiPh 芯片架构连接图对比",
+      "required": true,
+      "hideable": false
+    },
+    "bottom-insights": {
+      "desc": "Why SiPh 勋章功能条、核心结论与 TAM 五线折线预测图",
+      "required": true,
+      "hideable": false
+    }
+  },
+  "schema": {
+    "hero_title": {
+      "type": "html",
+      "maxLength": 60,
+      "desc": "报告大标题，可用 span 高亮核心词"
+    },
+    "hero_desc": {
+      "type": "text",
+      "maxLength": 120,
+      "desc": "报告副标题或核心研究假设，控制在两行以内"
+    },
+    "rack_cost_title": {
+      "type": "text",
+      "maxLength": 40,
+      "desc": "柱状图主标题"
+    },
+    "rack_cost_sub": {
+      "type": "text",
+      "maxLength": 35,
+      "desc": "柱状图副标题或计量单位描述"
+    },
+    "insight_growth_title": {
+      "type": "text",
+      "maxLength": 35,
+      "desc": "双箭头区域结论标签"
+    },
+    "arrow_16_multiplier": {
+      "type": "text",
+      "maxLength": 10,
+      "desc": "上部箭头倍数"
+    },
+    "arrow_16_label": {
+      "type": "text",
+      "maxLength": 20,
+      "desc": "上部箭头对应架构名称"
+    },
+    "arrow_45_multiplier": {
+      "type": "text",
+      "maxLength": 10,
+      "desc": "下部箭头倍数"
+    },
+    "arrow_45_label": {
+      "type": "text",
+      "maxLength": 20,
+      "desc": "下部箭头对应架构名称"
+    },
+    "drivers_title": {
+      "type": "text",
+      "maxLength": 55,
+      "desc": "横向占比条主标题"
+    },
+    "drivers_sub": {
+      "type": "text",
+      "maxLength": 50,
+      "desc": "横向占比条副标题或说明"
+    },
+    "driver_1_label": {
+      "type": "text",
+      "maxLength": 25,
+      "desc": "占比块 1 名称"
+    },
+    "driver_1_val": {
+      "type": "text",
+      "maxLength": 6,
+      "desc": "占比块 1 百分比值"
+    },
+    "driver_1_sub": {
+      "type": "text",
+      "maxLength": 15,
+      "desc": "占比块 1 绝对金额值"
+    },
+    "market_share_title": {
+      "type": "text",
+      "maxLength": 25,
+      "desc": "渗透率面积图大标题"
+    },
+    "inversion_zone_title": {
+      "type": "text",
+      "maxLength": 20,
+      "desc": "拐点区域英文名称"
+    },
+    "inversion_zone_sub": {
+      "type": "text",
+      "maxLength": 35,
+      "desc": "拐点区域中文解释"
+    },
+    "penetration_val": {
+      "type": "text",
+      "maxLength": 6,
+      "desc": "右侧终点渗透率数值"
+    },
+    "penetration_label": {
+      "type": "text",
+      "maxLength": 20,
+      "desc": "渗透率名词说明"
+    },
+    "penetration_6_val": {
+      "type": "text",
+      "maxLength": 6,
+      "desc": "左侧起始点渗透率数值"
+    },
+    "eml_arch_title": {
+      "type": "text",
+      "maxLength": 25,
+      "desc": "传统方案架构英文卡片头"
+    },
+    "siph_arch_title": {
+      "type": "text",
+      "maxLength": 35,
+      "desc": "硅光方案架构英文卡片头"
+    },
+    "eml_bullet_1": {
+      "type": "text",
+      "maxLength": 30,
+      "desc": "传统方案第 1 条劣势说明"
+    },
+    "siph_bullet_1": {
+      "type": "text",
+      "maxLength": 30,
+      "desc": "硅光方案第 1 条优势说明"
+    },
+    "wins_title_1": {
+      "type": "text",
+      "maxLength": 15,
+      "desc": "优势勋章条第 1 行英文标签"
+    },
+    "wins_title_2": {
+      "type": "text",
+      "maxLength": 15,
+      "desc": "优势勋章条第 2 行英文标签"
+    },
+    "wins_feat_1_val": {
+      "type": "text",
+      "maxLength": 10,
+      "desc": "勋章 1 核心量化指标"
+    },
+    "wins_feat_1_desc": {
+      "type": "text",
+      "maxLength": 35,
+      "desc": "勋章 1 指标描述"
+    },
+    "transition_desc": {
+      "type": "text",
+      "maxLength": 100,
+      "desc": "核心结论引入文本"
+    },
+    "insight_01_title": {
+      "type": "text",
+      "maxLength": 25,
+      "desc": "结论 1 标题"
+    },
+    "insight_01_desc": {
+      "type": "text",
+      "maxLength": 120,
+      "desc": "结论 1 正文分析文本"
+    },
+    "tam_projection_title": {
+      "type": "text",
+      "maxLength": 35,
+      "desc": "五线折线预测图大标题"
+    },
+    "tam_fig_caption": {
+      "type": "text",
+      "maxLength": 80,
+      "desc": "图表下方学术性图注说明"
+    }
+  },
+  "mockDataDeclaration": {
+    "charts": [
+      "rackCostChart",
+      "marketShareChart",
+      "tamChart"
+    ],
+    "staticDecorations": [
+      "inversion_zone_indicator_dashed_line",
+      "eml_vs_siph_chip_isometric_canvas",
+      "trophy_icon"
+    ]
+  },
+  "preview": {
+    "recommendedSize": {
+      "width": 1440,
+      "height": 1600
+    },
+    "aspectRatio": "9:10",
+    "captureRange": "从主 Header 到 TAM 折线图底部图注",
+    "fileName": "preview.png"
+  },
+  "externalDependencies": [
+    "Tailwind CSS CDN",
+    "ECharts CDN"
+  ],
+  "status": "incoming",
+  "folderName": "dashboard-01-blue-business",
+  "category": "dashboard",
+  "sequence": 1,
+  "styleName": "Blue Business",
+  "editorTheme": {
+    "defaultColor": "#165dff",
+    "presets": [
+      "#165dff",
+      "#0f294d",
+      "#38bdf8",
+      "#22c55e",
+      "#f5a623",
+      "#f43f5e"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-brand-blue\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-brand-blue\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-brand-blue\"]"
+      ],
+      "shadowSelectors": [
+        "[class*=\"shadow-hover\"]"
+      ]
+    }
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "id": "dashboard-15-consulting-data-report",
+  "name": "Consulting Data Report 咨询级数据报告模板",
+  "templateName": "ConsultingDataReportDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向管理层汇报、商业复盘、市场分析和战略推演的咨询级滚动数据报告模板，采用白底、深藏青强调、结论先行标题、左右分栏图表与洞察、细线分隔和 Chart.js 图表配置。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "business-review",
+    "market-analysis",
+    "strategy-report"
+  ],
+  "styleTags": [
+    "consulting-report",
+    "professional-dashboard",
+    "minimal-data-report",
+    "chartjs",
+    "scrolling-site"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "管理层汇报",
+    "商业数据复盘",
+    "市场趋势分析",
+    "竞争格局分析",
+    "战略行动方案"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "Chart.js CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#0F2C59",
+      "secondary": "#00B4D8",
+      "background": "#FAFAFA",
+      "surface": "#FFFFFF",
+      "textMain": "#111827",
+      "textSub": "#4B5563",
+      "textMuted": "#6B7280",
+      "border": "#E5E7EB",
+      "alert": "#991B1B"
+    },
+    "fonts": {
+      "serif": "Noto Serif SC, SimSun, Times New Roman, serif",
+      "body": "PingFang SC, Microsoft YaHei, Helvetica, Arial, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "report-header": {
+      "desc": "报告封面、标题和摘要说明",
+      "required": true,
+      "hideable": false
+    },
+    "executive-summary": {
+      "desc": "执行摘要和核心 KPI",
+      "required": true,
+      "hideable": true
+    },
+    "market-dynamics": {
+      "desc": "市场趋势与渠道结构分析",
+      "required": true,
+      "hideable": true
+    },
+    "competitive-landscape": {
+      "desc": "竞争格局四象限矩阵",
+      "required": true,
+      "hideable": true
+    },
+    "funnel-conversion": {
+      "desc": "转化漏斗与断点诊断",
+      "required": true,
+      "hideable": true
+    },
+    "segmentation-analysis": {
+      "desc": "细分结构和营收构成分析",
+      "required": true,
+      "hideable": true
+    },
+    "growth-trend": {
+      "desc": "核心大盘趋势",
+      "required": true,
+      "hideable": true
+    },
+    "user-demographics": {
+      "desc": "用户画像变化",
+      "required": true,
+      "hideable": true
+    },
+    "cost-structure": {
+      "desc": "成本结构优化分析",
+      "required": true,
+      "hideable": true
+    },
+    "cohort-retention": {
+      "desc": "同期群留存热力表",
+      "required": true,
+      "hideable": true
+    },
+    "strategic-solutions": {
+      "desc": "战略行动路线图",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-slot 和 contenteditable"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "canvas[id^=\"chart-\"]",
+      "desc": "Chart.js 图表容器；数据集中在底部 const chartData"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "滚动式报告区块"
+    }
+  },
+  "slotLimits": {
+    "action-title": 80,
+    "section-label": 24,
+    "metric-label": 28,
+    "metric-value": 18,
+    "insight-text": 180
+  },
+  "llmInjectionRules": [
+    "所有新增可编辑文字必须同时包含 data-editable=\"true\"、contenteditable=\"true\" 和 data-slot。",
+    "图表容器 ID 必须保持 chart-* 格式。",
+    "替换图表数据时优先修改底部 const chartData，不触碰布局和样式代码。",
+    "模块大标题保持结论先行，避免只写分析类型名称。",
+    "保持白底、细线、直角和克制配色，不添加大面积渐变、阴影或毛玻璃。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "editableCount": 77,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 11,
+    "chartCount": 8,
+    "hasSidebarShell": true,
+    "chartDataObjectAdded": true,
+    "sourceCleanup": [
+      "为 report hero 补充 data-section=\"report-header\"。",
+      "按用户槽位说明将 revenue-structure 标准化为 segmentation-analysis，将 strategic-roadmap 标准化为 strategic-solutions。",
+      "为可编辑节点补齐 contenteditable 和 data-slot。",
+      "将可编辑文案中的 Markdown 粗体标记转换为 strong 标签。",
+      "将底部 Chart.js 内联数据集中到 const chartData，便于后续注入。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#0f2c59",
+    "presets": [
+      "#0f2c59",
+      "#00b4d8",
+      "#991b1b",
+      "#16a34a",
+      "#f97316",
+      "#111827"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-c_primary\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-c_primary\"]",
+        "[class*=\"bg-blue\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-c_primary\"]",
+        "[class*=\"border-blue\"]"
+      ]
+    }
+  }
+}

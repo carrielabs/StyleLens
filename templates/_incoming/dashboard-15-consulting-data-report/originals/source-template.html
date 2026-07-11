@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>咨询级商业数据网页报告</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        c_primary: '#0F2C59',
+                        c_secondary: '#00B4D8',
+                        c_dark: '#111827',
+                        c_gray: '#4B5563',
+                        c_border: '#E5E7EB',
+                        c_bg: '#FAFAFA' // 极浅的背景色，区分导航栏和内容区
+                    },
+                    fontFamily: {
+                        serif: ['"Noto Serif SC"', 'SimSun', '"Times New Roman"', 'serif'],
+                        sans: ['"PingFang SC"', '"Microsoft YaHei"', 'Helvetica', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            background-color: #FAFAFA;
+            color: #111827;
+            scroll-behavior: smooth; /* 侧边栏点击平滑滚动 */
+        }
+        
+        /* 侧边导航栏 */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            background-color: #FAFAFA;
+            border-right: 1px solid #E5E7EB;
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+            z-index: 40;
+        }
+
+        .sidebar-link {
+            display: block;
+            padding: 0.6rem 1rem; /* 稍微增加内边距 */
+            color: #6B7280;
+            font-size: 0.875rem;
+            border-radius: 0.375rem;
+            margin-bottom: 0.25rem;
+            transition: all 0.2s;
+            border-left: 3px solid transparent; /* 为选中状态预留边框位置 */
+        }
+        .sidebar-link:hover {
+            background-color: #F3F4F6;
+            color: #111827;
+        }
+        .sidebar-link.active {
+            background-color: #EBF5FF; /* 极浅的品牌蓝背景 */
+            color: #0F2C59;
+            font-weight: bold;
+            border-left: 3px solid #0F2C59; /* 强调色的左侧提示线 */
+        }
+
+        /* 右侧主体内容区 */
+        .main-content {
+            margin-left: 260px; /* 留出侧边栏宽度 */
+            min-height: 100vh;
+            background-color: #FFFFFF;
+            padding: 4rem 10%; /* 相对视口宽度的留白，保证不同屏幕的阅读体验 */
+        }
+
+        /* 报告核心内容最大宽度限制 */
+        .report-wrapper {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* 原生的网页 Section，不再有纸张感 */
+        .report-section {
+            min-height: 100vh; /* 强制每个模块最少占满一整屏 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* 垂直居中，完美隐藏下一页的标题 */
+            padding: 4rem 0; 
+            border-bottom: 1px solid #E5E7EB;
+        }
+        .report-section:last-child {
+            border-bottom: none;
+            padding-bottom: 4rem;
+        }
+
+        /* 标题和文字体系 */
+        .action-title {
+            font-size: 1.875rem;
+            line-height: 1.4;
+            color: #000;
+            margin-bottom: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 0.025em;
+        }
+        .section-label {
+            color: #6B7280;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .bullet-list li {
+            position: relative;
+            padding-left: 1.25rem;
+            margin-bottom: 0.875rem;
+            line-height: 1.6;
+        }
+        .bullet-list li::before {
+            content: "■"; /* 更具现代Web感的小方块 */
+            position: absolute;
+            left: 0;
+            top: 0.1rem;
+            font-size: 0.6rem;
+            color: #0F2C59;
+        }
+
+        /* 统一图表高度约束，防止过高 */
+        .chart-wrapper {
+            position: relative;
+            height: 380px; /* 从 300px 调大至 380px，让画面更充实且不丑 */
+            width: 100%;
+        }
+
+        /* Web 特有的头部信息展示 */
+        .report-hero {
+            padding-bottom: 4rem;
+            border-bottom: 2px solid #111827;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-gray-800">
+
+    <!-- 侧边栏导航 (Web 报告特征) -->
+    <aside class="sidebar hidden md:block">
+        <div class="font-serif font-bold text-xl tracking-wide text-c_primary mb-8 border-b pb-4">
+            BERRY <span class="text-gray-400">DATA</span>
+        </div>
+        <div class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-4">报告目录</div>
+        <nav>
+            <a href="#sec-1" class="sidebar-link">1. 业务大盘复盘</a>
+            <a href="#sec-2" class="sidebar-link">2. 销售渠道演变</a>
+            <a href="#sec-3" class="sidebar-link">3. 竞争象限分析</a>
+            <a href="#sec-4" class="sidebar-link">4. 转化漏斗拆解</a>
+            <a href="#sec-5" class="sidebar-link">5. 营收结构拆解</a>
+            <a href="#sec-6" class="sidebar-link">6. 核心大盘走势</a>
+            <a href="#sec-7" class="sidebar-link">7. 用户画像变迁</a>
+            <a href="#sec-8" class="sidebar-link">8. 成本结构优化</a>
+            <a href="#sec-9" class="sidebar-link">9. 同期群留存</a>
+            <a href="#sec-10" class="sidebar-link">10. 战略行动路线图</a>
+        </nav>
+        
+        <div class="mt-12 text-xs text-gray-400 leading-relaxed border-t pt-4">
+            <p>生成时间: 2026.10.15</p>
+            <p>数据源: 内部 BI / 实时大盘</p>
+        </div>
+    </aside>
+
+    <!-- 右侧滚动内容区 -->
+    <main class="main-content">
+        <div class="report-wrapper">
+
+            <!-- Report Hero (大字报头部) -->
+            <header class="report-hero">
+                <span class="text-sm text-c_secondary font-bold tracking-widest uppercase" data-editable="true">Confidential Report</span>
+                <h1 class="font-serif text-4xl md:text-5xl font-bold mt-4 mb-6 leading-tight text-gray-900" data-editable="true">
+                    2026 Q3 核心业务复盘与下半场战略规划报告
+                </h1>
+                <p class="text-lg text-gray-500 max-w-3xl leading-relaxed" data-editable="true">
+                    本报告基于最新的 BI 平台脱敏数据自动生成，全景透视当前营收健康度、流量转化链路及潜在并购机会，为管理层提供决策支持。
+                </p>
+            </header>
+
+            <!-- ========================================== -->
+            <!-- 1: Executive Summary -->
+            <!-- ========================================== -->
+            <section class="report-section" id="sec-1" data-section="executive-summary">
+                <span class="section-label" data-editable="true">01 / 业务大盘复盘</span>
+                <h2 class="font-serif action-title" data-editable="true">
+                    核心业务大盘在 Q3 实现了 24% 的强劲反弹，主要由下沉市场（Tier 3）的新增客群驱动
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 mt-8">
+                    <div class="col-span-1 md:col-span-8">
+                        <h3 class="text-sm font-bold mb-4 uppercase text-gray-500" data-editable="true">核心业务指标表现 (YTD 2026)</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="border border-c_border p-6 bg-gray-50 rounded-sm">
+                                <p class="text-xs text-gray-500 mb-2" data-editable="true">总营收 (GMV) - 人民币</p>
+                                <p class="text-3xl font-bold text-c_primary" data-editable="true">¥32.4 亿</p>
+                                <p class="text-xs text-green-600 mt-3 font-bold" data-editable="true">▲ +24.5% YoY</p>
+                            </div>
+                            <div class="border border-c_border p-6 bg-gray-50 rounded-sm">
+                                <p class="text-xs text-gray-500 mb-2" data-editable="true">月活跃用户 (MAU)</p>
+                                <p class="text-3xl font-bold text-c_primary" data-editable="true">1,450 万</p>
+                                <p class="text-xs text-green-600 mt-3 font-bold" data-editable="true">▲ +12.3% YoY</p>
+                            </div>
+                            <div class="border border-c_border p-6 bg-gray-50 rounded-sm">
+                                <p class="text-xs text-gray-500 mb-2" data-editable="true">单客获取成本 (CAC)</p>
+                                <p class="text-3xl font-bold text-c_dark" data-editable="true">¥145.0</p>
+                                <p class="text-xs text-red-600 mt-3 font-bold" data-editable="true">▼ -8.4% YoY</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-1 md:col-span-4 md:border-l md:border-gray-200 md:pl-8">
+                        <h3 class="text-sm font-bold mb-4 uppercase text-gray-500" data-editable="true">管理层洞察</h3>
+                        <ul class="bullet-list text-sm text-gray-700">
+                            <li data-editable="true">历经2025年的行业调整期，本季度业务呈现显著V型反转。</li>
+                            <li data-editable="true">得益于供应链优化，虽然终端售价有所下调，但整体利润率仍保持在 18% 的健康水平。</li>
+                            <li data-editable="true"><strong>风险提示：</strong>竞争对手 A 在核心商圈的补贴策略导致一二线城市份额微降 3%。</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- 2: Market Dynamics -->
+            <!-- ========================================== -->
+            <section class="report-section" id="sec-2" data-section="market-dynamics">
+                <span class="section-label" data-editable="true">02 / 销售渠道演变</span>
+                <h2 class="font-serif action-title" data-editable="true">
+                    95% 的新设备销售依然依赖特许经销网络；但在二手市场，直营与C2C渠道占据主导
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 mt-8">
+                    <div class="col-span-1 md:col-span-8">
+                        <div class="grid grid-cols-2 gap-8">
+                            <div>
+                                <h3 class="text-sm font-bold mb-4 border-b border-gray-200 pb-2" data-editable="true">新设备渠道 (2026E)</h3>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-new-equip"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold mb-4 border-b border-gray-200 pb-2" data-editable="true">二手设备渠道 (2026E)</h3>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-used-equip"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-1 md:col-span-4 md:border-l md:border-gray-200 md:pl-8">
+                        <h3 class="text-sm font-bold mb-4 uppercase text-gray-500" data-editable="true">渠道归因</h3>
+                        <ul class="bullet-list text-sm text-gray-700">
+                            <li data-editable="true">在新设备市场，由于极高的售后门槛，特许经销商（Franchised suppliers）构成了绝对护城河。</li>
+                            <li data-editable="true">然而在二手交易中，消费者的首要诉求变为**“性价比”**与**“流动性”**。</li>
+                            <li data-editable="true">私人卖家和线上经纪平台在二手市场占据了超过 40% 的份额，这是我们目前的盲区。</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- 3: Competitive Landscape -->
+            <!-- ========================================== -->
+            <section class="report-section" id="sec-3" data-section="competitive-landscape">
+                <span class="section-label" data-editable="true">03 / 竞争象限</span>
+                <h2 class="font-serif action-title" data-editable="true">
+                    公司稳健占据下沉基本盘，而在高溢价的细分赛道中，存在极佳的并购窗口期
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 mt-8">
+                    <div class="col-span-1 md:col-span-8 relative bg-gray-50 p-4 border border-gray-200 rounded-sm">
+                        <h3 class="text-sm font-bold mb-6 text-center" data-editable="true">主要玩家的市场定位矩阵</h3>
+                        <div class="absolute left-2 top-1/2 -rotate-90 origin-left text-xs text-gray-400 font-bold" style="transform: translate(0, -50%) rotate(-90deg);">
+                            ← 定价水平 / 溢价能力
+                        </div>
+                        <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-gray-400 font-bold">
+                            品牌影响力 / 服务网络 →
+                        </div>
+                        <div class="pl-6 pb-6 pt-2 chart-wrapper">
+                            <canvas id="chart-scatter"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-1 md:col-span-4 md:border-l md:border-gray-200 md:pl-8">
+                        <h3 class="text-sm font-bold mb-4 uppercase text-gray-500" data-editable="true">竞争评述</h3>
+                        <ul class="bullet-list text-sm text-gray-700">
+                            <li data-editable="true">**本公司**稳居右下象限，依靠地推网络吃透了下沉市场。</li>
+                            <li data-editable="true">**竞对 A & B** 占据右上角区间，服务头部企业客户，享有 40% 的高毛利。</li>
+                            <li data-editable="true">**市场机会点**：左上角的玩家正在经历资金链危机，通过战略收购，可快速切入高端市场。</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- 4: Funnel -->
+            <!-- ========================================== -->
+            <section class="report-section" id="sec-4" data-section="funnel-conversion">
+                <span class="section-label" data-editable="true">04 / 转化漏斗拆解</span>
+                <h2 class="font-serif action-title" data-editable="true">
+                    前端流量获取成本正在走低，但“意向至签约”环节流失严重，亟需优化审核中台
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 mt-8">
+                    <div class="col-span-1 md:col-span-6">
+                        <h3 class="text-sm font-bold mb-4 border-b border-gray-200 pb-2" data-editable="true">全链路转化留存 (2026 H1 vs 2025 H1)</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-funnel"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-1 md:col-span-6">
+                        <h3 class="text-sm font-bold mb-4 border-b border-gray-200 pb-2" data-editable="true">关键断点诊断矩阵</h3>
+                        <div class="text-sm border border-gray-200 rounded-sm overflow-hidden">
+                            <div class="bg-gray-100 p-3 font-bold flex border-b border-gray-200">
+                                <div class="w-1/3 text-gray-600" data-editable="true">流失节点</div>
+                                <div class="w-2/3 text-gray-600" data-editable="true">核心归因</div>
+                            </div>
+                            <div class="flex border-b border-gray-200 p-3 items-center">
+                                <div class="w-1/3 font-bold text-gray-800" data-editable="true">1. 线索至试用</div>
+                                <div class="w-2/3 text-gray-600" data-editable="true">需跳出微信生态填写表单，致 40% 用户直接放弃。</div>
+                            </div>
+                            <div class="flex border-b border-gray-200 p-3 items-center bg-red-50">
+                                <div class="w-1/3 font-bold text-red-600" data-editable="true">2. 试用至签约</div>
+                                <div class="w-2/3 text-gray-800" data-editable="true">**最大流失**：风控要求多达5份纸质文件，耗时拉长至 72 小时。</div>
+                            </div>
+                            <div class="flex p-3 items-center">
+                                <div class="w-1/3 font-bold text-gray-800" data-editable="true">3. 签约至复购</div>
+                                <div class="w-2/3 text-gray-600" data-editable="true">缺乏自动化触达，过度依赖人工，覆盖率不足。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- 5: Revenue -->
+            <!-- ========================================== -->
+            <section class="report-section" id="sec-5" data-section="revenue-structure">
+                <span class="section-label" data-editable="true">05 / 营收结构拆解</span>
+                <h2 class="font-serif action-title" data-editable="true">
+                    商业模式转型初显飞轮效应，高毛利的 SaaS 订阅服务营收占比突破 50%
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 mt-8">
+                    <div class="col-span-1 md:col-span-5 relative">
+                        <div class="chart-wrapper">
+                            <canvas id="chart-revenue-pie"></canvas>
+                        </div>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
+                            <span class="text-xs text-gray-500">2026 Q3</span>
+                            <span class="text-2xl font-bold text-c_primary">¥32.4亿</span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-1 md:col-span-7 md:border-l md:border-gray-200 md:pl-8">
+                        <h3 class="text-sm font-bold mb-4 uppercase text-gray-500" data-editable="true">业务线健康度评估</h3>
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 p-4 rounded-sm border border-blue-100">
+                                <h4 class="font-bold text-c_primary mb-1 text-sm">SaaS订阅服务 (52%)</h4>
+                                <p class="text-sm text-gray-600">同比增长 45%，最大现金牛。留存率高达 92%，毛利率稳定在 85% 以上。</p>
+                            </div>
+                            <div class="p-4 rounded-sm border border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-1 text-sm">硬件设备一次性销售 (30%)</h4>
+                                <p class="text-sm text-gray-600">受宏观环境影响，采购预算缩减，营收同比下滑 12%，但仍是重要获客入口。</p>
+                            </div>
+                            <div class="p-4 rounded-sm border border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-1 text-sm">增值服务与实施咨询 (18%)</h4>
+                                <p class="text-sm text-gray-600">稳步增长。主要为头部客户提供定制化服务，有效提升了客户迁移成本。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- Remaining Sections 6-10 mapped to Web flow -->
+            <!-- ========================================== -->
+            <section class="report-section" id="sec-6" data-section="growth-trend">
+                <span class="section-label" data-editable="true">06 / 核心大盘走势</span>
+                <h2 class="font-serif action-title" data-editable="true">
+                    过去 12 个月大盘保持稳健增长，规模效应带动净利润率攀升至 18%
+                </h2>
+                <div class="mt-8">
+                    <div class="chart-wrapper" style="height: 350px;">
+                        <canvas id="chart-trend-combo"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="report-section" id="sec-7" data-section="user-demographics">
+                <span class="section-label" data-editable="true">07 / 用户画像变迁</span>
+                <h2 class="font-serif action-title" data-editable="true">
+                    目标客群呈现快速年轻化趋势，25-34岁人群贡献了主要的新增流量
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-8 mt-8">
+                    <div class="col-span-1 md:col-span-7">
+                        <div class="chart-wrapper">
+                            <canvas id="chart-demographics"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-span-1 md:col-span-5 md:pl-8">
+                        <ul class="bullet-list text-sm text-gray-700 mt-4">
+                            <li data-editable="true">**年轻群体（25-34岁）占比升至 42%**：主要由小红书、抖音渠道转化，偏好订阅制和轻量级服务。</li>
+                            <li data-editable="true">**高净值老客群**：绝对数量盘稳定，依然贡献了 60% 的高客单价购买，但整体占比被新增流量稀释。</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="report-section" id="sec-8" data-section="cost-structure">
+                <span class="section-label" data-editable="true">08 / 成本结构优化</span>
+                <h2 class="font-serif action-title" data-editable="true">
+                    中台建设红利释放：履约成本占比大幅摊薄，研发投入（R&D）得有空间加码
+                </h2>
+                <div class="mt-8">
+                    <div class="chart-wrapper" style="height: 350px;">
+                        <canvas id="chart-cost-stack"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="report-section" id="sec-9" data-section="cohort-retention">
+                <span class="section-label" data-editable="true">09 / 同期群留存</span>
+                <h2 class="font-serif action-title" data-editable="true">
+                    预警：4月份激进下沉买量导致次月留存率面临跌破 30% 的风险
+                </h2>
+                <div class="mt-8 overflow-x-auto text-sm">
+                    <table class="w-full text-center border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-t border-gray-300 text-gray-600">
+                                <th class="py-3 px-4 text-left border-r font-bold">获客月份</th>
+                                <th class="py-3 px-4 border-r">Month 1</th>
+                                <th class="py-3 px-4">Month 2</th>
+                                <th class="py-3 px-4">Month 3</th>
+                                <th class="py-3 px-4">Month 4</th>
+                                <th class="py-3 px-4">Month 5</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 text-left border-r font-bold">2026-01 (n=24.5k)</td>
+                                <td class="py-3 px-4 bg-[#0F2C59] text-white">100%</td>
+                                <td class="py-3 px-4 bg-[#1d4f91] text-white">42%</td>
+                                <td class="py-3 px-4 bg-[#3b7acb] text-white">35%</td>
+                                <td class="py-3 px-4 bg-[#7aaae8] text-gray-900">28%</td>
+                                <td class="py-3 px-4 bg-[#b6d0f4] text-gray-900">25%</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 text-left border-r font-bold">2026-02 (n=18.2k)</td>
+                                <td class="py-3 px-4 bg-[#0F2C59] text-white">100%</td>
+                                <td class="py-3 px-4 bg-[#1d4f91] text-white">40%</td>
+                                <td class="py-3 px-4 bg-[#3b7acb] text-white">32%</td>
+                                <td class="py-3 px-4 bg-[#7aaae8] text-gray-900">26%</td>
+                                <td class="py-3 px-4 bg-gray-50 text-gray-400">-</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 text-left border-r font-bold text-red-600">2026-04 (n=52.1k)</td>
+                                <td class="py-3 px-4 bg-[#0F2C59] text-white">100%</td>
+                                <td class="py-3 px-4 bg-[#7aaae8] text-gray-900 font-bold border-2 border-red-500">29%</td>
+                                <td class="py-3 px-4 bg-[#ddecfa] text-gray-900 font-bold border-2 border-red-500">18%</td>
+                                <td class="py-3 px-4 bg-gray-50 text-gray-400">-</td>
+                                <td class="py-3 px-4 bg-gray-50 text-gray-400">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="mt-4 text-xs text-gray-500">* 结论：建议立即叫停低质量信息流渠道，将预算倾斜至召回与促活策略。</p>
+                </div>
+            </section>
+
+            <section class="report-section" id="sec-10" data-section="strategic-roadmap">
+                <span class="section-label" data-editable="true">10 / 战略路线图</span>
+                <h2 class="font-serif action-title" data-editable="true">
+                    下一阶段核心动作：重塑线上体验以截流流失，同时伺机启动并购战
+                </h2>
+                <div class="mt-8 border border-gray-200 rounded-sm overflow-hidden text-sm">
+                    <div class="bg-gray-100 p-4 font-bold flex border-b border-gray-200">
+                        <div class="w-1/5" data-editable="true">战略支柱</div>
+                        <div class="w-2/5" data-editable="true">核心举措 (Initiatives)</div>
+                        <div class="w-1/5 text-center" data-editable="true">预期收益 / KPI</div>
+                        <div class="w-1/5 text-center" data-editable="true">执行状态</div>
+                    </div>
+                    
+                    <div class="flex border-b border-gray-100 p-4 items-center">
+                        <div class="w-1/5 font-bold text-c_primary" data-editable="true">流程体验重塑 (P0)</div>
+                        <div class="w-2/5 text-gray-600" data-editable="true">重构风控审核中台，引入 OCR 与活体检测，全面取代纸质审核。</div>
+                        <div class="w-1/5 text-center text-xs" data-editable="true">转化率提升至 40%</div>
+                        <div class="w-1/5 text-center"><span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs" data-editable="true">Q4 研发中</span></div>
+                    </div>
+
+                    <div class="flex border-b border-gray-100 p-4 items-center bg-gray-50">
+                        <div class="w-1/5 font-bold text-c_primary" data-editable="true">渠道拓展矩阵 (P1)</div>
+                        <div class="w-2/5 text-gray-600" data-editable="true">成立二手业务事业部，试水官方认证平台，补齐生命周期闭环。</div>
+                        <div class="w-1/5 text-center text-xs" data-editable="true">新增 GMV 贡献 15%</div>
+                        <div class="w-1/5 text-center"><span class="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-xs" data-editable="true">规划中</span></div>
+                    </div>
+
+                    <div class="flex p-4 items-center">
+                        <div class="w-1/5 font-bold text-c_primary" data-editable="true">生态并购扩张 (P2)</div>
+                        <div class="w-2/5 text-gray-600" data-editable="true">针对高溢价能力但缺渠道的左上象限竞品，推进战略控股与并表。</div>
+                        <div class="w-1/5 text-center text-xs" data-editable="true">高端市场份额突破 10%</div>
+                        <div class="w-1/5 text-center"><span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs" data-editable="true">已尽调接触</span></div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- 图表渲染逻辑保持不变，但为了适应自适应布局，会自动利用 wrapper 宽高 -->
+    <script>
+        Chart.defaults.font.family = '"PingFang SC", "Helvetica", sans-serif';
+        Chart.defaults.color = '#6B7280';
+        Chart.defaults.scale.grid.color = '#F3F4F6';
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(17, 24, 39, 0.9)';
+        Chart.defaults.plugins.legend.position = 'bottom';
+        Chart.defaults.plugins.legend.labels.boxWidth = 12;
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+        Chart.defaults.animation = false;
+
+        window.onload = function() {
+            // 新增：设置侧边栏滚动监听 (ScrollSpy)
+            const sections = document.querySelectorAll('.report-section');
+            const navLinks = document.querySelectorAll('.sidebar-link');
+            
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.5 // 当模块有 50% 面积进入视口时触发侧边栏高亮
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        // 移除所有旧的高亮
+                        navLinks.forEach(link => link.classList.remove('active'));
+                        // 寻找当前对应的链接并点亮
+                        const activeLink = document.querySelector(`.sidebar-link[href="#${id}"]`);
+                        if (activeLink) {
+                            activeLink.classList.add('active');
+                        }
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => observer.observe(section));
+
+            // 初始化所有图表
+            new Chart(document.getElementById('chart-new-equip').getContext('2d'), {
+                type: 'bar',
+                data: { labels: [''], datasets: [ { label: 'Others', data: [5], backgroundColor: '#D1D5DB' }, { label: 'Franchised Suppliers', data: [95], backgroundColor: '#0F2C59' } ] },
+                options: { indexAxis: 'x', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, display: false }, y: { stacked: true, max: 100, display: false } }, plugins: { legend: { display: false } } }
+            });
+
+            new Chart(document.getElementById('chart-used-equip').getContext('2d'), {
+                type: 'bar',
+                data: { labels: [''], datasets: [ { label: 'Others', data: [15], backgroundColor: '#E5E7EB' }, { label: 'Independent Stores', data: [25], backgroundColor: '#9CA3AF' }, { label: 'Private Sellers', data: [40], backgroundColor: '#00B4D8' }, { label: 'Franchised Suppliers', data: [20], backgroundColor: '#0F2C59' } ] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, display: false }, y: { stacked: true, max: 100, display: false } }, plugins: { legend: { position: 'right', align: 'end' } } }
+            });
+
+            new Chart(document.getElementById('chart-scatter').getContext('2d'), {
+                type: 'bubble',
+                data: {
+                    datasets: [
+                        { label: '竞对 A', data: [{x: 8.5, y: 8, r: 15}], backgroundColor: '#D1D5DB' },
+                        { label: '竞对 B', data: [{x: 7.0, y: 7.5, r: 10}], backgroundColor: '#D1D5DB' },
+                        { label: '本公司', data: [{x: 8.0, y: 2.5, r: 25}], backgroundColor: '#00B4D8', borderColor: '#0F2C59', borderWidth: 2 },
+                        { label: '并购标的', data: [{x: 2.5, y: 7.0, r: 12}], backgroundColor: 'rgba(0,0,0,0)', borderColor: '#EF4444', borderWidth: 2, borderDash: [4, 4] }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { min: 0, max: 10, ticks: { display: false } }, y: { min: 0, max: 10, ticks: { display: false } } }, plugins: { legend: { display: false } } },
+                plugins: [{ id: 'quadrantLines', beforeDraw: (c) => { const {ctx, chartArea: {top, bottom, left, right}, scales: {x, y}} = c; ctx.save(); ctx.strokeStyle = '#E5E7EB'; ctx.beginPath(); ctx.moveTo(x.getPixelForValue(5), top); ctx.lineTo(x.getPixelForValue(5), bottom); ctx.stroke(); ctx.beginPath(); ctx.moveTo(left, y.getPixelForValue(5)); ctx.lineTo(right, y.getPixelForValue(5)); ctx.stroke(); ctx.restore(); } }]
+            });
+
+            new Chart(document.getElementById('chart-funnel').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['展示曝光', '点击线索', '试用体验', '成功签约', '首次复购'],
+                    datasets: [
+                        { label: '2025 H1', data: [100, 45, 30, 18, 5], backgroundColor: '#E5E7EB' },
+                        { label: '2026 H1 (当前)', data: [100, 65, 35, 12, 4], backgroundColor: '#0F2C59' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: {display: false} }, x: { grid: { display: false } } } }
+            });
+
+            new Chart(document.getElementById('chart-revenue-pie').getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: ['SaaS订阅服务', '硬件一次性销售', '增值与咨询服务'], datasets: [{ data: [52, 30, 18], backgroundColor: ['#0F2C59', '#00B4D8', '#E5E7EB'], borderWidth: 0 }] },
+                options: { cutout: '75%', responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            new Chart(document.getElementById('chart-trend-combo').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+                    datasets: [
+                        { type: 'line', label: '净利润率 (%)', data: [14, 15, 15, 12, 11, 13, 16, 17, 18, 18, 19, 18], borderColor: '#00B4D8', backgroundColor: '#00B4D8', yAxisID: 'y1', tension: 0.3, fill: false, borderWidth: 3 },
+                        { type: 'bar', label: '月度 GMV (百万)', data: [120, 150, 210, 90, 85, 140, 180, 220, 240, 260, 255, 280], backgroundColor: '#E5E7EB', yAxisID: 'y' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { type: 'linear', display: true, position: 'left', grid: {display: false} }, y1: { type: 'linear', display: true, position: 'right', min: 0, max: 25, grid: {display: false} } } }
+            });
+
+            new Chart(document.getElementById('chart-demographics').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['18-24岁', '25-34岁', '35-44岁', '45-54岁', '55岁以上'],
+                    datasets: [
+                        { label: '2023 (三年前)', data: [5, 15, 35, 30, 15], backgroundColor: '#F3F4F6' },
+                        { label: '2026 (当前)', data: [12, 42, 25, 15, 6], backgroundColor: '#0F2C59' }
+                    ]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, grid: {display: false} }, y: { grid: {display: false} } } }
+            });
+
+            new Chart(document.getElementById('chart-cost-stack').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['2023', '2024', '2025', '2026 YTD'],
+                    datasets: [
+                        { label: '研发 (R&D)', data: [15, 18, 22, 25], backgroundColor: '#00B4D8' },
+                        { label: '营销 (Sales & Mktg)', data: [25, 30, 32, 30], backgroundColor: '#9CA3AF' },
+                        { label: '行政 (G&A)', data: [25, 22, 23, 23], backgroundColor: '#E5E7EB' },
+                        { label: '履约成本 (COGS)', data: [35, 30, 23, 22], backgroundColor: '#0F2C59' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid: {display: false} }, y: { stacked: true, max: 100, grid: {display: true} } } }
+            });
+        };
+    </script>
+</body>
+</html>

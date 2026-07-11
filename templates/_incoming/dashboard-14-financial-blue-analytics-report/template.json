@@ -1,0 +1,184 @@
+{
+  "id": "dashboard-14-financial-blue-analytics-report",
+  "name": "Financial Blue Analytics 财经蓝专业数据分析报告看板",
+  "templateName": "FinancialBlueAnalyticsReportDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向财经数据、企业经营分析、投研复盘和管理层汇报的浅色专业蓝数据报告模板，采用深色报告头、白色高密度卡片、ECharts 多图表组合、可编辑文本槽位和拖拽排序模块。",
+  "pageTypes": [
+    "data-report",
+    "financial-analysis",
+    "executive-dashboard",
+    "business-review",
+    "kpi-dashboard"
+  ],
+  "styleTags": [
+    "financial-blue",
+    "professional-dashboard",
+    "financial-dashboard",
+    "light-dashboard",
+    "echarts",
+    "sortable-dashboard"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-sortable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "财经数据分析",
+    "企业经营分析",
+    "投研复盘",
+    "管理层汇报",
+    "季度业务报告"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "ECharts CDN",
+    "SortableJS CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#0052D9",
+      "darkBlue": "#071126",
+      "background": "#F4F6F8",
+      "surface": "#FFFFFF",
+      "textMain": "#1D2129",
+      "textSub": "#4E5969",
+      "textMuted": "#86909C",
+      "positive": "#F53F3F",
+      "negative": "#00B42A"
+    },
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, PingFang SC, Microsoft YaHei, sans-serif",
+      "number": "DIN Alternate, -apple-system, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "sortableBlocks": true,
+    "dragHandleOnly": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "hero": {
+      "desc": "报告封面、标题、副标题、日期、出品方和密级",
+      "required": true,
+      "hideable": false
+    },
+    "executive-summary": {
+      "desc": "核心高管摘要",
+      "required": true,
+      "hideable": true
+    },
+    "insight-1": {
+      "desc": "核心业绩、KPI、营收趋势和业务结构",
+      "required": true,
+      "hideable": true
+    },
+    "insight-2": {
+      "desc": "成本效率、利润瀑布和转化漏斗",
+      "required": true,
+      "hideable": true
+    },
+    "insight-3": {
+      "desc": "用户生态、同期群留存和用户增长",
+      "required": true,
+      "hideable": true
+    },
+    "insight-4": {
+      "desc": "区域表现、竞品雷达和风险水位",
+      "required": true,
+      "hideable": true
+    },
+    "insight-5": {
+      "desc": "运营能效、投产比矩阵和股价 K 线",
+      "required": true,
+      "hideable": true
+    },
+    "conclusion": {
+      "desc": "下一步战略建议",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-slot 和 contenteditable"
+    },
+    "sortableBlocks": {
+      "type": "array",
+      "selector": "#sortable-insights > .insight-block",
+      "desc": "5 个核心洞察模块可通过拖拽手柄排序"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "ECharts 图表容器"
+    }
+  },
+  "slotLimits": {
+    "hero-title": 48,
+    "section-title": 40,
+    "metric-label": 28,
+    "metric-value": 18,
+    "insight-text": 220
+  },
+  "llmInjectionRules": [
+    "所有新增可编辑文字必须同时包含 data-editable=\"true\"、contenteditable=\"true\" 和 data-slot。",
+    "图表容器 ID 必须保持 chart-* 格式。",
+    "拖拽只能绑定 .drag-handle，避免影响正文编辑。",
+    "替换图表数据时，必须同步更新对应标题、说明和业务口径。",
+    "财经涨跌色保持中国金融习惯：红涨、绿跌。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "editableCount": 57,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 8,
+    "chartCount": 11,
+    "hasSidebarShell": false,
+    "sortableEnabled": true,
+    "sourceCleanup": [
+      "入库版将散点图轴名颜色从未定义的 P.textMuted 改为现有的 P.textSub。",
+      "入库版为公共轴类 ECharts tooltip 增加 crosshair 指针配置；原始文件未改动，保存在 originals/source-template.html。"
+    ],
+    "slotDefinitionNotes": [
+      "用户提供的槽位定义描述了 16 个理想模块；实际 HTML 将内容合并为 hero、executive-summary、insight-1 至 insight-5、conclusion 共 8 个 data-section。",
+      "入库版未重写页面结构，按实际 HTML 建立槽位文档。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#0052d9",
+    "presets": [
+      "#0052d9",
+      "#071126",
+      "#f53f3f",
+      "#00b42a",
+      "#38bdf8",
+      "#111827"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-brand\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-brand\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-brand\"]"
+      ]
+    }
+  }
+}

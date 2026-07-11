@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业季度深度分析报告</title>
+    <!-- 使用 Tailwind CSS 进行快速、规范的排版 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 ECharts 核心库 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <!-- 引入 SortableJS 实现流畅且防冲突的拖拽 -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#0052D9',       // 核心品牌蓝
+                        brandLight: '#E6EFFF',  // 浅蓝背景
+                        brandDark: '#071126',   // 深邃蓝黑(用于封面)
+                        textMain: '#1D2129',    // 标题极深灰
+                        textSub: '#4E5969',     // 正文常规灰
+                        textMuted: '#86909C',   // 辅助说明文字
+                        bgBase: '#F4F6F8',      // 略偏冷的专业灰底色
+                        up: '#F53F3F',          // 增长红
+                        down: '#00B42A',        // 下降绿
+                    },
+                    boxShadow: {
+                        // 摒弃粗糙的阴影，使用更具高级感的弥散弱阴影
+                        'premium': '0 4px 24px -6px rgba(2, 14, 38, 0.04)', 
+                    },
+                    fontFamily: {
+                        'sans': ['-apple-system', 'BlinkMacSystemFont', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+                        'number': ['DIN Alternate', '-apple-system', 'sans-serif'], // 强调数字感
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F4F6F8;
+            color: #1D2129;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* 编辑态交互提示 */
+        [data-editable="true"] {
+            transition: all 0.2s ease;
+            border-radius: 2px;
+        }
+        [data-editable="true"]:hover {
+            background-color: #E6EFFF;
+            box-shadow: 0 0 0 2px #0052D9;
+            cursor: text;
+        }
+        [data-editable="true"]:focus {
+            background-color: #fff;
+            box-shadow: 0 0 0 2px #0052D9;
+            outline: none;
+        }
+
+        /* 隐藏滚动条但保留滚动功能，让页面更干净 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #C9CDD4;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .echart-container { width: 100%; height: 300px; }
+        .echart-container-tall { width: 100%; height: 380px; }
+        .echart-container-short { width: 100%; height: 220px; }
+        
+        /* 洞察模块的左侧强调线 */
+        .insight-accent {
+            position: relative;
+        }
+        .insight-accent::before {
+            content: '';
+            position: absolute;
+            left: -16px;
+            top: 4px;
+            bottom: 4px;
+            width: 4px;
+            background-color: #0052D9;
+            border-radius: 2px;
+        }
+
+        /* 拖拽排序状态下的视觉反馈样式 */
+        .sortable-ghost {
+            opacity: 0.3;
+            background-color: #E6EFFF;
+            border: 2px dashed #0052D9;
+            border-radius: 8px;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body class="pb-24">
+
+    <!-- 报告封面 (Hero Section) - 沉浸式宽幅 -->
+    <header data-section="hero" class="w-full bg-brandDark text-white pt-20 pb-24 relative overflow-hidden">
+        <!-- 背景装饰，打破沉闷 -->
+        <div class="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none" style="background: radial-gradient(circle at 100% 0%, #0052D9 0%, transparent 70%);"></div>
+        <div class="absolute bottom-0 left-0 w-1/3 h-1/2 opacity-5 pointer-events-none" style="background: radial-gradient(circle at 0% 100%, #ffffff 0%, transparent 60%);"></div>
+        
+        <div class="max-w-6xl mx-auto px-6 lg:px-8 relative z-10">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-6 h-6 bg-brand rounded flex items-center justify-center font-bold text-sm">D</div>
+                <span class="font-medium text-sm text-gray-300 tracking-widest uppercase" data-editable="true" contenteditable="true" data-slot="text.hero.label">DATASIGHT 季度运营洞察</span>
+            </div>
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 tracking-tight leading-tight" data-editable="true" contenteditable="true" data-slot="text.hero.title">
+                2023 第三季度：<br/>韧性增长与结构优化
+            </h1>
+            <p class="text-gray-400 text-lg max-w-2xl font-light mb-8" data-editable="true" contenteditable="true" data-slot="text.hero.subtitle">
+                全面解析本季度营收表现、核心业务演进路径及用户留存挑战。在宏观承压的背景下，寻找下一阶段的利润增长引擎。
+            </p>
+            <div class="flex items-center gap-6 text-sm text-gray-500 border-t border-gray-800 pt-6 mt-8 max-w-2xl">
+                <div>发布时间: <span class="text-gray-300" data-editable="true" contenteditable="true" data-slot="text.hero.date">2023年11月15日</span></div>
+                <div>出品方: <span class="text-gray-300" data-editable="true" contenteditable="true" data-slot="text.hero.department">战略与商业分析中心</span></div>
+                <div>密级: <span class="text-brand px-2 py-0.5 rounded bg-brand/20 ml-1" data-editable="true" contenteditable="true" data-slot="text.hero.security">内部机密 (L3)</span></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主体内容容器 - 向上浮动，形成层叠立体感 -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-20 space-y-12">
+
+        <!-- 全局核心摘要 (Global Key Takeaways) -->
+        <section data-section="executive-summary" class="bg-white rounded-lg p-8 shadow-premium border border-gray-100">
+            <h2 class="text-xl font-bold mb-4 text-textMain flex items-center gap-2">
+                <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                核心高管摘要 (Key Takeaways)
+            </h2>
+            <div class="text-textSub leading-relaxed text-base space-y-3 bg-brandLight/30 p-5 rounded-md border border-brandLight">
+                <p data-editable="true" contenteditable="true" data-slot="text.summary.p1">
+                    <strong class="text-textMain">整体表现超预期，但增速放缓：</strong>本季度总营收达到 12.5 亿元，同比增长 35.4%，净利润率提升至 22.1%。虽然各项绝对值创历史新高，但受制于大盘流量见顶，环比增速已连续两个季度放缓。
+                </p>
+                <p data-editable="true" contenteditable="true" data-slot="text.summary.p2">
+                    <strong class="text-textMain">结构转型初见成效：</strong>对单一的交易佣金依赖度降低（占比下降至46.4%），高毛利的 B 端企业服务和财富管理业务成为新的利润护城河。
+                </p>
+                <p data-editable="true" contenteditable="true" data-slot="text.summary.p3">
+                    <strong class="text-textMain">潜在隐患：</strong>M3-M6 期用户留存率出现 1.5% 的异常下滑，这可能与近期调整的拉新策略有关，亟需产品端介入进行召回干预。
+                </p>
+            </div>
+        </section>
+
+        <!-- 拖拽容器开始：用于限制拖拽范围（摘要与总结之间） -->
+        <div id="sortable-insights" class="space-y-12 pb-6">
+
+        <!-- ========================================== -->
+        <!-- 模块一：核心业绩 (可作为拖拽组件的基础单元) -->
+        <!-- ========================================== -->
+        <section data-section="insight-1" class="insight-block relative group" data-draggable="true">
+            <!-- 模块拖拽手柄：悬浮时在左侧显现 -->
+            <div class="drag-handle absolute -left-12 top-0 bottom-0 w-10 flex flex-col justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab text-gray-300 hover:text-brand" title="按住拖拽排序模块">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M9 3H11V5H9V3ZM9 7H11V9H9V7ZM9 11H11V13H9V11ZM9 15H11V17H9V15ZM9 19H11V21H9V19ZM13 3H15V5H13V3ZM13 7H15V9H13V7ZM13 11H15V13H13V11ZM13 15H15V17H13V15ZM13 19H15V21H13V19Z"></path></svg>
+            </div>
+
+            <!-- 模块叙事头 -->
+            <div class="mb-6 ml-4 insight-accent">
+                <h3 class="text-2xl font-bold text-textMain mb-2" data-editable="true" contenteditable="true" data-slot="text.insight1.title">
+                    发现一：营收规模与盈利能力双创新高，B 端业务贡献抢眼
+                </h3>
+                <p class="text-textSub text-base" data-editable="true" contenteditable="true" data-slot="text.insight1.desc">
+                    得益于成本管控和高毛利业务的扩张，本季度在营收增长 35% 的同时，净利润实现了 85% 的跃升。这标志着公司正在走出“烧钱换增长”的阶段，进入高质量发展期。
+                </p>
+            </div>
+
+            <!-- 数据呈现区 -->
+            <div class="space-y-6">
+                <!-- KPI 指标网格 (纯净卡片设计) -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-lg shadow-premium">
+                        <div class="text-textMuted text-sm mb-1" data-editable="true" contenteditable="true" data-slot="text.kpi1.title">总营收 (Non-GAAP)</div>
+                        <div class="font-number text-3xl font-bold text-textMain tracking-tight mb-2" data-editable="true" contenteditable="true" data-slot="text.kpi1.value">12.50 <span class="text-base font-normal text-textMuted ml-1">亿</span></div>
+                        <div class="text-sm flex items-center text-up font-medium">
+                            同比 <svg class="w-3 h-3 ml-1 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V3a1 1 0 012 0v9.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" transform="rotate(180 10 10)"></path></svg> <span data-editable="true" contenteditable="true" data-slot="text.kpi1.yoy">35.4%</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg shadow-premium">
+                        <div class="text-textMuted text-sm mb-1" data-editable="true" contenteditable="true" data-slot="text.kpi2.title">毛利</div>
+                        <div class="font-number text-3xl font-bold text-textMain tracking-tight mb-2" data-editable="true" contenteditable="true" data-slot="text.kpi2.value">6.85 <span class="text-base font-normal text-textMuted ml-1">亿</span></div>
+                        <div class="text-sm flex items-center text-up font-medium">
+                            同比 <svg class="w-3 h-3 ml-1 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V3a1 1 0 012 0v9.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" transform="rotate(180 10 10)"></path></svg> <span data-editable="true" contenteditable="true" data-slot="text.kpi2.yoy">42.1%</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg shadow-premium">
+                        <div class="text-textMuted text-sm mb-1" data-editable="true" contenteditable="true" data-slot="text.kpi3.title">净利润</div>
+                        <div class="font-number text-3xl font-bold text-textMain tracking-tight mb-2" data-editable="true" contenteditable="true" data-slot="text.kpi3.value">2.76 <span class="text-base font-normal text-textMuted ml-1">亿</span></div>
+                        <div class="text-sm flex items-center text-up font-medium">
+                            同比 <svg class="w-3 h-3 ml-1 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V3a1 1 0 012 0v9.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" transform="rotate(180 10 10)"></path></svg> <span data-editable="true" contenteditable="true" data-slot="text.kpi3.yoy">85.2%</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg shadow-premium border-b-2 border-brand">
+                        <div class="text-textMuted text-sm mb-1" data-editable="true" contenteditable="true" data-slot="text.kpi4.title">B端企业客户数</div>
+                        <div class="font-number text-3xl font-bold text-textMain tracking-tight mb-2" data-editable="true" contenteditable="true" data-slot="text.kpi4.value">1,420 <span class="text-base font-normal text-textMuted ml-1">家</span></div>
+                        <div class="text-sm flex items-center text-textSub">
+                            本季度净增 <span class="text-textMain font-bold ml-1" data-editable="true" contenteditable="true" data-slot="text.kpi4.netadd">145 家</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图表组合 -->
+                <div class="grid grid-cols-1 lg:grid-cols-5 md:grid-cols-5 gap-6 mt-6">
+                    <div class="lg:col-span-3 md:col-span-3 bg-white p-6 rounded-lg shadow-premium">
+                        <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart1.title">营收增长趋势 (Bar & Line)</h4>
+                        <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart1.desc">过去 6 季度营收规模与环比增速对比</div>
+                        <div id="chart-revenue" class="echart-container"></div>
+                    </div>
+                    <div class="lg:col-span-2 md:col-span-2 bg-white p-6 rounded-lg shadow-premium">
+                        <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart2.title">本期业务结构 (Donut)</h4>
+                        <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart2.desc">多元化策略落地，非佣金收入占比超 50%</div>
+                        <div id="chart-structure" class="echart-container"></div>
+                    </div>
+                </div>
+            </section>
+
+        <!-- ========================================== -->
+        <!-- 模块二：成本与效率分析 -->
+        <!-- ========================================== -->
+        <section data-section="insight-2" class="insight-block relative group" data-draggable="true">
+            <!-- 拖拽手柄 -->
+            <div class="drag-handle absolute -left-12 top-0 bottom-0 w-10 flex flex-col justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab text-gray-300 hover:text-brand" title="按住拖拽排序模块">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M9 3H11V5H9V3ZM9 7H11V9H9V7ZM9 11H11V13H9V11ZM9 15H11V17H9V15ZM9 19H11V21H9V19ZM13 3H15V5H13V3ZM13 7H15V9H13V7ZM13 11H15V13H13V11ZM13 15H15V17H13V15ZM13 19H15V21H13V19Z"></path></svg>
+            </div>
+
+            <div class="mb-6 ml-4 insight-accent">
+                <h3 class="text-2xl font-bold text-textMain mb-2" data-editable="true" contenteditable="true" data-slot="text.insight2.title">
+                    发现二：营销转化效率遭遇瓶颈，获客成本存在上行压力
+                </h3>
+                <p class="text-textSub text-base" data-editable="true" contenteditable="true" data-slot="text.insight2.desc">
+                    通过利润瀑布图可以看出，虽然技术研发带来的边际成本在降低，但营销费用的绝对值和占比依然偏高。进一步拆解转化漏斗发现，从“APP下载”到“注册开户”环节流失最为严重，系核心卡点。
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-premium">
+                    <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart3.title">利润拆解模型 (Waterfall)</h4>
+                    <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart3.desc">从总营收(左)到净利润(右)的各项成本扣除项明细</div>
+                    <div id="chart-waterfall" class="echart-container"></div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-premium">
+                    <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart4.title">C端用户核心转化漏斗 (Funnel)</h4>
+                    <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart4.desc">全链路流量至付费转化节点诊断</div>
+                    <div id="chart-funnel" class="echart-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 模块三：用户生态与留存 -->
+        <!-- ========================================== -->
+        <section data-section="insight-3" class="insight-block relative group" data-draggable="true">
+            <!-- 拖拽手柄 -->
+            <div class="drag-handle absolute -left-12 top-0 bottom-0 w-10 flex flex-col justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab text-gray-300 hover:text-brand" title="按住拖拽排序模块">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M9 3H11V5H9V3ZM9 7H11V9H9V7ZM9 11H11V13H9V11ZM9 15H11V17H9V15ZM9 19H11V21H9V19ZM13 3H15V5H13V3ZM13 7H15V9H13V7ZM13 11H15V13H13V11ZM13 15H15V17H13V15ZM13 19H15V21H13V19Z"></path></svg>
+            </div>
+
+            <div class="mb-6 ml-4 insight-accent">
+                <h3 class="text-2xl font-bold text-textMain mb-2" data-editable="true" contenteditable="true" data-slot="text.insight3.title">
+                    发现三：大盘活跃度稳固，但需警惕中期留存衰减
+                </h3>
+                <p class="text-textSub text-base" data-editable="true" contenteditable="true" data-slot="text.insight3.desc">
+                    注册用户大盘顺利突破千万，活跃指标健康。但在同期群留存矩阵中，我们观察到 7月、8月获取的用户在第 3 个月（M3）出现了异常下降信号，这提示需要优化新手期的长期陪伴策略。
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-premium">
+                    <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart5.title">同期群留存诊断 (Heatmap)</h4>
+                    <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart5.desc">各月份获客在后续 M1-M6 的留存率表现</div>
+                    <div id="chart-retention" class="echart-container-tall"></div>
+                </div>
+                <div class="lg:col-span-3 space-y-6">
+                    <div class="bg-white p-6 rounded-lg shadow-premium">
+                        <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart6.title">用户规模增长曲线 (Area)</h4>
+                        <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart6.desc">近一年累计注册 vs 月活 (MAU) 剪刀差分析</div>
+                        <div id="chart-user" class="echart-container"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 模块四：全球化布局与风险控制 (新增) -->
+        <!-- ========================================== -->
+        <section data-section="insight-4" class="insight-block relative group" data-draggable="true">
+            <!-- 拖拽手柄 -->
+            <div class="drag-handle absolute -left-12 top-0 bottom-0 w-10 flex flex-col justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab text-gray-300 hover:text-brand" title="按住拖拽排序模块">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M9 3H11V5H9V3ZM9 7H11V9H9V7ZM9 11H11V13H9V11ZM9 15H11V17H9V15ZM9 19H11V21H9V19ZM13 3H15V5H13V3ZM13 7H15V9H13V7ZM13 11H15V13H13V11ZM13 15H15V17H13V15ZM13 19H15V21H13V19Z"></path></svg>
+            </div>
+
+            <div class="mb-6 ml-4 insight-accent">
+                <h3 class="text-2xl font-bold text-textMain mb-2" data-editable="true" contenteditable="true" data-slot="text.insight4.title">
+                    发现四：全球化扩张提速，核心风控指标保持健康水位
+                </h3>
+                <p class="text-textSub text-base" data-editable="true" contenteditable="true" data-slot="text.insight4.desc">
+                    本季度在亚太市场的渗透率进一步提升，大中华区依然是基本盘。在面对复杂的出海合规要求时，凭借牌照优势和合规风控体系，我们的综合健康指数仍稳定在优秀区间，多项能力指标领跑行业均值。
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- 条形图 -->
+                <div class="bg-white p-6 rounded-lg shadow-premium">
+                    <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart7.title">全球大区营收贡献 (Bar)</h4>
+                    <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart7.desc">各核心市场营收排行 (百万人民币)</div>
+                    <div id="chart-regional" class="echart-container-short"></div>
+                </div>
+                <!-- 雷达图 -->
+                <div class="bg-white p-6 rounded-lg shadow-premium">
+                    <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart8.title">竞品能力雷达模型 (Radar)</h4>
+                    <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart8.desc">DataSight(本品) vs 行业均值多维对比</div>
+                    <div id="chart-radar" class="echart-container-short"></div>
+                </div>
+                <!-- 仪表盘 -->
+                <div class="bg-white p-6 rounded-lg shadow-premium">
+                    <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart9.title">平台风控与合规水位 (Gauge)</h4>
+                    <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart9.desc">动态监测资金与运营健康指数</div>
+                    <div id="chart-gauge" class="echart-container-short"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 模块五：资本表现与运营能效 (新增) -->
+        <!-- ========================================== -->
+        <section data-section="insight-5" class="insight-block relative group" data-draggable="true">
+            <!-- 拖拽手柄 -->
+            <div class="drag-handle absolute -left-12 top-0 bottom-0 w-10 flex flex-col justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab text-gray-300 hover:text-brand" title="按住拖拽排序模块">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M9 3H11V5H9V3ZM9 7H11V9H9V7ZM9 11H11V13H9V11ZM9 15H11V17H9V15ZM9 19H11V21H9V19ZM13 3H15V5H13V3ZM13 7H15V9H13V7ZM13 11H15V13H13V11ZM13 15H15V17H13V15ZM13 19H15V21H13V19Z"></path></svg>
+            </div>
+
+            <div class="mb-6 ml-4 insight-accent">
+                <h3 class="text-2xl font-bold text-textMain mb-2" data-editable="true" contenteditable="true" data-slot="text.insight5.title">
+                    发现五：人效持续优化提振市场信心，股价迎来估值修复
+                </h3>
+                <p class="text-textSub text-base" data-editable="true" contenteditable="true" data-slot="text.insight5.desc">
+                    从各业务线的投入产出比（ROI）散点图可以看出，期权和财富管理业务展现出了极佳的杠杆效应。核心数据的高速增长也直接反馈在了二级市场，本季度股价企稳回升，形成了强劲的向上突破形态。
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 气泡图 -->
+                <div class="bg-white p-6 rounded-lg shadow-premium">
+                    <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart10.title">业务线投产比矩阵 (Scatter)</h4>
+                    <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart10.desc">横轴: 研发与运营投入 / 纵轴: 营收产出 (气泡大小=利润率)</div>
+                    <div id="chart-scatter" class="echart-container"></div>
+                </div>
+                <!-- K线图 -->
+                <div class="bg-white p-6 rounded-lg shadow-premium">
+                    <h4 class="font-bold text-textMain mb-1" data-editable="true" contenteditable="true" data-slot="text.chart11.title">本季度股价走势复盘 (Candlestick)</h4>
+                    <div class="text-xs text-textMuted mb-4" data-editable="true" contenteditable="true" data-slot="text.chart11.desc">FHL (Nasdaq) 财报季前后的日 K 线表现</div>
+                    <div id="chart-kline" class="echart-container"></div>
+                </div>
+            </div>
+        </section>
+
+        </div> 
+        <!-- 拖拽容器结束 -->
+
+        <!-- 总结模块 -->
+        <section data-section="conclusion" class="mt-12 pt-8 border-t border-gray-200">
+            <div class="bg-white p-8 rounded-lg shadow-premium">
+                <h3 class="text-xl font-bold text-textMain mb-4" data-editable="true" contenteditable="true" data-slot="text.conclusion.title">下一步战略建议 (Next Steps)</h3>
+                <div class="text-textSub space-y-4">
+                    <p data-editable="true" contenteditable="true" data-slot="text.conclusion.s1">
+                        <span class="inline-block w-6 h-6 bg-brand text-white text-center rounded-full text-sm leading-6 mr-2">1</span> 
+                        <strong>重塑转化链路：</strong> 针对漏斗流失最严重的注册环节，下季度拟推出“一键极速开户”功能，预期提升转化率 15%。
+                    </p>
+                    <p data-editable="true" contenteditable="true" data-slot="text.conclusion.s2">
+                        <span class="inline-block w-6 h-6 bg-brand text-white text-center rounded-full text-sm leading-6 mr-2">2</span> 
+                        <strong>精细化用户召回：</strong> 启动“北极星计划”，针对 7、8 月 M3 濒临流失用户发放专属权益，修复留存曲线。
+                    </p>
+                    <p data-editable="true" contenteditable="true" data-slot="text.conclusion.s3">
+                        <span class="inline-block w-6 h-6 bg-brand text-white text-center rounded-full text-sm leading-6 mr-2">3</span> 
+                        <strong>倾斜 B 端资源：</strong> 鉴于企业服务业务的高毛利特性，Q4 将把 30% 的营销预算从 C 端转移至 B 端拓客。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 图表渲染逻辑 -->
+    <script>
+        // 定义高级灰调/专业调色盘
+        const P = {
+            brand: '#0052D9', brandLight: '#E6EFFF', textMain: '#1D2129', textSub: '#86909C', grid: '#F0F2F5',
+            up: '#F53F3F', down: '#00B42A',
+            pie: ['#0052D9', '#3D82F2', '#73A8FF', '#A6C9FF', '#D9E8FF']
+        };
+
+        // 抽取公共简约配置项 (极简无边框风格)
+        const commonOptions = {
+            tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: none;', textStyle: { color: P.textMain } },
+            grid: { top: 30, right: 10, bottom: 20, left: 10, containLabel: true },
+            textStyle: { fontFamily: 'sans-serif' }
+        };
+        const xAxisCommon = { type: 'category', axisLine: { lineStyle: { color: '#E5E6EB' } }, axisTick: { show: false }, axisLabel: { color: P.textSub, margin: 12 } };
+        const yAxisCommon = { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: P.grid } }, axisLabel: { color: P.textSub } };
+
+        function renderCharts() {
+            // 1. 营收图
+            const chartRev = echarts.init(document.getElementById('chart-revenue'));
+            chartRev.setOption({
+                ...commonOptions,
+                legend: { data: ['营收(百万)', '环比增速(%)'], bottom: 0, icon: 'circle', itemWidth: 8, textStyle: { color: P.textSub } },
+                grid: { top: 30, right: 10, bottom: 40, left: 10, containLabel: true },
+                xAxis: { ...xAxisCommon, data: ['22Q2', '22Q3', '22Q4', '23Q1', '23Q2', '23Q3'] },
+                yAxis: [yAxisCommon, { type: 'value', splitLine: { show: false }, axisLabel: { formatter: '{value}%', color: P.textSub } }],
+                series: [
+                    { name: '营收(百万)', type: 'bar', barWidth: 32, itemStyle: { color: P.brand, borderRadius: [4, 4, 0, 0] }, data: [750, 820, 910, 880, 1120, 1250] },
+                    { name: '环比增速(%)', type: 'line', yAxisIndex: 1, smooth: true, symbol: 'circle', symbolSize: 8, itemStyle: { color: P.up, borderWidth: 2, borderColor: '#fff' }, lineStyle: { width: 3 }, data: [8.5, 9.3, 11.0, -3.2, 27.2, 11.6] }
+                ]
+            });
+
+            // 2. 结构图
+            const chartStr = echarts.init(document.getElementById('chart-structure'));
+            chartStr.setOption({
+                tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.95)', textStyle: { color: P.textMain } },
+                legend: { orient: 'vertical', right: 0, top: 'center', icon: 'circle', itemWidth: 8, textStyle: { color: P.textSub } },
+                series: [{
+                    type: 'pie', radius: ['50%', '80%'], center: ['40%', '50%'],
+                    itemStyle: { borderColor: '#fff', borderWidth: 2 },
+                    label: { show: false },
+                    data: [
+                        { value: 580, name: '交易佣金' }, { value: 320, name: '利息收入' },
+                        { value: 210, name: '财富管理' }, { value: 140, name: '企业服务' }
+                    ],
+                    color: P.pie
+                }]
+            });
+
+            // 3. 瀑布图
+            const chartWat = echarts.init(document.getElementById('chart-waterfall'));
+            chartWat.setOption({
+                ...commonOptions,
+                xAxis: { ...xAxisCommon, data: ['总营收', '研发', '营销', '管理', '税费', '净利'] },
+                yAxis: yAxisCommon,
+                series: [
+                    { type: 'bar', stack: 'all', itemStyle: { borderColor: 'transparent', color: 'transparent' }, data: [0, 850, 600, 480, 276, 0] },
+                    { type: 'bar', stack: 'all', label: { show: true, position: 'top', color: P.textMain, fontSize: 11 }, data: [
+                        {value: 1250, itemStyle: {color: P.brand}}, {value: 400, itemStyle: {color: P.down}}, 
+                        {value: 250, itemStyle: {color: P.down}}, {value: 120, itemStyle: {color: P.down}}, 
+                        {value: 204, itemStyle: {color: P.down}}, {value: 276, itemStyle: {color: P.up}}
+                    ]}
+                ]
+            });
+
+            // 4. 漏斗图
+            const chartFun = echarts.init(document.getElementById('chart-funnel'));
+            chartFun.setOption({
+                tooltip: { trigger: 'item' },
+                series: [{
+                    type: 'funnel', left: '10%', top: 20, bottom: 10, width: '80%', sort: 'descending', gap: 2,
+                    label: { show: true, position: 'inside', formatter: '{b} {c}%' },
+                    itemStyle: { borderColor: '#fff', borderWidth: 1 },
+                    data: [
+                        { value: 100, name: 'APP下载' }, { value: 40, name: '注册开户' }, 
+                        { value: 25, name: '首次入金' }, { value: 18, name: '产生交易' }
+                    ],
+                    color: P.pie
+                }]
+            });
+
+            // 5. 留存热力图
+            const chartRet = echarts.init(document.getElementById('chart-retention'));
+            const heatData = [
+                [0,0,45],[0,1,38],[0,2,30],[0,3,25],[0,4,22],[0,5,20],
+                [1,0,48],[1,1,40],[1,2,35],[1,3,28],[1,4,24],[1,5,'-'],
+                [2,0,52],[2,1,45],[2,2,25],[2,3,20],[2,4,'-'],[2,5,'-'], // 异常点
+                [3,0,55],[3,1,48],[3,2,22],[3,3,'-'],[3,4,'-'],[3,5,'-'], // 异常点
+                [4,0,58],[4,1,50],[4,2,'-'],[4,3,'-'],[4,4,'-'],[4,5,'-'],
+                [5,0,62],[5,1,'-'],[5,2,'-'],[5,3,'-'],[5,4,'-'],[5,5,'-']
+            ];
+            chartRet.setOption({
+                tooltip: { formatter: (p) => p.data[2] === '-' ? '' : `留存率: ${p.data[2]}%` },
+                grid: { top: 20, right: 10, bottom: 20, left: 60 },
+                xAxis: { type: 'category', data: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6'], splitArea: { show: true }, axisLine: {show:false}, axisTick: {show:false} },
+                yAxis: { type: 'category', data: ['5月', '6月', '7月', '8月', '9月', '10月'], splitArea: { show: true }, inverse: true, axisLine: {show:false}, axisTick: {show:false} },
+                visualMap: { min: 20, max: 65, show: false, inRange: { color: ['#F2F5F8', P.brand] } },
+                series: [{
+                    type: 'heatmap', data: heatData,
+                    label: { show: true, color: '#fff', formatter: (p) => p.data[2] === '-' ? '' : p.data[2]+'%' },
+                    itemStyle: { borderColor: '#fff', borderWidth: 2, borderRadius: 2 }
+                }]
+            });
+
+            // 6. 用户增长图
+            const chartUsr = echarts.init(document.getElementById('chart-user'));
+            chartUsr.setOption({
+                ...commonOptions,
+                legend: { data: ['累计注册(万)', 'MAU(万)'], bottom: 0, icon: 'circle', itemWidth: 8, textStyle: { color: P.textSub } },
+                grid: { top: 30, right: 10, bottom: 40, left: 10, containLabel: true },
+                xAxis: { ...xAxisCommon, boundaryGap: false, data: ['4月', '5月', '6月', '7月', '8月', '9月', '10月'] },
+                yAxis: yAxisCommon,
+                series: [
+                    { name: '累计注册(万)', type: 'line', smooth: true, symbol: 'none', areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: 'rgba(0, 82, 217, 0.2)'}, {offset: 1, color: 'rgba(0, 82, 217, 0)'}]) }, itemStyle: { color: P.brand }, data: [780, 810, 860, 890, 930, 960, 990] },
+                    { name: 'MAU(万)', type: 'line', smooth: true, symbolSize: 6, itemStyle: { color: '#3D82F2' }, data: [210, 225, 240, 260, 275, 280, 285] }
+                ]
+            });
+
+            // 7. 大区表现条形图 (Horizontal Bar)
+            const chartReg = echarts.init(document.getElementById('chart-regional'));
+            chartReg.setOption({
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { top: 10, right: 20, bottom: 20, left: 50 },
+                xAxis: { type: 'value', splitLine: { show: false }, axisLabel: { show: false } },
+                yAxis: { type: 'category', data: ['欧洲', '中东', '东南亚', '北美', '大中华区'], axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: P.textSub } },
+                series: [{
+                    name: '营收贡献', type: 'bar', barWidth: 16,
+                    itemStyle: { borderRadius: [0, 4, 4, 0], color: P.brand },
+                    label: { show: true, position: 'right', color: P.textMain, fontWeight: 'bold' },
+                    data: [45, 80, 180, 320, 625]
+                }]
+            });
+
+            // 8. 竞品雷达图 (Radar)
+            const chartRad = echarts.init(document.getElementById('chart-radar'));
+            chartRad.setOption({
+                tooltip: {},
+                radar: {
+                    indicator: [
+                        { name: '研发', max: 100 }, { name: '品牌', max: 100 }, { name: '获客', max: 100 },
+                        { name: '服务', max: 100 }, { name: '合规', max: 100 }, { name: '牌照', max: 100 }
+                    ],
+                    radius: '65%', center: ['50%', '50%'], splitNumber: 4,
+                    axisName: { color: P.textSub, fontSize: 11 },
+                    splitArea: { areaStyle: { color: ['transparent'] } },
+                    axisLine: { lineStyle: { color: '#E5E6EB' } }, splitLine: { lineStyle: { color: '#E5E6EB' } }
+                },
+                series: [{
+                    type: 'radar',
+                    data: [
+                        { value: [95, 88, 70, 92, 98, 90], name: 'DataSight', itemStyle: { color: P.brand }, areaStyle: { color: P.brand, opacity: 0.2 }, lineStyle: { width: 2 } },
+                        { value: [80, 85, 85, 75, 80, 70], name: '行业均值', itemStyle: { color: P.textSub }, lineStyle: { type: 'dashed', width: 2 }, areaStyle: { opacity: 0 } }
+                    ]
+                }]
+            });
+
+            // 9. 风控仪表盘 (Gauge)
+            const chartGau = echarts.init(document.getElementById('chart-gauge'));
+            chartGau.setOption({
+                series: [{
+                    type: 'gauge', startAngle: 210, endAngle: -30, min: 0, max: 100, radius: '90%', center: ['50%', '60%'],
+                    pointer: { show: true, length: '60%', width: 5, itemStyle: { color: P.textMain } },
+                    progress: { show: true, overlap: false, roundCap: true, clip: false, itemStyle: { color: P.brand } },
+                    axisLine: { lineStyle: { width: 12, color: [[1, '#F0F2F5']] } },
+                    splitLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false },
+                    data: [{ value: 92, name: '健康评分' }],
+                    title: { offsetCenter: [0, '40%'], color: P.textSub, fontSize: 12 },
+                    detail: { valueAnimation: true, formatter: '{value} 分', color: P.textMain, fontSize: 28, fontWeight: 'bold', offsetCenter: [0, '10%'] }
+                }]
+            });
+
+            // 10. 业务能效气泡图 (Scatter/Bubble)
+            const chartSca = echarts.init(document.getElementById('chart-scatter'));
+            chartSca.setOption({
+                ...commonOptions,
+                tooltip: { formatter: (p) => `<div style="font-weight:bold;margin-bottom:4px;">${p.data[3]}</div>投入: ${p.data[0]}万<br/>产出: ${p.data[1]}万<br/>利润率: ${p.data[2]}%` },
+                xAxis: { ...xAxisCommon, name: '资源投入(万)', nameTextStyle: { color: P.textMuted } },
+                yAxis: { ...yAxisCommon, name: '营收产出(万)', nameTextStyle: { color: P.textMuted } },
+                series: [{
+                    type: 'scatter', symbolSize: (data) => data[2] * 1.5, // 气泡大小与第三个维度正相关
+                    itemStyle: { color: 'rgba(0, 82, 217, 0.7)', shadowBlur: 10, shadowColor: 'rgba(0, 82, 217, 0.2)' },
+                    data: [
+                        [120, 500, 25, '基金交易'], [80, 300, 18, '港美股'], [200, 1200, 35, '期权业务'],
+                        [50, 100, 10, '企业ESOP'], [150, 800, 28, '财富管理']
+                    ],
+                    label: { show: true, formatter: (p) => p.data[3], position: 'top', color: P.textMain }
+                }]
+            });
+
+            // 11. 股价走势K线图 (Candlestick)
+            const chartKli = echarts.init(document.getElementById('chart-kline'));
+            chartKli.setOption({
+                ...commonOptions,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+                xAxis: { ...xAxisCommon, data: ['10-09','10-16','10-23','10-30','11-06','11-13(财报)'] },
+                yAxis: { ...yAxisCommon, scale: true },
+                series: [{
+                    type: 'candlestick',
+                    // 数据格式: [open, close, lowest, highest]
+                    data: [
+                        [45.2, 46.8, 44.5, 47.1],
+                        [46.8, 46.0, 45.1, 47.5],
+                        [45.5, 48.2, 45.0, 48.9],
+                        [48.0, 47.5, 46.2, 48.5],
+                        [47.8, 51.0, 47.5, 52.0],
+                        [51.2, 55.6, 50.8, 56.5]
+                    ],
+                    itemStyle: {
+                        color: P.up, color0: P.down,      // 中国股市习惯：红涨绿跌
+                        borderColor: P.up, borderColor0: P.down
+                    }
+                }]
+            });
+
+            window.addEventListener('resize', () => {
+                chartRev.resize(); chartStr.resize(); chartWat.resize();
+                chartFun.resize(); chartRet.resize(); chartUsr.resize();
+                chartReg.resize(); chartRad.resize(); chartGau.resize();
+                chartSca.resize(); chartKli.resize();
+            });
+        }
+
+        // 初始化拖拽排序逻辑
+        function initDragAndDrop() {
+            const container = document.getElementById('sortable-insights');
+            if (container && typeof Sortable !== 'undefined') {
+                new Sortable(container, {
+                    handle: '.drag-handle', // 必须通过拖拽手柄触发，保护所有文本正常选中和编辑
+                    animation: 250,         // 排序时的平滑动画时长
+                    ghostClass: 'sortable-ghost', // 拖动过程中的占位符虚线样式
+                    onEnd: function () {
+                        // 拖动结束后，由于 DOM 位置变化，触发一个全局 Resize 以确保 ECharts 图表尺寸正常
+                        window.dispatchEvent(new Event('resize'));
+                    }
+                });
+            }
+        }
+
+        window.onload = () => {
+            setTimeout(renderCharts, 100);
+            initDragAndDrop();
+        };
+    </script>
+</body>
+</html>

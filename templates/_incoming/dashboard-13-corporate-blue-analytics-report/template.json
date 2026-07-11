@@ -1,0 +1,238 @@
+{
+  "id": "dashboard-13-corporate-blue-analytics-report",
+  "name": "Corporate Blue Analytics Report 企业蓝咨询式数据分析报告看板",
+  "templateName": "CorporateBlueAnalyticsReportDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向企业经营分析、财务复盘、投研汇报和高管决策会的浅色企业蓝数据报告模板，采用深蓝报告头、白色锐利卡片、咨询式洞察段落、KPI 卡片、排行榜、进度条和 Chart.js 图表。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "business-review",
+    "financial-analysis",
+    "kpi-dashboard"
+  ],
+  "styleTags": [
+    "corporate-blue",
+    "consulting-report",
+    "financial-dashboard",
+    "light-dashboard",
+    "chartjs",
+    "sortable-dashboard"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-sortable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "企业经营分析",
+    "财务数据报告",
+    "管理层汇报",
+    "投研分析",
+    "业务增长复盘"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "Chart.js CDN",
+    "SortableJS CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#0047AB",
+      "background": "#F3F6F9",
+      "surface": "#FFFFFF",
+      "textMain": "#111827",
+      "textSub": "#4B5563",
+      "textMute": "#9CA3AF",
+      "accent": "#EA580C",
+      "negative": "#16A34A"
+    },
+    "fonts": {
+      "body": "PingFang SC, Microsoft YaHei, Helvetica, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "sortableBlocks": true,
+    "dragHandleOnly": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "hero": {
+      "desc": "报告头部与数据源信息",
+      "required": true,
+      "hideable": false
+    },
+    "key-takeaways": {
+      "desc": "核心洞察",
+      "required": true,
+      "hideable": true
+    },
+    "kpi-metrics": {
+      "desc": "4 个核心指标卡片",
+      "required": true,
+      "hideable": true
+    },
+    "trend-analysis": {
+      "desc": "业绩趋势图",
+      "required": true,
+      "hideable": true
+    },
+    "composition-analysis": {
+      "desc": "营收结构环形图",
+      "required": true,
+      "hideable": true
+    },
+    "funnel-conversion": {
+      "desc": "客户转化漏斗",
+      "required": true,
+      "hideable": true
+    },
+    "leaderboard-table": {
+      "desc": "业务线增长排行榜",
+      "required": true,
+      "hideable": true
+    },
+    "resource-allocation": {
+      "desc": "资源投入说明",
+      "required": true,
+      "hideable": true
+    },
+    "geo-distribution": {
+      "desc": "地域与牌照分布",
+      "required": true,
+      "hideable": true
+    },
+    "target-achievement": {
+      "desc": "年度 OKR 目标达成",
+      "required": true,
+      "hideable": true
+    },
+    "insight-1": {
+      "desc": "核心发现 01",
+      "required": true,
+      "hideable": true
+    },
+    "user-persona": {
+      "desc": "核心用户画像雷达图",
+      "required": true,
+      "hideable": true
+    },
+    "unit-economics": {
+      "desc": "LTV 与 CAC 单位经济模型",
+      "required": true,
+      "hideable": true
+    },
+    "insight-2": {
+      "desc": "核心发现 02",
+      "required": true,
+      "hideable": true
+    },
+    "growth-matrix": {
+      "desc": "业务增长矩阵",
+      "required": true,
+      "hideable": true
+    },
+    "risk-metrics": {
+      "desc": "风控指标",
+      "required": true,
+      "hideable": true
+    },
+    "market-position": {
+      "desc": "市场份额演变",
+      "required": true,
+      "hideable": true
+    },
+    "strategic-insight": {
+      "desc": "战略寄语",
+      "required": true,
+      "hideable": true
+    },
+    "final-conclusion": {
+      "desc": "报告总结与下一步行动",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-slot 和 contenteditable"
+    },
+    "sortableBlocks": {
+      "type": "array",
+      "selector": "#report-canvas > .sortable-block",
+      "desc": "报告主体可拖拽区块"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "Chart.js 图表容器"
+    }
+  },
+  "slotLimits": {
+    "report-title": 40,
+    "section-title": 36,
+    "metric-label": 28,
+    "metric-value": 18,
+    "insight-text": 220
+  },
+  "llmInjectionRules": [
+    "所有新增可编辑文字必须同时包含 data-editable=\"true\"、contenteditable=\"true\" 和 data-slot。",
+    "图表容器 ID 必须保持 chart-* 格式。",
+    "拖拽只绑定 .drag-handle，避免和正文编辑手势冲突。",
+    "替换图表数据时，必须同步更新对应标题、图例、说明和业务口径。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "editableCount": 108,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 19,
+    "chartCount": 7,
+    "hasSidebarShell": false,
+    "sortableEnabled": true,
+    "sourceCleanup": [
+      "入库版将核心洞察中的裸露 Markdown 粗体标记改为 strong 标签；原始文件未改动，保存在 originals/source-template.html。"
+    ],
+    "slotDefinitionNotes": [
+      "原槽位表漏列 insight-1、insight-2、final-conclusion 三个实际模块。",
+      "原槽位表漏列 text.target.title。",
+      "原槽位表使用 legend[1-3] 说明法，实际 HTML 槽位为 legend1 至 legend3。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#0047ab",
+    "presets": [
+      "#0047ab",
+      "#ea580c",
+      "#16a34a",
+      "#38bdf8",
+      "#7c3aed",
+      "#111827"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-primary\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-primary\"]",
+        "[class*=\"bg-primaryLight\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-primary\"]",
+        "[class*=\"border-l-primary\"]",
+        "[class*=\"border-t-primary\"]"
+      ]
+    }
+  }
+}

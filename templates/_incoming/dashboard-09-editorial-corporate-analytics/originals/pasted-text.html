@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级数据分析报告模板</title>
+    <style>
+        /* Design System & Base Reset */
+        :root {
+            --bg-page: #f4f5f6; /* 页面底色：克制的高级灰 */
+            --bg-card: #ffffff;
+            --color-black: #0a0a0a;
+            --color-white: #ffffff;
+            --color-green-light: #25a858;
+            --color-green-dark: #1b8544;
+            --color-text-main: #1f2329;
+            --color-text-muted: #646a73;
+            --color-border: #dee0e3;
+            
+            --radius-card: 6px; /* 微圆角，保持硬朗质感 */
+            --spacing-sm: 12px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+            --spacing-xl: 48px;
+
+            --font-family: "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-page);
+            color: var(--color-text-main);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            padding: 40px 20px;
+        }
+
+        .report-container {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Typography */
+        h1 { font-size: 32px; font-weight: 700; color: var(--color-black); line-height: 1.2; }
+        h2 { font-size: 24px; font-weight: 700; margin-bottom: 20px; }
+        h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+        .metric-value { font-size: 64px; font-weight: 700; line-height: 1.1; margin: 16px 0; }
+        .text-small { font-size: 12px; color: var(--color-text-muted); }
+
+        /* Layout & Grid */
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-radius: var(--radius-card); overflow: hidden; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+        /* Cards */
+        .card {
+            background-color: var(--bg-card);
+            border-radius: var(--radius-card);
+            padding: var(--spacing-lg);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        /* Specific Modules */
+        .header-module {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-bottom: var(--spacing-md);
+            border-bottom: 2px solid var(--color-black);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        /* Key Takeaways Section */
+        .takeaway-card {
+            padding: var(--spacing-xl) var(--spacing-lg);
+            color: var(--color-white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .takeaway-card.green-light { background-color: var(--color-green-light); }
+        .takeaway-card.green-dark { background-color: var(--color-green-dark); }
+        .takeaway-card.black { background-color: var(--color-black); }
+        
+        .takeaway-step {
+            font-size: 40px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            opacity: 0.9;
+        }
+
+        /* Chart Split Section */
+        .split-card {
+            display: flex;
+            border-radius: var(--radius-card);
+            overflow: hidden;
+        }
+        .split-left {
+            flex: 0 0 35%;
+            background-color: var(--color-black);
+            color: var(--color-white);
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        .split-right {
+            flex: 1;
+            background-color: var(--color-white);
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+
+        /* CSS Bar Chart */
+        .bar-chart-row { margin-bottom: 16px; display: flex; align-items: center; }
+        .bar-label { width: 120px; font-size: 14px; padding-right: 16px; text-align: right; }
+        .bar-track { flex: 1; background-color: #f0f0f0; height: 32px; border-radius: 2px; overflow: hidden; display: flex;}
+        .bar-fill { background-color: var(--color-green-light); height: 100%; display: flex; align-items: center; padding-left: 12px; color: white; font-weight: 600; font-size: 14px;}
+        .bar-fill.secondary { background-color: var(--color-black); }
+        .bar-fill.tertiary { background-color: var(--color-text-muted); }
+
+        /* CSS Donut Chart */
+        .donut-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .donut {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: conic-gradient(var(--color-green-light) 0% 50%, #222 50% 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .donut::after {
+            content: "";
+            width: 120px;
+            height: 120px;
+            background-color: var(--color-black); /* Matches background to form donut */
+            border-radius: 50%;
+            position: absolute;
+        }
+        .donut-text {
+            position: relative;
+            z-index: 1;
+            color: var(--color-green-light);
+            font-size: 40px;
+            font-weight: bold;
+        }
+
+        /* Segment Flow (Archetypes) */
+        .archetype-flow {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-top: 40px;
+            position: relative;
+        }
+        .archetype-flow::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 10%;
+            right: 10%;
+            height: 1px;
+            border-top: 2px dashed var(--color-border);
+            z-index: 0;
+        }
+        .archetype-item {
+            background: var(--bg-card);
+            z-index: 1;
+            padding: 0 16px;
+            width: 30%;
+        }
+        .archetype-percent { font-size: 32px; font-weight: 700; color: var(--color-green-light); }
+        .archetype-desc { background: var(--color-green-light); color: white; padding: 12px; border-radius: 4px; font-size: 13px; margin-top: 12px;}
+        .archetype-item:nth-child(2) .archetype-desc { background: var(--color-green-dark); }
+        .archetype-item:nth-child(3) .archetype-desc { background: var(--color-black); }
+
+        /* Data Table (For Excel mapping) */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid var(--color-black);
+            font-weight: 600;
+            color: var(--color-text-muted);
+        }
+        .data-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            background-color: #e8f5e9;
+            color: var(--color-green-dark);
+        }
+
+        /* --- NEW MODULES CSS --- */
+        /* Column Chart */
+        .column-chart { display: flex; align-items: flex-end; gap: 12px; height: 180px; margin-top: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--color-border); }
+        .col-bar { flex: 1; background-color: var(--color-green-light); position: relative; border-radius: 2px 2px 0 0; transition: height 0.3s ease; min-width: 20px;}
+        .col-bar.secondary { background-color: var(--color-black); }
+        .col-bar.tertiary { background-color: var(--color-border); }
+        .col-label { position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--color-text-muted); width: max-content;}
+        .col-val { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 700; color: var(--color-text-main); }
+        
+        /* Quadrant Matrix */
+        .matrix-container { display: grid; grid-template-columns: 24px 1fr; grid-template-rows: 1fr 24px; gap: 8px; margin-top: 24px; }
+        .matrix-y-axis { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; font-size: 12px; color: var(--color-text-muted); font-weight: 600; letter-spacing: 2px;}
+        .matrix-x-axis { grid-column: 2; text-align: center; font-size: 12px; color: var(--color-text-muted); font-weight: 600; letter-spacing: 2px;}
+        .matrix-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 180px 180px; gap: 4px; background: var(--color-border); border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden;}
+        .matrix-cell { background: var(--bg-card); padding: 24px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .matrix-cell.highlight { background: #e8f5e9; } 
+        .matrix-cell h4 { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--color-black); }
+        .matrix-cell p { font-size: 12px; color: var(--color-text-muted); }
+
+        /* Funnel / Pipeline */
+        .funnel-container { display: flex; flex-direction: column; gap: 4px; margin-top: 24px; align-items: center; }
+        .funnel-step { display: flex; justify-content: space-between; align-items: center; background: var(--color-black); color: white; padding: 12px 24px; transition: width 0.3s; margin-bottom: 2px;}
+        .funnel-step:nth-child(1) { width: 100%; border-radius: 4px 4px 0 0; }
+        .funnel-step:nth-child(2) { width: 85%; background: var(--color-green-dark); }
+        .funnel-step:nth-child(3) { width: 65%; background: var(--color-green-light); }
+        .funnel-step:nth-child(4) { width: 45%; background: #e8f5e9; color: var(--color-green-dark); border-radius: 0 0 4px 4px;}
+        .funnel-label { font-size: 14px; font-weight: 600; }
+        .funnel-val { font-size: 16px; font-weight: 700; }
+        .funnel-rate { font-size: 12px; color: var(--color-text-muted); margin: 4px 0 8px 0; text-align: center; }
+
+        /* Progress Tracker */
+        .progress-list { margin-top: 24px; display: flex; flex-direction: column; gap: 20px;}
+        .progress-item {}
+        .progress-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; font-weight: 600;}
+        .progress-track { width: 100%; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+        .progress-bar { height: 100%; background: var(--color-green-light); }
+        .progress-bar.warning { background: #f5a623; }
+        .progress-bar.danger { background: #d0021b; }
+
+        /* Leaderboard */
+        .leaderboard-list { list-style: none; padding: 0; margin-top: 16px; }
+        .leaderboard-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--color-border); }
+        .leaderboard-item:last-child { border-bottom: none; }
+        .rank-badge { width: 24px; height: 24px; background: var(--color-black); color: white; display: inline-flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 12px; font-weight: 700; margin-right: 12px; }
+        .rank-badge.top-1 { background: var(--color-green-light); }
+        .item-name { font-size: 14px; font-weight: 600; flex: 1; }
+        .item-score { font-size: 16px; font-weight: 700; }
+
+        /* Insight Quote */
+        .quote-card { background: var(--color-black); color: white; padding: 48px; border-radius: var(--radius-card); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center;}
+        .quote-mark { position: absolute; top: -20px; left: 24px; font-size: 160px; color: rgba(255,255,255,0.05); font-family: Georgia, serif; line-height: 1; }
+        .quote-text { font-size: 24px; font-weight: 600; line-height: 1.5; position: relative; z-index: 1; }
+        .quote-author { margin-top: 24px; font-size: 14px; color: var(--color-green-light); font-weight: 600; position: relative; z-index: 1; }
+
+        /* Comparison VS */
+        .vs-card { display: flex; border-radius: var(--radius-card); overflow: hidden; }
+        .vs-side { flex: 1; padding: 32px; display: flex; flex-direction: column; }
+        .vs-left { background: var(--color-black); color: white; }
+        .vs-right { background: var(--color-green-light); color: white; }
+        .vs-metric { font-size: 48px; font-weight: 700; margin: 16px 0; line-height: 1.1; }
+        
+        @media (max-width: 768px) {
+            .grid-3 { grid-template-columns: 1fr; border-radius: 0; }
+            .split-card { flex-direction: column; }
+            .split-left, .split-right { flex: none; width: 100%; }
+            .archetype-flow { flex-direction: column; gap: 24px; }
+            .archetype-flow::before { display: none; }
+            .archetype-item { width: 100%; padding: 0; }
+            .data-table { display: block; overflow-x: auto; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="report-container">
+
+    <!-- Header Section -->
+    <header class="header-module" data-section="header">
+        <div>
+            <h1 data-editable="true">战略咨询报告：2026 行业趋势雷达</h1>
+            <p data-editable="true" style="font-size: 20px; color: var(--color-text-muted); margin-top: 8px;">随着投资激增，核心决策者开始全面接管业务转型</p>
+        </div>
+        <div data-editable="true" style="font-size: 16px; font-weight: 600; color: var(--color-text-muted);">
+            2026-05-20
+        </div>
+    </header>
+
+    <h2 data-editable="true" style="margin-bottom: 0;">核心发现 (Key Takeaways)</h2>
+
+    <!-- Summary Metrics (3-column) -->
+    <section data-section="key-takeaways" class="grid-3">
+        <div class="takeaway-card green-light">
+            <div>
+                <div class="takeaway-step" data-editable="true">1</div>
+                <h3 data-editable="true">企业级投资较去年翻倍，且趋势不可逆转</h3>
+            </div>
+            <div>
+                <div class="metric-value" data-editable="true">94%</div>
+                <p data-editable="true" style="font-size: 14px;">的 CEO 表示，即使 2026 年业务没有立即产生财务回报，他们也将继续保持当前的战略投资规模。</p>
+            </div>
+        </div>
+        
+        <div class="takeaway-card green-dark">
+            <div>
+                <div class="takeaway-step" data-editable="true">2</div>
+                <h3 data-editable="true">企业级转型正从 IT 主导转向由 CEO 亲自挂帅</h3>
+            </div>
+            <div>
+                <div class="metric-value" data-editable="true">72%</div>
+                <p data-editable="true" style="font-size: 14px;">的受访高管确认，他们目前是组织内重大技术和战略转型的最核心决策者。</p>
+            </div>
+        </div>
+
+        <div class="takeaway-card black">
+            <div>
+                <div class="takeaway-step" data-editable="true">3</div>
+                <h3 data-editable="true">市场上涌现出三类典型的领导者画像，先锋派遥遥领先</h3>
+            </div>
+            <div>
+                <div class="metric-value" data-editable="true">60%</div>
+                <p data-editable="true" style="font-size: 14px;">的先锋派（Trailblazers）预算将被精准投放于智能体自动化及前沿核心业务线。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Split View: Text + Bar Chart -->
+    <section data-section="chart-split-bar" class="split-card" style="margin-top: 16px;">
+        <div class="split-left">
+            <div class="metric-value" data-editable="true" style="color: var(--color-green-light);">94%</div>
+            <h3 data-editable="true">的组织将会坚持长期主义</h3>
+            <p data-editable="true" style="color: #aaa; font-size: 14px; margin-top: 16px;">即使当前的早期项目在头 12 个月内未能带来明显的财务杠杆，绝大多数企业仍选择继续加码，而非退缩。</p>
+        </div>
+        <div class="split-right">
+            <h3 data-editable="true" style="font-size: 16px; margin-bottom: 8px;">仅 6% 的公司计划在当前项目未达预期时削减投资</h3>
+            <p class="text-small" data-editable="true" style="margin-bottom: 24px;">受访者份额分布 (N = 2,400)</p>
+            
+            <div class="bar-chart-row">
+                <div class="bar-label" data-editable="true">追加资源投入</div>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width: 24%;" data-editable="true">24%</div>
+                </div>
+            </div>
+            <div class="bar-chart-row">
+                <div class="bar-label" data-editable="true">保持现状/微调</div>
+                <div class="bar-track">
+                    <div class="bar-fill secondary" style="width: 70%;" data-editable="true">70%</div>
+                </div>
+            </div>
+            <div class="bar-chart-row">
+                <div class="bar-label" data-editable="true">削减当前投资</div>
+                <div class="bar-track">
+                    <div class="bar-fill tertiary" style="width: 6%; color: #333;" data-editable="true">6%</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Split View: Text + Donut Chart -->
+    <section data-section="chart-split-donut" class="split-card" style="margin-top: 16px;">
+        <div class="split-left" style="background-color: var(--color-black); flex: 0 0 50%;">
+            <h3 data-editable="true" style="font-size: 24px; line-height: 1.4; margin-top: 40px;">受访的 CEO 中有一半认为，他们未来的职位稳固性取决于能否在当下制定正确的业务转型战略。</h3>
+            <p class="text-small" data-editable="true" style="margin-top: 40px; color: #666;">数据来源：2026 全球高管战略调研问卷</p>
+        </div>
+        <div class="split-right" style="background-color: #111;">
+            <div class="donut-container">
+                <div class="donut">
+                    <div class="donut-text" data-editable="true">50%</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Cohort / Archetype Framework -->
+    <section data-section="archetypes" class="card">
+        <h3 data-editable="true">先锋者正在崛起，但几乎所有高管都将重心转移至此</h3>
+        <p class="text-small" data-editable="true">信心、投资、团队赋能水平呈阶梯式增长趋势</p>
+
+        <div class="archetype-flow">
+            <div class="archetype-item">
+                <div class="archetype-percent" data-editable="true" style="color: var(--color-text-muted);">~15% <span style="font-size:16px; color:#333;">跟随者</span></div>
+                <div class="archetype-desc" data-editable="true" style="background: var(--color-border); color: var(--color-text-main);">
+                    认知到行业潜力但缺乏全面信念。进行少量、谨慎的防御性投资。
+                </div>
+            </div>
+            <div class="archetype-item">
+                <div class="archetype-percent" data-editable="true" style="color: var(--color-green-dark);">~70% <span style="font-size:16px; color:#333;">务实派</span></div>
+                <div class="archetype-desc" data-editable="true">
+                    对趋势感到兴奋且自信，但要求看到明确商业价值和低风险后才大举投入。
+                </div>
+            </div>
+            <div class="archetype-item">
+                <div class="archetype-percent" data-editable="true">~15% <span style="font-size:16px; color:#333;">先锋派</span></div>
+                <div class="archetype-desc" data-editable="true">
+                    通过果断投资、快速团队赋能以及对 ROI 的强烈信念，全面驱动端到端业务转型。
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Additional Detail Module: Data Table (Common for Excel reports) -->
+    <section data-section="data-table" class="card">
+        <h3 data-editable="true">重点业务板块投资回报率 (ROI) 追踪矩阵</h3>
+        <p class="text-small" data-editable="true" style="margin-bottom: 24px;">基于企业级财务系统导出的 2026 Q1-Q2 细分领域数据分析表</p>
+        
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th data-editable="true">业务职能部门</th>
+                    <th data-editable="true">2026 预算规模</th>
+                    <th data-editable="true">当前部署阶段</th>
+                    <th data-editable="true">预估 ROI (12个月)</th>
+                    <th data-editable="true">转型评级</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-editable="true" style="font-weight:600;">客户服务与支持</td>
+                    <td data-editable="true">$4.5M</td>
+                    <td data-editable="true">全面推广 (Scaling)</td>
+                    <td data-editable="true" style="color: var(--color-green-light); font-weight: 600;">+ 145%</td>
+                    <td data-editable="true"><span class="status-badge">先锋级</span></td>
+                </tr>
+                <tr>
+                    <td data-editable="true" style="font-weight:600;">研发与工程</td>
+                    <td data-editable="true">$8.2M</td>
+                    <td data-editable="true">核心试点 (Piloting)</td>
+                    <td data-editable="true" style="color: var(--color-green-dark); font-weight: 600;">+ 85%</td>
+                    <td data-editable="true"><span class="status-badge" style="background-color: #f4f5f6; color: #1f2329;">务实级</span></td>
+                </tr>
+                <tr>
+                    <td data-editable="true" style="font-weight:600;">市场营销与增长</td>
+                    <td data-editable="true">$3.1M</td>
+                    <td data-editable="true">概念验证 (PoC)</td>
+                    <td data-editable="true" style="color: var(--color-text-muted); font-weight: 600;">待评估</td>
+                    <td data-editable="true"><span style="color:var(--color-text-muted); font-size:12px;">跟随级</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 1. Trend Line (Column Chart) -->
+    <section data-section="trend-chart" class="card">
+        <h3 data-editable="true">2025-2026 核心业务线月度营收趋势</h3>
+        <p class="text-small" data-editable="true">单位：百万美元 (M USD) | 过去 6 个月表现呈稳健上升态势</p>
+        
+        <div class="column-chart">
+            <div class="col-bar tertiary" style="height: 40%;"><div class="col-val" data-editable="true">42</div><div class="col-label" data-editable="true">Q4'25</div></div>
+            <div class="col-bar tertiary" style="height: 45%;"><div class="col-val" data-editable="true">48</div><div class="col-label" data-editable="true">Jan</div></div>
+            <div class="col-bar secondary" style="height: 42%;"><div class="col-val" data-editable="true">45</div><div class="col-label" data-editable="true">Feb</div></div>
+            <div class="col-bar secondary" style="height: 60%;"><div class="col-val" data-editable="true">64</div><div class="col-label" data-editable="true">Mar</div></div>
+            <div class="col-bar" style="height: 75%;"><div class="col-val" data-editable="true">82</div><div class="col-label" data-editable="true">Apr</div></div>
+            <div class="col-bar" style="height: 90%;"><div class="col-val" data-editable="true">95</div><div class="col-label" data-editable="true">May</div></div>
+        </div>
+    </section>
+
+    <div class="grid-2">
+        <!-- 2. Funnel Analysis -->
+        <section data-section="funnel-analysis" class="card">
+            <h3 data-editable="true">关键转化漏斗 (B2B 销售管线)</h3>
+            <p class="text-small" data-editable="true">本季度 MQL 到 Won 的整体转化率提升至 4.5%</p>
+            
+            <div class="funnel-container">
+                <div class="funnel-step">
+                    <span class="funnel-label" data-editable="true">营销线索 (MQL)</span>
+                    <span class="funnel-val" data-editable="true">12,500</span>
+                </div>
+                <div class="funnel-rate" data-editable="true">↓ 转化率: 32%</div>
+                <div class="funnel-step">
+                    <span class="funnel-label" data-editable="true">销售线索 (SQL)</span>
+                    <span class="funnel-val" data-editable="true">4,000</span>
+                </div>
+                <div class="funnel-rate" data-editable="true">↓ 转化率: 45%</div>
+                <div class="funnel-step">
+                    <span class="funnel-label" data-editable="true">商务谈判 (Negotiation)</span>
+                    <span class="funnel-val" data-editable="true">1,800</span>
+                </div>
+                <div class="funnel-rate" data-editable="true">↓ 转化率: 31%</div>
+                <div class="funnel-step">
+                    <span class="funnel-label" data-editable="true">最终成单 (Closed Won)</span>
+                    <span class="funnel-val" data-editable="true">560</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Progress / OKR Trackers -->
+        <section data-section="progress-trackers" class="card">
+            <h3 data-editable="true">2026 年度战略目标达成率</h3>
+            <p class="text-small" data-editable="true">截至 Q2 末的核心 OKR 进度追踪</p>
+            
+            <div class="progress-list">
+                <div class="progress-item">
+                    <div class="progress-header">
+                        <span data-editable="true">亚太区市场份额扩充</span>
+                        <span data-editable="true">85%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-bar" style="width: 85%;"></div>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-header">
+                        <span data-editable="true">AI 基础设施升级预算消耗</span>
+                        <span data-editable="true">62%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-bar secondary" style="width: 62%; background: var(--color-black);"></div>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-header">
+                        <span data-editable="true">核心人才流失率控制 (上限15%)</span>
+                        <span data-editable="true" style="color: #d0021b;">警告: 88% 触达</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-bar danger" style="width: 88%;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 4. Entity Comparison (VS Card) -->
+    <section data-section="vs-comparison" class="vs-card">
+        <div class="vs-side vs-left">
+            <h3 data-editable="true" style="color: #aaa;">传统业务线 (Legacy Core)</h3>
+            <div class="vs-metric" data-editable="true">12%</div>
+            <p data-editable="true" style="font-size: 14px;">年均复合增长率 (CAGR)。拥有稳定现金流，但利润空间正在逐年被压缩，获客成本大幅攀升。</p>
+        </div>
+        <div class="vs-side vs-right">
+            <h3 data-editable="true" style="color: rgba(255,255,255,0.8);">创新智能体业务 (Agentic AI)</h3>
+            <div class="vs-metric" data-editable="true">340%</div>
+            <p data-editable="true" style="font-size: 14px;">年均复合增长率 (CAGR)。处于爆发式增长期，凭借技术杠杆实现边际成本递减，是未来五年的战略重点。</p>
+        </div>
+    </section>
+
+    <!-- 5. Strategy Quadrant Matrix & 6. Leaderboard (Grid-2) -->
+    <div class="grid-2">
+        <section data-section="quadrant-matrix" class="card">
+            <h3 data-editable="true">产品组合战略矩阵 (BCG Matrix)</h3>
+            <p class="text-small" data-editable="true">相对市场份额 vs 市场增长率</p>
+
+            <div class="matrix-container">
+                <div class="matrix-y-axis" data-editable="true">市场增长率 (HIGH → LOW)</div>
+                <div class="matrix-grid">
+                    <div class="matrix-cell highlight">
+                        <h4 data-editable="true">明星业务</h4>
+                        <p data-editable="true">高增长，高份额。需重点投资以维持领先地位。(如：云服务)</p>
+                    </div>
+                    <div class="matrix-cell">
+                        <h4 data-editable="true">问题业务</h4>
+                        <p data-editable="true">高增长，低份额。面临抉择：加大投资或果断剥离。(如：硬件周边)</p>
+                    </div>
+                    <div class="matrix-cell" style="background: #fcfcfc;">
+                        <h4 data-editable="true">现金牛</h4>
+                        <p data-editable="true">低增长，高份额。提供稳定利润支撑其他业务。(如：企业ERP)</p>
+                    </div>
+                    <div class="matrix-cell">
+                        <h4 data-editable="true">瘦狗业务</h4>
+                        <p data-editable="true">低增长，低份额。建议尽早清算或重组。(如：边缘广告业务)</p>
+                    </div>
+                </div>
+                <div class="matrix-x-axis" data-editable="true">相对市场份额 (HIGH → LOW)</div>
+            </div>
+        </section>
+
+        <!-- 6. Leaderboard / Ranking -->
+        <section data-section="leaderboard" class="card">
+            <h3 data-editable="true">全球大区营收表现排行榜</h3>
+            <p class="text-small" data-editable="true">YTD 2026 区域营收目标达成度排名</p>
+            
+            <h4 style="margin-top: 24px; font-size: 12px; color: var(--color-green-dark); text-transform: uppercase;" data-editable="true">领先区域 (Top 3)</h4>
+            <ul class="leaderboard-list">
+                <li class="leaderboard-item">
+                    <div class="rank-badge top-1">1</div>
+                    <div class="item-name" data-editable="true">亚太区 (APAC)</div>
+                    <div class="item-score" style="color: var(--color-green-light);" data-editable="true">115%</div>
+                </li>
+                <li class="leaderboard-item">
+                    <div class="rank-badge">2</div>
+                    <div class="item-name" data-editable="true">北美区 (NA)</div>
+                    <div class="item-score" data-editable="true">108%</div>
+                </li>
+                <li class="leaderboard-item">
+                    <div class="rank-badge">3</div>
+                    <div class="item-name" data-editable="true">中东及北非 (MENA)</div>
+                    <div class="item-score" data-editable="true">102%</div>
+                </li>
+            </ul>
+
+            <h4 style="margin-top: 24px; font-size: 12px; color: #d0021b; text-transform: uppercase;" data-editable="true">落后预警 (Bottom 2)</h4>
+            <ul class="leaderboard-list">
+                <li class="leaderboard-item">
+                    <div class="rank-badge" style="background: #f0f0f0; color: #999;">8</div>
+                    <div class="item-name" data-editable="true">欧洲区 (EMEA)</div>
+                    <div class="item-score" style="color: #d0021b;" data-editable="true">82%</div>
+                </li>
+                <li class="leaderboard-item">
+                    <div class="rank-badge" style="background: #f0f0f0; color: #999;">9</div>
+                    <div class="item-name" data-editable="true">拉美区 (LATAM)</div>
+                    <div class="item-score" style="color: #d0021b;" data-editable="true">75%</div>
+                </li>
+            </ul>
+        </section>
+    </div>
+
+    <!-- 7. Key Insight Quote -->
+    <section data-section="insight-quote" class="quote-card">
+        <div class="quote-mark">"</div>
+        <div class="quote-text" data-editable="true">
+            “最大的风险不是过度投资于 AI，而是行动过于迟缓。在这个时代，不进行自我颠覆，就会被市场无情颠覆。”
+        </div>
+        <div class="quote-author" data-editable="true">— 全球首席执行官年度峰会致辞, 2026</div>
+    </section>
+
+</div>
+
+</body>
+</html>

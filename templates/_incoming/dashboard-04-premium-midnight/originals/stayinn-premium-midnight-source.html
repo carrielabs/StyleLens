@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StayInn Premium Midnight - 空间资产数智数据大盘</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#312e81',
+            },
+            darkBg: '#09090B',
+            darkCard: '#121214',
+            darkBorder: '#27272A',
+            emeraldGlow: '#10B981',
+            roseGlow: '#F43F5E'
+          },
+          fontFamily: {
+            sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+            mono: ['SFMono-Regular', 'Consolas', '"Liberation Mono"', 'Menlo', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 模拟 Excel-to-UI 生成器下的在线数据编辑高亮 */
+    [data-editable="true"] {
+      position: relative;
+      transition: all 0.2s ease;
+      border-radius: 4px;
+    }
+    [data-editable="true"]:hover {
+      background-color: rgba(99, 102, 241, 0.08);
+      outline: 2px dashed #6366f1;
+      outline-offset: 4px;
+      cursor: pointer;
+    }
+    [data-editable="true"]:focus {
+      background-color: rgba(99, 102, 241, 0.12);
+      outline: 2px solid #4f46e5;
+      outline-offset: 4px;
+      cursor: text;
+    }
+
+    /* 漫反射微光环境特效 */
+    .glow-overlay {
+      background: radial-gradient(circle at 50% -20%, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+    }
+
+    /* 滚动条美化 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #09090B;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272A;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3F3F46;
+    }
+
+    /* 保证圆不会因拉伸缩放变形的核心类 */
+    .strict-aspect-svg {
+      aspect-ratio: 1000 / 280;
+    }
+    .strict-aspect-scatter {
+      aspect-ratio: 500 / 300;
+    }
+    .strict-aspect-radar {
+      aspect-ratio: 1 / 1;
+    }
+
+    /* 同心圆悬停高亮过渡 */
+    .interactive-ring {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .interactive-ring:hover {
+      filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.4));
+      stroke-width: 2.5;
+    }
+  </style>
+</head>
+<body class="bg-darkBg text-zinc-100 font-sans antialiased selection:bg-brand-500 selection:text-white relative min-h-screen pb-16">
+
+  <!-- Core ambient background glow -->
+  <div class="absolute inset-0 glow-overlay pointer-events-none z-0"></div>
+
+  <!-- 顶部导航栏 (Navbar) -->
+  <header class="sticky top-0 z-40 w-full bg-darkBg/80 backdrop-blur-md border-b border-zinc-800/50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <!-- Left Branding -->
+      <div class="flex items-center space-x-3">
+        <svg class="w-6 h-6 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9s2.015-9 4.5-9y" />
+        </svg>
+        <span class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          StayInn <span class="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700 font-mono">EXCEL_BI_V3.2</span>
+        </span>
+      </div>
+
+      <!-- Right Utility Actions -->
+      <div class="flex items-center space-x-4">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs">
+          <span class="w-2 h-2 rounded-full bg-emeraldGlow animate-pulse"></span>
+          <span class="text-zinc-400 font-medium">数据链路正常协同中</span>
+        </div>
+        <button onclick="window.print()" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white text-zinc-950 hover:bg-zinc-200 transition-all flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          导出高级 PDF 报告
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主体工作区容器 -->
+  <main class="max-w-7xl mx-auto px-6 pt-10 space-y-10 relative z-10">
+
+    <!-- 大盘标题区域与 Excel 导入状态通知 -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-800 pb-8">
+      <div>
+        <div class="inline-block mb-3">
+          <span class="px-3 py-1 rounded-full text-[10px] font-mono tracking-widest bg-brand-500/10 border border-brand-500/20 text-brand-400 uppercase">
+            AUTOMATED BI REPORT
+          </span>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
+          空间资产数智运营分析大盘
+        </h1>
+        <p class="text-zinc-400 text-sm mt-2 font-normal leading-relaxed">
+          已成功导入结构化 Excel 数据行。系统已自动解算指标漏斗，并匹配最契合的空间汇报视觉标准。
+        </p>
+      </div>
+      <!-- Excel Meta information block -->
+      <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md">
+        <div class="p-3 rounded-xl bg-green-500/10 text-emeraldGlow">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          </svg>
+        </div>
+        <div class="text-xs">
+          <p class="text-zinc-500 font-mono">源文件 / SOURCES</p>
+          <p class="text-zinc-200 font-semibold font-mono">StayInn_Data_Dec2025.xlsx</p>
+          <p class="text-zinc-500 mt-1">1,248 行记录已成功清洗并对齐</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 1. KPI CORE GRID SECTION ==================== -->
+    <section data-section="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- KPI Card 1: Revenue -->
+      <div class="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md hover:border-zinc-700/80 transition-all duration-300">
+        <div class="flex justify-between items-start mb-4">
+          <span class="text-xs text-zinc-500 font-semibold tracking-wider">期间总营业额 (Revenue)</span>
+          <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emeraldGlow font-bold">+18.4%</span>
+        </div>
+        <div class="space-y-1">
+          <span class="text-[11px] text-zinc-500 block font-mono">DECEMBER TOTAL</span>
+          <div class="flex items-baseline space-x-1">
+            <span data-slot="kpi-revenue" data-editable="true" class="text-3xl font-black font-mono text-white tracking-tight">¥1,842,900</span>
+          </div>
+          <p data-slot="kpi-revenue-trend" data-editable="true" class="text-[11px] text-zinc-400 font-normal leading-relaxed pt-2">
+            对比上月净增长了 <strong class="text-zinc-200">¥287,100</strong>，主因是圣诞及跨年季客房预订均价上浮显著。
+          </p>
+        </div>
+      </div>
+
+      <!-- KPI Card 2: ADR -->
+      <div class="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md hover:border-zinc-700/80 transition-all duration-300">
+        <div class="flex justify-between items-start mb-4">
+          <span class="text-xs text-zinc-500 font-semibold tracking-wider">客房平均每日房价 (ADR)</span>
+          <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emeraldGlow font-bold">+12.1%</span>
+        </div>
+        <div class="space-y-1">
+          <span class="text-[11px] text-zinc-500 block font-mono">AVERAGE DAILY RATE</span>
+          <div class="flex items-baseline space-x-1">
+            <span data-slot="kpi-adr" data-editable="true" class="text-3xl font-black font-mono text-white tracking-tight">¥480.00</span>
+          </div>
+          <p data-slot="kpi-adr-trend" data-editable="true" class="text-[11px] text-zinc-400 font-normal leading-relaxed pt-2">
+            通过 AI 收益预测模型动态定价，本月将非展会周中价格进行了阶梯式上浮，收益可喜。
+          </p>
+        </div>
+      </div>
+
+      <!-- KPI Card 3: Occupancy Rate -->
+      <div class="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md hover:border-zinc-700/80 transition-all duration-300">
+        <div class="flex justify-between items-start mb-4">
+          <span class="text-xs text-zinc-500 font-semibold tracking-wider">空间平均入住率 (OCC)</span>
+          <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emeraldGlow font-bold">+8.5%</span>
+        </div>
+        <div class="space-y-1">
+          <span class="text-[11px] text-zinc-500 block font-mono">OCCUPANCY RATE</span>
+          <div class="flex items-baseline space-x-1">
+            <span data-slot="kpi-occupancy" data-editable="true" class="text-3xl font-black font-mono text-white tracking-tight">88.4%</span>
+          </div>
+          <p data-slot="kpi-occupancy-trend" data-editable="true" class="text-[11px] text-zinc-400 font-normal leading-relaxed pt-2">
+            平均周中入住率稳定在 <strong class="text-zinc-200">84.2%</strong>，周末触达上限 <strong class="text-zinc-200">96.8%</strong>，无任何无效房态挤压。
+          </p>
+        </div>
+      </div>
+
+      <!-- KPI Card 4: RevPAR -->
+      <div class="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md hover:border-zinc-700/80 transition-all duration-300">
+        <div class="flex justify-between items-start mb-4">
+          <span class="text-xs text-zinc-500 font-semibold tracking-wider">可售客房平均收入 (RevPAR)</span>
+          <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emeraldGlow font-bold">+22.4%</span>
+        </div>
+        <div class="space-y-1">
+          <span class="text-[11px] text-zinc-500 block font-mono">REVENUE PER AVAILABLE ROOM</span>
+          <div class="flex items-baseline space-x-1">
+            <span data-slot="kpi-revpar" data-editable="true" class="text-3xl font-black font-mono text-white tracking-tight">¥424.30</span>
+          </div>
+          <p data-slot="kpi-revpar-trend" data-editable="true" class="text-[11px] text-zinc-400 font-normal leading-relaxed pt-2">
+            创历史同期新高，说明整体房源的空载耗损降至极低，坪效与资产保值极佳。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 2. REVENUE TRENDS & CHANNELS ==================== -->
+    <section data-section="trends-and-channels" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      <!-- Left Column: Smooth Glowing Trend Chart -->
+      <div class="lg:col-span-8 p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md flex flex-col justify-between relative">
+        <div>
+          <div class="flex items-center justify-between mb-8">
+            <div class="space-y-1">
+              <span class="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">REVENUE VELOCITY TREND</span>
+              <h3 class="text-lg font-bold text-white">本月总营业额动态走势趋势图</h3>
+            </div>
+            <span data-slot="trend-period" data-editable="true" class="text-xs font-mono text-brand-400 px-3 py-1 rounded-xl bg-brand-500/5 border border-brand-500/10">
+              12月1日 - 12月31日数据追踪
+            </span>
+          </div>
+
+          <!-- Pure High-End SVG Glowing Chart Container with responsive exact aspect ratio layout -->
+          <div class="w-full relative group strict-aspect-svg">
+            <svg class="w-full h-full overflow-visible" viewBox="0 0 1000 280">
+              <defs>
+                <linearGradient id="neonGlowGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#6366f1" stop-opacity="0.35" />
+                  <stop offset="100%" stop-color="#6366f1" stop-opacity="0.0" />
+                </linearGradient>
+                <linearGradient id="neonLineGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#4f46e5" />
+                  <stop offset="50%" stop-color="#8b5cf6" />
+                  <stop offset="100%" stop-color="#ec4899" />
+                </linearGradient>
+              </defs>
+
+              <!-- Grid Horizontal Lines -->
+              <line x1="0" y1="40" x2="1000" y2="40" stroke="#27272A" stroke-width="0.5" stroke-dasharray="4,4" />
+              <line x1="0" y1="100" x2="1000" y2="100" stroke="#27272A" stroke-width="0.5" stroke-dasharray="4,4" />
+              <line x1="0" y1="160" x2="1000" y2="160" stroke="#27272A" stroke-width="0.5" stroke-dasharray="4,4" />
+              <line x1="0" y1="220" x2="1000" y2="220" stroke="#27272A" stroke-width="0.5" stroke-dasharray="4,4" />
+
+              <!-- Average target threshold line -->
+              <line x1="0" y1="130" x2="1000" y2="130" stroke="#10B981" stroke-width="1" stroke-dasharray="6,4" stroke-opacity="0.5" />
+
+              <!-- Glow shaded area under curve -->
+              <path d="M 50,200 C 120,210 150,130 200,140 C 300,160 350,180 400,170 C 500,150 550,100 600,110 C 700,130 750,40 800,50 C 860,60 900,60 950,70 L 950,260 L 50,260 Z" fill="url(#neonGlowGrad)" />
+
+              <!-- Glowing Main Trend Curve -->
+              <path d="M 50,200 C 120,210 150,130 200,140 C 300,160 350,180 400,170 C 500,150 550,100 600,110 C 700,130 750,40 800,50 C 860,60 900,60 950,70" fill="none" stroke="url(#neonLineGrad)" stroke-width="3" />
+
+              <!-- SVG Interactive Points with pulsing halos -->
+              <g class="cursor-pointer">
+                <!-- Point 1 -->
+                <circle cx="50" cy="200" r="14" fill="#6366f1" fill-opacity="0.15" class="hover:fill-opacity-30 transition-all" />
+                <circle cx="50" cy="200" r="6" fill="#6366f1" stroke="#ffffff" stroke-width="2.5" class="trend-point" data-date="12月01日" data-revenue="¥38,500" data-occupancy="81.2%" />
+                
+                <!-- Point 2 -->
+                <circle cx="200" cy="140" r="14" fill="#6366f1" fill-opacity="0.15" class="hover:fill-opacity-30 transition-all" />
+                <circle cx="200" cy="140" r="6" fill="#6366f1" stroke="#ffffff" stroke-width="2.5" class="trend-point" data-date="12月07日" data-revenue="¥52,800" data-occupancy="84.5%" />
+                
+                <!-- Point 3 -->
+                <circle cx="400" cy="170" r="14" fill="#6366f1" fill-opacity="0.15" class="hover:fill-opacity-30 transition-all" />
+                <circle cx="400" cy="170" r="6" fill="#6366f1" stroke="#ffffff" stroke-width="2.5" class="trend-point" data-date="12月14日" data-revenue="¥45,100" data-occupancy="83.1%" />
+                
+                <!-- Point 4 -->
+                <circle cx="600" cy="110" r="14" fill="#8b5cf6" fill-opacity="0.15" class="hover:fill-opacity-30 transition-all" />
+                <circle cx="600" cy="110" r="6" fill="#8b5cf6" stroke="#ffffff" stroke-width="2.5" class="trend-point" data-date="12月21日" data-revenue="¥68,200" data-occupancy="89.4%" />
+                
+                <!-- Point 5 -->
+                <circle cx="800" cy="50" r="14" fill="#ec4899" fill-opacity="0.15" class="hover:fill-opacity-30 transition-all" />
+                <circle cx="800" cy="50" r="6" fill="#ec4899" stroke="#ffffff" stroke-width="2.5" class="trend-point" data-date="12月28日" data-revenue="¥89,400" data-occupancy="95.2%" />
+
+                <!-- Point 6 -->
+                <circle cx="950" cy="70" r="14" fill="#ec4899" fill-opacity="0.15" class="hover:fill-opacity-30 transition-all" />
+                <circle cx="950" cy="70" r="6" fill="#ec4899" stroke="#ffffff" stroke-width="2.5" class="trend-point" data-date="12月31日" data-revenue="¥81,200" data-occupancy="92.1%" />
+              </g>
+            </svg>
+            
+            <!-- Absolute Overlay for Average Value Tag -->
+            <div class="absolute left-4 top-[116px] px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-mono text-emeraldGlow">
+              <span data-slot="trend-avg-label" data-editable="true">均线预警阀值: ¥55,000/天</span>
+            </div>
+
+            <!-- Follow-cursor Active Tooltip Box -->
+            <div id="chartTooltip" class="absolute hidden bg-zinc-950/95 border border-zinc-800 p-3 rounded-2xl text-xs font-sans shadow-2xl pointer-events-none z-30 transition-all duration-150 backdrop-blur-md">
+              <p class="font-bold text-white font-mono mb-1" id="tooltipDate">12月28日</p>
+              <div class="space-y-1 text-[11px] text-zinc-400">
+                <p>每日营收: <span class="text-brand-400 font-mono font-semibold" id="tooltipRevenue">¥89,400</span></p>
+                <p>实时入住: <span class="text-emeraldGlow font-mono font-semibold" id="tooltipOcc">95.2%</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom legend logs -->
+        <div class="mt-6 flex items-center justify-between text-xs text-zinc-500 pt-4 border-t border-zinc-800/40">
+          <div class="flex space-x-6">
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-brand-500"></span>
+              线上渠道收益 (在线预订)
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+              线下增值与合伙收益
+            </span>
+          </div>
+          <span>数据已进行对数底数清洗校准</span>
+        </div>
+      </div>
+
+      <!-- Right Column: Interactive Multi-Nested Revenue Circles -->
+      <div class="lg:col-span-4 p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md flex flex-col justify-between items-center text-center relative group">
+        <div class="w-full text-left mb-6">
+          <span class="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">REVENUE PIE ANATOMY</span>
+          <h3 class="text-base font-bold text-white mt-1">营收来源多维度结构分析</h3>
+        </div>
+
+        <!-- Concentric circles core element with Hover interaction -->
+        <div class="relative w-[260px] h-[260px] flex items-center justify-center">
+          <!-- Background Glow element -->
+          <div class="absolute w-44 h-44 rounded-full bg-brand-500/10 blur-[40px] pointer-events-none"></div>
+
+          <!-- Outer Circle (15% Catering) -->
+          <div class="absolute w-[240px] h-[240px] rounded-full border border-indigo-500/20 bg-indigo-500/5 flex items-center justify-center concentric-circle hover:scale-105 transition-all cursor-pointer ring-segment" data-segment-name="餐饮与零售增值" data-segment-value="¥276,435" data-segment-ratio="15%">
+            <div class="absolute top-2 flex flex-col items-center">
+              <span data-slot="circle-outer-val" data-editable="true" class="text-base font-black font-mono text-zinc-300">15%</span>
+            </div>
+
+            <!-- Mid Circle (80% Rooms) -->
+            <div class="w-[170px] h-[170px] rounded-full border border-brand-500/40 bg-brand-500/10 flex items-center justify-center concentric-circle cursor-pointer ring-segment" data-segment-name="核心客房预订" data-segment-value="¥1,474,320" data-segment-ratio="80%">
+              <div class="absolute top-6 flex flex-col items-center">
+                <span data-slot="circle-mid-val" data-editable="true" class="text-lg font-black font-mono text-white">80%</span>
+              </div>
+
+              <!-- Inner Circle (5% Space Rentals) -->
+              <div class="w-[90px] h-[90px] rounded-full border border-purple-500/40 bg-purple-500/15 flex flex-col items-center justify-center concentric-circle cursor-pointer ring-segment" data-segment-name="空间租约溢价" data-segment-value="¥92,145" data-segment-ratio="5%">
+                <span data-slot="circle-inner-val" data-editable="true" class="text-xs font-black font-mono text-purple-300">5%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center Interactive text display panel -->
+          <div class="absolute pointer-events-none text-center bg-zinc-950/80 w-20 h-20 rounded-full flex flex-col items-center justify-center border border-zinc-800/40 backdrop-blur-sm z-10 transition-all" id="concentricCenterPanel">
+            <span class="text-[8px] text-zinc-500 uppercase tracking-widest block" id="centerSubtext">主轴大盘</span>
+            <span class="text-[10px] font-bold text-zinc-300 mt-0.5 leading-tight" id="centerMaintext">指引悬停</span>
+          </div>
+        </div>
+
+        <div class="w-full text-xs text-zinc-400 text-left pt-6 mt-6 border-t border-zinc-800/40 leading-relaxed">
+          客房预订依旧占据主轴大底盘，餐饮增值表现环比提升，成为新利润驱动项。
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 2.5 ACQUISITION CONVERSION FUNNEL & GRID ==================== -->
+    <section data-section="acquisition-funnel" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      <!-- Funnel Progress Bars (Left) -->
+      <div class="lg:col-span-6 p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md space-y-6">
+        <div>
+          <span class="px-3 py-1 rounded-full text-[10px] font-mono tracking-widest bg-brand-500/10 border border-brand-500/20 text-brand-400 uppercase">
+            TRAFFIC CONVERSION
+          </span>
+          <h3 class="text-lg font-bold text-white mt-3">全渠道获客漏斗及转化率</h3>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Funnel Stage 1 -->
+          <div class="space-y-1.5 group/funnel cursor-pointer">
+            <div class="flex justify-between items-end text-xs">
+              <span class="text-zinc-400 group-hover/funnel:text-white transition-colors">第一层：全网渠道引流展现 (Impression)</span>
+              <span class="font-mono text-white font-bold">1,420,000 PV</span>
+            </div>
+            <div class="h-3 w-full bg-zinc-950/80 border border-zinc-800 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full w-full group-hover/funnel:bg-indigo-400 transition-all duration-500"></div>
+            </div>
+          </div>
+
+          <!-- Funnel Stage 2 -->
+          <div class="space-y-1.5 group/funnel cursor-pointer">
+            <div class="flex justify-between items-end text-xs">
+              <span class="text-zinc-400 group-hover/funnel:text-white transition-colors">第二层：高意向落地页触达 (Click)</span>
+              <span class="font-mono text-brand-400 font-bold">284,000 CLK (转化率 20%)</span>
+            </div>
+            <div class="h-3 w-full bg-zinc-950/80 border border-zinc-800 rounded-full overflow-hidden">
+              <div class="h-full bg-brand-600 rounded-full w-[20%] group-hover/funnel:bg-brand-500 transition-all duration-500"></div>
+            </div>
+          </div>
+
+          <!-- Funnel Stage 3 -->
+          <div class="space-y-1.5 group/funnel cursor-pointer">
+            <div class="flex justify-between items-end text-xs">
+              <span class="text-zinc-400 group-hover/funnel:text-white transition-colors">第三层：生成试算预订转化 (Checkout)</span>
+              <span class="font-mono text-purple-400 font-bold">34,080 BKG (留存比 12%)</span>
+            </div>
+            <div class="h-3 w-full bg-zinc-950/80 border border-zinc-800 rounded-full overflow-hidden">
+              <div class="h-full bg-purple-600 rounded-full w-[12%] group-hover/funnel:bg-purple-500 transition-all duration-500"></div>
+            </div>
+          </div>
+
+          <!-- Funnel Stage 4 -->
+          <div class="space-y-1.5 group/funnel cursor-pointer">
+            <div class="flex justify-between items-end text-xs">
+              <span class="text-zinc-400 group-hover/funnel:text-white transition-colors">第四层：实付尾款离店结算 (Converted)</span>
+              <span class="font-mono text-emeraldGlow font-bold">28,960 SET (最终结转率 85%)</span>
+            </div>
+            <div class="h-3 w-full bg-zinc-950/80 border border-zinc-800 rounded-full overflow-hidden">
+              <div class="h-full bg-emerald-500 rounded-full w-[10.2%] group-hover/funnel:bg-emerald-400 transition-all duration-500"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Metrics KPI Cards Grid (Right) -->
+      <div class="lg:col-span-6 grid grid-cols-2 gap-4">
+        <!-- Add Card 1 -->
+        <div class="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md flex flex-col justify-between hover:border-zinc-700/80 transition-all duration-300">
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono text-indigo-400 uppercase tracking-wider block">CAC COST CONTROL</span>
+            <h4 class="text-sm font-bold text-zinc-300">平均获客成本 (CAC)</h4>
+          </div>
+          <div class="py-4">
+            <p class="text-3xl font-black font-mono text-white">¥34.20 <span class="text-xs text-emeraldGlow font-bold">-14.5% MoM</span></p>
+          </div>
+          <p class="text-[10px] text-zinc-500">由于小程序直连营销占比增高，使外部OTA大流量分发抽佣成本有效压低。</p>
+        </div>
+
+        <!-- Add Card 2 -->
+        <div class="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md flex flex-col justify-between hover:border-zinc-700/80 transition-all duration-300">
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono text-purple-400 uppercase tracking-wider block">LIFE TIME VALUE</span>
+            <h4 class="text-sm font-bold text-zinc-300">核心用户生命周期价值</h4>
+          </div>
+          <div class="py-4">
+            <p class="text-3xl font-black font-mono text-white">¥1,420.00 <span class="text-xs text-brand-400 font-bold">+21.2%</span></p>
+          </div>
+          <p class="text-[10px] text-zinc-500">多维餐饮、增值下午茶及数字游民共享工位联卡销售促成了LTV大跃迁。</p>
+        </div>
+
+        <!-- Add Card 3 -->
+        <div class="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md flex flex-col justify-between hover:border-zinc-700/80 transition-all duration-300">
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono text-emeraldGlow uppercase tracking-wider block">REPURCHASE INDEX</span>
+            <h4 class="text-sm font-bold text-zinc-300">复购留存粘性比率</h4>
+          </div>
+          <div class="py-4">
+            <p class="text-3xl font-black font-mono text-white">42.8% <span class="text-xs text-emeraldGlow font-bold">+5.4%</span></p>
+          </div>
+          <p class="text-[10px] text-zinc-500">常客计划与社群日常游民分享沙龙大大拉高了周间空闲时段的返店率。</p>
+        </div>
+
+        <!-- Add Card 4 -->
+        <div class="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md flex flex-col justify-between hover:border-zinc-700/80 transition-all duration-300">
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono text-brand-500 uppercase tracking-wider block">NPS SATISFACTION</span>
+            <h4 class="text-sm font-bold text-zinc-300">净推荐值 (NPS)</h4>
+          </div>
+          <div class="py-4">
+            <p class="text-3xl font-black font-mono text-white">76.5 <span class="text-xs text-brand-400 font-bold">Excellent</span></p>
+          </div>
+          <p class="text-[10px] text-zinc-500">无缝自助智能锁和高效的保洁派单效率在常客评价中赢得了极高赞誉。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 2.8 31-DAY HIGH FIDELITY OCCUPANCY HEAT CALENDAR GRID ==================== -->
+    <section data-section="occupancy-heatgrid" class="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div class="space-y-1">
+          <span class="px-3 py-1 rounded-full text-[10px] font-mono tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-emeraldGlow uppercase">
+            31-DAY OCCUPANCY METRIC
+          </span>
+          <h2 class="text-xl font-bold text-white mt-3">十二月 31 天高精细入住率热力图</h2>
+          <p class="text-zinc-400 text-xs">像素级展示 12 月 1 日至 31 日每天的实际客房占有比例，高亮红框表示由于节假日溢价调整的核心观察期：</p>
+        </div>
+        
+        <!-- Legend definitions -->
+        <div class="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-zinc-950 border border-zinc-850"></span> &lt; 50%</span>
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-brand-500/20"></span> 50% - 70%</span>
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-brand-500/50"></span> 70% - 85%</span>
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-brand-500/80"></span> 85% - 95%</span>
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-emerald-500/80"></span> &gt; 95% (极度火爆)</span>
+        </div>
+      </div>
+
+      <!-- Responsive Heatgrid Grid with JS-powered Hover system -->
+      <div class="relative">
+        <div class="grid grid-cols-7 sm:grid-cols-10 lg:grid-cols-16 gap-3" id="heatGridParent">
+          <!-- Daily Cells -->
+          <div class="p-2.5 rounded-xl bg-brand-500/20 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="1" data-occ="62.4%" data-tag="周一平淡">
+            <span class="text-[10px] text-zinc-500 block font-mono">D1</span><span class="text-xs font-bold font-mono text-zinc-300">62%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/20 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="2" data-occ="64.1%" data-tag="周二稳定">
+            <span class="text-[10px] text-zinc-500 block font-mono">D2</span><span class="text-xs font-bold font-mono text-zinc-300">64%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/50 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="3" data-occ="71.5%" data-tag="周三攀升">
+            <span class="text-[10px] text-zinc-500 block font-mono">D3</span><span class="text-xs font-bold font-mono text-zinc-300">71%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/50 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="4" data-occ="74.0%" data-tag="商务周四">
+            <span class="text-[10px] text-zinc-500 block font-mono">D4</span><span class="text-xs font-bold font-mono text-zinc-300">74%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="5" data-occ="88.2%" data-tag="周末预热">
+            <span class="text-[10px] text-zinc-500 block font-mono">D5</span><span class="text-xs font-bold font-mono text-zinc-300">88%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell animate-pulse" data-day="6" data-occ="97.4%" data-tag="周末大爆满 🔴">
+            <span class="text-[10px] text-zinc-500 block font-mono">D6</span><span class="text-xs font-bold font-mono text-white">97%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="7" data-occ="96.1%" data-tag="星期日结算归港">
+            <span class="text-[10px] text-zinc-500 block font-mono">D7</span><span class="text-xs font-bold font-mono text-white">96%</span>
+          </div>
+          <!-- Days 8 - 14 -->
+          <div class="p-2.5 rounded-xl bg-brand-500/20 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="8" data-occ="61.5%" data-tag="周一淡季">
+            <span class="text-[10px] text-zinc-500 block font-mono">D8</span><span class="text-xs font-bold font-mono text-zinc-300">61%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/20 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="9" data-occ="63.2%" data-tag="周二常规">
+            <span class="text-[10px] text-zinc-500 block font-mono">D9</span><span class="text-xs font-bold font-mono text-zinc-300">63%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/50 border border-zinc-800/ text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="10" data-occ="70.1%" data-tag="周三回温">
+            <span class="text-[10px] text-zinc-500 block font-mono">D10</span><span class="text-xs font-bold font-mono text-zinc-300">70%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/50 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="11" data-occ="73.8%" data-tag="周四开市">
+            <span class="text-[10px] text-zinc-500 block font-mono">D11</span><span class="text-xs font-bold font-mono text-zinc-300">74%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="12" data-occ="86.4%" data-tag="周末客潮临近">
+            <span class="text-[10px] text-zinc-500 block font-mono">D12</span><span class="text-xs font-bold font-mono text-zinc-300">86%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="13" data-occ="95.2%" data-tag="周末狂欢周六">
+            <span class="text-[10px] text-zinc-500 block font-mono">D13</span><span class="text-xs font-bold font-mono text-white">95%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="14" data-occ="91.4%" data-tag="周日返程潮">
+            <span class="text-[10px] text-zinc-500 block font-mono">D14</span><span class="text-xs font-bold font-mono text-zinc-300">91%</span>
+          </div>
+          <!-- Days 15 - 21 -->
+          <div class="p-2.5 rounded-xl bg-brand-500/20 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="15" data-occ="59.8%" data-tag="冷门周一">
+            <span class="text-[10px] text-zinc-500 block font-mono">D15</span><span class="text-xs font-bold font-mono text-zinc-300">59%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/20 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="16" data-occ="62.4%" data-tag="周二修整">
+            <span class="text-[10px] text-zinc-500 block font-mono">D16</span><span class="text-xs font-bold font-mono text-zinc-300">62%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/50 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="17" data-occ="72.1%" data-tag="冬至预热">
+            <span class="text-[10px] text-zinc-500 block font-mono">D17</span><span class="text-xs font-bold font-mono text-zinc-300">72%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/50 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="18" data-occ="75.9%" data-tag="周四采购日">
+            <span class="text-[10px] text-zinc-500 block font-mono">D18</span><span class="text-xs font-bold font-mono text-zinc-300">75%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="19" data-occ="89.1%" data-tag="常客入住季">
+            <span class="text-[10px] text-zinc-500 block font-mono">D19</span><span class="text-xs font-bold font-mono text-zinc-300">89%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="20" data-occ="96.5%" data-tag="周六常客峰值">
+            <span class="text-[10px] text-zinc-500 block font-mono">D20</span><span class="text-xs font-bold font-mono text-white">96%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="21" data-occ="92.1%" data-tag="周日派单合规">
+            <span class="text-[10px] text-zinc-500 block font-mono">D21</span><span class="text-xs font-bold font-mono text-zinc-300">92%</span>
+          </div>
+          <!-- Days 22 - 31 -->
+          <div class="p-2.5 rounded-xl bg-brand-500/50 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="22" data-occ="79.4%" data-tag="圣诞周一开始大流量">
+            <span class="text-[10px] text-zinc-500 block font-mono">D22</span><span class="text-xs font-bold font-mono text-zinc-300">79%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="23" data-occ="88.2%" data-tag="圣诞前哨">
+            <span class="text-[10px] text-zinc-500 block font-mono">D23</span><span class="text-xs font-bold font-mono text-zinc-300">88%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-500/80 border-2 border-roseGlow text-center cursor-pointer transition-all hover:scale-110 hover:border-roseGlow group/cell shadow-lg shadow-roseGlow/15" data-day="24" data-occ="99.4%" data-tag="🌲 圣诞平安夜超级爆满 🌲">
+            <span class="text-[10px] text-roseGlow block font-mono font-bold">XMAS</span><span class="text-xs font-black font-mono text-white">99%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="25" data-occ="98.1%" data-tag="圣诞节返店客房">
+            <span class="text-[10px] text-zinc-500 block font-mono">D25</span><span class="text-xs font-bold font-mono text-white">98%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="26" data-occ="91.2%" data-tag="周五延续溢价">
+            <span class="text-[10px] text-zinc-500 block font-mono">D26</span><span class="text-xs font-bold font-mono text-zinc-300">91%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="27" data-occ="95.9%" data-tag="周末聚客">
+            <span class="text-[10px] text-zinc-500 block font-mono">D27</span><span class="text-xs font-bold font-mono text-white">95%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="28" data-occ="93.4%" data-tag="周日退房潮">
+            <span class="text-[10px] text-zinc-500 block font-mono">D28</span><span class="text-xs font-bold font-mono text-zinc-300">93%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/50 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="29" data-occ="84.5%" data-tag="跨年周中准备">
+            <span class="text-[10px] text-zinc-500 block font-mono">D29</span><span class="text-xs font-bold font-mono text-zinc-300">84%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-brand-500/80 border border-zinc-800 text-center cursor-pointer transition-all hover:scale-110 hover:border-brand-400 group/cell" data-day="30" data-occ="92.8%" data-tag="跨年夜倒计时前夕">
+            <span class="text-[10px] text-zinc-500 block font-mono">D30</span><span class="text-xs font-bold font-mono text-zinc-300">92%</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-500/80 border-2 border-roseGlow text-center cursor-pointer transition-all hover:scale-110 hover:border-roseGlow group/cell shadow-lg shadow-roseGlow/15" data-day="31" data-occ="99.8%" data-tag="✨ 跨年元旦夜世纪爆满 ✨">
+            <span class="text-[10px] text-roseGlow block font-mono font-bold">NYE</span><span class="text-xs font-black font-mono text-white">99%</span>
+          </div>
+        </div>
+
+        <!-- Float Heatgrid Tooltip Box -->
+        <div id="heatGridTooltip" class="absolute hidden bg-zinc-950/95 border border-zinc-800 p-3 rounded-2xl text-xs font-sans shadow-2xl pointer-events-none z-30 transition-all duration-100 backdrop-blur-md">
+          <p class="font-bold text-white mb-0.5" id="heatTooltipDay">12月24日</p>
+          <p class="text-zinc-400 text-[11px]" id="heatTooltipOcc">入住占比: <span class="text-emeraldGlow font-mono font-bold">99.4%</span></p>
+          <p class="text-zinc-500 text-[10px] italic mt-1 border-t border-zinc-800 pt-1" id="heatTooltipTag">圣诞前夜溢价高亮观测期</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 3. COHORT RETRESSION MATRIX SECTION ==================== -->
+    <section data-section="cohort-matrix" class="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div class="space-y-1">
+          <span class="px-3 py-1 rounded-full text-[10px] font-semibold bg-zinc-800 border border-zinc-700 text-zinc-300">
+            RETENTION FLOW MATRIX
+          </span>
+          <h2 class="text-xl font-bold text-white mt-3">空间合伙人与客户留存分析（同生群热力矩阵）</h2>
+          <p class="text-zinc-400 text-xs">展现不同注册月份的群组用户，在随后数月内的重订、二次消费的概率流向：</p>
+        </div>
+        <div class="flex items-center space-x-2 text-xs">
+          <span class="text-zinc-500">数值越高热力深度越浓:</span>
+          <span class="w-3 h-3 bg-brand-500/10 rounded"></span>
+          <span class="text-zinc-500">Low</span>
+          <span class="w-3 h-3 bg-brand-500/50 rounded"></span>
+          <span class="w-3 h-3 bg-brand-500/90 rounded"></span>
+          <span class="text-zinc-500">High</span>
+        </div>
+      </div>
+
+      <!-- Cohort Heatmap Responsive Grid Matrix -->
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[720px] text-xs text-left border-collapse">
+          <thead>
+            <tr class="border-b border-zinc-800 text-zinc-500 uppercase font-mono tracking-widest">
+              <th class="py-3 px-4 font-semibold">用户注册周期 (Cohort)</th>
+              <th class="py-3 px-4 font-semibold">群组样本数</th>
+              <th class="py-3 px-4 font-semibold text-center">Month 01 (自注册)</th>
+              <th class="py-3 px-4 font-semibold text-center">Month 02</th>
+              <th class="py-3 px-4 font-semibold text-center">Month 03</th>
+              <th class="py-3 px-4 font-semibold text-center">Month 04</th>
+              <th class="py-3 px-4 font-semibold text-center">Month 05</th>
+              <th class="py-3 px-4 font-semibold text-center">Month 06</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-zinc-800/40 font-mono">
+            <!-- Row 1 -->
+            <tr class="hover:bg-zinc-800/20">
+              <td data-slot="cohort-row-1" data-editable="true" class="py-4 px-4 font-sans font-bold text-white">2025年08月新客</td>
+              <td class="py-4 px-4 text-zinc-400">12,450 人</td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/90 text-white font-bold">100%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/80 text-white font-bold">82.4%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/60 text-white">65.8%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/40 text-zinc-300">54.0%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/30 text-zinc-300">42.5%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/20 text-zinc-400">38.4%</span></td>
+            </tr>
+            <!-- Row 2 -->
+            <tr class="hover:bg-zinc-800/20">
+              <td data-slot="cohort-row-2" data-editable="true" class="py-4 px-4 font-sans font-bold text-white">2025年09月新客</td>
+              <td class="py-4 px-4 text-zinc-400">14,200 人</td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/90 text-white font-bold">100%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/85 text-white font-bold">85.0%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/70 text-white">71.2%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/50 text-white">58.3%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/30 text-zinc-300">45.0%</span></td>
+              <td class="py-4 px-2 text-center text-zinc-600">--</td>
+            </tr>
+            <!-- Row 3 -->
+            <tr class="hover:bg-zinc-800/20">
+              <td data-slot="cohort-row-3" data-editable="true" class="py-4 px-4 font-sans font-bold text-white">2025年10月新客</td>
+              <td class="py-4 px-4 text-zinc-400">15,800 人</td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/90 text-white font-bold">100%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/75 text-white font-bold">78.1%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/50 text-white">61.4%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/35 text-zinc-300">49.2%</span></td>
+              <td class="py-4 px-2 text-center text-zinc-600">--</td>
+              <td class="py-4 px-2 text-center text-zinc-600">--</td>
+            </tr>
+            <!-- Row 4 -->
+            <tr class="hover:bg-zinc-800/20">
+              <td data-slot="cohort-row-4" data-editable="true" class="py-4 px-4 font-sans font-bold text-white">2025年11月新客</td>
+              <td class="py-4 px-4 text-zinc-400">18,100 人</td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/90 text-white font-bold">100%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/80 text-white font-bold">81.5%</span></td>
+              <td class="py-4 px-2 text-center"><span class="inline-block w-14 py-1.5 rounded bg-brand-500/60 text-white">67.0%</span></td>
+              <td class="py-4 px-2 text-center text-zinc-600">--</td>
+              <td class="py-4 px-2 text-center text-zinc-600">--</td>
+              <td class="py-4 px-2 text-center text-zinc-600">--</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== [NEW] 3.5 ADVANCED SCATTER & RADAR MAPS ==================== -->
+    <!-- 新增两个图表类型：价格弹性气泡散点图 (无拉伸变形) & 资产运营雷达图。皆带完美动态悬停交互 -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      
+      <!-- Chart A: Pricing vs Occupancy Correlation Scatter Map (散点弹性热力气泡) -->
+      <div class="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md flex flex-col justify-between relative overflow-visible">
+        <div>
+          <div class="space-y-1 mb-6">
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono tracking-widest bg-brand-500/10 border border-brand-500/20 text-brand-400 uppercase">
+              CORRELATION SCATTER
+            </span>
+            <h3 class="text-base font-bold text-white mt-3">客房定价与入住率相关性散点图</h3>
+            <p class="text-zinc-400 text-xs font-normal">解算不同房型定价（X轴）与实际入住率（Y轴）分布相关弹性，气泡大小代指流水比：</p>
+          </div>
+
+          <!-- Strict aspect-ratio SVG Scatter plot container -->
+          <div class="w-full relative strict-aspect-scatter">
+            <svg class="w-full h-full overflow-visible" viewBox="0 0 500 300">
+              <!-- Grid background guides -->
+              <line x1="50" y1="20" x2="50" y2="250" stroke="#27272A" stroke-width="0.5" />
+              <line x1="50" y1="250" x2="480" y2="250" stroke="#27272A" stroke-width="0.5" />
+              <!-- Y guides -->
+              <line x1="50" y1="250" x2="480" y2="250" stroke="#27272A" stroke-width="0.5" stroke-dasharray="3,3" />
+              <line x1="50" y1="192" x2="480" y2="192" stroke="#27272A" stroke-width="0.5" stroke-dasharray="3,3" />
+              <line x1="50" y1="135" x2="480" y2="135" stroke="#27272A" stroke-width="0.5" stroke-dasharray="3,3" />
+              <line x1="50" y1="77" x2="480" y2="77" stroke="#27272A" stroke-width="0.5" stroke-dasharray="3,3" />
+              <line x1="50" y1="20" x2="480" y2="20" stroke="#27272A" stroke-width="0.5" stroke-dasharray="3,3" />
+              
+              <!-- Axis labels (Fixed: Replaced bad tag syntax with pure standard text SVG tags) -->
+              <text x="35" y="25" fill="#52525B" font-size="9" font-family="monospace" text-anchor="end">100%</text>
+              <text x="35" y="138" fill="#52525B" font-size="9" font-family="monospace" text-anchor="end">50%</text>
+              <text x="35" y="253" fill="#52525B" font-size="9" font-family="monospace" text-anchor="end">0%</text>
+              
+              <text x="50" y="265" fill="#52525B" font-size="9" font-family="monospace" text-anchor="middle">¥100</text>
+              <text x="265" y="265" fill="#52525B" font-size="9" font-family="monospace" text-anchor="middle">¥500</text>
+              <text x="480" y="265" fill="#52525B" font-size="9" font-family="monospace" text-anchor="middle">¥1000</text>
+              
+              <!-- Scatter points (X: Price scale 50-480, Y: OCC scale 250-20. Radius: Revenue ratio) -->
+              <g class="cursor-pointer">
+                <!-- Room ST-201 -->
+                <circle cx="210" cy="80" r="14" fill="#6366f1" fill-opacity="0.3" class="scatter-point hover:fill-opacity-50 transition-all duration-150" data-room="豪华大床房 201" data-price="¥450" data-occ="88.2%" data-rev="¥12,890" />
+                <circle cx="210" cy="80" r="3" fill="#6366f1" class="pointer-events-none" />
+
+                <!-- Room ST-202 -->
+                <circle cx="340" cy="65" r="22" fill="#8b5cf6" fill-opacity="0.3" class="scatter-point" data-room="行政大床套房 202" data-price="¥720" data-occ="92.4%" data-rev="¥18,450" />
+                <circle cx="340" cy="65" r="3" fill="#8b5cf6" />
+
+                <!-- Room ST-203 -->
+                <circle cx="95" cy="210" r="8" fill="#ec4899" fill-opacity="0.3" class="scatter-point" data-room="数字胶囊舱 203" data-price="¥180" data-occ="55.0%" data-rev="¥4,200" />
+                <circle cx="95" cy="210" r="3" fill="#ec4899" />
+
+                <!-- Room ST-204 -->
+                <circle cx="260" cy="110" r="16" fill="#10b981" fill-opacity="0.3" class="scatter-point" data-room="家庭景观房 204" data-price="¥560" data-occ="75.6%" data-rev="¥11,200" />
+                <circle cx="260" cy="110" r="3" fill="#10b981" />
+
+                <!-- Room ST-205 -->
+                <circle cx="430" cy="40" r="25" fill="#f59e0b" fill-opacity="0.3" class="scatter-point" data-room="总统套房 205" data-price="¥950" data-occ="96.8%" data-rev="¥22,500" />
+                <circle cx="430" cy="40" r="3" fill="#f59e0b" />
+              </g>
+            </svg>
+
+            <!-- Dynamic Tooltip for Scatter bubbles -->
+            <div id="scatterTooltip" class="absolute hidden bg-zinc-950/95 border border-zinc-800 p-3 rounded-2xl text-xs shadow-2xl pointer-events-none z-30 transition-all duration-100 backdrop-blur-md">
+              <p class="font-bold text-white mb-1" id="scatterRoom">房间名</p>
+              <div class="space-y-0.5 text-[10px] text-zinc-400 font-mono">
+                <p>结算房价: <span class="text-indigo-400" id="scatterPrice">¥450</span></p>
+                <p>期间占有: <span class="text-emeraldGlow" id="scatterOcc">88%</span></p>
+                <p>总毛净收: <span class="text-purple-400" id="scatterRev">¥12,890</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="text-[10px] text-zinc-500 mt-4">提示：气泡大小表征流水。定价落入 ¥400 - ¥800 之间的中端至行政级房态呈现最健康的收益效率配比。</p>
+      </div>
+
+      <!-- Chart B: 5-Dimensional Asset Health Radar Chart (五维资产运营健康度雷达图 - 等比放大美化版) -->
+      <div class="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md flex flex-col justify-between relative overflow-visible">
+        <div>
+          <div class="space-y-1 mb-4">
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono tracking-widest bg-purple-500/10 border border-purple-500/20 text-purple-400 uppercase">
+              HEALTH DEGREE RADAR
+            </span>
+            <h3 class="text-base font-bold text-white mt-3">空间五维运营健康度雷达图</h3>
+            <p class="text-zinc-400 text-xs font-normal">对多张 Excel 交叉核算形成的雷达模型。悬停端点可查看各专项多维诊断指标：</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+            <!-- Left Area: Perfect Radar SVG (Enlarged with safe padding to prevent label clipping) -->
+            <div class="sm:col-span-7 relative flex items-center justify-center p-3">
+              <div class="w-full max-w-[270px] strict-aspect-radar relative">
+                <svg class="w-full h-full overflow-visible" viewBox="0 0 200 200">
+                  <!-- Concentric polygons (Grid background) -->
+                  <polygon points="100,20 176,75 147,165 53,165 24,75" fill="none" stroke="#27272A" stroke-width="0.5" />
+                  <polygon points="100,50 151,87 131,146 69,146 49,87" fill="none" stroke="#27272A" stroke-width="0.5" />
+                  <polygon points="100,80 126,99 116,128 84,128 74,99" fill="none" stroke="#27272A" stroke-width="0.5" />
+                  
+                  <!-- Axes lines -->
+                  <line x1="100" y1="100" x2="100" y2="20" stroke="#27272A" stroke-width="0.5" />
+                  <line x1="100" y1="100" x2="176" y2="75" stroke="#27272A" stroke-width="0.5" />
+                  <line x1="100" y1="100" x2="147" y2="165" stroke="#27272A" stroke-width="0.5" />
+                  <line x1="100" y1="100" x2="53" y2="165" stroke="#27272A" stroke-width="0.5" />
+                  <line x1="100" y1="100" x2="24" y2="75" stroke="#27272A" stroke-width="0.5" />
+
+                  <!-- Axis Label annotations -->
+                  <text x="100" y="14" fill="#52525B" font-size="8" font-family="monospace" text-anchor="middle">资金流速</text>
+                  <text x="185" y="75" fill="#52525B" font-size="8" font-family="monospace" text-anchor="start">渠道自主</text>
+                  <text x="154" y="175" fill="#52525B" font-size="8" font-family="monospace" text-anchor="start">空间周转</text>
+                  <text x="46" y="175" fill="#52525B" font-size="8" font-family="monospace" text-anchor="end">客户满意</text>
+                  <text x="15" y="75" fill="#52525B" font-size="8" font-family="monospace" text-anchor="end">硬件效能</text>
+
+                  <!-- Real Performance Polygon Area -->
+                  <polygon points="100,32 149.4,83.75 142.3,158.5 58.64,152.2 46.8,87.5" fill="#6366f1" fill-opacity="0.2" stroke="#6366f1" stroke-width="2" />
+
+                  <!-- Vertices dots with hover capabilities -->
+                  <circle cx="100" cy="32" r="5" fill="#8b5cf6" class="radar-vertex cursor-pointer" data-name="资金流速 (Cash Velocity)" data-score="88.5 分" data-desc="周中结账账期由传统的 T+7 全面缩窄至 D+0 (当天对账当天发放)，资产回款流速超大厂安全线。" />
+                  <circle cx="149.4" cy="83.75" r="5" fill="#8b5cf6" class="radar-vertex cursor-pointer" data-name="渠道自主 (Direct Booking)" data-score="64.2 分" data-desc="私域自营直客占比提升。虽然相较于携程分销依然处于弱势，但目前私域直客流水展现显著的阶梯成长弹性。" />
+                  <circle cx="142.3" cy="158.5" r="5" fill="#8b5cf6" class="radar-vertex cursor-pointer" data-name="空间周转 (Space Turnover)" data-score="92.1 分" data-desc="由于31天客房大热力入住率保持在 88.4% 的超饱和段，无任何无效空间死角挤压，周转极其完美。" />
+                  <circle cx="58.64" cy="152.2" r="5" fill="#8b5cf6" class="radar-vertex cursor-pointer" data-name="客户满意 (NPS Loyalty)" data-score="89.0 分" data-desc="得益于免排队智能自助登记与线上3秒无缝派保洁的联动，顾客好评反馈复购留存粘性拉高至 42.8%。" />
+                  <circle cx="46.8" cy="87.5" r="5" fill="#8b5cf6" class="radar-vertex cursor-pointer" data-name="硬件效能 (IoT Power)" data-score="72.5 分" data-desc="物联网客房空调等边缘设备智能感知断电，但公共空间冷热能效在低峰期仍存在局部空转虚耗，需算法校正。" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Right Area: Interactive Diagnostic Box -->
+            <div class="sm:col-span-5 p-4 rounded-2xl bg-zinc-950/80 border border-zinc-850 space-y-2 flex flex-col justify-center min-h-[160px]">
+              <span class="text-[9px] font-mono text-emeraldGlow tracking-widest block uppercase">DIAGNOSTIC RADAR NODE</span>
+              <p class="font-bold text-white text-xs" id="radarMetricName">资金流速 (Cash Velocity)</p>
+              <div class="text-[11px] space-y-1">
+                <p class="text-indigo-400 font-mono" id="radarMetricScore">88.5 分 (Excellent)</p>
+                <p class="text-zinc-400 leading-relaxed font-normal text-[10px] pt-1" id="radarMetricDesc">
+                  周中结账账期由传统的 T+7 全面缩窄至 D+0 (当天对账当天发放)，资产回款流速超大厂安全线。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 4. RAW EXCEL DATA DETAIL EXPLORER ==================== -->
+    <section data-section="raw-data-explorer" class="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div class="space-y-1">
+          <span class="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">RAW DATA AUDIT</span>
+          <h3 class="text-lg font-bold text-white">
+            导入 Excel 原始流水明细探针
+          </h3>
+          <p class="text-zinc-400 text-xs font-normal">
+            以下为从 Excel 中直接读取并转化为 UI 的前几行代表性实体流水，用于资产溯源与审计校验：
+          </p>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <input type="text" placeholder="全局检索空间客房..." class="bg-zinc-950 border border-zinc-850 px-4 py-2 rounded-xl text-xs text-zinc-300 focus:outline-none focus:border-brand-500 min-w-[200px]" readonly value="Filter: 核心渠道">
+          <button class="p-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white transition-colors" title="列配置筛选">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Interactive Excel Table Grid -->
+      <div class="overflow-x-auto rounded-2xl border border-zinc-800/60 bg-zinc-950/40">
+        <table class="w-full text-xs text-left border-collapse">
+          <thead>
+            <tr class="bg-zinc-900/60 border-b border-zinc-800 text-zinc-400 font-semibold uppercase tracking-wider">
+              <th class="py-3 px-4 w-12 text-center">
+                <input type="checkbox" checked class="accent-brand-500 cursor-pointer">
+              </th>
+              <th data-slot="th-column-1" class="py-3 px-4">空间房态ID</th>
+              <th data-slot="th-column-2" class="py-3 px-4">资产房型 (Type)</th>
+              <th data-slot="th-column-3" class="py-3 px-4">订购渠道</th>
+              <th data-slot="th-column-4" class="py-3 px-4">清结算状态</th>
+              <th data-slot="th-column-5" class="py-3 px-4 text-right">期间毛营收</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-zinc-800/40 font-mono text-zinc-300">
+            <!-- Row 1 -->
+            <tr class="hover:bg-zinc-900/50 transition-colors">
+              <td class="py-3.5 px-4 text-center">
+                <input type="checkbox" checked class="accent-brand-500 cursor-pointer">
+              </td>
+              <td data-slot="row-1-room-id" class="py-3.5 px-4 font-bold text-white">#ST-201-DLX</td>
+              <td data-slot="row-1-type" class="py-3.5 px-4 font-sans">至尊豪华双床房</td>
+              <td data-slot="row-1-channel" class="py-3.5 px-4">
+                <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/15">携程 OTA</span>
+              </td>
+              <td data-slot="row-1-status" class="py-3.5 px-4">
+                <span class="flex items-center gap-1.5 text-emeraldGlow font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emeraldGlow"></span> 已结算
+                </span>
+              </td>
+              <td data-slot="row-1-amount" class="py-3.5 px-4 text-right font-black text-white">¥12,890.00</td>
+            </tr>
+
+            <!-- Row 2 -->
+            <tr class="hover:bg-zinc-900/50 transition-colors">
+              <td class="py-3.5 px-4 text-center">
+                <input type="checkbox" checked class="accent-brand-500 cursor-pointer">
+              </td>
+              <td data-slot="row-2-room-id" class="py-3.5 px-4 font-bold text-white">#ST-202-KNG</td>
+              <td data-slot="row-2-type" class="py-3.5 px-4 font-sans">行政大床套房</td>
+              <td data-slot="row-2-channel" class="py-3.5 px-4">
+                <span class="px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/15">StayInn 独立私域</span>
+              </td>
+              <td data-slot="row-2-status" class="py-3.5 px-4">
+                <span class="flex items-center gap-1.5 text-emeraldGlow font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emeraldGlow"></span> 已结算
+                </span>
+              </td>
+              <td data-slot="row-2-amount" class="py-3.5 px-4 text-right font-black text-white">¥18,450.00</td>
+            </tr>
+
+            <!-- Row 3 -->
+            <tr class="hover:bg-zinc-900/50 transition-colors">
+              <td class="py-3.5 px-4 text-center">
+                <input type="checkbox" checked class="accent-brand-500 cursor-pointer">
+              </td>
+              <td data-slot="row-3-room-id" class="py-3.5 px-4 font-bold text-white">#ST-203-SNG</td>
+              <td data-slot="row-3-type" class="py-3.5 px-4 font-sans">数字游民微型胶囊舱</td>
+              <td data-slot="row-3-channel" class="py-3.5 px-4">
+                <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/15">美团民宿</span>
+              </td>
+              <td data-slot="row-3-status" class="py-3.5 px-4">
+                <span class="flex items-center gap-1.5 text-emeraldGlow font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emeraldGlow"></span> 已结算
+                </span>
+              </td>
+              <td data-slot="row-3-amount" class="py-3.5 px-4 text-right font-black text-white">¥4,200.00</td>
+            </tr>
+
+            <!-- Row 4 -->
+            <tr class="hover:bg-zinc-900/50 transition-colors">
+              <td class="py-3.5 px-4 text-center">
+                <input type="checkbox" checked class="accent-brand-500 cursor-pointer">
+              </td>
+              <td data-slot="row-4-room-id" class="py-3.5 px-4 font-bold text-white">#ST-204-DLX</td>
+              <td data-slot="row-4-type" class="py-3.5 px-4 font-sans">至尊豪华双床房</td>
+              <td data-slot="row-4-channel" class="py-3.5 px-4">
+                <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/15">同程艺龙</span>
+              </td>
+              <td data-slot="row-4-status" class="py-3.5 px-4">
+                <span class="flex items-center gap-1.5 text-amber-400 font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> 待审核
+                </span>
+              </td>
+              <td data-slot="row-4-amount" class="py-3.5 px-4 text-right font-black text-white">¥11,200.00</td>
+            </tr>
+
+            <!-- Row 5 -->
+            <tr class="hover:bg-zinc-900/50 transition-colors">
+              <td class="py-3.5 px-4 text-center">
+                <input type="checkbox" checked class="accent-brand-500 cursor-pointer">
+              </td>
+              <td data-slot="row-5-room-id" class="py-3.5 px-4 font-bold text-white">#ST-205-QD</td>
+              <td data-slot="row-5-type" class="py-3.5 px-4 font-sans">景观豪华家庭套房</td>
+              <td data-slot="row-5-channel" class="py-3.5 px-4">
+                <span class="px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/15">StayInn 独立私域</span>
+              </td>
+              <td data-slot="row-5-status" class="py-3.5 px-4">
+                <span class="flex items-center gap-1.5 text-emeraldGlow font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emeraldGlow"></span> 已结算
+                </span>
+              </td>
+              <td data-slot="row-5-amount" class="py-3.5 px-4 text-right font-black text-white">¥22,500.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mock table paginator -->
+      <div class="mt-4 flex items-center justify-between text-xs text-zinc-500 font-mono">
+        <span>展示 1 到 5 行 / 共 1,248 行记录</span>
+        <div class="flex items-center space-x-2">
+          <button class="px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors" disabled>Prev</button>
+          <span class="text-zinc-200">Page 1 of 250</span>
+          <button class="px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors">Next</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 5. AI INSIGHTS & DECISION RECOMMENDATIONS ==================== -->
+    <section data-section="ai-insights" class="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md relative overflow-hidden">
+      <!-- Glow ambient light inside container -->
+      <div class="absolute -right-12 -bottom-12 w-48 h-48 rounded-full bg-indigo-500/10 blur-[60px] pointer-events-none"></div>
+
+      <div class="flex items-center space-x-3 mb-6">
+        <div class="w-9 h-9 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-400 animate-pulse">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21l8.904-4.43m-8.904-.666L18 7.5m-12 12h.008v.008H6v-.008z" />
+          </svg>
+        </div>
+        <div class="space-y-0.5">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            StayInn AI 数智洞察报告与优化建议
+          </h3>
+          <p class="text-[11px] text-zinc-500">根据当前 Excel 导入的数据特征模型，自动提炼以下决策洞察：</p>
+        </div>
+        <!-- Alerts Badge -->
+        <div class="ml-auto">
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-roseGlow/10 border border-roseGlow/20 text-roseGlow">
+            <strong data-slot="insight-alert-badge" data-editable="true">2 项高优改进警告</strong>
+          </span>
+        </div>
+      </div>
+
+      <!-- Insights Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-800/50">
+        <!-- Insight Card 1 -->
+        <div class="p-4 rounded-2xl bg-zinc-950/40 border border-zinc-800/60 hover:border-brand-500/40 transition-colors duration-300 space-y-2">
+          <div class="flex items-center gap-2 text-xs font-bold text-indigo-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+            <span data-slot="insight-title-1" data-editable="true">私域渠道均价倒挂现象警报</span>
+          </div>
+          <p data-slot="insight-desc-1" data-editable="true" class="text-xs text-zinc-400 leading-relaxed font-normal">
+            Excel 第 148-230 行的数据对比显示，独立私域小程序的平均 ADR 居然比携程等 OTA 渠道低了约 <strong class="text-white font-mono">¥45.00</strong>。建议针对私域重构节假日阶梯溢价算法，减少不必要的促销损耗。
+          </p>
+        </div>
+
+        <!-- Insight Card 2 -->
+        <div class="p-4 rounded-2xl bg-zinc-950/40 border border-zinc-800/60 hover:border-emeraldGlow/40 transition-colors duration-300 space-y-2">
+          <div class="flex items-center gap-2 text-xs font-bold text-emeraldGlow">
+            <span class="w-1.5 h-1.5 rounded-full bg-emeraldGlow"></span>
+            <span data-slot="insight-title-2" data-editable="true">餐饮服务增收机会极大提高</span>
+          </div>
+          <p data-slot="insight-desc-2" data-editable="true" class="text-xs text-zinc-400 leading-relaxed font-normal">
+            本月餐饮及周边伴手礼转化率攀升至 <strong class="text-white font-mono">15%</strong>。鉴于目前该板块极高的净边际利润率（约 48.5%），建议在私域预订流中自动附赠 ¥15 的伴手礼优惠券，拉动高毛利零售。
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- JavaScript Interactivity for live presentation -->
+  <script>
+    // 1. 给所有 data-editable 节点开启即时浏览器编辑模式
+    document.querySelectorAll('[data-editable="true"]').forEach(el => {
+      el.setAttribute('contenteditable', 'true');
+    });
+
+    // 2. 趋势折线图的高精度浮动探针 (Interactive Trend SVG Tooltip)
+    const trendPoints = document.querySelectorAll('.trend-point');
+    const chartTooltip = document.getElementById('chartTooltip');
+    const tooltipDate = document.getElementById('tooltipDate');
+    const tooltipRevenue = document.getElementById('tooltipRevenue');
+    const tooltipOcc = document.getElementById('tooltipOcc');
+
+    trendPoints.forEach(point => {
+      point.addEventListener('mouseenter', (e) => {
+        const rect = point.getBoundingClientRect();
+        const parentRect = point.closest('.relative').getBoundingClientRect();
+        
+        const left = rect.left - parentRect.left + (rect.width / 2);
+        const top = rect.top - parentRect.top - 80;
+
+        tooltipDate.textContent = point.getAttribute('data-date');
+        tooltipRevenue.textContent = point.getAttribute('data-revenue');
+        tooltipOcc.textContent = point.getAttribute('data-occupancy');
+
+        chartTooltip.style.left = `${left}px`;
+        chartTooltip.style.top = `${top}px`;
+        chartTooltip.classList.remove('hidden');
+        chartTooltip.classList.add('opacity-100');
+
+        point.setAttribute('r', '9');
+        point.style.stroke = '#ffffff';
+        point.style.filter = 'drop-shadow(0 0 8px rgba(99, 102, 241, 0.8))';
+      });
+
+      point.addEventListener('mouseleave', () => {
+        chartTooltip.classList.add('hidden');
+        chartTooltip.classList.remove('opacity-100');
+        point.setAttribute('r', '6');
+        point.style.filter = 'none';
+      });
+    });
+
+    // 3. 多层嵌套同心圆解算中心联动 (Concentric Circle Hub)
+    const ringSegments = document.querySelectorAll('.ring-segment');
+    const centerSubtext = document.getElementById('centerSubtext');
+    const centerMaintext = document.getElementById('centerMaintext');
+    const concentricCenterPanel = document.getElementById('concentricCenterPanel');
+
+    ringSegments.forEach(segment => {
+      segment.addEventListener('mouseenter', () => {
+        const name = segment.getAttribute('data-segment-name');
+        const value = segment.getAttribute('data-segment-value');
+
+        centerSubtext.textContent = name;
+        centerMaintext.textContent = value;
+        centerMaintext.className = "text-xs font-black text-brand-500 mt-1 font-mono";
+
+        segment.style.strokeWidth = "2.5";
+        segment.style.filter = "drop-shadow(0 0 8px rgba(99, 102, 241, 0.6))";
+      });
+
+      segment.addEventListener('mouseleave', () => {
+        centerSubtext.textContent = "主轴大盘";
+        centerMaintext.textContent = "指引悬停";
+        centerMaintext.className = "text-[10px] font-bold text-zinc-300 mt-0.5 leading-tight";
+        segment.style.strokeWidth = "1.5";
+        segment.style.filter = "none";
+      });
+    });
+
+    // 4. 31天高精度热力图悬停气泡联动 (Heatgrid Tooltips)
+    const cellGroups = document.querySelectorAll('.group\\/cell');
+    const heatGridTooltip = document.getElementById('heatGridTooltip');
+    const heatTooltipDay = document.getElementById('heatTooltipDay');
+    const heatTooltipOcc = document.getElementById('heatTooltipOcc');
+    const heatTooltipTag = document.getElementById('heatTooltipTag');
+
+    cellGroups.forEach(cell => {
+      cell.addEventListener('mouseenter', (e) => {
+        const rect = cell.getBoundingClientRect();
+        const parentRect = document.getElementById('heatGridParent').getBoundingClientRect();
+        
+        const left = rect.left - parentRect.left + (rect.width / 2);
+        const top = rect.top - parentRect.top - 100;
+
+        heatTooltipDay.textContent = `12月${cell.getAttribute('data-day')}日`;
+        heatTooltipOcc.innerHTML = `入住占比: <span class="text-emeraldGlow font-mono font-bold">${cell.getAttribute('data-occ')}</span>`;
+        heatTooltipTag.textContent = cell.getAttribute('data-tag');
+
+        heatGridTooltip.style.left = `${left}px`;
+        heatGridTooltip.style.top = `${top}px`;
+        heatGridTooltip.classList.remove('hidden');
+      });
+
+      cell.addEventListener('mouseleave', () => {
+        heatGridTooltip.classList.add('hidden');
+      });
+    });
+
+    // 5. [新增] 散点热力图悬停联动机制 (Scatter Bubble Tooltips)
+    const scatterPoints = document.querySelectorAll('.scatter-point');
+    const scatterTooltip = document.getElementById('scatterTooltip');
+    const scatterRoom = document.getElementById('scatterRoom');
+    const scatterPrice = document.getElementById('scatterPrice');
+    const scatterOcc = document.getElementById('scatterOcc');
+    const scatterRev = document.getElementById('scatterRev');
+
+    scatterPoints.forEach(pt => {
+      pt.addEventListener('mouseenter', (e) => {
+        const rect = pt.getBoundingClientRect();
+        const parentRect = pt.closest('.relative').getBoundingClientRect();
+        
+        const left = rect.left - parentRect.left + (rect.width / 2);
+        const top = rect.top - parentRect.top - 105;
+
+        scatterRoom.textContent = pt.getAttribute('data-room');
+        scatterPrice.textContent = pt.getAttribute('data-price');
+        scatterOcc.textContent = pt.getAttribute('data-occ');
+        scatterRev.textContent = pt.getAttribute('data-rev');
+
+        scatterTooltip.style.left = `${left}px`;
+        scatterTooltip.style.top = `${top}px`;
+        scatterTooltip.classList.remove('hidden');
+
+        pt.setAttribute('stroke-width', '2.5');
+        pt.setAttribute('stroke', '#ffffff');
+        pt.style.filter = 'drop-shadow(0 0 10px rgba(99, 102, 241, 0.6))';
+      });
+
+      pt.addEventListener('mouseleave', () => {
+        scatterTooltip.classList.add('hidden');
+        pt.setAttribute('stroke', 'none');
+        pt.style.filter = 'none';
+      });
+    });
+
+    // 6. [新增] 空间五维运营健康雷达联动机制 (Radar Vertex Interaction)
+    const radarPoints = document.querySelectorAll('.radar-vertex');
+    const radarMetricName = document.getElementById('radarMetricName');
+    const radarMetricScore = document.getElementById('radarMetricScore');
+    const radarMetricDesc = document.getElementById('radarMetricDesc');
+
+    radarPoints.forEach(pt => {
+      pt.addEventListener('mouseenter', () => {
+        radarMetricName.textContent = pt.getAttribute('data-name');
+        radarMetricScore.textContent = pt.getAttribute('data-score');
+        radarMetricDesc.textContent = pt.getAttribute('data-desc');
+
+        pt.setAttribute('r', '8');
+        pt.setAttribute('fill', '#ffffff');
+        pt.style.filter = 'drop-shadow(0 0 8px #6366f1)';
+      });
+
+      pt.addEventListener('mouseleave', () => {
+        pt.setAttribute('r', '5');
+        pt.setAttribute('fill', '#8b5cf6');
+        pt.style.filter = 'none';
+      });
+    });
+  </script>
+</body>
+</html>

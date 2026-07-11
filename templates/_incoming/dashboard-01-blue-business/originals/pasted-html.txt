@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级商业数据看板 - 模板</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            navy: '#0f294d',    
+                            blue: '#165dff',    
+                            darkblue: '#0047a5',
+                            lightblue: '#93c5fd',
+                            ice: '#e8f0fe',     
+                            gray: '#86909c',    
+                            darkgray: '#4e5969',
+                            border: '#e5e8ef',  
+                        },
+                        bar: {
+                            1: '#002966', 
+                            2: '#0047a5', 
+                            3: '#1864f2', 
+                            4: '#5ca2fb', 
+                            5: '#a3cffb', 
+                            6: '#e2e8f0', 
+                            7: '#f1f5f9'  
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Helvetica Neue"', 'Helvetica', 'Arial', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'panel': '0 4px 18px rgba(15, 41, 77, 0.04)',
+                        'hover': '0 12px 30px rgba(15, 41, 77, 0.08), 0 4px 12px rgba(22, 93, 255, 0.03)',
+                        'tooltip': '0 6px 20px rgba(15, 41, 77, 0.1)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #f4f7fd; -webkit-font-smoothing: antialiased; font-family: 'Helvetica Neue', Arial, sans-serif; min-height: 100vh; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        
+        .panel { 
+            background: #ffffff; 
+            border-radius: 8px; 
+            border: 1px solid #e5e8ef;
+            box-shadow: 0 4px 18px rgba(15, 41, 77, 0.03);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .panel:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(15, 41, 77, 0.07), 0 4px 12px rgba(22, 93, 255, 0.02);
+            border-color: rgba(22, 93, 255, 0.15);
+        }
+
+        .driver-box { transition: all 0.25s ease; cursor: pointer; }
+        .driver-box:hover { opacity: 0.95; transform: scale(1.01); filter: brightness(1.05); }
+    </style>
+</head>
+<body class="p-4 md:p-6 lg:p-8 flex justify-center w-full">
+
+    <!-- 顶层可配置数据集，方便后端或 Codex 快速读取和修改 -->
+    <script>
+        window.REPORT_DATA = {
+            // 模块 1: 每机架网络成本柱状图
+            rackCostChart: {
+                categories: ['GB300', 'Vera Rubin Spec A', 'Vera Rubin Spec B', 'Rubin Ultra Spec A', 'Rubin Ultra Spec B'],
+                scaleUp: [315, 489, 504, 600, 650],
+                scaleOut: [0, 0, 0, 513, 519],
+                totals: [315, 489, 504, 1113, 1169] // 用于计算堆叠总量的高级指标
+            },
+            // 模块 3: 市场份额面积图
+            marketShareChart: {
+                quarters: ['2024 Q1', '2024 Q3', '2025 Q1', '2025 Q3', '2026 Q1', '2026 Q3', '2027 Q1', '2027 Q3', '2028 Q1', '2028 Q3', '2028 Q4'],
+                emlBackground: [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100], // 限制传统份额为 100% 堆叠基准
+                siphPenetration: [6, 8, 12, 17, 23, 31, 39, 46, 53, 63, 68]
+            },
+            // 模块 5: TAM 折线预测图
+            tamChart: {
+                years: ['2026E', '2027E', '2028E'],
+                scaleUpHighEndB: [10921, 30697, 82837],
+                scaleUpLowEndA: [7228, 26840, 39733],
+                scaleOutHighEndA: [10771, 27023, 39835],
+                scaleOutLowEndA: [7228, 12321, 20358],
+                cpoTamHighEndB: [1024, 12321, 70881]
+            }
+        };
+    </script>
+
+    <main class="w-full max-w-[1440px] flex flex-col gap-4">
+        
+        <!-- ================= Header (Header) ================= -->
+        <header data-section="hero" class="mb-1 px-1 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+            <div>
+                <h1 class="text-3xl md:text-[34px] font-black text-brand-navy tracking-tight uppercase" data-editable="true" data-key="hero_title">
+                    EXPLOSIVE UNIT ECONOMICS: <span class="text-brand-blue">DOLLAR CONTENT SKYROCKETS</span>
+                </h1>
+                <div class="mt-2 border-l-4 border-brand-blue pl-3">
+                    <p class="text-sm text-brand-darkgray font-medium animate-pulse" data-editable="true" data-key="hero_desc">
+                        Rising computing power per rack necessitates substantially higher equipment spend.
+                    </p>
+                </div>
+            </div>
+        </header>
+
+        <!-- ================= Row 1: Top Charts ================= -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4" data-section="top-charts">
+            
+            <!-- Left Chart: Bar Chart -->
+            <div class="lg:col-span-8 panel p-5 md:p-6 flex flex-col min-h-[340px]">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h2 class="text-[13px] font-bold text-brand-navy" data-editable="true" data-key="rack_cost_title">Total Networking Cost Per Rack (US$k)</h2>
+                        <p class="text-[11px] text-brand-gray mt-0.5" data-editable="true" data-key="rack_cost_sub">Networking cost per rack (US$k)</p>
+                    </div>
+                    <div class="flex items-center gap-4 text-[11px] text-brand-darkgray font-medium">
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 bg-[#a3cffb] rounded-[2px]"></span> <span data-editable="true" data-key="rack_cost_legend_up">Scale-up</span></div>
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 bg-[#0a42bd] rounded-[2px]"></span> <span data-editable="true" data-key="rack_cost_legend_out">Scale-out</span></div>
+                    </div>
+                </div>
+                <div id="rackCostChart" class="flex-1 w-full relative z-10"></div>
+            </div>
+            
+            <!-- Right Infographic: SVG Arrows -->
+            <div class="lg:col-span-4 panel p-5 md:p-6 bg-gradient-to-b from-[#f5f8ff] to-[#edf3ff] flex flex-col border-none relative overflow-hidden">
+                <h2 class="text-[12px] font-bold text-brand-navy uppercase tracking-wider mb-6" data-editable="true" data-key="insight_growth_title">KEY INSIGHT: EXPONENTIAL GROWTH</h2>
+                
+                <div class="flex-1 flex flex-col justify-center gap-8 relative px-2">
+                    
+                    <!-- Top Arrow: +16x -->
+                    <div class="relative group/arrow cursor-pointer">
+                        <div class="flex justify-between text-[11px] text-brand-navy font-bold mb-1 z-10 relative">
+                            <span><span data-editable="true" data-key="arrow_16_base_name">GB300</span><br><span class="text-brand-gray font-normal" data-editable="true" data-key="arrow_16_base_sub">Baseline</span></span>
+                            <span class="text-right"><span data-editable="true" data-key="arrow_16_target_name">Rubin Ultra</span><br><span class="text-brand-gray font-normal" data-editable="true" data-key="arrow_16_target_sub">Spec B</span></span>
+                        </div>
+                        <div class="relative h-[80px] w-full">
+                            <svg class="absolute inset-0 w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 200 60">
+                                <defs>
+                                    <marker id="arrowLight16" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                        <path d="M 0 1 L 10 5 L 0 9 z" fill="#b9d6ff"/>
+                                    </marker>
+                                    <marker id="arrowDark16" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                        <path d="M 0 1 L 10 5 L 0 9 z" fill="#0047a5"/>
+                                    </marker>
+                                </defs>
+                                <g transform="translate(1, 4)" opacity="0.5" class="group-hover/arrow:translate-y-1.5 transition-transform duration-300">
+                                    <circle cx="5" cy="40" r="4.5" fill="#b9d6ff"/>
+                                    <line x1="5" y1="40" x2="188" y2="15" stroke="#b9d6ff" stroke-width="4" marker-end="url(#arrowLight16)"/>
+                                </g>
+                                <g class="group-hover/arrow:translate-y-[-1px] transition-transform duration-300">
+                                    <circle cx="5" cy="40" r="4.5" fill="#0047a5"/>
+                                    <line x1="5" y1="40" x2="188" y2="15" stroke="#0047a5" stroke-width="4.5" marker-end="url(#arrowDark16)"/>
+                                </g>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center transform translate-y-3 z-10 pointer-events-none">
+                                <div class="text-[34px] font-black text-[#165dff] leading-none group-hover/arrow:scale-110 transition-transform duration-300" data-editable="true" data-key="arrow_16_multiplier">+16x</div>
+                                <div class="text-[10px] font-bold text-brand-darkgray mt-0.5" data-editable="true" data-key="arrow_16_label">Scale-out</div>
+                                <div class="text-[9px] text-brand-gray" data-editable="true" data-key="arrow_16_sub">Dollar content growth</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-brand-border/40 border-dashed mx-2"></div>
+                    
+                    <!-- Bottom Arrow: +45x -->
+                    <div class="relative group/arrow2 cursor-pointer">
+                        <div class="flex justify-between text-[11px] text-brand-navy font-bold mb-1 z-10 relative">
+                            <span><span data-editable="true" data-key="arrow_45_base_name">GB300</span><br><span class="text-brand-gray font-normal" data-editable="true" data-key="arrow_45_base_sub">Baseline</span></span>
+                            <span class="text-right"><span data-editable="true" data-key="arrow_45_target_name">Rubin Ultra</span><br><span class="text-brand-gray font-normal" data-editable="true" data-key="arrow_45_target_sub">Spec B</span></span>
+                        </div>
+                        <div class="relative h-[80px] w-full">
+                            <svg class="absolute inset-0 w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 200 60">
+                                <defs>
+                                    <marker id="arrowLight45_bg" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                        <path d="M 0 1 L 10 5 L 0 9 z" fill="#b9d6ff"/>
+                                    </marker>
+                                    <marker id="arrowLight45_fg" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                        <path d="M 0 1 L 10 5 L 0 9 z" fill="#5ca2fb"/>
+                                    </marker>
+                                </defs>
+                                <g transform="translate(1, 4)" opacity="0.5" class="group-hover/arrow2:translate-y-1.5 transition-transform duration-300">
+                                    <circle cx="5" cy="45" r="4.5" fill="#b9d6ff"/>
+                                    <line x1="5" y1="45" x2="188" y2="20" stroke="#b9d6ff" stroke-width="4" marker-end="url(#arrowLight45_bg)"/>
+                                </g>
+                                <g class="group-hover/arrow2:translate-y-[-1px] transition-transform duration-300">
+                                    <circle cx="5" cy="45" r="4.5" fill="#5ca2fb"/>
+                                    <line x1="5" y1="45" x2="188" y2="20" stroke="#5ca2fb" stroke-width="4.5" marker-end="url(#arrowLight45_fg)"/>
+                                </g>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center transform translate-y-3 z-10 pointer-events-none">
+                                <div class="text-[34px] font-black text-[#5ca2fb] leading-none group-hover/arrow2:scale-110 transition-transform duration-300" data-editable="true" data-key="arrow_45_multiplier">+45x</div>
+                                <div class="text-[10px] font-bold text-brand-darkgray mt-0.5" data-editable="true" data-key="arrow_45_label">Scale-up</div>
+                                <div class="text-[9px] text-brand-gray" data-editable="true" data-key="arrow_45_sub">Dollar content growth</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Row 2: Dollar Content Drivers ================= -->
+        <div class="panel p-5 md:p-6" data-section="content-drivers">
+            <h2 class="text-[13px] font-bold text-brand-navy uppercase mb-1" data-editable="true" data-key="drivers_title">DOLLAR CONTENT DRIVERS (RUBIN ULTRA SPEC B)</h2>
+            <p class="text-[11px] text-brand-gray mb-4" data-editable="true" data-key="drivers_sub">Share of Total Networking Cost Per Rack</p>
+            
+            <div class="flex w-full h-[95px] rounded-md overflow-hidden font-sans border border-[#d6e4ff]">
+                
+                <!-- 37% & 11% (Deep Blue) -->
+                <div class="w-[48%] flex">
+                    <!-- Optical Modules -->
+                    <div class="driver-box flex-1 px-4 pt-3 pb-5 bg-bar-1 border-r border-white/20 flex flex-col justify-between relative">
+                        <div class="text-[11px] font-medium text-white/90" data-editable="true" data-key="driver_1_label">Optical Modules</div>
+                        <div>
+                            <div class="text-[28px] font-bold text-white leading-none mb-1" data-editable="true" data-key="driver_1_val">37%</div>
+                            <div class="text-[10px] text-white/75" data-editable="true" data-key="driver_1_sub">US$245k</div>
+                        </div>
+                        <svg class="absolute right-3 bottom-3 w-5 h-5 text-white/20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19,3H5C3.89,3 3,3.89 3,5V19C3,20.1 3.89,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19M17,11H15V9H17V11M13,11H11V9H13V11M9,11H7V9H9V11M17,15H15V13H17V15M13,15H11V13H13V15M9,15H7V13H9V15M17,17H15V15H17V17M13,17H11V15H13V17M9,17H7V15H9V17Z"/>
+                        </svg>
+                    </div>
+                    <!-- Fiber Cable -->
+                    <div class="driver-box flex-1 px-4 pt-3 pb-5 bg-bar-1 border-r border-white/20 flex flex-col justify-between relative">
+                        <div class="text-[11px] font-medium text-white/90 leading-tight" data-editable="true" data-key="driver_2_label">Fiber Cable<br>& MPO</div>
+                        <div>
+                            <div class="text-[24px] font-bold text-white leading-none mb-1" data-editable="true" data-key="driver_2_val">11%</div>
+                            <div class="text-[10px] text-white/75" data-editable="true" data-key="driver_2_sub">US$108k</div>
+                        </div>
+                        <svg class="absolute right-3 bottom-3 w-5 h-5 text-white/20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/><path d="M8 12a4 4 0 1 1 8 0 4 4 0 1 1-8 0"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- 15% (Medium Blue) -->
+                <div class="driver-box w-[15%] px-3 pt-3 pb-5 bg-bar-2 flex flex-col justify-between border-r border-white/30 relative">
+                    <div class="text-[11px] font-bold text-[#0f294d]" data-editable="true" data-key="driver_3_label">Optical Engine & FAU</div>
+                    <div>
+                        <div class="text-[22px] font-black text-[#0f294d] leading-none mb-1" data-editable="true" data-key="driver_3_val">15%</div>
+                        <div class="text-[10px] text-[#0f294d]/80" data-editable="true" data-key="driver_3_sub">US$100k</div>
+                    </div>
+                    <svg class="absolute right-3 bottom-3 w-5 h-5 text-[#0f294d]/20" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 2h8v8H8V8z"/>
+                    </svg>
+                </div>
+
+                <!-- 9% & 7% (Light Blue) -->
+                <div class="w-[20%] flex text-brand-navy">
+                    <!-- CPO Engine -->
+                    <div class="driver-box flex-1 px-3 pt-3 pb-5 bg-[#b7d6ff] flex flex-col justify-between border-r border-white/40">
+                        <div class="text-[10px] font-bold leading-tight" data-editable="true" data-key="driver_4_label">CPO Engine &<br>FAU (29%)</div>
+                        <div>
+                            <div class="text-[18px] font-black leading-none mb-1" data-editable="true" data-key="driver_4_val">9%</div>
+                            <div class="text-[9px] opacity-80" data-editable="true" data-key="driver_4_sub">US$63k</div>
+                        </div>
+                    </div>
+                    <!-- CPO Switch -->
+                    <div class="driver-box flex-1 px-3 pt-3 pb-5 bg-[#b7d6ff] flex flex-col justify-between border-r border-white/60">
+                        <div class="text-[10px] font-bold leading-tight" data-editable="true" data-key="driver_5_label">CPO Switch<br>(3.2T)</div>
+                        <div>
+                            <div class="text-[16px] font-black leading-none mb-1" data-editable="true" data-key="driver_5_val">7%</div>
+                            <div class="text-[9px] opacity-80" data-editable="true" data-key="driver_5_sub">US$31k</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stacked small blocks (Gray) -->
+                <div class="w-[17%] flex flex-col driver-gray">
+                    <div class="flex-1 flex border-b border-white">
+                        <div class="driver-box flex-1 px-2.5 py-1.5 border-r border-white flex flex-col justify-center">
+                            <div class="text-[9px] font-bold text-brand-navy mb-0.5" data-editable="true" data-key="driver_6_label">ELS</div>
+                            <div class="text-[11px] font-black text-brand-navy" data-editable="true" data-key="driver_6_val">5% <span class="font-normal text-[9px] text-brand-gray ml-1" data-key="driver_6_sub">US$13k</span></div>
+                        </div>
+                        <div class="driver-box flex-1 px-2.5 py-1.5 flex flex-col justify-center">
+                            <div class="text-[9px] font-bold text-brand-navy mb-0.5" data-editable="true" data-key="driver_7_label">Shufflebox</div>
+                            <div class="text-[11px] font-black text-brand-navy" data-editable="true" data-key="driver_7_val">2% <span class="font-normal text-[9px] text-brand-gray ml-1" data-key="driver_7_sub">US$7k</span></div>
+                        </div>
+                    </div>
+                    <div class="flex-1 flex">
+                        <div class="driver-box flex-1 px-2.5 py-1.5 border-r border-white flex flex-col justify-center">
+                            <div class="text-[9px] font-bold text-brand-navy leading-tight mb-0.5" data-editable="true" data-key="driver_8_label">Copper Cable & Backplane</div>
+                            <div class="text-[11px] font-black text-brand-navy" data-editable="true" data-key="driver_8_val">2% <span class="font-normal text-[9px] text-brand-gray ml-1" data-key="driver_8_sub">US$30k</span></div>
+                        </div>
+                        <div class="driver-box flex-1 px-2.5 py-1.5 flex flex-col justify-center bg-[#f3f6fa]">
+                            <div class="text-[9px] font-bold text-brand-navy mb-0.5" data-editable="true" data-key="driver_9_label">Others</div>
+                            <div class="text-[11px] font-black text-brand-navy" data-editable="true" data-key="driver_9_val">2% <span class="font-normal text-[9px] text-brand-gray ml-1" data-key="driver_9_sub">US$5k</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Row 3: Market Share Area & Architecture Grid ================= -->
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4" data-section="market-architecture">
+            
+            <!-- Left: Market Share Area Chart -->
+            <div class="xl:col-span-8 panel p-5 md:p-6 flex flex-col relative min-h-[400px]">
+                <h2 class="text-[14px] font-bold text-brand-navy mb-4" data-editable="true" data-key="market_share_title">Market share %</h2>
+                
+                <div id="marketShareChart" class="flex-1 w-full -ml-2 relative z-10"></div>
+                
+                <div class="absolute inset-0 pointer-events-none z-0 hidden md:block">
+                    <div class="absolute top-[18%] left-[58%] transform -translate-x-1/2 flex flex-col items-center">
+                        <div class="text-[11px] font-bold text-[#165dff] text-center leading-tight tracking-tight">
+                            <span data-editable="true" data-key="inversion_zone_title">Inversion Zone</span><br>
+                            <span class="font-semibold text-[9px] text-[#165dff]/80" data-editable="true" data-key="inversion_zone_sub">Structural Inflection Point</span>
+                        </div>
+                        <div class="w-[1px] h-[95px] border-l border-dashed border-[#a3cffb] my-2"></div>
+                        <div class="w-4 h-4 rounded-full border-2 border-white bg-transparent ring-2 ring-[#165dff] shadow-sm"></div>
+                    </div>
+                    
+                    <div class="absolute top-[48%] right-[8%] text-right">
+                        <div class="text-[44px] font-black text-[#165dff] leading-none" data-editable="true" data-key="penetration_val">46%</div>
+                        <div class="text-[10px] font-bold text-brand-navy flex items-center justify-end gap-1 mt-1">
+                            <span data-editable="true" data-key="penetration_label">SiPh penetration</span> <span class="inline-block w-2.5 h-2.5 rounded-full border-2 border-[#165dff]"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="absolute bottom-[20%] left-[8%] flex items-end gap-2">
+                        <div class="text-[32px] font-black text-brand-navy leading-none" data-editable="true" data-key="penetration_6_val">6%</div>
+                        <div class="text-[10px] font-bold text-brand-darkgray leading-tight pb-1" data-editable="true" data-key="penetration_6_label">SiPh<br>penetration</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: EML vs SiPh Architecture -->
+            <div class="xl:col-span-4 panel bg-[#f6f9fe] border border-[#d6e4ff] overflow-hidden flex flex-col min-h-[400px]">
+                <div class="flex w-full text-center text-xs font-bold">
+                    <div class="flex-1 bg-[#e3e9f4] py-3 text-brand-navy border-r border-[#d6e4ff]" data-editable="true" data-key="eml_arch_title">EML Architecture</div>
+                    <div class="flex-1 bg-[#165dff] py-3 text-white" data-editable="true" data-key="siph_arch_title">Silicon Photonics Architecture</div>
+                </div>
+                <div class="flex-1 flex flex-col md:flex-row p-5 relative">
+                    <div class="absolute left-1/2 top-[35%] md:top-[30%] transform -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-brand-navy text-white flex items-center justify-center text-xs font-black border-[3px] border-white shadow-lg z-20">VS</div>
+                    
+                    <!-- Left: EML Architecture -->
+                    <div class="flex-1 flex flex-col items-center border-b md:border-b-0 md:border-r border-[#d6e4ff] pb-5 md:pb-0 md:pr-4">
+                        <div class="w-full h-[100px] relative mb-4">
+                            <div class="w-[90%] h-7 bg-gradient-to-b from-[#f2f6fc] to-[#e1eaf7] mx-auto rounded border border-[#b4c6eb] text-[9px] text-center leading-7 font-bold text-[#4b6ba3] shadow-sm relative z-10" data-editable="true" data-key="eml_switch_label">Switch / ASIC</div>
+                            
+                            <svg class="absolute top-7 left-0 w-full h-[35px] z-0" preserveAspectRatio="none" viewBox="0 0 100 40">
+                                <path d="M 20 0 Q 20 15 12 35" fill="none" stroke="#b4c6eb" stroke-width="1.5"/>
+                                <path d="M 40 0 Q 40 15 37 35" fill="none" stroke="#b4c6eb" stroke-width="1.5"/>
+                                <path d="M 60 0 Q 60 15 63 35" fill="none" stroke="#b4c6eb" stroke-width="1.5"/>
+                                <path d="M 80 0 Q 80 15 88 35" fill="none" stroke="#b4c6eb" stroke-width="1.5"/>
+                            </svg>
+                            
+                            <div class="flex justify-between w-[95%] mx-auto mt-[32px] relative z-10">
+                                <div class="w-[20%] h-8 bg-white rounded shadow-sm border border-[#9eb7e5] text-[8px] flex items-center justify-center font-bold text-[#4b6ba3]" data-editable="true" data-key="eml_chip_1_label">EML</div>
+                                <div class="w-[20%] h-8 bg-white rounded shadow-sm border border-[#9eb7e5] text-[8px] flex items-center justify-center font-bold text-[#4b6ba3]" data-editable="true" data-key="eml_chip_2_label">EML</div>
+                                <div class="w-[20%] h-8 bg-white rounded shadow-sm border border-[#9eb7e5] text-[8px] flex items-center justify-center font-bold text-[#4b6ba3]" data-editable="true" data-key="eml_chip_3_label">EML</div>
+                                <div class="w-[20%] h-8 bg-white rounded shadow-sm border border-[#9eb7e5] text-[8px] flex items-center justify-center font-bold text-[#4b6ba3]" data-editable="true" data-key="eml_chip_4_label">EML</div>
+                            </div>
+                        </div>
+                        
+                        <ul class="text-[10px] text-brand-darkgray space-y-2 w-full font-medium px-1">
+                            <li class="flex items-center gap-2"><span class="text-[#86909c]">⚙️</span> <span data-editable="true" data-key="eml_bullet_1">Discrete optics</span></li>
+                            <li class="flex items-center gap-2"><span class="text-[#86909c]">📐</span> <span data-editable="true" data-key="eml_bullet_2">Larger footprint</span></li>
+                            <li class="flex items-center gap-2"><span class="text-[#86909c]">🧩</span> <span data-editable="true" data-key="eml_bullet_3">More components</span></li>
+                            <li class="flex items-center gap-2"><span class="text-[#86909c]">⚡</span> <span data-editable="true" data-key="eml_bullet_4">Higher power</span></li>
+                            <li class="flex items-center gap-2"><span class="text-[#86909c]">🧱</span> <span data-editable="true" data-key="eml_bullet_5">Lower integration</span></li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Right: SiPh Architecture -->
+                    <div class="flex-1 flex flex-col items-center pt-5 md:pt-0 md:pl-4">
+                        <div class="w-full h-[100px] relative mb-4">
+                            <div class="w-[90%] h-7 bg-gradient-to-b from-[#f2f6fc] to-[#e1eaf7] mx-auto rounded border border-[#b4c6eb] text-[9px] text-center leading-7 font-bold text-[#4b6ba3] shadow-sm relative z-10" data-editable="true" data-key="siph_switch_label">Switch / ASIC</div>
+                            
+                            <svg class="absolute top-7 left-0 w-full h-[25px] z-0" preserveAspectRatio="none" viewBox="0 0 100 30">
+                                <path d="M 30 0 L 30 30 M 40 0 L 40 30 M 50 0 L 50 30 M 60 0 L 60 30 M 70 0 L 70 30" fill="none" stroke="#165dff" opacity="0.3" stroke-width="1.5"/>
+                            </svg>
+                            
+                            <div class="w-[85%] h-11 bg-gradient-to-br from-[#165dff] to-[#0a3ca8] mx-auto mt-[25px] rounded border border-[#002868] text-white flex items-center justify-center text-xs font-bold shadow-[0_6px_12px_rgba(22,93,255,0.3)] relative z-10" data-editable="true" data-key="siph_chip_label">
+                                SiPh
+                            </div>
+                        </div>
+                        
+                        <ul class="text-[10px] text-[#0047a5] space-y-2 w-full font-bold px-1">
+                            <li class="flex items-center gap-2"><span>✅</span> <span data-editable="true" data-key="siph_bullet_1">Integrated optics</span></li>
+                            <li class="flex items-center gap-2"><span>✅</span> <span data-editable="true" data-key="siph_bullet_2">Compact footprint</span></li>
+                            <li class="flex items-center gap-2"><span>✅</span> <span data-editable="true" data-key="siph_bullet_3">Fewer interconnects</span></li>
+                            <li class="flex items-center gap-2"><span>✅</span> <span data-editable="true" data-key="siph_bullet_4">Lower power</span></li>
+                            <li class="flex items-center gap-2"><span>✅</span> <span data-editable="true" data-key="siph_bullet_5">Higher integration</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Row 4: Unified Bottom Panel ================= -->
+        <div class="panel bg-white overflow-hidden flex flex-col" data-section="bottom-insights">
+            
+            <!-- Ribbon: Why SiPh Wins -->
+            <div class="bg-[#f7fafe] border-b border-[#e5e8ef] px-6 py-4 flex flex-col md:flex-row items-center gap-8">
+                <!-- Trophy Badge -->
+                <div class="flex items-center md:border-r border-[#d6e4ff] md:pr-8 shrink-0 hover:scale-105 transition-transform">
+                    <div class="w-10 h-10 bg-[#0f294d] rounded-full flex items-center justify-center mr-4">
+                        <span class="text-white text-lg">🏆</span>
+                    </div>
+                    <div>
+                        <div class="text-[14px] font-black text-brand-navy leading-tight" data-editable="true" data-key="wins_title_1">Why SiPh</div>
+                        <div class="text-[14px] font-black text-brand-navy leading-tight" data-editable="true" data-key="wins_title_2">Wins</div>
+                    </div>
+                </div>
+                
+                <!-- Features Grid -->
+                <div class="flex-1 flex flex-wrap justify-between gap-4 w-full">
+                    <div class="flex items-center gap-3 hover:translate-y-[-1px] transition-transform">
+                        <div class="w-8 h-8 rounded-full border border-[#165dff] text-[#165dff] flex items-center justify-center text-sm font-bold bg-white">↓</div>
+                        <div class="text-[11px] font-bold text-brand-navy leading-tight">
+                            <span data-editable="true" data-key="wins_feat_1_val">15-20%</span><br>
+                            <span class="font-normal text-brand-darkgray" data-editable="true" data-key="wins_feat_1_desc">lower cost at 800G / 1.6T</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 hover:translate-y-[-1px] transition-transform">
+                        <div class="w-8 h-8 rounded-full bg-[#165dff] text-white flex items-center justify-center shadow-sm">⊞</div>
+                        <div class="text-[11px] font-bold text-brand-navy leading-tight">
+                            <span data-editable="true" data-key="wins_feat_2_val">Higher</span><br>
+                            <span class="font-normal text-brand-darkgray" data-editable="true" data-key="wins_feat_2_desc">integration density</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 hover:translate-y-[-1px] transition-transform">
+                        <div class="w-8 h-8 rounded-full border border-[#165dff] text-[#165dff] flex items-center justify-center bg-white">⤡</div>
+                        <div class="text-[11px] font-bold text-brand-navy leading-tight">
+                            <span data-editable="true" data-key="wins_feat_3_val">Smaller</span><br>
+                            <span class="font-normal text-brand-darkgray" data-editable="true" data-key="wins_feat_3_desc">footprint</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 hover:translate-y-[-1px] transition-transform">
+                        <div class="w-8 h-8 rounded-full border border-[#165dff] text-[#165dff] flex items-center justify-center bg-white">🛡️</div>
+                        <div class="text-[11px] font-bold text-brand-navy leading-tight">
+                            <span data-editable="true" data-key="wins_feat_4_val">Better</span><br>
+                            <span class="font-normal text-brand-darkgray" data-editable="true" data-key="wins_feat_4_desc">reliability</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 hover:translate-y-[-1px] transition-transform">
+                        <div class="w-8 h-8 rounded-full border border-[#165dff] text-[#165dff] flex items-center justify-center text-sm font-bold bg-white">📈</div>
+                        <div class="text-[11px] font-bold text-brand-navy leading-tight">
+                            <span data-editable="true" data-key="wins_feat_5_val">Margin</span><br>
+                            <span class="font-normal text-brand-darkgray" data-editable="true" data-key="wins_feat_5_desc">expansion for suppliers</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Grid: Text & Line chart -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-0">
+                <!-- Left text insights -->
+                <div class="lg:col-span-4 p-8 border-r border-[#e5e8ef] flex flex-col justify-center bg-white">
+                    <p class="text-[12px] font-medium text-brand-darkgray mb-8" data-editable="true" data-key="transition_desc">
+                        The transition to Vera Rubin and Rubin Ultra platforms radically expands the networking value pool.
+                    </p>
+                    <div class="space-y-8">
+                        <div class="flex items-start gap-4 hover:translate-x-1 transition-transform">
+                            <div class="w-9 h-9 rounded-full bg-[#165dff] flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">💡</div>
+                            <div>
+                                <h3 class="text-[14px] font-bold text-brand-navy mb-1"><span class="mr-1">01.</span> <span data-editable="true" data-key="insight_01_title">Key Insight:</span></h3>
+                                <p class="text-[11px] text-brand-gray leading-relaxed" data-editable="true" data-key="insight_01_desc">Global value TAM will scale 9x, driven largely by the Rubin Ultra lifecycle.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 hover:translate-x-1 transition-transform">
+                            <div class="w-9 h-9 rounded-full bg-[#165dff] flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">📊</div>
+                            <div>
+                                <h3 class="text-[14px] font-bold text-brand-navy mb-1"><span class="mr-1">02.</span> <span data-editable="true" data-key="insight_02_title">Scale-Up Dominance:</span></h3>
+                                <p class="text-[11px] text-brand-gray leading-relaxed" data-editable="true" data-key="insight_02_desc">69% of the US$154bn TAM in Rubin Ultra is allocated purely to scale-up configurations.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 hover:translate-x-1 transition-transform">
+                            <div class="w-9 h-9 rounded-full border border-[#165dff] bg-transparent flex items-center justify-center flex-shrink-0 text-[#165dff] font-bold text-sm">⚙️</div>
+                            <div>
+                                <h3 class="text-[14px] font-bold text-brand-navy mb-1"><span class="mr-1">03.</span> <span data-editable="true" data-key="insight_03_title">The CPO Catalyst:</span></h3>
+                                <p class="text-[11px] text-brand-gray leading-relaxed" data-editable="true" data-key="insight_03_desc">Co-Packaged Optics alone will constitute US$91bn (59%) of this new market.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right: Line Chart -->
+                <div class="lg:col-span-8 p-6 pb-4 flex flex-col bg-[#fdfdfd] relative">
+                    <div class="mb-4">
+                        <h2 class="text-[14px] font-bold text-brand-navy" data-editable="true" data-key="tam_projection_title">Value TAM Projection (US$ m)</h2>
+                    </div>
+                    <div id="tamChart" class="flex-1 w-full min-h-[300px] relative z-10"></div>
+                    <p class="text-[9px] text-brand-gray text-center italic mt-2" data-editable="true" data-key="tam_fig_caption">Fig. 10: Value TAM projection showing massive structural growth through 2028.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            const rawData = window.REPORT_DATA;
+
+            // ================= 1. Top Bar Chart =================
+            var rackCostChart = echarts.init(document.getElementById('rackCostChart'));
+            rackCostChart.setOption({
+                grid: { top: 30, right: 10, bottom: 20, left: 40, containLabel: false },
+                tooltip: { 
+                    trigger: 'axis', 
+                    axisPointer: { type: 'shadow' },
+                    extraCssText: 'z-index: 999; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 6px;',
+                },
+                xAxis: {
+                    type: 'category',
+                    data: rawData.rackCostChart.categories,
+                    axisLine: { lineStyle: { color: '#e5e6eb' } },
+                    axisTick: { show: false },
+                    axisLabel: { color: '#86909c', fontSize: 10, interval: 0, margin: 12 }
+                },
+                yAxis: {
+                    type: 'value',
+                    max: 1400,
+                    interval: 200,
+                    splitLine: { show: true, lineStyle: { color: '#f2f3f5', type: 'dashed' } }, 
+                    axisLabel: { color: '#86909c', fontSize: 10, margin: 10 },
+                    axisLine: { show: false }
+                },
+                series: [
+                    {
+                        name: 'Scale-up',
+                        type: 'bar',
+                        barWidth: '35%',
+                        stack: 'total',
+                        data: rawData.rackCostChart.scaleUp.map((val, idx) => {
+                            const isUltra = idx >= 3; 
+                            return { value: val, itemStyle: { color: isUltra ? '#a3cffb' : '#86909c' } };
+                        })
+                    },
+                    {
+                        name: 'Scale-out',
+                        type: 'bar',
+                        barWidth: '35%',
+                        stack: 'total',
+                        data: rawData.rackCostChart.scaleOut.map((val) => {
+                            return { value: val, itemStyle: { color: '#0a42bd' } };
+                        }),
+                        label: {
+                            show: true, position: 'top', color: '#0f294d', fontSize: 11, fontWeight: 'bold',
+                            formatter: function(params) {
+                                return rawData.rackCostChart.totals[params.dataIndex].toLocaleString();
+                            }
+                        }
+                    }
+                ]
+            });
+
+            // ================= 2. Market Share Area Chart =================
+            var marketShareChart = echarts.init(document.getElementById('marketShareChart'));
+            marketShareChart.setOption({
+                grid: { top: 40, right: 30, bottom: 20, left: 30, containLabel: true },
+                tooltip: { 
+                    trigger: 'axis',
+                    backgroundColor: '#ffffff',
+                    padding: [12, 16],
+                    extraCssText: 'z-index: 10000 !important; box-shadow: 0 4px 16px rgba(15, 41, 77, 0.12); border-radius: 6px; border: 1px solid #f2f3f5; pointer-events: auto;',
+                    formatter: function(params) {
+                        let title = `<div style="font-size: 13px; color: #4e5969; margin-bottom: 8px; font-weight: bold;">${params[0].axisValue}</div>`;
+                        let item1 = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; gap: 24px;">
+                                        <div style="display:flex; align-items:center;">
+                                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:#165dff; margin-right:8px;"></span>
+                                            <span style="color:#86909c; font-size:12px;">EML Background</span>
+                                        </div>
+                                        <span style="color:#0f294d; font-weight:bold; font-size:13px;">${params[0].value}</span>
+                                     </div>`;
+                        let item2 = `<div style="display:flex; justify-content:space-between; align-items:center; gap: 24px;">
+                                        <div style="display:flex; align-items:center;">
+                                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:#74ce7a; margin-right:8px;"></span>
+                                            <span style="color:#86909c; font-size:12px;">Silicon Photonics (SiPh)</span>
+                                        </div>
+                                        <span style="color:#0f294d; font-weight:bold; font-size:13px;">${params[1].value}</span>
+                                     </div>`;
+                        return title + item1 + item2;
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: rawData.marketShareChart.quarters,
+                    axisLine: { show: false },
+                    axisTick: { show: true, lineStyle: { color: '#e5e6eb' } },
+                    axisLabel: { color: '#86909c', fontSize: 10, margin: 12 }
+                },
+                yAxis: {
+                    type: 'value',
+                    max: 100,
+                    splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } },
+                    axisLabel: { formatter: '{value}%', color: '#86909c', fontSize: 10 }
+                },
+                series: [
+                    {
+                        name: 'EML Background',
+                        type: 'line',
+                        data: rawData.marketShareChart.emlBackground,
+                        symbol: 'none',
+                        lineStyle: { width: 0 },
+                        areaStyle: { color: '#f2f6fc' }, 
+                        emphasis: { focus: 'none' }
+                    },
+                    {
+                        name: 'Silicon Photonics (SiPh)',
+                        type: 'line',
+                        data: rawData.marketShareChart.siphPenetration,
+                        smooth: 0.3,
+                        showSymbol: false,
+                        symbol: 'circle',
+                        symbolSize: 10,
+                        itemStyle: { color: '#ffffff', borderColor: '#165dff', borderWidth: 2 },
+                        lineStyle: { color: '#165dff', width: 3.5 },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(22, 93, 255, 0.55)' },
+                                { offset: 1, color: 'rgba(22, 93, 255, 0.05)' }
+                            ])
+                        }
+                    }
+                ]
+            });
+
+            // ================= 3. TAM Line Chart =================
+            var tamChart = echarts.init(document.getElementById('tamChart'));
+            tamChart.setOption({
+                legend: {
+                    top: 0,
+                    itemWidth: 20,
+                    itemHeight: 2,
+                    textStyle: { color: '#86909c', fontSize: 9 },
+                    icon: 'path://M0,0 L20,0',
+                    data: [
+                        { name: 'Scale up TAM (High-end, Spec B)', icon: 'path://M0,0 L20,0', itemStyle: {color: '#165dff'} },
+                        { name: 'Scale out TAM (High-end, Spec A)', icon: 'path://M0,0 L20,0', itemStyle: {color: '#86909c'} },
+                        { name: 'CPO TAM (High-end, Spec B)', icon: 'path://M0,0 L20,0', itemStyle: {color: '#4fc2f8'} },
+                        { name: 'Scale up TAM (Low-end, Spec A)', icon: 'path://M0,0 L10,0 M15,0 L20,0', itemStyle: {color: '#165dff'} },
+                        { name: 'Scale out TAM (Low-end, Spec A)', icon: 'path://M0,0 L10,0 M15,0 L20,0', itemStyle: {color: '#86909c'} }
+                    ]
+                },
+                grid: { top: 60, right: 45, bottom: 20, left: 45, containLabel: false },
+                tooltip: { 
+                    trigger: 'axis',
+                    extraCssText: 'z-index: 999; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 6px;'
+                },
+                xAxis: {
+                    type: 'category',
+                    data: rawData.tamChart.years,
+                    axisLine: { lineStyle: { color: '#cbd5e1' } },
+                    axisTick: { show: true, alignWithLabel: true },
+                    axisLabel: { color: '#4e5969', fontSize: 11, fontWeight: 'bold', margin: 15 }
+                },
+                yAxis: {
+                    type: 'value',
+                    max: 100000,
+                    interval: 20000,
+                    splitLine: { lineStyle: { color: '#f2f3f5', type: 'dashed' } },
+                    axisLabel: { color: '#86909c', fontSize: 10, formatter: '{value}' },
+                    axisLine: { show: false }
+                },
+                series: [
+                    {
+                        name: 'Scale up TAM (High-end, Spec B)',
+                        type: 'line',
+                        data: rawData.tamChart.scaleUpHighEndB,
+                        symbol: 'circle', 
+                        symbolSize: 6,
+                        itemStyle: { color: '#165dff' },
+                        lineStyle: { color: '#165dff', width: 2 },
+                        label: { show: true, position: 'top', color: '#165dff', fontSize: 10, fontWeight: 'bold' },
+                        labelLayout: { hideOverlap: true }
+                    },
+                    {
+                        name: 'Scale up TAM (Low-end, Spec A)',
+                        type: 'line',
+                        data: rawData.tamChart.scaleUpLowEndA,
+                        symbol: 'none',
+                        lineStyle: { color: '#165dff', width: 1.5, type: 'dashed' },
+                    },
+                    {
+                        name: 'Scale out TAM (High-end, Spec A)',
+                        type: 'line',
+                        data: rawData.tamChart.scaleOutHighEndA,
+                        symbol: 'circle', 
+                        symbolSize: 5,
+                        itemStyle: { color: '#86909c' },
+                        lineStyle: { color: '#86909c', width: 2 },
+                        label: { show: true, position: 'bottom', color: '#86909c', fontSize: 9 },
+                        labelLayout: { hideOverlap: true }
+                    },
+                    {
+                        name: 'Scale out TAM (Low-end, Spec A)',
+                        type: 'line',
+                        data: rawData.tamChart.scaleOutLowEndA,
+                        symbol: 'emptyCircle', 
+                        symbolSize: 5,
+                        itemStyle: { color: '#86909c', borderWidth: 1.5 },
+                        lineStyle: { color: '#86909c', width: 1.5, type: 'dashed' },
+                        label: { show: true, position: 'right', color: '#86909c', fontSize: 9 },
+                        labelLayout: { hideOverlap: true }
+                    },
+                    {
+                        name: 'CPO TAM (High-end, Spec B)',
+                        type: 'line',
+                        data: rawData.tamChart.cpoTamHighEndB,
+                        symbol: 'emptyCircle', 
+                        symbolSize: 6,
+                        itemStyle: { color: '#4fc2f8', borderWidth: 2 },
+                        lineStyle: { color: '#4fc2f8', width: 2 },
+                        label: { show: true, position: 'right', color: '#4fc2f8', fontSize: 10, fontWeight: 'bold' },
+                        labelLayout: { hideOverlap: true }
+                    }
+                ]
+            });
+
+            // 完美规避 ResizeObserver loop completion loop warning 报错
+            const resizeObserver = new ResizeObserver(() => {
+                window.requestAnimationFrame(() => {
+                    if (rackCostChart) rackCostChart.resize();
+                    if (marketShareChart) marketShareChart.resize();
+                    if (tamChart) tamChart.resize();
+                });
+            });
+            
+            resizeObserver.observe(document.querySelector('main'));
+        });
+    </script>
+</body>
+</html>

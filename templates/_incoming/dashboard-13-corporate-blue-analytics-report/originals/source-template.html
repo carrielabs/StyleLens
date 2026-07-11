@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级数据分析报告</title>
+    <!-- 使用 Tailwind CSS 进行快速、无构建的原子化样式重构 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Chart.js 用于渲染真实数据图表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入 SortableJS 实现轻量级拖拽排序 -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0047AB', // 核心企业蓝
+                        primaryLight: '#EBF3FF', 
+                        accent: '#EA580C',  // 增长橙
+                        textMain: '#111827',
+                        textSub: '#4B5563',
+                        textMute: '#9CA3AF',
+                        surface: '#FFFFFF',
+                        pageBg: '#F3F6F9',
+                        border: '#E5E7EB'
+                    },
+                    fontFamily: {
+                        sans: ['"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 强制覆盖一些全局样式，确保锐利和专业感 */
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background-color: #F3F6F9; color: #111827; }
+        .card { background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 2px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); } 
+        .card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border-color: #D1D5DB; z-index: 20; position: relative; }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 18px; background-color: #0047AB; margin-right: 8px; vertical-align: -2px; }
+        
+        /* 拖拽相关样式 */
+        .drag-handle { cursor: grab; }
+        .drag-handle:active { cursor: grabbing; }
+        .sortable-ghost { opacity: 0.4; transform: scale(0.98); background-color: #EBF3FF; border: 2px dashed #0047AB; border-radius: 4px; }
+        .sortable-ghost * { visibility: hidden; } /* 拖拽占位符内部隐藏，仅保留虚线框 */
+        .sortable-drag { cursor: grabbing !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+    </style>
+</head>
+<body class="antialiased pb-20">
+
+    <!-- Hero: 报告头部 (固定不参与拖拽) -->
+    <header data-section="hero" class="bg-primary text-white py-12 px-8 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-end">
+            <div>
+                <p data-editable="true" contenteditable="true" data-slot="text.hero.confidential" class="text-blue-200 text-sm font-semibold tracking-widest uppercase mb-2">Internal Confidential / 内部绝密</p>
+                <h1 data-editable="true" contenteditable="true" data-slot="text.hero.title" class="text-4xl font-bold mb-4 tracking-tight">2023 Q3 集团全业务增长与财务分析报告</h1>
+                <p data-editable="true" contenteditable="true" data-slot="text.hero.subtitle" class="text-blue-100 text-lg">AI 驱动的数据深度洞察，聚焦核心营收、用户漏斗与资源效能</p>
+            </div>
+            <div class="text-right">
+                <div data-editable="true" contenteditable="true" data-slot="text.hero.date" class="text-3xl font-bold">2023 / 11 / 02</div>
+                <div data-editable="true" contenteditable="true" data-slot="text.hero.source" class="text-sm text-blue-200 mt-1">数据源: 集团财务中台 & BI 数据仓</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 可拖拽的主容器 ID: report-canvas -->
+    <main id="report-canvas" class="max-w-7xl mx-auto px-8 mt-[-2rem] relative z-10 space-y-8">
+
+        <!-- 拖拽块 1：核心洞察 (Executive Summary) -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+            
+            <section data-section="key-takeaways" class="card p-8 border-t-4 border-t-primary shadow-sm">
+                <h2 data-editable="true" contenteditable="true" data-slot="text.keyaways.title" class="text-xl font-bold mb-4 text-primary">Executive Summary / 核心洞察 (Keyaways)</h2>
+                <ul class="space-y-3 text-textSub text-base leading-relaxed">
+                    <li class="flex items-start">
+                        <span class="text-accent mr-2 font-bold">1.</span>
+                        <span data-editable="true" contenteditable="true" data-slot="text.keyaways.item1">**营收持续高速增长，多元化趋势显现**：Q3 总营收达到 <strong class="text-textMain">2.60 亿</strong> 美元，同比增长 <strong>39.6%</strong>，其中非交易类佣金（利息与增值服务）占比首次突破 50%，结构抗风险能力大幅提升。</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-accent mr-2 font-bold">2.</span>
+                        <span data-editable="true" contenteditable="true" data-slot="text.keyaways.item2">**用户留存率创历史新高**：核心高净值客户留存率高达 <strong class="text-textMain">98.1%</strong>，资产管理规模(AUM)同比增长 22.9%，体现了一站式财富管理战略的初步成功。</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-accent mr-2 font-bold">3.</span>
+                        <span data-editable="true" contenteditable="true" data-slot="text.keyaways.item3">**研发投入效能凸显**：坚持高研发投入策略（本季投入 6370 万，同比+82.5%），自研系统将交易链路延迟降至毫秒级，直接带动日均收益交易数(DARTs) 提升 17.3%。</span>
+                    </li>
+                </ul>
+            </section>
+        </div>
+
+        <!-- 拖拽块 2：核心指标看板 -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+
+            <section data-section="kpi-metrics" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="card p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-4">
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card1.title" class="text-sm font-semibold text-textSub">总营收 (Total Revenue)</span>
+                        <span class="p-1 bg-primaryLight text-primary text-xs rounded-sm">Q3 '23</span>
+                    </div>
+                    <div data-editable="true" contenteditable="true" data-slot="text.kpi.card1.value" class="text-3xl font-bold text-primary mb-2">2.60 <span class="text-base font-normal text-textSub">亿港元</span></div>
+                    <div class="pt-4 border-t border-gray-100 flex justify-between items-center text-sm">
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card1.sublabel" class="text-textMute">同比 (YoY)</span>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card1.subvalue" class="font-bold text-accent">+ 39.6% ↑</span>
+                    </div>
+                </div>
+                <div class="card p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-4">
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card2.title" class="text-sm font-semibold text-textSub">毛利 (Gross Profit)</span>
+                    </div>
+                    <div data-editable="true" contenteditable="true" data-slot="text.kpi.card2.value" class="text-3xl font-bold text-textMain mb-2">1.96 <span class="text-base font-normal text-textSub">亿港元</span></div>
+                    <div class="pt-4 border-t border-gray-100 flex justify-between items-center text-sm">
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card2.sublabel" class="text-textMute">同比 (YoY)</span>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card2.subvalue" class="font-bold text-accent">+ 55.9% ↑</span>
+                    </div>
+                </div>
+                <div class="card p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-4">
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card3.title" class="text-sm font-semibold text-textSub">净利润 (Non-GAAP)</span>
+                    </div>
+                    <div data-editable="true" contenteditable="true" data-slot="text.kpi.card3.value" class="text-3xl font-bold text-textMain mb-2">5920 <span class="text-base font-normal text-textSub">万港元</span></div>
+                    <div class="pt-4 border-t border-gray-100 flex justify-between items-center text-sm">
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card3.sublabel" class="text-textMute">同比 (YoY)</span>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card3.subvalue" class="font-bold text-accent">+ 121.7% ↑</span>
+                    </div>
+                </div>
+                <div class="card p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-4">
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card4.title" class="text-sm font-semibold text-textSub">注册用户数 (Registered Users)</span>
+                    </div>
+                    <div data-editable="true" contenteditable="true" data-slot="text.kpi.card4.value" class="text-3xl font-bold text-textMain mb-2">610 <span class="text-base font-normal text-textSub">万人</span></div>
+                    <div class="pt-4 border-t border-gray-100 flex justify-between items-center text-sm">
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card4.sublabel" class="text-textMute">同比环比综合</span>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi.card4.subvalue" class="font-bold text-primary">+ 26.5% ↑</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 拖拽块 3：趋势 与 结构 -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Trend Analysis -->
+                <section data-section="trend-analysis" class="card p-6 lg:col-span-8 flex flex-col">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.trend.title" class="text-lg font-bold section-title mb-6">Q3 业绩稳健增长趋势</h3>
+                    <div class="flex-grow w-full h-[300px]">
+                        <canvas id="chart-trend"></canvas>
+                    </div>
+                </section>
+
+                <!-- Composition Analysis -->
+                <section data-section="composition-analysis" class="card p-6 lg:col-span-4 flex flex-col">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.composition.title" class="text-lg font-bold section-title mb-6">Q2营收保持高速增长 (多元化)</h3>
+                    <div class="relative flex justify-center items-center h-[200px] mb-4">
+                        <canvas id="chart-composition"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span data-editable="true" contenteditable="true" data-slot="text.composition.innerLabel" class="text-xs text-textSub">总营收</span>
+                            <span data-editable="true" contenteditable="true" data-slot="text.composition.innerValue" class="text-xl font-bold text-textMain">2.60<span class="text-xs">亿</span></span>
+                        </div>
+                    </div>
+                    <div class="mt-auto space-y-3 pt-4 border-t border-gray-100">
+                        <div class="flex justify-between items-center text-sm">
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-[#3B82F6] mr-2"></span><span data-editable="true" contenteditable="true" data-slot="text.composition.legend1.label">交易佣金及手续费</span></div>
+                            <span data-editable="true" contenteditable="true" data-slot="text.composition.legend1.value" class="font-bold">47.1%</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-[#14B8A6] mr-2"></span><span data-editable="true" contenteditable="true" data-slot="text.composition.legend2.label">利息收入</span></div>
+                            <span data-editable="true" contenteditable="true" data-slot="text.composition.legend2.value" class="font-bold">43.8%</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-[#8B5CF6] mr-2"></span><span data-editable="true" contenteditable="true" data-slot="text.composition.legend3.label">其他收入</span></div>
+                            <span data-editable="true" contenteditable="true" data-slot="text.composition.legend3.value" class="font-bold">9.1%</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- 拖拽块 4：漏斗、下钻表格 -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Funnel Conversion -->
+                <section data-section="funnel-conversion" class="card p-6 lg:col-span-4">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.funnel.title" class="text-lg font-bold section-title mb-6">客户转化漏斗</h3>
+                    <div class="space-y-6 mt-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span data-editable="true" contenteditable="true" data-slot="text.funnel.step1.label" class="text-textSub font-bold">开户客户 (注册到开户)</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.funnel.step1.value" class="text-textMain font-bold">61.45万人</span>
+                            </div>
+                            <div class="w-full bg-gray-100 h-3 rounded-none overflow-hidden">
+                                <div class="bg-primary h-3" style="width: 100%"></div>
+                            </div>
+                            <p data-editable="true" contenteditable="true" data-slot="text.funnel.step1.note" class="text-xs text-textMute mt-1 text-right">基准 100%</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span data-editable="true" contenteditable="true" data-slot="text.funnel.step2.label" class="text-textSub font-bold">有资产客户 (开户到入金)</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.funnel.step2.value" class="text-textMain font-bold">16.5万人</span>
+                            </div>
+                            <div class="w-full bg-gray-100 h-3 rounded-none overflow-hidden">
+                                <div class="bg-[#3B82F6] h-3" style="width: 26.8%"></div>
+                            </div>
+                            <p data-editable="true" contenteditable="true" data-slot="text.funnel.step2.note" class="text-xs text-textMute mt-1 text-right">转化率 26.8%</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span data-editable="true" contenteditable="true" data-slot="text.funnel.step3.label" class="text-textSub font-bold">活跃交易客户</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.funnel.step3.value" class="text-textMain font-bold">10.86万人</span>
+                            </div>
+                            <div class="w-full bg-gray-100 h-3 rounded-none overflow-hidden">
+                                <div class="bg-accent h-3" style="width: 17.6%"></div>
+                            </div>
+                            <p data-editable="true" contenteditable="true" data-slot="text.funnel.step3.note" class="text-xs text-textMute mt-1 text-right">转化率 17.6% (高净值留存98.1%)</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Leaderboard Table -->
+                <section data-section="leaderboard-table" class="card lg:col-span-8 flex flex-col">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.leaderboard.title" class="text-lg font-bold section-title">Top 5 核心业务线增长表现</h3>
+                        <button class="text-sm text-primary hover:underline">导出 Excel</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-textSub">
+                                <tr>
+                                    <th class="px-6 py-3 font-semibold">排名</th>
+                                    <th class="px-6 py-3 font-semibold">业务线名称</th>
+                                    <th class="px-6 py-3 font-semibold">Q3 营收 (万美元)</th>
+                                    <th class="px-6 py-3 font-semibold">环比增长</th>
+                                    <th class="px-6 py-3 font-semibold">战略优先级</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="px-6 py-4 font-bold text-primary">1</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row1.name" class="px-6 py-4 font-semibold">美股经纪业务 (To C)</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row1.rev" class="px-6 py-4">12,500</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row1.growth" class="px-6 py-4 text-accent font-bold">+ 42.1%</td>
+                                    <td class="px-6 py-4"><span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-sm">P0</span></td>
+                                </tr>
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="px-6 py-4 font-bold text-primary">2</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row2.name" class="px-6 py-4 font-semibold">融资融券服务 (To C)</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row2.rev" class="px-6 py-4">8,200</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row2.growth" class="px-6 py-4 text-accent font-bold">+ 50.5%</td>
+                                    <td class="px-6 py-4"><span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-sm">P0</span></td>
+                                </tr>
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="px-6 py-4 text-textMute font-bold">3</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row3.name" class="px-6 py-4 font-semibold">企业 ESOP 计划 (To B)</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row3.rev" class="px-6 py-4">3,100</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row3.growth" class="px-6 py-4 text-accent font-bold">+ 115.0%</td>
+                                    <td class="px-6 py-4"><span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-sm">P1</span></td>
+                                </tr>
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="px-6 py-4 text-textMute font-bold">4</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row4.name" class="px-6 py-4 font-semibold">财富管理 / 现金宝</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row4.rev" class="px-6 py-4">1,400</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row4.growth" class="px-6 py-4 text-green-600 font-bold">- 5.2%</td>
+                                    <td class="px-6 py-4"><span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-sm">P1</span></td>
+                                </tr>
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="px-6 py-4 text-textMute font-bold">5</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row5.name" class="px-6 py-4 font-semibold">IPO 分销 (To B)</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row5.rev" class="px-6 py-4">800</td>
+                                    <td data-editable="true" contenteditable="true" data-slot="text.leaderboard.row5.growth" class="px-6 py-4 text-accent font-bold">+ 12.0%</td>
+                                    <td class="px-6 py-4"><span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-sm">P2</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- 拖拽块 5：多维混合模块 -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Text Insights / Resource -->
+                <section data-section="resource-allocation" class="card bg-primary text-white p-6 border-none flex flex-col justify-between">
+                    <div>
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.resource.title" class="text-lg font-bold mb-2">坚持高研发投入策略</h3>
+                        <p data-editable="true" contenteditable="true" data-slot="text.resource.subtitle" class="text-sm text-blue-200 mb-6">深化自研系统创新，建立核心技术壁垒</p>
+                        <div class="text-xs text-blue-300 uppercase tracking-wider mb-1">Q3 研发投入总额</div>
+                        <div data-editable="true" contenteditable="true" data-slot="text.resource.value" class="text-4xl font-bold text-white mb-2">6370 <span class="text-base font-normal text-blue-200">万港元</span></div>
+                        <div class="inline-block px-2 py-1 bg-white/20 text-white text-xs mb-6">+ 82.5% YoY</div>
+                    </div>
+                    <div class="pt-4 border-t border-white/20">
+                        <p data-editable="true" contenteditable="true" data-slot="text.resource.content" class="text-sm text-blue-100 leading-relaxed">研发投入主要源于：研发团队人员的扩充、平台矩阵建设及系统安全的持续维护。本季度全国首家提供美股期权毫秒级深度报价，刷新速度远高于同行。</p>
+                    </div>
+                </section>
+
+                <!-- Geo Distribution -->
+                <section data-section="geo-distribution" class="card p-6">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.geo.title" class="text-lg font-bold section-title mb-6">全球化效能凸显 (牌照与资产分布)</h3>
+                    <div class="h-[200px] w-full">
+                        <canvas id="chart-geo"></canvas>
+                    </div>
+                    <p data-editable="true" contenteditable="true" data-slot="text.geo.note" class="text-xs text-textMute mt-4 text-center">持有 17 张金融牌照，覆盖美国、泛欧、香港、新加坡</p>
+                </section>
+
+                <!-- Target Achievement -->
+                <section data-section="target-achievement" class="card p-6">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.target.title" class="text-lg font-bold section-title mb-6">年度 OKR 目标达成率</h3>
+                    
+                    <div class="mb-6">
+                        <div class="flex justify-between text-sm mb-2">
+                            <span data-editable="true" contenteditable="true" data-slot="text.target.goal1.label" class="font-semibold">营收目标 ($10亿)</span>
+                            <span data-editable="true" contenteditable="true" data-slot="text.target.goal1.value" class="font-bold text-primary">78%</span>
+                        </div>
+                        <div class="w-full bg-gray-100 h-2">
+                            <div class="bg-primary h-2" style="width: 78%"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="flex justify-between text-sm mb-2">
+                            <span data-editable="true" contenteditable="true" data-slot="text.target.goal2.label" class="font-semibold">新增高净值客户 (20万)</span>
+                            <span data-editable="true" contenteditable="true" data-slot="text.target.goal2.value" class="font-bold text-accent">105%</span>
+                        </div>
+                        <div class="w-full bg-gray-100 h-2 relative">
+                            <div class="bg-accent h-2" style="width: 100%"></div>
+                            <div class="absolute top-[-4px] left-[100%] w-1 h-4 bg-red-600"></div>
+                            <p class="text-[10px] text-accent mt-1 text-right">超额完成 (Overachieved)</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span data-editable="true" contenteditable="true" data-slot="text.target.goal3.label" class="font-semibold">新市场牌照获取 (5张)</span>
+                            <span data-editable="true" contenteditable="true" data-slot="text.target.goal3.value" class="font-bold text-yellow-500">40%</span>
+                        </div>
+                        <div class="w-full bg-gray-100 h-2">
+                            <div class="bg-yellow-500 h-2" style="width: 40%"></div>
+                        </div>
+                        <p data-editable="true" contenteditable="true" data-slot="text.target.goal3.note" class="text-xs text-textMute mt-2">受合规审查延长影响，新加坡进度存在延迟风险。</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- 拖拽块：核心发现 (Insight 1) -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+            
+            <section data-section="insight-1" class="card p-6 border-l-4 border-l-primary bg-primaryLight/30 shadow-none">
+                <div class="flex items-center mb-3">
+                    <span data-editable="true" contenteditable="true" data-slot="text.insight1.tag" class="bg-primary text-white text-xs font-bold px-2 py-1 rounded-sm mr-3 tracking-wide">核心发现 01 (Insight)</span>
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.insight1.title" class="text-xl font-bold text-primary">高净值客群的单位经济模型（UE）表现出极强韧性</h3>
+                </div>
+                <p data-editable="true" contenteditable="true" data-slot="text.insight1.desc" class="text-textSub text-sm leading-relaxed">在整体市场周期波动中，虽然前端流量获客成本（CAC）略有攀升，但 AUM > 50 万的核心高净值用户展现出了极高的忠诚度与活跃度。下方的用户画像雷达与 LTV/CAC 趋势图充分印证了这一点：通过提供深度的全球化资产配置与衍生品工具，单客生命周期价值（LTV）仍有巨大深挖空间。</p>
+            </section>
+        </div>
+
+        <!-- 拖拽块 6：用户画像 (雷达) + 单位经济模型 (双轴图) -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- User Persona -->
+                <section data-section="user-persona" class="card p-6 lg:col-span-4 flex flex-col">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.persona.title" class="text-lg font-bold section-title mb-2">核心高净值用户画像</h3>
+                    <p data-editable="true" contenteditable="true" data-slot="text.persona.subtitle" class="text-xs text-textMute mb-4">基于 Q3 新增 AUM > 50万 客户群体采样</p>
+                    <div class="flex-grow w-full h-[250px]">
+                        <canvas id="chart-persona-radar"></canvas>
+                    </div>
+                </section>
+
+                <!-- Unit Economics -->
+                <section data-section="unit-economics" class="card p-6 lg:col-span-8 flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.unit.title" class="text-lg font-bold section-title">单位经济模型 (LTV vs CAC)</h3>
+                        <div class="flex items-center space-x-4 text-sm">
+                            <span class="flex items-center"><span class="w-3 h-3 bg-primaryLight border border-primary mr-2"></span><span data-editable="true" contenteditable="true" data-slot="text.unit.legend.cac">获客成本 (CAC)</span></span>
+                            <span class="flex items-center"><span class="w-3 h-1 bg-accent mr-2"></span><span data-editable="true" contenteditable="true" data-slot="text.unit.legend.ltv">单客生命周期价值 (LTV)</span></span>
+                        </div>
+                    </div>
+                    <div class="flex-grow w-full h-[250px]">
+                        <canvas id="chart-unit-econ"></canvas>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- 拖拽块：核心发现 (Insight 2) -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+            
+            <section data-section="insight-2" class="card p-6 border-l-4 border-l-accent bg-orange-50/50 shadow-none">
+                <div class="flex items-center mb-3">
+                    <span data-editable="true" contenteditable="true" data-slot="text.insight2.tag" class="bg-accent text-white text-xs font-bold px-2 py-1 rounded-sm mr-3 tracking-wide">核心发现 02 (Insight)</span>
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.insight2.title" class="text-xl font-bold text-accent">B端业务成为新增长引擎，但需严守风控红线</h3>
+                </div>
+                <p data-editable="true" contenteditable="true" data-slot="text.insight2.desc" class="text-textSub text-sm leading-relaxed">波士顿矩阵显示，企业 ESOP 业务不仅增速最快（同比+115%），且正向“明星业务”象限演进，表明我们的 To B 战略正在奏效。然而，随着体量的急速膨胀，反洗钱（AML）等合规指标压力剧增。下方的矩阵与风控监控大盘提示我们，在高速扩张的同时，必须通过 AI 技术强化底层安全架构。</p>
+            </section>
+        </div>
+
+        <!-- 拖拽块 7：波士顿矩阵 (气泡图) + 核心风控指标 (纯文本数据) -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Growth Matrix -->
+                <section data-section="growth-matrix" class="card p-6 lg:col-span-8 flex flex-col">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.matrix.title" class="text-lg font-bold section-title mb-2">业务线增长与份额矩阵 (波士顿矩阵)</h3>
+                    <p data-editable="true" contenteditable="true" data-slot="text.matrix.subtitle" class="text-xs text-textMute mb-6">气泡大小代表该业务营收规模。右上角为“明星”业务。</p>
+                    <div class="flex-grow w-full h-[300px]">
+                        <canvas id="chart-growth-matrix"></canvas>
+                    </div>
+                </section>
+
+                <!-- Risk Metrics -->
+                <section data-section="risk-metrics" class="card p-6 lg:col-span-4 bg-gray-900 text-white border-none flex flex-col">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.risk.title" class="text-lg font-bold mb-6 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        核心风控与合规水位
+                    </h3>
+                    <div class="space-y-5 flex-grow">
+                        <div class="pb-3 border-b border-gray-700">
+                            <div class="flex justify-between text-sm text-gray-400 mb-1">
+                                <span data-editable="true" contenteditable="true" data-slot="text.risk.item1.label">融资融券平仓率</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.risk.item1.status" class="text-green-400 font-bold">良好</span>
+                            </div>
+                            <div data-editable="true" contenteditable="true" data-slot="text.risk.item1.value" class="text-2xl font-bold text-white">0.02% <span class="text-xs text-gray-500 font-normal ml-2">基准线 < 0.1%</span></div>
+                        </div>
+                        <div class="pb-3 border-b border-gray-700">
+                            <div class="flex justify-between text-sm text-gray-400 mb-1">
+                                <span data-editable="true" contenteditable="true" data-slot="text.risk.item2.label">系统可用性 (SLA)</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.risk.item2.status" class="text-green-400 font-bold">达标</span>
+                            </div>
+                            <div data-editable="true" contenteditable="true" data-slot="text.risk.item2.value" class="text-2xl font-bold text-white">99.995% <span class="text-xs text-gray-500 font-normal ml-2">交易早盘无宕机</span></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm text-gray-400 mb-1">
+                                <span data-editable="true" contenteditable="true" data-slot="text.risk.item3.label">反洗钱 (AML) 命中率</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.risk.item3.status" class="text-yellow-500 font-bold">监控中</span>
+                            </div>
+                            <div data-editable="true" contenteditable="true" data-slot="text.risk.item3.value" class="text-2xl font-bold text-white">1.14% <span class="text-xs text-gray-500 font-normal ml-2">环比上升 0.2%</span></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- 拖拽块 8：竞品对比堆叠图 与 战略洞察 -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                 <!-- Market Position -->
+                <section data-section="market-position" class="card p-6">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.market.title" class="text-lg font-bold section-title mb-6">头部机构交易量份额占比演变</h3>
+                    <div class="w-full h-[250px]">
+                        <canvas id="chart-market-share"></canvas>
+                    </div>
+                </section>
+                
+                <!-- Custom Insight -->
+                <section data-section="strategic-insight" class="card p-6 flex flex-col justify-center items-start bg-primaryLight border-primary/20">
+                    <div class="bg-primary text-white text-xs font-bold px-2 py-1 rounded-sm mb-4 uppercase tracking-wide">CEO 办公室战略寄语</div>
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.insight.quote" class="text-2xl font-bold text-primary mb-4 leading-snug">"在剧烈波动的市场中，我们凭借极致的产研效率与风控纪律，逆势夺取了更大的定价权。"</h3>
+                    <p data-editable="true" contenteditable="true" data-slot="text.insight.content" class="text-textSub leading-relaxed text-sm">下个季度，各业务线需在确保合规底线的基础上，进一步下探下沉市场，利用财富管理工具形成产品矩阵的交叉销售，将 LTV 提升至全新水位。</p>
+                    <button class="mt-6 px-6 py-2 bg-primary text-white text-sm font-semibold rounded-sm hover:bg-blue-800 transition-colors">查看详细战略部署</button>
+                </section>
+            </div>
+        </div>
+
+        <!-- 拖拽块 9：总结与行动计划 -->
+        <div class="sortable-block group relative">
+            <div class="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity drag-handle p-1 text-gray-400 hover:text-primary z-50" title="拖拽排序">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path></svg>
+            </div>
+            
+            <section data-section="final-conclusion" class="card p-8 bg-[#F8FAFC] border-none shadow-inner">
+                <h2 data-editable="true" contenteditable="true" data-slot="text.conclusion.title" class="text-xl font-bold mb-6 text-textMain">报告总结与下一步行动计划 (Next Steps)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-5 border border-gray-200 rounded-sm">
+                        <div class="flex items-center mb-3">
+                            <span class="flex items-center justify-center w-6 h-6 bg-blue-100 text-primary font-bold rounded-full text-xs mr-3">1</span>
+                            <h4 data-editable="true" contenteditable="true" data-slot="text.conclusion.step1.title" class="font-bold text-sm">聚焦高净值客户转化</h4>
+                        </div>
+                        <p data-editable="true" contenteditable="true" data-slot="text.conclusion.step1.desc" class="text-xs text-textSub leading-relaxed">基于漏斗分析结果，下季度将调拨 30% 市场预算，定向拉升 AUM>100万 的目标客群，降低单客 CAC。</p>
+                    </div>
+                    <div class="bg-white p-5 border border-gray-200 rounded-sm">
+                        <div class="flex items-center mb-3">
+                            <span class="flex items-center justify-center w-6 h-6 bg-orange-100 text-accent font-bold rounded-full text-xs mr-3">2</span>
+                            <h4 data-editable="true" contenteditable="true" data-slot="text.conclusion.step2.title" class="font-bold text-sm">推进新加坡牌照落地</h4>
+                        </div>
+                        <p data-editable="true" contenteditable="true" data-slot="text.conclusion.step2.desc" class="text-xs text-textSub leading-relaxed">成立专项合规应对小组，确保在 Q4 结束前完成新加坡金融管理局 (MAS) 的最终审计，打通东南亚资产通道。</p>
+                    </div>
+                    <div class="bg-white p-5 border border-gray-200 rounded-sm">
+                        <div class="flex items-center mb-3">
+                            <span class="flex items-center justify-center w-6 h-6 bg-purple-100 text-purple-600 font-bold rounded-full text-xs mr-3">3</span>
+                            <h4 data-editable="true" contenteditable="true" data-slot="text.conclusion.step3.title" class="font-bold text-sm">深化 B 端服务变现</h4>
+                        </div>
+                        <p data-editable="true" contenteditable="true" data-slot="text.conclusion.step3.desc" class="text-xs text-textSub leading-relaxed">利用 ESOP 系统的市占率优势（波士顿矩阵明星业务），针对准上市企业推出“股权管理+IPO分销”的捆绑套餐。</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- 图表初始化及拖拽初始化脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // --- 1. 拖拽功能初始化 (SortableJS) ---
+            const el = document.getElementById('report-canvas');
+            if (el) {
+                Sortable.create(el, {
+                    handle: '.drag-handle',
+                    animation: 250,
+                    ghostClass: 'sortable-ghost',
+                    easing: "cubic-bezier(1, 0, 0, 1)",
+                    onEnd: function (evt) {
+                        console.log('拖拽完成！节点顺序已更新。从', evt.oldIndex, '移到了', evt.newIndex);
+                    }
+                });
+            }
+
+            // --- 2. Chart.js 图表渲染逻辑 ---
+            const colors = {
+                blue: '#0047AB',
+                lightBlue: '#3B82F6',
+                cyan: '#14B8A6',
+                purple: '#8B5CF6',
+                orange: '#EA580C',
+                grayLine: '#E5E7EB',
+                textMain: '#111827',
+                textMute: '#9CA3AF'
+            };
+
+            Chart.defaults.font.family = "'PingFang SC', 'Microsoft YaHei', sans-serif";
+            Chart.defaults.color = colors.textMute;
+
+            // 1. 趋势分析折线图
+            const canvasTrend = document.getElementById('chart-trend');
+            if (canvasTrend) {
+                new Chart(canvasTrend.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: ['Q1 2022', 'Q2 2022', 'Q3 2022', 'Q4 2022', 'Q1 2023', 'Q2 2023', 'Q3 2023'],
+                        datasets: [
+                            {
+                                label: '总营收 (亿港元)',
+                                data: [1.3, 1.4, 1.8, 1.9, 2.1, 2.3, 2.6],
+                                borderColor: colors.blue,
+                                backgroundColor: 'rgba(0, 71, 171, 0.1)',
+                                borderWidth: 3,
+                                tension: 0.3,
+                                fill: true,
+                                pointBackgroundColor: '#fff',
+                                pointBorderColor: colors.blue,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: '毛利 (亿港元)',
+                                data: [0.9, 1.0, 1.2, 1.3, 1.5, 1.7, 1.96],
+                                borderColor: colors.cyan,
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                tension: 0.3,
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8 } }
+                        },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { grid: { color: colors.grayLine, borderDash: [2, 2] }, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+
+            // 2. 结构占比环形图
+            const canvasComp = document.getElementById('chart-composition');
+            if (canvasComp) {
+                new Chart(canvasComp.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['交易佣金及手续费', '利息收入', '其他收入'],
+                        datasets: [{
+                            data: [47.1, 43.8, 9.1],
+                            backgroundColor: [colors.lightBlue, colors.cyan, colors.purple],
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%', 
+                        plugins: {
+                            legend: { display: false }, 
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return ' ' + context.label + ': ' + context.parsed + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 3. 地域分布条形图
+            const canvasGeo = document.getElementById('chart-geo');
+            if (canvasGeo) {
+                new Chart(canvasGeo.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['中国香港', '美国', '泛欧地区', '新加坡'],
+                        datasets: [{
+                            label: '持有金融牌照数量',
+                            data: [11, 2, 2, 2],
+                            backgroundColor: colors.lightBlue,
+                            borderRadius: 2
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y', 
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { color: colors.grayLine, borderDash: [2, 2] }, beginAtZero: true },
+                            y: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+
+            // 4. 用户画像雷达图
+            const canvasRadar = document.getElementById('chart-persona-radar');
+            if (canvasRadar) {
+                new Chart(canvasRadar.getContext('2d'), {
+                    type: 'radar',
+                    data: {
+                        labels: ['风险偏好', '高频交易', '衍生品参与', '全球化资产', '社区活跃'],
+                        datasets: [{
+                            label: '本季新增核心用户',
+                            data: [85, 70, 65, 90, 50],
+                            backgroundColor: 'rgba(0, 71, 171, 0.2)',
+                            borderColor: colors.blue,
+                            pointBackgroundColor: colors.blue,
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: colors.blue
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            r: {
+                                angleLines: { color: colors.grayLine },
+                                grid: { color: colors.grayLine },
+                                pointLabels: { font: { family: "'PingFang SC', sans-serif" }, color: colors.textSub },
+                                ticks: { display: false, min: 0, max: 100 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 5. 单位经济模型双轴图
+            const canvasUnit = document.getElementById('chart-unit-econ');
+            if (canvasUnit) {
+                new Chart(canvasUnit.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Q1', 'Q2', 'Q3', 'Q4(E)'],
+                        datasets: [
+                            {
+                                type: 'line',
+                                label: 'LTV (美元)',
+                                data: [450, 480, 520, 560],
+                                borderColor: colors.orange,
+                                borderWidth: 3,
+                                tension: 0.3,
+                                pointBackgroundColor: '#fff',
+                                pointBorderColor: colors.orange,
+                                yAxisID: 'y'
+                            },
+                            {
+                                type: 'bar',
+                                label: 'CAC (美元)',
+                                data: [120, 115, 95, 90],
+                                backgroundColor: colors.primaryLight,
+                                borderColor: colors.blue,
+                                borderWidth: 1,
+                                barThickness: 40,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }, 
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { position: 'left', grid: { color: colors.grayLine, borderDash: [2,2] }, title: {display: true, text: 'LTV'} },
+                            y1: { position: 'right', grid: { display: false }, title: {display: true, text: 'CAC'} }
+                        }
+                    }
+                });
+            }
+
+            // 6. 业务健康度气泡矩阵
+            const canvasBubble = document.getElementById('chart-growth-matrix');
+            if (canvasBubble) {
+                new Chart(canvasBubble.getContext('2d'), {
+                    type: 'bubble',
+                    data: {
+                        datasets: [
+                            { label: '美股经纪', data: [{x: 45, y: 60, r: 25}], backgroundColor: 'rgba(0, 71, 171, 0.7)' },
+                            { label: '财富管理', data: [{x: 15, y: 85, r: 15}], backgroundColor: 'rgba(234, 88, 12, 0.7)' },
+                            { label: '期权衍生品', data: [{x: 25, y: 40, r: 12}], backgroundColor: 'rgba(139, 92, 246, 0.7)' },
+                            { label: '企业 ESOP', data: [{x: 10, y: 110, r: 8}], backgroundColor: 'rgba(20, 184, 166, 0.7)' }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 6 } } },
+                        scales: {
+                            x: { title: { display: true, text: '市场占有率 (%)' }, grid: { color: colors.grayLine, borderDash: [2,2] } },
+                            y: { title: { display: true, text: '同比增速 (%)' }, grid: { color: colors.grayLine, borderDash: [2,2] } }
+                        }
+                    }
+                });
+            }
+
+            // 7. 市场份额堆叠条形图
+            const canvasShare = document.getElementById('chart-market-share');
+            if (canvasShare) {
+                new Chart(canvasShare.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Q1', 'Q2', 'Q3'],
+                        datasets: [
+                            { label: '本集团 (Our Market Share)', data: [15, 18, 22], backgroundColor: colors.blue },
+                            { label: '竞对 A', data: [35, 33, 30], backgroundColor: '#9CA3AF' },
+                            { label: '竞对 B', data: [20, 19, 18], backgroundColor: '#D1D5DB' },
+                            { label: '其他', data: [30, 30, 30], backgroundColor: '#F3F4F6' }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y', 
+                        scales: {
+                            x: { stacked: true, grid: { color: colors.grayLine, borderDash: [2,2] }, max: 100 },
+                            y: { stacked: true, grid: { display: false } }
+                        },
+                        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

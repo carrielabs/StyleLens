@@ -1,0 +1,202 @@
+{
+  "id": "dashboard-07-dark-bento-analytics",
+  "name": "Dark Bento Analytics 暗黑科技全景数据看板",
+  "templateName": "DarkBentoAnalyticsDashboardTemplate",
+  "version": "1.0.0",
+  "description": "暗黑科技 Bento Grid 风格的数据报告模板，采用 15 卡片全景分析结构，适合经营分析、竞品分析、商业化漏斗、管理层 BI 看板和 Excel 数据报告可视化。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "bi-dashboard",
+    "business-review",
+    "competitive-analysis"
+  ],
+  "styleTags": [
+    "dark-bento",
+    "cyber-dark",
+    "executive-dashboard",
+    "bento-grid",
+    "tooltip-rich",
+    "high-density"
+  ],
+  "deliveryType": "scrolling-site",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "经营分析",
+    "竞品分析",
+    "商业化漏斗",
+    "管理层 BI 看板",
+    "Excel 数据报告可视化"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "Font Awesome CDN",
+    "Motion CDN",
+    "Native SVG",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#000000",
+      "cardBg": "#111111",
+      "cardBorder": "#262626",
+      "cardBorderHover": "#444444",
+      "primary": "#E31937",
+      "tooltipBg": "rgba(34, 34, 34, 0.95)",
+      "tooltipBorder": "#444444"
+    },
+    "fonts": {
+      "body": "system-ui, PingFang SC, Microsoft YaHei, sans-serif",
+      "mono": "SFMono-Regular, Consolas, Menlo, ui-monospace, monospace"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "hoverInteractions": true,
+    "tooltipDataPanels": true,
+    "showHideSections": true
+  },
+  "supportedSections": {
+    "key-takeaways": {
+      "desc": "置顶高管摘要，包含三个核心业务结论",
+      "required": true,
+      "hideable": false
+    },
+    "market-overview": {
+      "desc": "北极星指标大盘，包含趋势图、数据切片和 tooltip",
+      "required": true,
+      "hideable": false
+    },
+    "metric-card-1": {
+      "desc": "总营收指标卡",
+      "required": true,
+      "hideable": true
+    },
+    "metric-card-2": {
+      "desc": "MAU 指标卡",
+      "required": true,
+      "hideable": true
+    },
+    "funnel-analysis": {
+      "desc": "商业化转化漏斗",
+      "required": true,
+      "hideable": true
+    },
+    "bar-chart": {
+      "desc": "月度营收柱状图",
+      "required": true,
+      "hideable": true
+    },
+    "multi-line-chart": {
+      "desc": "核心流量多线对比图",
+      "required": true,
+      "hideable": true
+    },
+    "quadrant-analysis": {
+      "desc": "波士顿业务矩阵",
+      "required": true,
+      "hideable": true
+    },
+    "activity-heatmap": {
+      "desc": "高频活跃热力图",
+      "required": true,
+      "hideable": true
+    },
+    "revenue-donut": {
+      "desc": "业务营收占比环形图",
+      "required": true,
+      "hideable": true
+    },
+    "unit-economics": {
+      "desc": "UE 单元经济模型",
+      "required": true,
+      "hideable": true
+    },
+    "attribution-waterfall": {
+      "desc": "异动归因瀑布图",
+      "required": true,
+      "hideable": true
+    },
+    "ab-testing": {
+      "desc": "A/B 实验对比",
+      "required": true,
+      "hideable": true
+    },
+    "radar-chart": {
+      "desc": "能力雷达图",
+      "required": true,
+      "hideable": true
+    },
+    "realtime-alerts": {
+      "desc": "实时监控与预警池",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "editable_text": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字，已补齐 data-slot 和 contenteditable"
+    },
+    "tooltip_panels": {
+      "type": "array",
+      "selector": ".ui-tooltip",
+      "desc": "所有 hover 数据面板，填充图表数据时必须同步更新 data-tooltip-slot 对应文本"
+    },
+    "chart_sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "15 个核心数据模块及 header、bento-grid 容器"
+    }
+  },
+  "slotLimits": {
+    "section-title": 24,
+    "metric-value": 16,
+    "metric-label": 28,
+    "takeaway-text": 120,
+    "tooltip-text": 80,
+    "alert-text": 48
+  },
+  "llmInjectionRules": [
+    "填充波士顿矩阵时，必须同步更新散点位置、颜色类名和内部 .ui-tooltip 文本。",
+    "填充热力图时，必须同步更新热力方块颜色类名和内部 .ui-tooltip 文本。",
+    "带背景趋势图的卡片不得把核心数字绝对定位覆盖在图表上，应保持标题、关键数字和图表区域物理隔离。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "tooltipSlotsAdded": true,
+    "sectionCount": 15,
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png。"
+  },
+  "editorTheme": {
+    "defaultColor": "#e31937",
+    "presets": [
+      "#e31937",
+      "#ffffff",
+      "#38bdf8",
+      "#22c55e",
+      "#fbbf24",
+      "#7c3aed"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-tesla-red\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-tesla-red\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-tesla-red\"]",
+        "[class*=\"border-l-tesla-red\"]"
+      ]
+    }
+  }
+}

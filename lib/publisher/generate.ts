@@ -11,10 +11,28 @@ const WEBSITE_TEMPLATES = new Set([
   'website-09-blue-shift-portfolio',
 ])
 
+const DASHBOARD_TEMPLATES = new Set([
+  'dashboard-01-blue-business',
+  'dashboard-02-premium-dark',
+  'dashboard-03-lean-cyber-analytics',
+  'dashboard-04-premium-midnight',
+  'dashboard-05-premium-cyber-dark',
+  'dashboard-06-warm-paper-analytics',
+  'dashboard-07-dark-bento-analytics',
+  'dashboard-08-saas-executive-analytics',
+  'dashboard-09-editorial-corporate-analytics',
+  'dashboard-10-executive-logic-report',
+  'dashboard-11-saas-growth-health-report',
+  'dashboard-12-atomic-bento-strategy-report',
+  'dashboard-13-corporate-blue-analytics-report',
+  'dashboard-14-financial-blue-analytics-report',
+  'dashboard-15-consulting-data-report',
+])
+
 type WebsiteEngine = {
   buildHtmlFromText(options: {
     text: string
-    type: 'product-website'
+    type: 'product-website' | 'dashboard'
     template: string
   }): Promise<string>
 }
@@ -22,16 +40,22 @@ type WebsiteEngine = {
 export async function buildProductWebsiteHtml(options: {
   sourceText: string
   templateId: string
+  pageType?: 'product-website' | 'dashboard'
 }): Promise<PublisherResult> {
-  const templateId = options.templateId || 'website-01-fui'
-  if (!WEBSITE_TEMPLATES.has(templateId)) {
-    throw new Error('第一版只支持官网模板')
+  const pageType = options.pageType || 'product-website'
+  const templateId = options.templateId || (pageType === 'dashboard' ? 'dashboard-01-blue-business' : 'website-01-fui')
+
+  if (pageType === 'product-website' && !WEBSITE_TEMPLATES.has(templateId)) {
+    throw new Error('产品官网只能使用官网模板')
+  }
+  if (pageType === 'dashboard' && !DASHBOARD_TEMPLATES.has(templateId)) {
+    throw new Error('dashboard 只能使用 dashboard 模板')
   }
 
   const { buildHtmlFromText } = await import('./website-engine.mjs') as WebsiteEngine
   const html = await buildHtmlFromText({
     text: options.sourceText,
-    type: 'product-website',
+    type: pageType,
     template: templateId,
   })
 

@@ -1,0 +1,185 @@
+{
+  "id": "dashboard-06-warm-paper-analytics",
+  "name": "Warm Paper Analytics 暖纸质感数据报告看板",
+  "templateName": "WarmPaperAnalyticsDashboardTemplate",
+  "version": "1.0.0",
+  "description": "暖调纸质感、多页报告式数据分析模板，适合年度经营分析、业务复盘、趋势预测和管理层汇报。",
+  "pageTypes": [
+    "data-report",
+    "executive-dashboard",
+    "bi-dashboard",
+    "annual-report",
+    "forecast-report"
+  ],
+  "styleTags": [
+    "warm-paper",
+    "minimalist",
+    "paper-art",
+    "muted-accent",
+    "deck-site"
+  ],
+  "deliveryType": "deck-site",
+  "interactionMode": "editable-report",
+  "contentCapacity": "high",
+  "bestFor": [
+    "年度经营分析",
+    "管理层汇报",
+    "业务复盘",
+    "Excel 数据报告可视化",
+    "趋势预测报告"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "Google Fonts CDN",
+    "Native SVG"
+  ],
+  "theme": {
+    "colors": {
+      "pageBackground": "#E5E0D8",
+      "paper": "#F4F1EB",
+      "ink": "#111111",
+      "muted": "#666666",
+      "lime": "#D0F49D",
+      "purple": "#C9D6FA",
+      "yellow": "#FDF08A",
+      "pink": "#FBCFE8"
+    },
+    "fonts": {
+      "body": "Inter, PingFang SC, Microsoft YaHei, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": false,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "printToPdf": true
+  },
+  "supportedSections": {
+    "cover": {
+      "desc": "报告封面、年份、主题、团队、日期和作者信息",
+      "required": true,
+      "hideable": false
+    },
+    "highlights": {
+      "desc": "年度高光 KPI 四宫格",
+      "required": true,
+      "hideable": false
+    },
+    "team": {
+      "desc": "团队战绩和部门贡献",
+      "required": true,
+      "hideable": true
+    },
+    "delivery": {
+      "desc": "重点业务交付、项目质量和进度",
+      "required": true,
+      "hideable": true
+    },
+    "funnel": {
+      "desc": "全链路用户转化漏斗",
+      "required": true,
+      "hideable": true
+    },
+    "forecast": {
+      "desc": "历史趋势和预测走势 SVG 图表",
+      "required": true,
+      "hideable": true
+    },
+    "action": {
+      "desc": "策略诊断建议和行动部署",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "schema": {
+    "metadata": {
+      "type": "object",
+      "slots": [
+        "cover-year",
+        "cover-title",
+        "cover-subtitle",
+        "cover-date",
+        "cover-team",
+        "cover-author"
+      ],
+      "desc": "报告封面与基础信息"
+    },
+    "highlights": {
+      "type": "array",
+      "selector": "[data-section=\"highlights\"] [data-editable=\"true\"]",
+      "desc": "高光 KPI 卡片，包含 title、value、desc、color"
+    },
+    "team": {
+      "type": "array",
+      "selector": "[data-section=\"team\"] [data-editable=\"true\"]",
+      "desc": "团队贡献条目"
+    },
+    "delivery": {
+      "type": "array",
+      "selector": "[data-section=\"delivery\"] [data-editable=\"true\"]",
+      "desc": "项目交付条目"
+    },
+    "funnel": {
+      "type": "object",
+      "slots": [
+        "funnel-title"
+      ],
+      "desc": "转化漏斗阶段、数量、转化率和洞察"
+    },
+    "forecast": {
+      "type": "svg",
+      "slots": [
+        "forecast-title"
+      ],
+      "desc": "趋势预测标题和 SVG 折线图"
+    },
+    "actions": {
+      "type": "array",
+      "selector": "[data-section=\"action\"] [data-editable=\"true\"]",
+      "desc": "行动建议卡片"
+    }
+  },
+  "slotLimits": {
+    "cover-title": 24,
+    "cover-subtitle": 60,
+    "cover-team": 18,
+    "card-title": 18,
+    "card-desc": 48,
+    "action-desc": 120
+  },
+  "audit": {
+    "sourceFileArchived": true,
+    "outerShellRemoved": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png。"
+  },
+  "editorTheme": {
+    "defaultColor": "#d0f49d",
+    "presets": [
+      "#d0f49d",
+      "#c9d6fa",
+      "#fdf08a",
+      "#fbcfe8",
+      "#38bdf8",
+      "#f97316"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-green\"]",
+        "[class*=\"text-purple\"]"
+      ],
+      "backgroundSelectors": [
+        "[style*=\"#D0F49D\"]",
+        "[style*=\"#d0f49d\"]"
+      ],
+      "borderSelectors": [
+        "[style*=\"#D0F49D\"]",
+        "[style*=\"#d0f49d\"]"
+      ]
+    }
+  }
+}

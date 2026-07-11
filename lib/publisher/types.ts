@@ -1,4 +1,4 @@
-export type PublisherPageType = 'product-website'
+export type PublisherPageType = 'product-website' | 'dashboard'
 
 export interface GenerateProductWebsiteOptions {
   sourceText: string

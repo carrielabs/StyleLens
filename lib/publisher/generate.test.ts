@@ -16,6 +16,24 @@ const WEBSITE_TEMPLATES = [
   'website-09-blue-shift-portfolio',
 ]
 
+const DASHBOARD_TEMPLATES = [
+  'dashboard-01-blue-business',
+  'dashboard-02-premium-dark',
+  'dashboard-03-lean-cyber-analytics',
+  'dashboard-04-premium-midnight',
+  'dashboard-05-premium-cyber-dark',
+  'dashboard-06-warm-paper-analytics',
+  'dashboard-07-dark-bento-analytics',
+  'dashboard-08-saas-executive-analytics',
+  'dashboard-09-editorial-corporate-analytics',
+  'dashboard-10-executive-logic-report',
+  'dashboard-11-saas-growth-health-report',
+  'dashboard-12-atomic-bento-strategy-report',
+  'dashboard-13-corporate-blue-analytics-report',
+  'dashboard-14-financial-blue-analytics-report',
+  'dashboard-15-consulting-data-report',
+]
+
 const sourceText = [
   '# AI HTML Publisher',
   '',
@@ -115,5 +133,33 @@ describe('generateProductWebsiteHtml', () => {
       process.chdir(originalCwd)
       await rm(tempDir, { recursive: true, force: true })
     }
+  })
+
+  it('generates dashboard HTML from a dashboard template', async () => {
+    const result = await generateProductWebsiteHtml({
+      sourceText: '# 经营数据看板\n\n用于查看核心指标、图表和业务结论。',
+      templateId: 'dashboard-01-blue-business',
+      pageType: 'dashboard',
+    })
+
+    expect(result.title).toBe('经营数据看板')
+    expect(result.templateId).toBe('dashboard-01-blue-business')
+    expect(result.html).toContain('经营数据看板')
+    expect(result.html).toContain('window.REPORT_DATA')
+    expect(result.html).toContain('data-ahp-runtime')
+    expect(result.html).toContain('dashboard-01-blue-business')
+  })
+
+  it.each(DASHBOARD_TEMPLATES)('generates dashboard HTML for %s', async templateId => {
+    const result = await generateProductWebsiteHtml({
+      sourceText: '# 经营数据看板\n\n用于查看核心指标、图表和业务结论。',
+      templateId,
+      pageType: 'dashboard',
+    })
+
+    expect(result.title).toBe('经营数据看板')
+    expect(result.templateId).toBe(templateId)
+    expect(result.html).toContain('经营数据看板')
+    expect(result.html).toContain('data-ahp-runtime')
   })
 })

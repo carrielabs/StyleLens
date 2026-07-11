@@ -9,7 +9,7 @@ import MagicalHeroLogo from './MagicalHeroLogo'
 import type { DisplayStyleReport, HomeHistoryRecord } from '@/lib/types'
 import type { UploadState } from '@/hooks/useExtraction'
 import { detectInputIntent, isTextUpload } from '@/lib/publisher/inputIntent'
-import type { GeneratedPageResult } from '@/hooks/usePublisher'
+import type { GeneratedPageResult, GeneratedPageType } from '@/hooks/usePublisher'
 
 const WEBSITE_TEMPLATES = [
   { id: 'website-01-fui', name: 'FUI' },
@@ -20,6 +20,29 @@ const WEBSITE_TEMPLATES = [
   { id: 'website-07-blueprint-agent-platform', name: 'Blueprint Agent' },
   { id: 'website-08-editorial-apple-tech', name: 'Editorial Apple Tech' },
   { id: 'website-09-blue-shift-portfolio', name: 'Blue Shift Portfolio' },
+]
+
+const DASHBOARD_TEMPLATES = [
+  { id: 'dashboard-01-blue-business', name: 'Blue Business' },
+  { id: 'dashboard-02-premium-dark', name: 'Premium Dark' },
+  { id: 'dashboard-03-lean-cyber-analytics', name: 'Lean Cyber Analytics' },
+  { id: 'dashboard-04-premium-midnight', name: 'Premium Midnight' },
+  { id: 'dashboard-05-premium-cyber-dark', name: 'Premium Cyber Dark' },
+  { id: 'dashboard-06-warm-paper-analytics', name: 'Warm Paper Analytics' },
+  { id: 'dashboard-07-dark-bento-analytics', name: 'Dark Bento Analytics' },
+  { id: 'dashboard-08-saas-executive-analytics', name: 'SaaS Executive' },
+  { id: 'dashboard-09-editorial-corporate-analytics', name: 'Editorial Corporate' },
+  { id: 'dashboard-10-executive-logic-report', name: 'Executive Logic' },
+  { id: 'dashboard-11-saas-growth-health-report', name: 'SaaS Growth Health' },
+  { id: 'dashboard-12-atomic-bento-strategy-report', name: 'Atomic Bento Strategy' },
+  { id: 'dashboard-13-corporate-blue-analytics-report', name: 'Corporate Blue' },
+  { id: 'dashboard-14-financial-blue-analytics-report', name: 'Financial Blue' },
+  { id: 'dashboard-15-consulting-data-report', name: 'Consulting Data' },
+]
+
+const PAGE_TYPES: Array<{ id: GeneratedPageType; name: string }> = [
+  { id: 'product-website', name: '产品官网' },
+  { id: 'dashboard', name: 'Dashboard' },
 ]
 
 interface HomeWorkspaceProps {
@@ -38,7 +61,7 @@ interface HomeWorkspaceProps {
   setError: Dispatch<SetStateAction<string | null>>
   greeting: { prefix: string; name: string } | null
   handleUrlSubmit: (e?: FormEvent) => Promise<void>
-  generatePage: (sourceText: string, templateId: string) => Promise<GeneratedPageResult>
+  generatePage: (sourceText: string, templateId: string, pageType?: GeneratedPageType) => Promise<GeneratedPageResult>
   urlInputRef: RefObject<HTMLInputElement | null>
   url: string
   setUrl: Dispatch<SetStateAction<string>>
@@ -98,11 +121,19 @@ export default function HomeWorkspace({
   extractionPhase,
 }: HomeWorkspaceProps) {
   const [hoveredSection, setHoveredSection] = useState<{ yStart: number; yEnd: number } | null>(null)
+  const [selectedPageType, setSelectedPageType] = useState<GeneratedPageType>('product-website')
   const [selectedTemplateId, setSelectedTemplateId] = useState('website-01-fui')
   const [textUploadFile, setTextUploadFile] = useState<File | null>(null)
   const [textUploadPhase, setTextUploadPhase] = useState<'idle' | 'generating' | 'error'>('idle')
   const isTextUploadActive = Boolean(textUploadFile)
   const isBusy = isExtracting || isGenerating || textUploadPhase === 'generating'
+  const templateOptions = selectedPageType === 'dashboard' ? DASHBOARD_TEMPLATES : WEBSITE_TEMPLATES
+  const shouldShowPublisherOptions = !url.trim() || detectInputIntent(url) === 'generate-page'
+
+  const handlePageTypeChange = (pageType: GeneratedPageType) => {
+    setSelectedPageType(pageType)
+    setSelectedTemplateId(pageType === 'dashboard' ? 'dashboard-01-blue-business' : 'website-01-fui')
+  }
 
   const handleUnifiedSubmit = async (e?: FormEvent) => {
     if (e) e.preventDefault()
@@ -116,7 +147,7 @@ export default function HomeWorkspace({
 
     setError(null)
     try {
-      await generatePage(value, selectedTemplateId)
+      await generatePage(value, selectedTemplateId, selectedPageType)
       setUrl('')
     } catch (err) {
       setError(err instanceof Error ? err.message : '生成失败，请重试')
@@ -129,7 +160,7 @@ export default function HomeWorkspace({
     setTextUploadFile(file)
     setTextUploadPhase('generating')
     try {
-      await generatePage(await file.text(), selectedTemplateId)
+      await generatePage(await file.text(), selectedTemplateId, selectedPageType)
       setTextUploadFile(null)
       setTextUploadPhase('idle')
     } catch (err) {
@@ -361,29 +392,56 @@ export default function HomeWorkspace({
               </div>
             </form>
 
-            {detectInputIntent(url) === 'generate-page' && url.trim() && (
-              <div style={{ margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '12px', color: '#8E8E93', flexShrink: 0 }}>官网模板</span>
-                <select
-                  value={selectedTemplateId}
-                  onChange={e => setSelectedTemplateId(e.target.value)}
-                  disabled={isBusy}
-                  style={{
-                    flex: 1,
-                    height: '34px',
-                    border: '1px solid rgba(0,0,0,0.08)',
-                    borderRadius: '10px',
-                    background: '#FFFFFF',
-                    color: '#1D1D1F',
-                    fontSize: '12px',
-                    padding: '0 10px',
-                    outline: 'none',
-                  }}
-                >
-                  {WEBSITE_TEMPLATES.map(template => (
-                    <option key={template.id} value={template.id}>{template.name}</option>
-                  ))}
-                </select>
+            {shouldShowPublisherOptions && (
+              <div style={{ margin: '0 0 24px', display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '10px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: '#8E8E93', flexShrink: 0 }}>页面类型</span>
+                  <select
+                    aria-label="页面类型"
+                    value={selectedPageType}
+                    onChange={e => handlePageTypeChange(e.target.value as GeneratedPageType)}
+                    disabled={isBusy}
+                    style={{
+                      flex: 1,
+                      height: '34px',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      borderRadius: '10px',
+                      background: '#FFFFFF',
+                      color: '#1D1D1F',
+                      fontSize: '12px',
+                      padding: '0 10px',
+                      outline: 'none',
+                    }}
+                  >
+                    {PAGE_TYPES.map(pageType => (
+                      <option key={pageType.id} value={pageType.id}>{pageType.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: '#8E8E93', flexShrink: 0 }}>模板</span>
+                  <select
+                    aria-label="模板"
+                    value={selectedTemplateId}
+                    onChange={e => setSelectedTemplateId(e.target.value)}
+                    disabled={isBusy}
+                    style={{
+                      flex: 1,
+                      height: '34px',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      borderRadius: '10px',
+                      background: '#FFFFFF',
+                      color: '#1D1D1F',
+                      fontSize: '12px',
+                      padding: '0 10px',
+                      outline: 'none',
+                    }}
+                  >
+                    {templateOptions.map(template => (
+                      <option key={template.id} value={template.id}>{template.name}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
             )}
 
@@ -570,7 +628,7 @@ export default function HomeWorkspace({
                     <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1F', marginBottom: '5px', letterSpacing: '-0.01em' }}>
                       {uploadState === 'dragover' ? '释放以解析' : '点击上传 / 将图片、.md 或 .txt 拖拽至此'}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>图片用于提取风格，Markdown/TXT 用于生成官网</div>
+                    <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>图片用于提取风格，Markdown/TXT 用于生成官网或 Dashboard</div>
                   </div>
                 </>
               )}

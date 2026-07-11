@@ -8,11 +8,13 @@ export interface GeneratedPageResult {
   templateId: string
 }
 
+export type GeneratedPageType = 'product-website' | 'dashboard'
+
 export function usePublisher() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedPage, setGeneratedPage] = useState<GeneratedPageResult | null>(null)
 
-  async function generatePage(sourceText: string, templateId: string) {
+  async function generatePage(sourceText: string, templateId: string, pageType: GeneratedPageType = 'product-website') {
     setIsGenerating(true)
     setGeneratedPage(null)
 
@@ -23,7 +25,7 @@ export function usePublisher() {
         body: JSON.stringify({
           sourceText,
           templateId,
-          pageType: 'product-website',
+          pageType,
         }),
       })
       const data = await res.json()
