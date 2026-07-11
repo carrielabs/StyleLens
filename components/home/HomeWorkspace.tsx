@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import type { ClipboardEvent, Dispatch, DragEvent, FormEvent, RefObject, SetStateAction } from 'react'
+import React, { useState } from 'react'
+import type { ClipboardEvent, Dispatch, DragEvent, FormEvent, KeyboardEvent, RefObject, SetStateAction } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { ArrowUp, HelpCircle, Link2, Upload, X } from 'lucide-react'
+import { ArrowUp, FileText, HelpCircle, Link2, Loader2, Upload, X } from 'lucide-react'
 import StyleReportView from '@/components/report/StyleReport'
 import MagicalHeroLogo from './MagicalHeroLogo'
 import type { DisplayStyleReport, HomeHistoryRecord } from '@/lib/types'
@@ -99,7 +99,10 @@ export default function HomeWorkspace({
 }: HomeWorkspaceProps) {
   const [hoveredSection, setHoveredSection] = useState<{ yStart: number; yEnd: number } | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState('website-01-fui')
-  const isBusy = isExtracting || isGenerating
+  const [textUploadFile, setTextUploadFile] = useState<File | null>(null)
+  const [textUploadPhase, setTextUploadPhase] = useState<'idle' | 'generating' | 'error'>('idle')
+  const isTextUploadActive = Boolean(textUploadFile)
+  const isBusy = isExtracting || isGenerating || textUploadPhase === 'generating'
 
   const handleUnifiedSubmit = async (e?: FormEvent) => {
     if (e) e.preventDefault()
@@ -123,9 +126,14 @@ export default function HomeWorkspace({
   const handleTextUpload = async (file: File) => {
     if (isBusy) return
     setError(null)
+    setTextUploadFile(file)
+    setTextUploadPhase('generating')
     try {
       await generatePage(await file.text(), selectedTemplateId)
+      setTextUploadFile(null)
+      setTextUploadPhase('idle')
     } catch (err) {
+      setTextUploadPhase('error')
       setError(err instanceof Error ? err.message : '生成失败，请重试')
     }
   }
@@ -391,7 +399,9 @@ export default function HomeWorkspace({
             <div
               style={{
                 width: '100%', height: '200px', borderRadius: '24px',
-                border: uploadState === 'dragover'
+                border: isTextUploadActive
+                  ? '1px solid rgba(0,0,0,0.12)'
+                  : uploadState === 'dragover'
                   ? '1.5px solid rgba(0,0,0,0.22)'
                   : uploadState === 'hover'
                   ? '1px solid rgba(0,0,0,0.12)'
@@ -401,12 +411,14 @@ export default function HomeWorkspace({
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 justifyContent: 'center', gap: '12px', cursor: 'pointer',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                backgroundColor: uploadState === 'dragover'
+                backgroundColor: isTextUploadActive
+                  ? '#FBFBFD'
+                  : uploadState === 'dragover'
                   ? 'rgba(0,0,0,0.015)'
                   : uploadState === 'hover'
                   ? 'rgba(255,255,255,0.6)'
                   : 'transparent',
-                boxShadow: uploadState === 'selected' || uploadState === 'extracting'
+                boxShadow: isTextUploadActive || uploadState === 'selected' || uploadState === 'extracting'
                   ? 'none'
                   : 'inset 0 1px 4px rgba(0,0,0,0.01)',
                 transform: uploadState === 'hover' ? 'scale(1.002)' : 'scale(1)',
@@ -414,6 +426,8 @@ export default function HomeWorkspace({
                 pointerEvents: isBusy ? 'none' : 'auto',
                 overflow: 'hidden', position: 'relative'
               }}
+              role={pendingFile ? undefined : 'button'}
+              aria-label={pendingFile ? undefined : '上传文件'}
               onMouseEnter={() => !isDragging && !pendingFile && setUploadZoneHovered(true)}
               onMouseLeave={() => setUploadZoneHovered(false)}
               onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
@@ -423,11 +437,25 @@ export default function HomeWorkspace({
               onClick={() => {
                 if (isBusy) return
                 if (pendingFile) return
+                if (isTextUploadActive) {
+                  if (textUploadPhase === 'error') {
+                    setTextUploadFile(null)
+                    setTextUploadPhase('idle')
+                    fileInputRef.current?.click()
+                  }
+                  return
+                }
                 if (user || !guestTrialUsed) fileInputRef.current?.click()
                 else setIsAuthVisible(true)
               }}
               onPaste={handlePaste}
-              tabIndex={0}
+              onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  e.currentTarget.click()
+                }
+              }}
+              tabIndex={pendingFile ? -1 : 0}
             >
               {(uploadState === 'selected' || uploadState === 'extracting') && pendingPreviewUrl && (
                 <>
@@ -494,7 +522,39 @@ export default function HomeWorkspace({
                 </>
               )}
 
-              {uploadState !== 'selected' && uploadState !== 'extracting' && (
+              {isTextUploadActive && (
+                <>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '12px',
+                    backgroundColor: '#F2F2F7',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#3C3C3E'
+                  }}>
+                    {textUploadPhase === 'generating' ? (
+                      <Loader2 className="animate-spin" size={18} strokeWidth={1.8} />
+                    ) : (
+                      <FileText size={18} strokeWidth={1.8} />
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'center', maxWidth: '80%' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 650, color: '#1D1D1F', marginBottom: '4px', letterSpacing: '-0.01em' }}>
+                      {textUploadFile?.name}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#8E8E93', fontWeight: 450 }}>
+                      {textUploadPhase === 'generating'
+                        ? '正在生成官网…'
+                        : '生成失败，请重新上传'}
+                    </div>
+                    {textUploadFile && (
+                      <div style={{ fontSize: '11px', color: '#AEAEB2', marginTop: '4px' }}>
+                        {(textUploadFile.size / 1024).toFixed(1)} KB
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {!isTextUploadActive && uploadState !== 'selected' && uploadState !== 'extracting' && (
                 <>
                   <div className="upload-icon-float" style={{
                     width: '36px', height: '36px', borderRadius: '10px',

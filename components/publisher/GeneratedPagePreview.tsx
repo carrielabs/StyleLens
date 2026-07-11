@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { Download, RotateCcw } from 'lucide-react'
 
 interface GeneratedPagePreviewProps {
   html: string
@@ -35,9 +36,49 @@ export default function GeneratedPagePreview({
           <div style={{ fontSize: 12, color: '#78716c' }}>{templateId}</div>
           <div style={{ fontSize: 12, color: '#78716c', marginTop: 4 }}>已生成，可编辑并下载</div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" onClick={onBack}>重新上传</button>
-          <button type="button" onClick={downloadHtml}>下载 HTML</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            type="button"
+            onClick={onBack}
+            style={{
+              height: 34,
+              padding: '0 14px',
+              borderRadius: 10,
+              border: '1px solid rgba(0,0,0,0.10)',
+              background: '#FFFFFF',
+              color: '#3C3C3E',
+              fontSize: 13,
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              cursor: 'pointer',
+            }}
+          >
+            <RotateCcw size={14} strokeWidth={2} />
+            重新上传
+          </button>
+          <button
+            type="button"
+            onClick={downloadHtml}
+            style={{
+              height: 34,
+              padding: '0 14px',
+              borderRadius: 10,
+              border: '1px solid #1D1D1F',
+              background: '#1D1D1F',
+              color: '#FFFFFF',
+              fontSize: 13,
+              fontWeight: 650,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              cursor: 'pointer',
+            }}
+          >
+            <Download size={14} strokeWidth={2} />
+            下载 HTML
+          </button>
         </div>
       </div>
       <iframe
