@@ -33,9 +33,10 @@ export default function GeneratedPagePreview({
         <div>
           <div style={{ fontWeight: 700 }}>{title}</div>
           <div style={{ fontSize: 12, color: '#78716c' }}>{templateId}</div>
+          <div style={{ fontSize: 12, color: '#78716c', marginTop: 4 }}>已生成，可编辑并下载</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" onClick={onBack}>返回</button>
+          <button type="button" onClick={onBack}>重新上传</button>
           <button type="button" onClick={downloadHtml}>下载 HTML</button>
         </div>
       </div>
