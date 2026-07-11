@@ -6,6 +6,7 @@ export interface GeneratedPageResult {
   html: string
   title: string
   templateId: string
+  sourceFileName?: string
 }
 
 export type GeneratedPageType = 'product-website' | 'dashboard'
@@ -37,6 +38,28 @@ export function usePublisher() {
     }
   }
 
+  async function generateDashboardFromFile(file: File, templateId = 'dashboard-15-consulting-data-report') {
+    setIsGenerating(true)
+    setGeneratedPage(null)
+
+    try {
+      const formData = new FormData()
+      formData.set('file', file)
+      formData.set('templateId', templateId)
+
+      const res = await fetch('/api/generate-dashboard-data', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || '生成失败，请重试')
+      setGeneratedPage(data.result)
+      return data.result as GeneratedPageResult
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   function clearGeneratedPage() {
     setGeneratedPage(null)
   }
@@ -45,6 +68,7 @@ export function usePublisher() {
     isGenerating,
     generatedPage,
     generatePage,
+    generateDashboardFromFile,
     clearGeneratedPage,
   }
 }

@@ -118,6 +118,7 @@ export default function Home() {
     isGenerating,
     generatedPage,
     generatePage,
+    generateDashboardFromFile,
     clearGeneratedPage,
   } = usePublisher()
 
@@ -318,6 +319,7 @@ export default function Home() {
             greeting={greeting}
             handleUrlSubmit={handleUrlSubmit}
             generatePage={generatePage}
+            generateDashboardFromFile={generateDashboardFromFile}
             urlInputRef={urlInputRef}
             url={url}
             setUrl={setUrl}

@@ -8,7 +8,7 @@ import StyleReportView from '@/components/report/StyleReport'
 import MagicalHeroLogo from './MagicalHeroLogo'
 import type { DisplayStyleReport, HomeHistoryRecord } from '@/lib/types'
 import type { UploadState } from '@/hooks/useExtraction'
-import { detectInputIntent, isTextUpload } from '@/lib/publisher/inputIntent'
+import { detectInputIntent, isDataUpload, isTextUpload } from '@/lib/publisher/inputIntent'
 import type { GeneratedPageResult, GeneratedPageType } from '@/hooks/usePublisher'
 
 const WEBSITE_TEMPLATES = [
@@ -62,6 +62,7 @@ interface HomeWorkspaceProps {
   greeting: { prefix: string; name: string } | null
   handleUrlSubmit: (e?: FormEvent) => Promise<void>
   generatePage: (sourceText: string, templateId: string, pageType?: GeneratedPageType) => Promise<GeneratedPageResult>
+  generateDashboardFromFile: (file: File, templateId?: string) => Promise<GeneratedPageResult>
   urlInputRef: RefObject<HTMLInputElement | null>
   url: string
   setUrl: Dispatch<SetStateAction<string>>
@@ -100,6 +101,7 @@ export default function HomeWorkspace({
   greeting,
   handleUrlSubmit,
   generatePage,
+  generateDashboardFromFile,
   urlInputRef,
   url,
   setUrl,
@@ -129,6 +131,7 @@ export default function HomeWorkspace({
   const isBusy = isExtracting || isGenerating || textUploadPhase === 'generating'
   const templateOptions = selectedPageType === 'dashboard' ? DASHBOARD_TEMPLATES : WEBSITE_TEMPLATES
   const shouldShowPublisherOptions = !url.trim() || detectInputIntent(url) === 'generate-page'
+  const dataDashboardTemplateId = 'dashboard-15-consulting-data-report'
 
   const handlePageTypeChange = (pageType: GeneratedPageType) => {
     setSelectedPageType(pageType)
@@ -169,7 +172,28 @@ export default function HomeWorkspace({
     }
   }
 
+  const handleDataUpload = async (file: File) => {
+    if (isBusy) return
+    setError(null)
+    setSelectedPageType('dashboard')
+    setSelectedTemplateId(dataDashboardTemplateId)
+    setTextUploadFile(file)
+    setTextUploadPhase('generating')
+    try {
+      await generateDashboardFromFile(file, dataDashboardTemplateId)
+      setTextUploadFile(null)
+      setTextUploadPhase('idle')
+    } catch (err) {
+      setTextUploadPhase('error')
+      setError(err instanceof Error ? err.message : '生成失败，请重试')
+    }
+  }
+
   const handleUnifiedFile = (file: File) => {
+    if (isDataUpload(file)) {
+      void handleDataUpload(file)
+      return
+    }
     if (isTextUpload(file)) {
       void handleTextUpload(file)
       return
@@ -600,7 +624,9 @@ export default function HomeWorkspace({
                     </div>
                     <div style={{ fontSize: '12px', color: '#8E8E93', fontWeight: 450 }}>
                       {textUploadPhase === 'generating'
-                        ? '正在生成官网…'
+                        ? textUploadFile && isDataUpload(textUploadFile)
+                          ? '正在生成数据看板…'
+                          : '正在生成官网…'
                         : '生成失败，请重新上传'}
                     </div>
                     {textUploadFile && (
@@ -628,7 +654,7 @@ export default function HomeWorkspace({
                     <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1F', marginBottom: '5px', letterSpacing: '-0.01em' }}>
                       {uploadState === 'dragover' ? '释放以解析' : '点击上传 / 将图片、.md 或 .txt 拖拽至此'}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>图片用于提取风格，Markdown/TXT 用于生成官网或 Dashboard</div>
+                    <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>图片用于提取风格，Markdown/TXT 用于生成页面，CSV/JSON/XLSX 用于生成 Dashboard</div>
                   </div>
                 </>
               )}
@@ -690,7 +716,7 @@ export default function HomeWorkspace({
               )
             })()}
 
-            <input ref={fileInputRef} type="file" accept="image/*,.md,.txt,text/plain,text/markdown" style={{ display: 'none' }}
+            <input ref={fileInputRef} type="file" accept="image/*,.md,.txt,.csv,.json,.xlsx,text/plain,text/markdown,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style={{ display: 'none' }}
               onChange={e => { if (e.target.files?.[0]) handleUnifiedFile(e.target.files[0]) }} />
           </div>
         </div>

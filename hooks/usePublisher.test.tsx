@@ -59,4 +59,33 @@ describe('usePublisher', () => {
       pageType: 'dashboard',
     })
   })
+
+  it('uploads one data file for dashboard generation', async () => {
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ({
+        success: true,
+        result: {
+          html: '<!DOCTYPE html><html><body>Dashboard</body></html>',
+          title: 'sales 数据看板',
+          templateId: 'dashboard-15-consulting-data-report',
+        },
+      }),
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderHook(() => usePublisher())
+    const file = new File(['date,revenue\n2026-01-01,100'], 'sales.csv', { type: 'text/csv' })
+
+    await act(async () => {
+      await result.current.generateDashboardFromFile(file, 'dashboard-15-consulting-data-report')
+    })
+
+    const calls = fetchMock.mock.calls as unknown as Array<[string, RequestInit]>
+    const [url, init] = calls[0]
+
+    expect(url).toBe('/api/generate-dashboard-data')
+    expect(init.method).toBe('POST')
+    expect(init.body).toBeInstanceOf(FormData)
+    expect(result.current.generatedPage?.title).toBe('sales 数据看板')
+  })
 })

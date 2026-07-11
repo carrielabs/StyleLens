@@ -13,3 +13,13 @@ export function isTextUpload(file: File): boolean {
     || name.endsWith('.md')
     || name.endsWith('.txt')
 }
+
+export function isDataUpload(file: File): boolean {
+  const name = file.name.toLowerCase()
+  return file.type === 'text/csv'
+    || file.type === 'application/json'
+    || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    || name.endsWith('.csv')
+    || name.endsWith('.json')
+    || name.endsWith('.xlsx')
+}
