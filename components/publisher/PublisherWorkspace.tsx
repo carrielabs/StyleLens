@@ -31,8 +31,11 @@ export default function PublisherWorkspace({
   const [sourceText, setSourceText] = useState('')
   const [queuedFile, setQueuedFile] = useState<QueuedFile | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [previewLoaded, setPreviewLoaded] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const templates = category === 'product-website' ? WEBSITE_TEMPLATES : DASHBOARD_TEMPLATES
+  const drawerError = drawerOpen ? error : null
+  const drawerProgressStep = isGenerating ? 3 : (sourceText.trim() || queuedFile) ? 2 : 1
 
   function openDrawer(template: PublisherTemplate) {
     setSelectedTemplate(template)
@@ -49,6 +52,11 @@ export default function PublisherWorkspace({
     const nextTemplate = previewTemplate
     setPreviewTemplate(null)
     openDrawer(nextTemplate)
+  }
+
+  function openPreview(template: PublisherTemplate) {
+    setPreviewLoaded(false)
+    setPreviewTemplate(template)
   }
 
   function queueFile(file: File) {
@@ -107,13 +115,38 @@ export default function PublisherWorkspace({
 
   return (
     <main style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden', background: '#FAFAFA' }}>
-      <header style={{ height: '56px', borderBottom: '1px solid #E5E7EB', background: 'rgba(255,255,255,0.86)', display: 'flex', alignItems: 'center', padding: '0 24px' }}>
-        <h1 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#111827' }}>模板库</h1>
-      </header>
+      <style>{`
+        .publisher-template-card {
+          transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 180ms ease, border-color 180ms ease;
+          will-change: transform;
+        }
+        .publisher-template-card:hover,
+        .publisher-template-card:focus-within {
+          transform: translateY(-5px) rotate(-0.25deg);
+          border-color: rgba(96, 165, 250, 0.72) !important;
+          box-shadow: 0 18px 46px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(96, 165, 250, 0.32);
+        }
+        .publisher-template-card:hover .publisher-preview-overlay,
+        .publisher-template-card:focus-within .publisher-preview-overlay {
+          opacity: 1;
+        }
+        .publisher-template-card:hover .publisher-preview-label,
+        .publisher-template-card:focus-within .publisher-preview-label {
+          opacity: 1 !important;
+          transform: translate(-50%, -50%) scale(1) !important;
+        }
+        .publisher-template-card:hover .publisher-use-button,
+        .publisher-template-card:focus-within .publisher-use-button {
+          background: #0F172A !important;
+          color: #FFFFFF !important;
+          border-color: #0F172A !important;
+          transform: translateX(2px);
+        }
+      `}</style>
 
-      <div style={{ height: 'calc(100% - 56px)', overflowY: 'auto', padding: '48px 32px 72px' }}>
+      <div style={{ height: '100%', overflowY: 'auto', padding: '64px 32px 72px' }}>
         <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
-          {error && (
+          {error && !drawerOpen && (
             <div role="alert" style={{ margin: '0 auto 18px', maxWidth: '520px', border: '1px solid rgba(255,59,48,0.18)', background: '#FFF2F1', color: '#B42318', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 600 }}>
               {error}
             </div>
@@ -141,7 +174,7 @@ export default function PublisherWorkspace({
               <TemplateCard
                 key={template.id}
                 template={template}
-                onPreview={() => setPreviewTemplate(template)}
+                onPreview={() => openPreview(template)}
                 onUse={() => openDrawer(template)}
               />
             ))}
@@ -168,11 +201,21 @@ export default function PublisherWorkspace({
               </button>
             </div>
           </div>
+          {!previewLoaded && (
+            <div
+              role="status"
+              aria-label="模板预览加载中"
+              style={{ position: 'absolute', inset: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0B0B0D', color: 'rgba(255,255,255,0.72)', fontSize: '14px', fontWeight: 700 }}
+            >
+              正在载入模板预览...
+            </div>
+          )}
           <iframe
             title={`${previewTemplate.name} 全屏模板预览`}
             src={`/api/template-preview/${previewTemplate.id}`}
             sandbox="allow-scripts"
-            style={{ width: '100%', height: '100%', border: 0, background: '#FFFFFF' }}
+            onLoad={() => setPreviewLoaded(true)}
+            style={{ width: '100%', height: '100%', border: 0, background: '#0B0B0D', opacity: previewLoaded ? 1 : 0, transition: 'opacity 160ms ease' }}
           />
         </div>
       )}
@@ -199,12 +242,38 @@ export default function PublisherWorkspace({
             </div>
             <div style={{ overflowY: 'auto', padding: '22px' }}>
               <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px', display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '22px' }}>
-                <div style={{ width: '58px', height: '58px', borderRadius: '8px', background: selectedTemplate.tone }} />
+                <TemplateMiniPreview template={selectedTemplate} />
                 <div>
                   <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 800, marginBottom: '4px' }}>正在使用</div>
                   <div style={{ fontSize: '18px', color: '#0F172A', fontWeight: 800 }}>{selectedTemplate.name}</div>
                 </div>
               </div>
+
+              <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px', marginBottom: '18px', background: '#F8FAFC' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 800 }}>目标进度</span>
+                  <span style={{ fontSize: '12px', color: '#0F172A', fontWeight: 800 }}>第 {drawerProgressStep}/3 步</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                  {[1, 2, 3].map(step => (
+                    <div
+                      key={step}
+                      style={{
+                        height: '5px',
+                        borderRadius: '999px',
+                        background: step <= drawerProgressStep ? '#0F172A' : '#E2E8F0',
+                        transition: 'background 140ms ease',
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {drawerError && (
+                <div role="alert" style={{ marginBottom: '14px', border: '1px solid rgba(220,38,38,0.18)', background: '#FEF2F2', color: '#B91C1C', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700 }}>
+                  {drawerError}
+                </div>
+              )}
 
               <label htmlFor="publisher-source-text" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '14px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>
                 输入文本内容
@@ -256,6 +325,11 @@ export default function PublisherWorkspace({
               </div>
             </div>
             <div style={{ padding: '18px 22px', borderTop: '1px solid #F1F5F9' }}>
+              {drawerError && (
+                <div role="alert" style={{ marginBottom: '10px', border: '1px solid rgba(220,38,38,0.18)', background: '#FEF2F2', color: '#B91C1C', borderRadius: '10px', padding: '9px 11px', fontSize: '13px', fontWeight: 700 }}>
+                  {drawerError}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleGenerate}
@@ -306,20 +380,31 @@ function TemplateCard({
   onUse: () => void
 }) {
   return (
-    <article data-testid={`template-card-${template.id}`} style={{ border: '1px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden', background: '#FFFFFF' }}>
-      <div style={{ height: '210px', background: template.tone, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <article
+      className="publisher-template-card"
+      data-testid={`template-card-${template.id}`}
+      data-preview-card="true"
+      style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', background: '#FFFFFF', boxShadow: '0 2px 8px rgba(15,23,42,0.04)' }}
+    >
+      <div style={{ height: '210px', background: '#F8FAFC', position: 'relative', overflow: 'hidden' }}>
         <iframe
-          title={`${template.name} 模板预览`}
+          title={`${template.name} 模板缩略图`}
           src={`/api/template-preview/${template.id}`}
           loading="lazy"
           sandbox="allow-scripts"
           tabIndex={-1}
-          style={{ width: '1280px', height: '760px', border: 0, transform: 'scale(0.22)', transformOrigin: '0 0', pointerEvents: 'none', background: '#FFFFFF', opacity: 0.92 }}
+          data-real-template-thumbnail="true"
+          style={{ position: 'absolute', top: 0, left: 0, width: '1280px', height: '760px', border: 0, transform: 'scale(0.285)', transformOrigin: 'top left', pointerEvents: 'none', background: '#FFFFFF' }}
         />
-        <button type="button" aria-label={`全屏预览 ${template.name}`} onClick={onPreview} style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(15,23,42,0)', color: '#FFFFFF', cursor: 'zoom-in' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '999px', background: 'rgba(15,23,42,0.72)', fontSize: '13px', fontWeight: 800 }}>
+        <div className="publisher-preview-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.28)', opacity: 0, transition: 'opacity 180ms ease', pointerEvents: 'none' }} />
+        <button type="button" aria-label={`全屏沉浸预览 ${template.name}`} onClick={onPreview} style={{ position: 'absolute', inset: 0, border: 'none', background: 'transparent', color: '#FFFFFF', cursor: 'pointer' }}>
+          <span
+            className="publisher-preview-label"
+            data-preview-label="true"
+            style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, calc(-50% + 8px)) scale(0.96)', opacity: 0, display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 17px', borderRadius: '999px', background: 'rgba(15,23,42,0.64)', border: '1px solid rgba(255,255,255,0.38)', boxShadow: '0 12px 32px rgba(15,23,42,0.22)', backdropFilter: 'blur(16px)', fontSize: '13px', fontWeight: 800, transition: 'opacity 180ms ease, transform 180ms ease', whiteSpace: 'nowrap' }}
+          >
             <Maximize size={15} strokeWidth={2} />
-            全屏预览
+            全屏沉浸预览
           </span>
         </button>
       </div>
@@ -328,11 +413,26 @@ function TemplateCard({
           <h3 style={{ margin: '0 0 5px', color: '#111827', fontSize: '18px', lineHeight: 1.2, fontWeight: 800 }}>{template.name}</h3>
           <p style={{ margin: 0, color: '#64748B', fontSize: '13px', fontWeight: 500 }}>{template.description}</p>
         </div>
-        <button type="button" aria-label={`使用 ${template.name} 模板`} onClick={onUse} style={{ width: '42px', height: '42px', borderRadius: '50%', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+        <button className="publisher-use-button" type="button" aria-label={`使用 ${template.name} 模板`} onClick={onUse} style={{ width: '42px', height: '42px', borderRadius: '50%', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'background 160ms ease, color 160ms ease, border-color 160ms ease, transform 160ms ease' }}>
           <ArrowRight size={20} strokeWidth={2} />
         </button>
       </div>
     </article>
+  )
+}
+
+function TemplateMiniPreview({ template }: { template: PublisherTemplate }) {
+  return (
+    <div style={{ width: '58px', height: '58px', borderRadius: '8px', overflow: 'hidden', background: '#F8FAFC', position: 'relative', flexShrink: 0, border: '1px solid #E2E8F0' }}>
+      <iframe
+        title={`${template.name} 当前模板缩略图`}
+        src={`/api/template-preview/${template.id}`}
+        loading="lazy"
+        sandbox="allow-scripts"
+        tabIndex={-1}
+        style={{ position: 'absolute', top: 0, left: 0, width: '1280px', height: '760px', border: 0, transform: 'scale(0.078)', transformOrigin: 'top left', pointerEvents: 'none', background: '#FFFFFF' }}
+      />
+    </div>
   )
 }
 

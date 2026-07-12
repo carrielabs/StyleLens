@@ -19,25 +19,30 @@
 
 ```text
 app/
-├─ page.tsx             首页：提取器入口 + 报告展示（承担了立项文档里 page/library 拆分之外更多的组装逻辑）
+├─ page.tsx             首页：工作区组合层，承接风格提取、Publisher、生成结果预览
 ├─ library/page.tsx      素材库页面，需登录（未登录会 redirect 到 /auth）
 ├─ auth/                 登录相关页面与回调
 └─ api/
    ├─ extract/route.ts    风格提取主接口
-   └─ screenshot/route.ts URL 截图接口
+   ├─ screenshot/route.ts URL 截图接口
+   ├─ generate/route.ts   文本生成官网 / Dashboard 接口
+   ├─ generate-dashboard-data/route.ts 数据文件生成 Dashboard 接口
+   └─ template-preview/[templateId]/route.ts 模板预览接口
 
 components/
 ├─ auth/AuthOverlay.tsx
 ├─ common/SettingsModal.tsx
 ├─ extractor/ (ImageUploader, UrlInput)
 ├─ home/ (HomeSidebar, HomeWorkspace, HomeOverlays, MagicalHeroLogo, viewUtils)
+├─ publisher/ (PublisherWorkspace, GeneratedPagePreview)
 ├─ report/ (StyleReport, ColorSystem, Typography, DesignDetails 及其 Elite/EliteV2/EliteV3 变体,
 │           DesignInspector, StyleInspector, AtomicSandbox, ColorHighlighter, ExportPanel)
 └─ settings/SettingsView.tsx（+ ApiKeysSection 等子组件）
 
 hooks/
 ├─ useHistory.ts     历史列表状态：游客历史、账号历史、迁移、增删改查、搜索、置顶、撤销
-└─ useExtraction.ts  提取流程状态：URL/图片输入、上传预览、拖拽粘贴、取消、加载态、错误处理
+├─ useExtraction.ts  提取流程状态：URL/图片输入、上传预览、拖拽粘贴、取消、加载态、错误处理
+└─ usePublisher.ts   官网 / Dashboard 生成状态、本地生成历史、生成结果打开
 
 lib/
 ├─ api/ (aiExtract, screenshotter, pageAnalyzer, heroRegionDetector, heroVisualAnalyzer)
@@ -45,6 +50,7 @@ lib/
 ├─ exporters/ (css/json/markdown/prompt/tailwind 五种导出格式 —— 比立项文档多了 tailwindExporter)
 ├─ presets/brandPresets.ts   知名品牌的预置示例报告
 ├─ storage/ (guestStore, libraryStore, supabaseClient, supabaseServer)
+├─ publisher/ (内容结构化、模板加载、官网生成、Dashboard 数据文件解析、编辑运行时注入)
 ├─ flags.ts    实验性功能开关
 └─ types/index.ts
 ```
@@ -58,6 +64,14 @@ lib/
 3. 服务端把截图 + 结构化的 `pageAnalysis` 一起送进 `POST /api/extract`（走 `lib/api/aiExtract.ts`），由 Gemini 做视觉理解，并把 `pageAnalysis` 提供的"测量信号"作为约束——也就是说，最终风格报告不是纯粹靠 AI"看图猜"，而是"DOM 实测数据 + AI 视觉理解"两条信号融合的结果，这一点立项文档完全没有提到，是实际实现里更扎实的部分。
 4. 报告在前端渲染为多个展示模块（色彩系统、字体排版、设计细节，及若干 Elite 版本的进阶展示组件），可以导出成 Prompt / Markdown / CSS / JSON / Tailwind 五种格式。
 5. 登录用户点击保存，写入 Supabase；未登录用户走 `lib/storage/guestStore.ts` 存在 localStorage，登录后自动迁移。
+
+## 请求链路：从模板库到生成 HTML
+
+1. 用户在左侧切换到 `生成页面与看板`。
+2. 前端展示 8 个官网模板或 15 个 Dashboard 模板，模板封面和全屏预览都通过 `GET /api/template-preview/[templateId]` 读取真实模板 HTML。
+3. 官网生成：用户选择官网模板，在右侧抽屉粘贴文本或上传 `.md` / `.txt`，前端调用 `POST /api/generate`，服务端用 `lib/publisher` 把内容注入所选模板并加上编辑运行时。
+4. Dashboard 生成：用户选择 Dashboard 模板，上传 `.csv` / `.json` / `.xlsx`，前端调用 `POST /api/generate-dashboard-data`，服务端解析数据文件、生成指标模型、注入所选 Dashboard 模板并加上 Dashboard 编辑数据。
+5. 生成结果进入 `GeneratedPagePreview`，用 sandbox iframe 预览，顶部悬浮操作条提供返回模板库和下载 HTML。
 
 ## 待确认
 

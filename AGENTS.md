@@ -77,7 +77,7 @@ npm run build
 ## 7. StyleLens 专属约束
 
 1. 保留 URL / 图片风格提取主流程，除非用户明确要求重构。
-2. Publisher 第一版只支持文本 / `.md` / `.txt` 生成产品官网 HTML；dashboard、PPT、Skill、GitHub 开源不混入第一版。
+2. Publisher 当前必须完整支持 8 个官网模板和 15 个 Dashboard 模板：文本 / `.md` / `.txt` 生成官网 HTML，`.csv` / `.json` / `.xlsx` 数据文件生成 Dashboard HTML。PPT、Skill、GitHub 开源仍不混入当前版本。
 3. `.claude/worktrees`、`.next`、`node_modules`、本地缓存和历史工作区不能作为正式源码依据。
 4. 根目录素材、截图、缓存文件需要谨慎处理；测试素材应归档到 `test/fixtures/`，历史设计稿或一次性调试产物应归档到 `docs/archive/`。
 5. `walkthrough.md` 是外部流程维护文件，普通开发和重构中不要随意修改。

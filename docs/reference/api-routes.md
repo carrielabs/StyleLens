@@ -19,7 +19,27 @@
 - **运行时限制**：`maxDuration = 60`。
 - 详见 `docs/features/01-extraction-pipeline.md`。
 
+## `POST /api/generate`
+
+- **作用**：根据文本材料生成 HTML。`pageType=product-website` 时生成官网；`pageType=dashboard` 时可用 Dashboard 模板生成文本型 Dashboard。
+- **输入**：JSON，包含 `sourceText`、`templateId`、`pageType`。
+- **限制**：`sourceText` 上限 200KB；`pageType` 只允许 `product-website` 或 `dashboard`。
+- **运行时限制**：`maxDuration = 60`。
+
+## `POST /api/generate-dashboard-data`
+
+- **作用**：根据数据文件生成 Dashboard HTML。
+- **输入**：`multipart/form-data`，包含 `file` 和可选 `templateId`。
+- **文件类型**：支持 `.csv` / `.json` / `.xlsx`。
+- **限制**：文件上限 2MB；模板只能使用当前 15 个 Dashboard 模板。
+- **运行时限制**：`maxDuration = 60`。
+
+## `GET /api/template-preview/[templateId]`
+
+- **作用**：读取 `templates/_incoming/<templateId>/template.html`，用于模板卡片预览和全屏预览。
+- **安全**：`templateId` 只允许小写字母、数字和短横线，且会校验解析后的路径必须仍在 `templates/_incoming` 目录内。
+- **缓存**：`Cache-Control: public, max-age=300`。
+
 ## 待确认
 
-- 是否存在其他未被本次审查发现的 API 路由（本次只在 `app/api/` 下找到 `extract` 和 `screenshot` 两个）。
 - `/api/extract` 的完整请求/响应类型定义建议直接参考 `lib/types/index.ts` 中的 `ExtractRequest`，本文档不重复摘抄类型细节以避免与代码脱节。

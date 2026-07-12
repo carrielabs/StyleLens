@@ -7,7 +7,8 @@ StyleLens 是一个面向设计参考和页面生成的 Web 工具。
 - 输入官网 URL，提取网站视觉风格。
 - 上传图片 / 截图，提取视觉风格。
 - 输出风格报告、Prompt、CSS、Design Token JSON。
-- 输入文本 / Markdown / TXT，选择官网模板，生成可预览、可下载的产品官网 HTML。
+- 输入文本 / Markdown / TXT，选择 8 个官网模板之一，生成可预览、可下载、可编辑的产品官网 HTML。
+- 上传 `.csv` / `.json` / `.xlsx` 数据文件，选择 15 个 Dashboard 模板之一，生成可预览、可下载、可编辑的数据看板 HTML。
 
 ## 开发规则
 
@@ -86,7 +87,7 @@ app/                  Next.js 页面与 API 路由
 components/           React UI 组件
 hooks/                前端状态与业务 Hook
 lib/                  核心业务逻辑、API、存储、Publisher
-templates/            官网生成模板
+templates/            官网与 Dashboard 生成模板
 public/               静态资源
 test/fixtures/        测试素材与截图 fixture
 docs/                 产品、架构、功能和参考文档
@@ -96,18 +97,21 @@ scripts/              本地辅助脚本
 重点文件：
 
 - `app/page.tsx`：首页组合层。
-- `components/home/HomeWorkspace.tsx`：首页主工作区。
+- `components/home/HomeWorkspace.tsx`：风格提取工作区。
+- `components/publisher/PublisherWorkspace.tsx`：官网与 Dashboard 生成工作区。
 - `hooks/useExtraction.ts`：URL / 图片风格提取逻辑。
-- `hooks/usePublisher.ts`：文本生成官网逻辑。
+- `hooks/usePublisher.ts`：官网与 Dashboard 生成逻辑。
 - `lib/publisher/`：AI HTML Publisher 服务端生成模块。
 - `app/api/extract/route.ts`：风格提取 API。
-- `app/api/generate/route.ts`：官网生成 API。
+- `app/api/generate/route.ts`：文本生成官网 / Dashboard API。
+- `app/api/generate-dashboard-data/route.ts`：数据文件生成 Dashboard API。
 
 ## 核心约定
 
 - URL / 图片继续走风格提取。
 - 文本 / `.md` / `.txt` 走产品官网生成。
-- Publisher 第一版只支持官网模板，不支持 dashboard、PPT、Skill、GitHub 开源。
+- `.csv` / `.json` / `.xlsx` 走 Dashboard 生成。
+- Publisher 当前必须支持 8 个官网模板和 15 个 Dashboard 模板；PPT、Skill、GitHub 开源不属于当前版本。
 - `walkthrough.md` 是外部流程维护文件，普通开发不要随意修改。
 - `.claude/worktrees`、`.next`、`node_modules`、本地缓存不能作为正式源码依据。
 - 测试截图素材放在 `test/fixtures/`，不要散落在仓库根目录。
@@ -119,6 +123,7 @@ scripts/              本地辅助脚本
 - 提取流程 Hook。
 - 历史记录 Hook。
 - Publisher 官网生成。
+- Publisher Dashboard 数据文件生成。
 - API 路由输入校验。
 - 页面分析核心逻辑。
 

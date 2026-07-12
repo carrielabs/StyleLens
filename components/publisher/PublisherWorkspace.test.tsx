@@ -22,9 +22,26 @@ describe('PublisherWorkspace', () => {
     renderPublisher()
 
     expect(screen.getByRole('heading', { name: '探索模板' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: '模板库' })).toBeNull()
     expect(screen.getByRole('button', { name: '网站官网' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: '数据看板' }).getAttribute('aria-pressed')).toBe('false')
     expect(screen.getAllByTestId(/template-card-/)).toHaveLength(8)
+  })
+
+  it('uses real template iframe thumbnails and hides preview text until hover', () => {
+    renderPublisher()
+
+    const card = screen.getByTestId('template-card-website-01-fui')
+    expect(card.getAttribute('data-preview-card')).toBe('true')
+
+    const thumbnail = within(card).getByTitle('FUI 模板缩略图')
+    expect(thumbnail.getAttribute('src')).toBe('/api/template-preview/website-01-fui')
+    expect(thumbnail.getAttribute('data-real-template-thumbnail')).toBe('true')
+    expect(thumbnail.getAttribute('style')).toContain('position: absolute')
+
+    const previewLabel = within(card).getByText('全屏沉浸预览')
+    expect(previewLabel.getAttribute('data-preview-label')).toBe('true')
+    expect(previewLabel.getAttribute('style')).toContain('opacity: 0')
   })
 
   it('switches to dashboard templates without leaving the workspace', () => {
@@ -40,9 +57,10 @@ describe('PublisherWorkspace', () => {
   it('opens fullscreen template preview and then uses the same template', () => {
     renderPublisher()
 
-    fireEvent.click(screen.getByRole('button', { name: '全屏预览 FUI' }))
+    fireEvent.click(screen.getByRole('button', { name: '全屏沉浸预览 FUI' }))
 
     expect(screen.getByRole('dialog', { name: 'FUI 模板预览' })).toBeTruthy()
+    expect(screen.getByRole('status', { name: '模板预览加载中' })).toBeTruthy()
     expect(screen.getByTitle('FUI 全屏模板预览').getAttribute('src')).toBe('/api/template-preview/website-01-fui')
 
     fireEvent.click(screen.getByRole('button', { name: '立即使用此模板' }))
@@ -59,6 +77,8 @@ describe('PublisherWorkspace', () => {
     renderPublisher({ generatePage })
 
     fireEvent.click(screen.getByRole('button', { name: '使用 FUI 模板' }))
+    expect(screen.getByText('目标进度')).toBeTruthy()
+    expect(screen.getByText(/第 1\/3 步/)).toBeTruthy()
     fireEvent.change(screen.getByLabelText(/输入文本内容/), {
       target: { value: '# 产品介绍' },
     })
@@ -67,6 +87,16 @@ describe('PublisherWorkspace', () => {
     await waitFor(() => {
       expect(generatePage).toHaveBeenCalledWith('# 产品介绍', 'website-01-fui', 'product-website')
     })
+  })
+
+  it('shows drawer errors near the input and action instead of behind the overlay', () => {
+    renderPublisher({ error: '请先输入文本或上传文档' })
+
+    fireEvent.click(screen.getByRole('button', { name: '使用 FUI 模板' }))
+
+    const drawer = screen.getByRole('dialog', { name: '配置数据源' })
+    expect(within(drawer).getAllByRole('alert')).toHaveLength(2)
+    expect(within(drawer).getAllByText('请先输入文本或上传文档')).toHaveLength(2)
   })
 
   it('generates a dashboard from an uploaded csv file', async () => {
