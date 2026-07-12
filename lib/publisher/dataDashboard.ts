@@ -1,6 +1,7 @@
 import Papa from 'papaparse'
 import { readSheet } from 'read-excel-file/node'
 import * as cheerio from 'cheerio'
+import type { Element } from 'domhandler'
 import type { PublisherResult } from './types'
 import { buildProductWebsiteHtml } from './generate'
 
@@ -47,8 +48,32 @@ export interface DashboardDataModel {
   categoryBreakdown: DashboardPoint[]
 }
 
-const DATA_DASHBOARD_TEMPLATE_ID = 'dashboard-15-consulting-data-report'
+const DATA_DASHBOARD_TEMPLATE_IDS = [
+  'dashboard-01-blue-business',
+  'dashboard-02-premium-dark',
+  'dashboard-03-lean-cyber-analytics',
+  'dashboard-04-premium-midnight',
+  'dashboard-05-premium-cyber-dark',
+  'dashboard-06-warm-paper-analytics',
+  'dashboard-07-dark-bento-analytics',
+  'dashboard-08-saas-executive-analytics',
+  'dashboard-09-editorial-corporate-analytics',
+  'dashboard-10-executive-logic-report',
+  'dashboard-11-saas-growth-health-report',
+  'dashboard-12-atomic-bento-strategy-report',
+  'dashboard-13-corporate-blue-analytics-report',
+  'dashboard-14-financial-blue-analytics-report',
+  'dashboard-15-consulting-data-report',
+] as const
+const DEFAULT_DATA_DASHBOARD_TEMPLATE_ID = 'dashboard-15-consulting-data-report'
 const MAX_ROWS = 1000
+
+type DataDashboardTemplateId = typeof DATA_DASHBOARD_TEMPLATE_IDS[number]
+type DataDashboardAdapter = (html: string, model: DashboardDataModel, fileName: string, templateId: DataDashboardTemplateId) => string
+
+const DATA_DASHBOARD_ADAPTERS: Record<DataDashboardTemplateId, DataDashboardAdapter> = Object.fromEntries(
+  DATA_DASHBOARD_TEMPLATE_IDS.map(templateId => [templateId, injectDataDashboard])
+) as Record<DataDashboardTemplateId, DataDashboardAdapter>
 
 export async function parseDataFile(input: DataFileInput): Promise<ParsedDataset> {
   const fileName = input.fileName.toLowerCase()
@@ -96,10 +121,8 @@ export function buildDashboardDataModel(dataset: ParsedDataset): DashboardDataMo
 export async function generateDashboardHtmlFromDataFile(
   options: DataFileInput & { templateId?: string }
 ): Promise<PublisherResult & { sourceFileName: string }> {
-  const templateId = options.templateId || DATA_DASHBOARD_TEMPLATE_ID
-  if (templateId !== DATA_DASHBOARD_TEMPLATE_ID) {
-    throw new Error('第一版数据文件生成 Dashboard 仅支持 Consulting Data 模板')
-  }
+  const templateId = normalizeDashboardTemplateId(options.templateId)
+  const adapter = DATA_DASHBOARD_ADAPTERS[templateId]
 
   const dataset = await parseDataFile(options)
   const model = buildDashboardDataModel(dataset)
@@ -108,7 +131,7 @@ export async function generateDashboardHtmlFromDataFile(
     templateId,
     pageType: 'dashboard',
   })
-  const html = injectDataDashboard(base.html, model, options.fileName)
+  const html = adapter(base.html, model, options.fileName, templateId)
 
   return {
     html,
@@ -116,6 +139,14 @@ export async function generateDashboardHtmlFromDataFile(
     templateId,
     sourceFileName: options.fileName,
   }
+}
+
+function normalizeDashboardTemplateId(templateId?: string): DataDashboardTemplateId {
+  const nextTemplateId = templateId || DEFAULT_DATA_DASHBOARD_TEMPLATE_ID
+  if (DATA_DASHBOARD_TEMPLATE_IDS.includes(nextTemplateId as DataDashboardTemplateId)) {
+    return nextTemplateId as DataDashboardTemplateId
+  }
+  throw new Error('数据文件生成 Dashboard 只能使用已支持的 15 个 Dashboard 模板')
 }
 
 async function parseCsv(input: DataFileInput): Promise<ParsedDataset> {
@@ -233,9 +264,14 @@ function buildCategoryBreakdown(rows: DataRow[], metricName: string, categoryNam
     .map(([label, value]) => ({ label, value }))
 }
 
-function injectDataDashboard(html: string, model: DashboardDataModel, fileName: string): string {
+function injectDataDashboard(html: string, model: DashboardDataModel, fileName: string, templateId: DataDashboardTemplateId): string {
   const $ = cheerio.load(html)
   $('title').text(`${model.title} - AI HTML Publisher`)
+  $('body')
+    .attr('data-ahp-dashboard-template', templateId)
+    .attr('data-ahp-real-data', 'true')
+
+  injectGenericDashboardText($, model, fileName)
   setSlot($, 'text.header.02', model.title)
   setSlot($, 'text.header.03', `基于 ${fileName} 自动识别 ${model.primaryMetric.name} 等字段，生成真实数据看板。`)
   setSlot($, 'text.summary.02', `${model.primaryMetric.name} 是当前数据集的核心指标`)
@@ -252,11 +288,71 @@ function injectDataDashboard(html: string, model: DashboardDataModel, fileName: 
   $('script:not([src])').each((_, element) => {
     const node = $(element)
     const script = node.html() || ''
-    if (!script.includes('const chartData =')) return
-    node.html(script.replace(/const chartData = \{[\s\S]*?\n        \};/, `const chartData = ${nextChartData};`))
+    if (!isDashboardChartScript(script)) return
+    const nextScript = script.includes('const chartData =')
+      ? script.replace(/const chartData = \{[\s\S]*?\n        \};/, `const chartData = ${nextChartData};`)
+      : injectGenericChartArrays(script, model)
+    node.html(nextScript)
   })
 
+  $('script[data-ahp-dashboard-data]').remove()
+  const dashboardPayload = safeJson({
+    templateId,
+    fileName,
+    title: model.title,
+    primaryMetric: model.primaryMetric,
+    kpis: model.kpis,
+    trend: model.trend,
+    categoryBreakdown: model.categoryBreakdown,
+  })
+  $('body').append(`<script data-ahp-dashboard-data="true">window.AHP_DASHBOARD_DATA = ${dashboardPayload};</script>`)
+
   return $.html()
+}
+
+function injectGenericDashboardText($: cheerio.CheerioAPI, model: DashboardDataModel, fileName: string) {
+  const values = [
+    model.title,
+    `基于 ${fileName} 自动识别字段并生成真实数据看板`,
+    `${model.primaryMetric.name} 是当前核心指标`,
+    ...model.kpis.flatMap(kpi => [kpi.label, kpi.value, kpi.trend]),
+    `${model.primaryMetric.name} 趋势来自上传文件的真实记录`,
+    model.trend.map(point => `${point.label}: ${formatNumber(point.value)}`).join(' / '),
+    '分类占比按上传文件中的分类字段自动汇总',
+    model.categoryBreakdown.map(point => `${point.label}: ${formatNumber(point.value)}`).join(' / '),
+  ].filter(Boolean)
+
+  const nodes: Element[] = []
+  $('[data-editable="true"][data-slot], [contenteditable="true"][data-slot]').each((_, element) => {
+    if (!nodes.includes(element)) nodes.push(element)
+  })
+
+  values.forEach((value, index) => {
+    const node = nodes[index]
+    if (!node) return
+    $(node).text(value)
+  })
+}
+
+function isDashboardChartScript(script: string): boolean {
+  return /const chartData\s*=|new Chart\(|echarts\.init|window\.REPORT_DATA/.test(script)
+}
+
+function injectGenericChartArrays(script: string, model: DashboardDataModel): string {
+  const labels = [
+    jsArray(model.trend.map(point => point.label)),
+    jsArray(model.categoryBreakdown.map(point => point.label)),
+  ]
+  const values = [
+    jsArray(model.trend.map(point => point.value)),
+    jsArray(model.categoryBreakdown.map(point => point.value)),
+  ]
+  let labelIndex = 0
+  let valueIndex = 0
+
+  return script
+    .replace(/labels\s*:\s*\[[^\]]*]/g, () => `labels: ${labels[labelIndex++ % labels.length]}`)
+    .replace(/data\s*:\s*\[(?:[^\][{}]|\{[^{}]*})*]/g, () => `data: ${values[valueIndex++ % values.length]}`)
 }
 
 function buildChartDataLiteral(model: DashboardDataModel): string {
@@ -341,4 +437,8 @@ function jsArray(values: Array<string | number>): string {
 
 function escapeJs(value: string): string {
   return String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+function safeJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c')
 }

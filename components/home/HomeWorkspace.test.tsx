@@ -191,8 +191,69 @@ describe('HomeWorkspace', () => {
     })
 
     await waitFor(() => {
-      expect(generateDashboardFromFile).toHaveBeenCalledWith(file, 'dashboard-15-consulting-data-report')
+      expect(generateDashboardFromFile).toHaveBeenCalledWith(file, 'dashboard-01-blue-business')
       expect(handleFilePreview).not.toHaveBeenCalled()
+    })
+  })
+
+  it('uploads csv files with the selected dashboard template', async () => {
+    const generateDashboardFromFile = vi.fn(() => new Promise<never>(() => {}))
+    const fileInputRef = React.createRef<HTMLInputElement>()
+    const urlInputRef = React.createRef<HTMLInputElement>()
+
+    render(
+      <HomeWorkspace
+        activeItemId={null}
+        report={null}
+        isExtracting={false}
+        isGenerating={false}
+        isUrlExtracting={false}
+        isImageExtracting={false}
+        extractions={[]}
+        reportLang="zh"
+        setReportLang={vi.fn()}
+        setLightboxUrl={vi.fn()}
+        setIsLightboxOpen={vi.fn()}
+        error={null}
+        setError={vi.fn()}
+        greeting={{ prefix: 'Welcome to', name: 'StyleLens...' }}
+        handleUrlSubmit={vi.fn()}
+        generatePage={vi.fn()}
+        generateDashboardFromFile={generateDashboardFromFile}
+        urlInputRef={urlInputRef}
+        url=""
+        setUrl={vi.fn()}
+        pendingFile={null}
+        pendingPreviewUrl={null}
+        uploadState="idle"
+        isDragging={false}
+        setIsDragging={vi.fn()}
+        setUploadZoneHovered={vi.fn()}
+        user={null}
+        guestTrialUsed={false}
+        fileInputRef={fileInputRef}
+        setIsAuthVisible={vi.fn()}
+        handlePaste={vi.fn()}
+        handleExtractFile={vi.fn()}
+        clearPendingFile={vi.fn()}
+        cancelExtraction={vi.fn()}
+        handleFilePreview={vi.fn()}
+        extractionPhase={null}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText('页面类型'), { target: { value: 'dashboard' } })
+    fireEvent.change(screen.getByLabelText('模板'), { target: { value: 'dashboard-14-financial-blue-analytics-report' } })
+
+    const file = new File(['date,revenue\n2026-01-01,100'], 'sales.csv', { type: 'text/csv' })
+    fireEvent.drop(screen.getByRole('button', { name: '上传文件' }), {
+      dataTransfer: {
+        files: [file],
+      },
+    })
+
+    await waitFor(() => {
+      expect(generateDashboardFromFile).toHaveBeenCalledWith(file, 'dashboard-14-financial-blue-analytics-report')
     })
   })
 })

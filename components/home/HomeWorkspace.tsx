@@ -131,7 +131,6 @@ export default function HomeWorkspace({
   const isBusy = isExtracting || isGenerating || textUploadPhase === 'generating'
   const templateOptions = selectedPageType === 'dashboard' ? DASHBOARD_TEMPLATES : WEBSITE_TEMPLATES
   const shouldShowPublisherOptions = !url.trim() || detectInputIntent(url) === 'generate-page'
-  const dataDashboardTemplateId = 'dashboard-15-consulting-data-report'
 
   const handlePageTypeChange = (pageType: GeneratedPageType) => {
     setSelectedPageType(pageType)
@@ -175,12 +174,13 @@ export default function HomeWorkspace({
   const handleDataUpload = async (file: File) => {
     if (isBusy) return
     setError(null)
+    const dashboardTemplateId = selectedPageType === 'dashboard' ? selectedTemplateId : 'dashboard-01-blue-business'
     setSelectedPageType('dashboard')
-    setSelectedTemplateId(dataDashboardTemplateId)
+    setSelectedTemplateId(dashboardTemplateId)
     setTextUploadFile(file)
     setTextUploadPhase('generating')
     try {
-      await generateDashboardFromFile(file, dataDashboardTemplateId)
+      await generateDashboardFromFile(file, dashboardTemplateId)
       setTextUploadFile(null)
       setTextUploadPhase('idle')
     } catch (err) {
