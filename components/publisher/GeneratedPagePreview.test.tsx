@@ -22,7 +22,7 @@ describe('GeneratedPagePreview', () => {
     expect(screen.getByText('website-01-fui')).toBeTruthy()
     expect(screen.getByText('已生成，可编辑并下载')).toBeTruthy()
     expect(screen.getByTitle('生成页面预览')).toBeTruthy()
-    expect(screen.getByText('重新上传')).toBeTruthy()
+    expect(screen.getByText('返回画廊')).toBeTruthy()
     expect(screen.getByText('下载 HTML')).toBeTruthy()
   })
 
@@ -37,7 +37,7 @@ describe('GeneratedPagePreview', () => {
       />
     )
 
-    fireEvent.click(screen.getByText('重新上传'))
+    fireEvent.click(screen.getByText('返回画廊'))
 
     expect(onBack).toHaveBeenCalledTimes(1)
   })

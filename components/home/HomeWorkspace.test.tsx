@@ -2,7 +2,6 @@ import React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import HomeWorkspace from './HomeWorkspace'
-import type { GeneratedPageResult } from '@/hooks/usePublisher'
 
 vi.mock('./MagicalHeroLogo', () => ({
   default: () => null,
@@ -15,7 +14,6 @@ function renderWorkspace(overrides: Partial<React.ComponentProps<typeof HomeWork
     activeItemId: null,
     report: null,
     isExtracting: false,
-    isGenerating: false,
     isUrlExtracting: false,
     isImageExtracting: false,
     extractions: [],
@@ -27,8 +25,6 @@ function renderWorkspace(overrides: Partial<React.ComponentProps<typeof HomeWork
     setError: vi.fn(),
     greeting: { prefix: 'Welcome to', name: 'StyleLens...' },
     handleUrlSubmit: vi.fn(),
-    generatePage: vi.fn(async () => ({ html: '', title: '', templateId: '' } as GeneratedPageResult)),
-    generateDashboardFromFile: vi.fn(async () => ({ html: '', title: '', templateId: '' } as GeneratedPageResult)),
     urlInputRef,
     url: '',
     setUrl: vi.fn(),
@@ -55,119 +51,49 @@ function renderWorkspace(overrides: Partial<React.ComponentProps<typeof HomeWork
 }
 
 describe('HomeWorkspace', () => {
-  it('queues markdown uploads until the user chooses a website template', async () => {
-    const generatePage = vi.fn(async () => ({ html: '', title: '', templateId: 'website-01-fui' } as GeneratedPageResult))
-    renderWorkspace({ generatePage })
-    const file = new File(['# Demo'], 'brief.md', { type: 'text/markdown' })
-    Object.defineProperty(file, 'text', {
-      value: vi.fn().mockResolvedValue('# Demo'),
-    })
+  it('keeps the extraction workspace focused on URL and image input only', () => {
+    renderWorkspace()
 
-    fireEvent.drop(screen.getByRole('button', { name: '上传文件' }), {
-      dataTransfer: {
-        files: [file],
-      },
-    })
+    expect(screen.getByPlaceholderText('粘贴要分析的网址')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '上传图片' })).toBeTruthy()
+    expect(screen.queryByText('选择模板生成')).toBeNull()
+  })
 
-    await waitFor(() => {
-      expect(screen.getByText('brief.md')).toBeTruthy()
-      expect(screen.getByText('已识别为文本内容')).toBeTruthy()
-    })
-    expect(generatePage).not.toHaveBeenCalled()
+  it('submits URLs to the extraction flow', async () => {
+    const handleUrlSubmit = vi.fn()
+    renderWorkspace({ url: 'https://example.com', handleUrlSubmit })
 
-    fireEvent.click(screen.getByRole('button', { name: '用 FUI 生成官网' }))
+    fireEvent.submit(screen.getByTestId('extract-url-form'))
 
     await waitFor(() => {
-      expect(generatePage).toHaveBeenCalledWith('# Demo', 'website-01-fui', 'product-website')
+      expect(handleUrlSubmit).toHaveBeenCalledTimes(1)
     })
   })
 
-  it('generates a dashboard from markdown after the user chooses a dashboard template', async () => {
-    const generatePage = vi.fn(async () => ({ html: '', title: '', templateId: 'dashboard-01-blue-business' } as GeneratedPageResult))
-    renderWorkspace({ generatePage })
-    const file = new File(['# Dashboard'], 'dashboard.md', { type: 'text/markdown' })
-    Object.defineProperty(file, 'text', {
-      value: vi.fn().mockResolvedValue('# Dashboard'),
-    })
+  it('rejects non-url text instead of routing it to publisher templates', async () => {
+    const setError = vi.fn()
+    const handleUrlSubmit = vi.fn()
+    renderWorkspace({ url: '这是产品介绍文案', setError, handleUrlSubmit })
 
-    fireEvent.drop(screen.getByRole('button', { name: '上传文件' }), {
-      dataTransfer: {
-        files: [file],
-      },
-    })
+    fireEvent.submit(screen.getByTestId('extract-url-form'))
 
     await waitFor(() => {
-      expect(screen.getByText('dashboard.md')).toBeTruthy()
-    })
-    expect(generatePage).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('button', { name: '用 Blue Business 生成 Dashboard' }))
-
-    await waitFor(() => {
-      expect(generatePage).toHaveBeenCalledWith('# Dashboard', 'dashboard-01-blue-business', 'dashboard')
+      expect(handleUrlSubmit).not.toHaveBeenCalled()
+      expect(setError).toHaveBeenCalledWith('请粘贴一个有效网址')
     })
   })
 
-  it('queues csv uploads and disables website templates', async () => {
-    const generateDashboardFromFile = vi.fn(async () => ({ html: '', title: '', templateId: 'dashboard-01-blue-business' } as GeneratedPageResult))
+  it('passes dropped images to the extraction file preview flow', () => {
     const handleFilePreview = vi.fn()
-    renderWorkspace({ generateDashboardFromFile, handleFilePreview })
-    const file = new File(['date,revenue\n2026-01-01,100'], 'sales.csv', { type: 'text/csv' })
+    renderWorkspace({ handleFilePreview })
+    const file = new File(['image'], 'screen.png', { type: 'image/png' })
 
-    fireEvent.drop(screen.getByRole('button', { name: '上传文件' }), {
+    fireEvent.drop(screen.getByRole('button', { name: '上传图片' }), {
       dataTransfer: {
         files: [file],
       },
     })
 
-    await waitFor(() => {
-      expect(screen.getByText('sales.csv')).toBeTruthy()
-      expect(screen.getByText('已识别为数据文件')).toBeTruthy()
-    })
-    expect(generateDashboardFromFile).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: '数据文件不能生成 FUI 官网' })).toHaveProperty('disabled', true)
-
-    fireEvent.click(screen.getByRole('button', { name: '用 Blue Business 生成 Dashboard' }))
-
-    await waitFor(() => {
-      expect(generateDashboardFromFile).toHaveBeenCalledWith(file, 'dashboard-01-blue-business')
-      expect(handleFilePreview).not.toHaveBeenCalled()
-    })
-  })
-
-  it('generates csv dashboards with the clicked dashboard template', async () => {
-    const generateDashboardFromFile = vi.fn(async () => ({ html: '', title: '', templateId: 'dashboard-14-financial-blue-analytics-report' } as GeneratedPageResult))
-    renderWorkspace({ generateDashboardFromFile })
-    const file = new File(['date,revenue\n2026-01-01,100'], 'sales.csv', { type: 'text/csv' })
-
-    fireEvent.drop(screen.getByRole('button', { name: '上传文件' }), {
-      dataTransfer: {
-        files: [file],
-      },
-    })
-
-    await waitFor(() => {
-      expect(screen.getByText('sales.csv')).toBeTruthy()
-    })
-    fireEvent.click(screen.getByRole('button', { name: '用 Financial Blue 生成 Dashboard' }))
-
-    await waitFor(() => {
-      expect(generateDashboardFromFile).toHaveBeenCalledWith(file, 'dashboard-14-financial-blue-analytics-report')
-    })
-  })
-
-  it('renders all website and dashboard templates with preview frames', () => {
-    renderWorkspace()
-
-    expect(screen.getByText('共 23 个模板')).toBeTruthy()
-    expect(screen.getAllByTestId(/template-preview-/)).toHaveLength(23)
-    expect(screen.getByRole('button', { name: '请先上传或粘贴内容：Blue Shift Portfolio' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: '请先上传或粘贴内容：Consulting Data' })).toBeTruthy()
-  })
-
-  it('makes the template gallery page scrollable', () => {
-    renderWorkspace()
-
-    expect(screen.getByTestId('home-workspace-start').style.overflowY).toBe('auto')
+    expect(handleFilePreview).toHaveBeenCalledWith(file)
   })
 })

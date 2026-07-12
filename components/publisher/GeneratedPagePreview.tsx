@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef } from 'react'
-import { Download, RotateCcw } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Download } from 'lucide-react'
 
 interface GeneratedPagePreviewProps {
   html: string
@@ -58,47 +58,63 @@ export default function GeneratedPagePreview({
   }
 
   return (
-    <div style={{ height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr', background: '#f5f5f4' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottom: '1px solid #e7e5e4' }}>
-        <div>
-          <div style={{ fontWeight: 700 }}>{title}</div>
-          <div style={{ fontSize: 12, color: '#78716c' }}>{templateId}</div>
-          <div style={{ fontSize: 12, color: '#78716c', marginTop: 4 }}>已生成，可编辑并下载</div>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+    <div style={{ height: '100%', position: 'relative', background: '#FFFFFF' }}>
+      <div style={{
+        position: 'absolute',
+        top: 24,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 5,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '7px 8px',
+        borderRadius: '999px',
+        background: 'rgba(15,23,42,0.96)',
+        boxShadow: '0 18px 48px rgba(15,23,42,0.24)',
+        border: '1px solid rgba(255,255,255,0.12)',
+      }}>
           <button
             type="button"
             onClick={onBack}
             style={{
               height: 34,
-              padding: '0 14px',
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.10)',
-              background: '#FFFFFF',
-              color: '#3C3C3E',
-              fontSize: 13,
-              fontWeight: 600,
+              padding: '0 13px',
+              borderRadius: 999,
+              border: 'none',
+              background: 'transparent',
+              color: '#FFFFFF',
+              fontSize: 14,
+              fontWeight: 750,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
               cursor: 'pointer',
             }}
           >
-            <RotateCcw size={14} strokeWidth={2} />
-            重新上传
+            <ArrowLeft size={15} strokeWidth={2} />
+            返回画廊
           </button>
+          <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.18)' }} />
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 13px', color: '#CBD5E1', fontSize: 14, fontWeight: 750 }}>
+            <CheckCircle2 size={15} strokeWidth={2} color="#22C55E" />
+            <span>{title}</span>
+            <span style={{ fontSize: 12, color: '#94A3B8' }}>{templateId}</span>
+            <span style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>已生成，可编辑并下载</span>
+          </div>
+          <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.18)' }} />
           <button
             type="button"
             onClick={downloadHtml}
             style={{
               height: 34,
-              padding: '0 14px',
-              borderRadius: 10,
-              border: '1px solid #1D1D1F',
-              background: '#1D1D1F',
+              padding: '0 18px',
+              borderRadius: 999,
+              border: '1px solid #2563EB',
+              background: '#2563EB',
               color: '#FFFFFF',
-              fontSize: 13,
-              fontWeight: 650,
+              fontSize: 14,
+              fontWeight: 800,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
@@ -108,7 +124,6 @@ export default function GeneratedPagePreview({
             <Download size={14} strokeWidth={2} />
             下载 HTML
           </button>
-        </div>
       </div>
       <iframe
         ref={iframeRef}

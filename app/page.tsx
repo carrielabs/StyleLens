@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import HomeOverlays from '@/components/home/HomeOverlays'
 import HomeSidebar from '@/components/home/HomeSidebar'
+import type { HomeWorkspaceMode } from '@/components/home/HomeSidebar'
 import HomeWorkspace from '@/components/home/HomeWorkspace'
 import GeneratedPagePreview from '@/components/publisher/GeneratedPagePreview'
+import PublisherWorkspace from '@/components/publisher/PublisherWorkspace'
 import SettingsView from '@/components/settings/SettingsView'
 import { useExtraction } from '@/hooks/useExtraction'
 import { useHistory } from '@/hooks/useHistory'
@@ -19,6 +21,7 @@ export default function Home() {
   const [report, setReport] = useState<DisplayStyleReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reportLang, setReportLang] = useState<'zh' | 'en'>('zh')
+  const [activeWorkspace, setActiveWorkspace] = useState<HomeWorkspaceMode>('extract')
 
   // ── Auth state ──
   const [isAuthVisible, setIsAuthVisible] = useState(false)
@@ -117,9 +120,11 @@ export default function Home() {
   const {
     isGenerating,
     generatedPage,
+    generatedHistory,
     generatePage,
     generateDashboardFromFile,
     clearGeneratedPage,
+    openGeneratedPage,
   } = usePublisher()
 
   // ── Modal Background Lock ──
@@ -198,6 +203,30 @@ export default function Home() {
     }
   }, [report, isSearchOpen, contextMenuId, renamingId])
 
+  function switchWorkspace(workspace: HomeWorkspaceMode) {
+    setActiveWorkspace(workspace)
+    setIsSearchOpen(false)
+    setIsSettingsOpen(false)
+    setError(null)
+    setReport(null)
+    setActiveItemId(null)
+    setUrl('')
+    clearPendingFile()
+    if (workspace === 'extract') clearGeneratedPage()
+  }
+
+  function openPublisherHistoryItem(item: typeof generatedHistory[number]) {
+    setActiveWorkspace('publisher')
+    setReport(null)
+    setActiveItemId(null)
+    setIsSearchOpen(false)
+    openGeneratedPage(item)
+  }
+
+  const activePublisherHistoryId = generatedPage && 'id' in generatedPage
+    ? String(generatedPage.id)
+    : null
+
   return (
     <>
       <style>{`
@@ -250,6 +279,8 @@ export default function Home() {
         <HomeSidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
+          activeWorkspace={activeWorkspace}
+          onWorkspaceChange={switchWorkspace}
           isSearchOpen={isSearchOpen}
           pinnedCollapsed={pinnedCollapsed}
           setPinnedCollapsed={setPinnedCollapsed}
@@ -257,6 +288,9 @@ export default function Home() {
           setHistoryCollapsed={setHistoryCollapsed}
           pinnedList={pinnedList}
           recentList={recentList}
+          publisherHistory={generatedHistory}
+          activePublisherHistoryId={activePublisherHistoryId}
+          onOpenPublisherHistory={openPublisherHistoryItem}
           activeItemId={activeItemId}
           contextMenuId={contextMenuId}
           setContextMenuId={setContextMenuId}
@@ -298,15 +332,25 @@ export default function Home() {
               html={generatedPage.html}
               title={generatedPage.title}
               templateId={generatedPage.templateId}
-              onBack={clearGeneratedPage}
+              onBack={() => {
+                clearGeneratedPage()
+                setActiveWorkspace('publisher')
+              }}
             />
           </main>
+        ) : activeWorkspace === 'publisher' ? (
+          <PublisherWorkspace
+            isGenerating={isGenerating}
+            generatePage={generatePage}
+            generateDashboardFromFile={generateDashboardFromFile}
+            error={error}
+            setError={setError}
+          />
         ) : (
           <HomeWorkspace
             activeItemId={activeItemId}
             report={report}
             isExtracting={isExtracting}
-            isGenerating={isGenerating}
             isUrlExtracting={isUrlExtracting}
             isImageExtracting={isImageExtracting}
             extractions={extractions}
@@ -318,8 +362,6 @@ export default function Home() {
             setError={setError}
             greeting={greeting}
             handleUrlSubmit={handleUrlSubmit}
-            generatePage={generatePage}
-            generateDashboardFromFile={generateDashboardFromFile}
             urlInputRef={urlInputRef}
             url={url}
             setUrl={setUrl}

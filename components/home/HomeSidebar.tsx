@@ -1,14 +1,15 @@
 'use client'
 
-import { memo, useEffect, useState } from 'react'
-import type { Dispatch, MouseEvent, ReactNode, RefObject, SetStateAction } from 'react'
+import React, { memo, useEffect, useState } from 'react'
+import type { Dispatch, MouseEvent, ReactNode, RefObject, SetStateAction, SyntheticEvent } from 'react'
 import {
   ChevronDown,
+  LayoutTemplate,
   MoreHorizontal,
+  Palette,
   PencilLine,
   Pin,
   PinOff,
-  Plus,
   Search,
   Settings,
   Trash2,
@@ -17,15 +18,18 @@ import {
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/storage/supabaseClient'
 import type { ColorToken, DisplayStyleReport, HomeHistoryRecord, StyleReport } from '@/lib/types'
+import type { GeneratedPageHistoryRecord } from '@/hooks/usePublisher'
 import { getTopColors } from './viewUtils'
-import SettingsView from '@/components/settings/SettingsView'
 
 type SidebarRecord = HomeHistoryRecord
 type BrowserSupabaseClient = ReturnType<typeof createClient>
+export type HomeWorkspaceMode = 'extract' | 'publisher'
 
 interface HomeSidebarProps {
   sidebarOpen: boolean
   setSidebarOpen: Dispatch<SetStateAction<boolean>>
+  activeWorkspace: HomeWorkspaceMode
+  onWorkspaceChange: (workspace: HomeWorkspaceMode) => void
   isSearchOpen: boolean
   pinnedCollapsed: boolean
   setPinnedCollapsed: Dispatch<SetStateAction<boolean>>
@@ -33,6 +37,9 @@ interface HomeSidebarProps {
   setHistoryCollapsed: Dispatch<SetStateAction<boolean>>
   pinnedList: SidebarRecord[]
   recentList: SidebarRecord[]
+  publisherHistory: GeneratedPageHistoryRecord[]
+  activePublisherHistoryId: string | null
+  onOpenPublisherHistory: (item: GeneratedPageHistoryRecord) => void
   activeItemId: string | null
   contextMenuId: string | null
   setContextMenuId: Dispatch<SetStateAction<string | null>>
@@ -69,6 +76,8 @@ interface HomeSidebarProps {
 export default function HomeSidebar({
   sidebarOpen,
   setSidebarOpen,
+  activeWorkspace,
+  onWorkspaceChange,
   isSearchOpen,
   pinnedCollapsed,
   setPinnedCollapsed,
@@ -76,6 +85,9 @@ export default function HomeSidebar({
   setHistoryCollapsed,
   pinnedList,
   recentList,
+  publisherHistory,
+  activePublisherHistoryId,
+  onOpenPublisherHistory,
   activeItemId,
   contextMenuId,
   setContextMenuId,
@@ -206,12 +218,18 @@ export default function HomeSidebar({
       </div>
 
       <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '48px' }}>
+        {sidebarOpen && (
+          <div style={{ padding: '8px 10px 6px', fontSize: '12px', color: '#A1A1AA', fontWeight: 700 }}>
+            工作区
+          </div>
+        )}
         <SidebarBtn
-          icon={<Plus size={15} strokeWidth={2} />}
-          label="New Extraction"
+          icon={<Palette size={15} strokeWidth={2} />}
+          label="提取视觉风格"
           collapsed={!sidebarOpen}
-          active={false}
+          active={activeWorkspace === 'extract'}
           onClick={() => {
+            onWorkspaceChange('extract')
             setIsSearchOpen(false)
             setReport(null)
             setActiveItemId(null)
@@ -222,6 +240,24 @@ export default function HomeSidebar({
             setContextMenuId(null)
             onCloseSettings()
             setTimeout(() => urlInputRef.current?.focus(), 50)
+          }}
+        />
+        <SidebarBtn
+          icon={<LayoutTemplate size={15} strokeWidth={2} />}
+          label="生成页面与看板"
+          collapsed={!sidebarOpen}
+          active={activeWorkspace === 'publisher'}
+          onClick={() => {
+            onWorkspaceChange('publisher')
+            setIsSearchOpen(false)
+            setReport(null)
+            setActiveItemId(null)
+            setError(null)
+            setUrl('')
+            clearPendingFile()
+            setShowUserMenu(false)
+            setContextMenuId(null)
+            onCloseSettings()
           }}
         />
         <SidebarBtn
@@ -239,7 +275,7 @@ export default function HomeSidebar({
 
 
       <div className="no-scrollbar" style={{ flex: 1, overflowY: sidebarOpen ? 'auto' : 'hidden' }}>
-        {sidebarOpen && pinnedList.length > 0 && (
+        {activeWorkspace === 'extract' && sidebarOpen && pinnedList.length > 0 && (
           <>
             <SectionHeader label="Pinned" collapsed={pinnedCollapsed} onToggle={() => setPinnedCollapsed(v => !v)} />
             {!pinnedCollapsed && (
@@ -275,7 +311,20 @@ export default function HomeSidebar({
         {sidebarOpen && <SectionHeader label="History" collapsed={historyCollapsed} onToggle={() => setHistoryCollapsed(v => !v)} />}
 
         <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-          {!sidebarOpen ? null : historyCollapsed ? null : isLoadingHistory && recentList.length === 0 ? (
+          {!sidebarOpen ? null : historyCollapsed ? null : activeWorkspace === 'publisher' ? (
+            publisherHistory.length === 0 ? (
+              <EmptyState>暂无生成记录</EmptyState>
+            ) : (
+              publisherHistory.map(item => (
+                <PublisherHistoryItem
+                  key={item.id}
+                  item={item}
+                  isActive={activePublisherHistoryId === item.id}
+                  onClick={() => onOpenPublisherHistory(item)}
+                />
+              ))
+            )
+          ) : isLoadingHistory && recentList.length === 0 ? (
             <div style={{ padding: '8px 4px' }}>
               {[1, 2, 3, 4].map(i => (
                 <div key={i} style={{
@@ -407,6 +456,43 @@ export default function HomeSidebar({
   )
 }
 
+function PublisherHistoryItem({
+  item,
+  isActive,
+  onClick,
+}: {
+  item: GeneratedPageHistoryRecord
+  isActive: boolean
+  onClick: () => void
+}) {
+  const label = item.pageType === 'dashboard' ? 'Dashboard' : '官网 HTML'
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-active={isActive ? 'true' : 'false'}
+      style={{
+        width: '100%',
+        padding: '9px 10px',
+        borderRadius: '8px',
+        backgroundColor: isActive ? 'rgba(37,99,235,0.08)' : 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        textAlign: 'left',
+        fontFamily: 'var(--font-sans)',
+      }}
+    >
+      <div style={{ fontSize: '14px', fontWeight: 650, color: '#1D1D1F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {item.title || '未命名页面'}
+      </div>
+      <div style={{ marginTop: '3px', fontSize: '12px', color: '#8E8E93', fontWeight: 600 }}>
+        {label}
+      </div>
+    </button>
+  )
+}
+
 function UserAvatar({ email, sources }: { email?: string; sources: string[] }) {
   const [sourceIndex, setSourceIndex] = useState(0)
   const sourceSignature = sources.join('|')
@@ -506,7 +592,7 @@ const HistoryItem = memo(function HistoryItem({
   const isRenaming = renamingId === id
   const topColors = getTopColors(colors)
 
-  const handleImgLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  const handleImgLoad = (e: SyntheticEvent<HTMLImageElement>) => {
     if (sourceType === 'image') {
       const img = e.currentTarget
       const ratio = img.naturalHeight / img.naturalWidth
