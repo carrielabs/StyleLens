@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useRef } from 'react'
 import { Download, RotateCcw } from 'lucide-react'
 
 interface GeneratedPagePreviewProps {
@@ -16,8 +16,10 @@ export default function GeneratedPagePreview({
   templateId,
   onBack,
 }: GeneratedPagePreviewProps) {
-  function downloadHtml() {
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+
+  function downloadHtmlContent(htmlContent: string) {
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -26,6 +28,33 @@ export default function GeneratedPagePreview({
     link.click()
     link.remove()
     URL.revokeObjectURL(url)
+  }
+
+  async function requestCurrentHtml() {
+    const frameWindow = iframeRef.current?.contentWindow
+    if (!frameWindow) return html
+
+    return new Promise<string>((resolve) => {
+      const timeout = window.setTimeout(() => {
+        window.removeEventListener('message', handleMessage)
+        resolve(html)
+      }, 800)
+
+      function handleMessage(event: MessageEvent) {
+        if (event.source !== frameWindow) return
+        if (event.data?.type !== 'AHP_EXPORT_HTML') return
+        window.clearTimeout(timeout)
+        window.removeEventListener('message', handleMessage)
+        resolve(typeof event.data.html === 'string' && event.data.html.trim() ? event.data.html : html)
+      }
+
+      window.addEventListener('message', handleMessage)
+      frameWindow.postMessage({ type: 'AHP_REQUEST_EXPORT_HTML' }, '*')
+    })
+  }
+
+  async function downloadHtml() {
+    downloadHtmlContent(await requestCurrentHtml())
   }
 
   return (
@@ -82,6 +111,7 @@ export default function GeneratedPagePreview({
         </div>
       </div>
       <iframe
+        ref={iframeRef}
         title="生成页面预览"
         sandbox="allow-scripts allow-same-origin allow-downloads"
         srcDoc={html}

@@ -283,6 +283,7 @@ function injectDataDashboard(html: string, model: DashboardDataModel, fileName: 
   })
   setSlot($, 'text.trend.02', `${model.primaryMetric.name} 趋势来自上传文件的真实记录`)
   setSlot($, 'text.segment.02', '分类占比按上传文件中的分类字段自动汇总')
+  bindDashboardDataNodes($, model)
 
   const nextChartData = buildChartDataLiteral(model)
   $('script:not([src])').each((_, element) => {
@@ -295,6 +296,8 @@ function injectDataDashboard(html: string, model: DashboardDataModel, fileName: 
     node.html(nextScript)
   })
 
+  const runtimeScripts = $('body script[data-ahp-runtime]').toArray().map(element => $.html(element)).join('\n')
+  $('body script[data-ahp-runtime]').remove()
   $('script[data-ahp-dashboard-data]').remove()
   const dashboardPayload = safeJson({
     templateId,
@@ -306,6 +309,7 @@ function injectDataDashboard(html: string, model: DashboardDataModel, fileName: 
     categoryBreakdown: model.categoryBreakdown,
   })
   $('body').append(`<script data-ahp-dashboard-data="true">window.AHP_DASHBOARD_DATA = ${dashboardPayload};</script>`)
+  if (runtimeScripts) $('body').append(runtimeScripts)
 
   return $.html()
 }
@@ -331,6 +335,34 @@ function injectGenericDashboardText($: cheerio.CheerioAPI, model: DashboardDataM
     const node = nodes[index]
     if (!node) return
     $(node).text(value)
+  })
+}
+
+function bindDashboardDataNodes($: cheerio.CheerioAPI, model: DashboardDataModel) {
+  const bindText = (value: string, bind: string) => {
+    const text = String(value || '').trim()
+    if (!text) return
+    $('[data-editable="true"], [contenteditable="true"]').each((_, element) => {
+      const node = $(element)
+      if (node.attr('data-ahp-dashboard-bind')) return
+      if (node.text().trim() === text) node.attr('data-ahp-dashboard-bind', bind)
+    })
+  }
+
+  bindText(model.title, 'title')
+  bindText(model.primaryMetric.name, 'primaryMetric.name')
+  model.kpis.forEach((kpi, index) => {
+    bindText(kpi.label, `kpi.${index}.label`)
+    bindText(kpi.value, `kpi.${index}.value`)
+    bindText(kpi.trend, `kpi.${index}.trend`)
+  })
+  model.trend.forEach((point, index) => {
+    bindText(point.label, `trend.${index}.label`)
+    bindText(formatNumber(point.value), `trend.${index}.value`)
+  })
+  model.categoryBreakdown.forEach((point, index) => {
+    bindText(point.label, `category.${index}.label`)
+    bindText(formatNumber(point.value), `category.${index}.value`)
   })
 }
 

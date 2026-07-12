@@ -140,6 +140,9 @@ describe('data dashboard files', () => {
     expect(result.html).toContain("labels: ['2026-01-01', '2026-01-02', '2026-01-03']")
     expect(result.html).toContain("labels: ['Direct', 'Search']")
     expect(result.html).toContain('data-ahp-runtime')
+    expect(result.html.indexOf('data-ahp-dashboard-data')).toBeLessThan(result.html.indexOf('<script data-ahp-runtime'))
+    expect(result.html).toContain('data-ahp-dashboard-bind="kpi.0.value"')
+    expect(result.html).toContain('data-ahp-dashboard-editor')
   })
 
   it.each(TEMPLATE_FILE_CASES)('generates real data dashboard html for $templateId from $fileName', async ({ templateId, fileName, contentType, bytes, expectedTotal }) => {
@@ -160,5 +163,8 @@ describe('data dashboard files', () => {
     expect(result.html).toContain('data-ahp-dashboard-data')
     expect(result.html).toContain(`"templateId":"${templateId}"`)
     expect(result.html).toContain('data-ahp-runtime')
+    expect(result.html.indexOf('data-ahp-dashboard-data')).toBeLessThan(result.html.indexOf('<script data-ahp-runtime'))
+    expect(result.html).toContain('data-section=')
+    expect(result.html).toContain('data-ahp-dashboard-editor')
   })
 })

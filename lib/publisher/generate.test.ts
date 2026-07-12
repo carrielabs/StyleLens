@@ -55,6 +55,15 @@ const sourceText = [
   '- 编辑导出',
 ].join('\n')
 
+function expectEditingRuntime(html: string) {
+  expect(html).toContain('data-ahp-runtime')
+  expect(html).toContain('data-style="moduleUp"')
+  expect(html).toContain('data-style="moduleDown"')
+  expect(html).toContain('data-style="moduleToggle"')
+  expect(html).toContain('data-style="moduleDuplicate"')
+  expect(html).toContain('data-style="moduleDelete"')
+}
+
 const originalBaseUrl = process.env.AHP_TEMPLATE_RAW_BASE_URL
 const originalForceRemote = process.env.AHP_TEMPLATE_FORCE_REMOTE
 const originalToken = process.env.AHP_TEMPLATE_GITHUB_TOKEN
@@ -79,7 +88,7 @@ describe('generateProductWebsiteHtml', () => {
     expect(result.title).toBe('AI HTML Publisher')
     expect(result.templateId).toBe(templateId)
     expect(result.html).toContain('AI HTML Publisher')
-    expect(result.html).toContain('data-ahp-runtime')
+    expectEditingRuntime(result.html)
     expect(result.html).not.toMatch(/<script[^>]+src="https?:\/\//i)
     expect(result.html).not.toMatch(/<link[^>]+href="https?:\/\//i)
     expect(result.html).not.toMatch(/cdn\.tailwindcss|fonts\.googleapis|localhost|127\.0\.0\.1|onclick=|document\.write|href="#"/i)
@@ -146,7 +155,7 @@ describe('generateProductWebsiteHtml', () => {
     expect(result.templateId).toBe('dashboard-01-blue-business')
     expect(result.html).toContain('经营数据看板')
     expect(result.html).toContain('window.REPORT_DATA')
-    expect(result.html).toContain('data-ahp-runtime')
+    expectEditingRuntime(result.html)
     expect(result.html).toContain('dashboard-01-blue-business')
   })
 
@@ -160,6 +169,6 @@ describe('generateProductWebsiteHtml', () => {
     expect(result.title).toBe('经营数据看板')
     expect(result.templateId).toBe(templateId)
     expect(result.html).toContain('经营数据看板')
-    expect(result.html).toContain('data-ahp-runtime')
+    expectEditingRuntime(result.html)
   })
 })

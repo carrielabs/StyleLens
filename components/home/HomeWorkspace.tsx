@@ -12,38 +12,38 @@ import { detectInputIntent, isDataUpload, isTextUpload } from '@/lib/publisher/i
 import type { GeneratedPageResult, GeneratedPageType } from '@/hooks/usePublisher'
 
 const WEBSITE_TEMPLATES = [
-  { id: 'website-01-fui', name: 'FUI' },
-  { id: 'website-02-soft-surrealism', name: 'Soft Surrealism' },
-  { id: 'website-03-red-clay', name: 'Red Clay' },
-  { id: 'website-04-premium-midnight', name: 'Premium Midnight' },
-  { id: 'website-05-voltflow-cyber-saas', name: 'Voltflow Cyber SaaS' },
-  { id: 'website-07-blueprint-agent-platform', name: 'Blueprint Agent' },
-  { id: 'website-08-editorial-apple-tech', name: 'Editorial Apple Tech' },
-  { id: 'website-09-blue-shift-portfolio', name: 'Blue Shift Portfolio' },
+  { id: 'website-01-fui', name: 'FUI', description: '简洁产品介绍', tone: '#1D1D1F' },
+  { id: 'website-02-soft-surrealism', name: 'Soft Surrealism', description: '柔和品牌官网', tone: '#E8B4C8' },
+  { id: 'website-03-red-clay', name: 'Red Clay', description: '内容型产品页', tone: '#B85C38' },
+  { id: 'website-04-premium-midnight', name: 'Premium Midnight', description: '高端深色官网', tone: '#111827' },
+  { id: 'website-05-voltflow-cyber-saas', name: 'Voltflow Cyber SaaS', description: '科技 SaaS', tone: '#D9EB26' },
+  { id: 'website-07-blueprint-agent-platform', name: 'Blueprint Agent', description: '平台型产品', tone: '#2563EB' },
+  { id: 'website-08-editorial-apple-tech', name: 'Editorial Apple Tech', description: '编辑感科技页', tone: '#A3A3A3' },
+  { id: 'website-09-blue-shift-portfolio', name: 'Blue Shift Portfolio', description: '作品集/品牌展示', tone: '#38BDF8' },
 ]
 
 const DASHBOARD_TEMPLATES = [
-  { id: 'dashboard-01-blue-business', name: 'Blue Business' },
-  { id: 'dashboard-02-premium-dark', name: 'Premium Dark' },
-  { id: 'dashboard-03-lean-cyber-analytics', name: 'Lean Cyber Analytics' },
-  { id: 'dashboard-04-premium-midnight', name: 'Premium Midnight' },
-  { id: 'dashboard-05-premium-cyber-dark', name: 'Premium Cyber Dark' },
-  { id: 'dashboard-06-warm-paper-analytics', name: 'Warm Paper Analytics' },
-  { id: 'dashboard-07-dark-bento-analytics', name: 'Dark Bento Analytics' },
-  { id: 'dashboard-08-saas-executive-analytics', name: 'SaaS Executive' },
-  { id: 'dashboard-09-editorial-corporate-analytics', name: 'Editorial Corporate' },
-  { id: 'dashboard-10-executive-logic-report', name: 'Executive Logic' },
-  { id: 'dashboard-11-saas-growth-health-report', name: 'SaaS Growth Health' },
-  { id: 'dashboard-12-atomic-bento-strategy-report', name: 'Atomic Bento Strategy' },
-  { id: 'dashboard-13-corporate-blue-analytics-report', name: 'Corporate Blue' },
-  { id: 'dashboard-14-financial-blue-analytics-report', name: 'Financial Blue' },
-  { id: 'dashboard-15-consulting-data-report', name: 'Consulting Data' },
+  { id: 'dashboard-01-blue-business', name: 'Blue Business', description: '经营分析 / KPI', tone: '#2563EB' },
+  { id: 'dashboard-02-premium-dark', name: 'Premium Dark', description: '深色数据大屏', tone: '#18181B' },
+  { id: 'dashboard-03-lean-cyber-analytics', name: 'Lean Cyber Analytics', description: '科技监控', tone: '#A3E635' },
+  { id: 'dashboard-04-premium-midnight', name: 'Premium Midnight', description: '高级深色报告', tone: '#312E81' },
+  { id: 'dashboard-05-premium-cyber-dark', name: 'Premium Cyber Dark', description: '安全 / 系统指标', tone: '#22D3EE' },
+  { id: 'dashboard-06-warm-paper-analytics', name: 'Warm Paper Analytics', description: '温和汇报页', tone: '#D97706' },
+  { id: 'dashboard-07-dark-bento-analytics', name: 'Dark Bento Analytics', description: '模块化分析', tone: '#DC2626' },
+  { id: 'dashboard-08-saas-executive-analytics', name: 'SaaS Executive', description: 'SaaS 高管看板', tone: '#7C3AED' },
+  { id: 'dashboard-09-editorial-corporate-analytics', name: 'Editorial Corporate', description: '企业分析报告', tone: '#0F172A' },
+  { id: 'dashboard-10-executive-logic-report', name: 'Executive Logic', description: '管理层决策', tone: '#0284C7' },
+  { id: 'dashboard-11-saas-growth-health-report', name: 'SaaS Growth Health', description: '增长健康度', tone: '#16A34A' },
+  { id: 'dashboard-12-atomic-bento-strategy-report', name: 'Atomic Bento Strategy', description: '战略复盘', tone: '#F97316' },
+  { id: 'dashboard-13-corporate-blue-analytics-report', name: 'Corporate Blue', description: '蓝色企业报告', tone: '#1D4ED8' },
+  { id: 'dashboard-14-financial-blue-analytics-report', name: 'Financial Blue', description: '财务分析', tone: '#0EA5E9' },
+  { id: 'dashboard-15-consulting-data-report', name: 'Consulting Data', description: '咨询数据报告', tone: '#0F2C59' },
 ]
 
-const PAGE_TYPES: Array<{ id: GeneratedPageType; name: string }> = [
-  { id: 'product-website', name: '产品官网' },
-  { id: 'dashboard', name: 'Dashboard' },
-]
+const TEMPLATE_TOTAL = WEBSITE_TEMPLATES.length + DASHBOARD_TEMPLATES.length
+
+type TemplateOption = typeof WEBSITE_TEMPLATES[number] | typeof DASHBOARD_TEMPLATES[number]
+type QueuedPublisherFile = { file: File; kind: 'text' | 'data' }
 
 interface HomeWorkspaceProps {
   activeItemId: string | null
@@ -123,19 +123,17 @@ export default function HomeWorkspace({
   extractionPhase,
 }: HomeWorkspaceProps) {
   const [hoveredSection, setHoveredSection] = useState<{ yStart: number; yEnd: number } | null>(null)
-  const [selectedPageType, setSelectedPageType] = useState<GeneratedPageType>('product-website')
-  const [selectedTemplateId, setSelectedTemplateId] = useState('website-01-fui')
+  const [queuedPublisherFile, setQueuedPublisherFile] = useState<QueuedPublisherFile | null>(null)
   const [textUploadFile, setTextUploadFile] = useState<File | null>(null)
   const [textUploadPhase, setTextUploadPhase] = useState<'idle' | 'generating' | 'error'>('idle')
   const isTextUploadActive = Boolean(textUploadFile)
+  const isPublisherFileQueued = Boolean(queuedPublisherFile)
   const isBusy = isExtracting || isGenerating || textUploadPhase === 'generating'
-  const templateOptions = selectedPageType === 'dashboard' ? DASHBOARD_TEMPLATES : WEBSITE_TEMPLATES
   const shouldShowPublisherOptions = !url.trim() || detectInputIntent(url) === 'generate-page'
-
-  const handlePageTypeChange = (pageType: GeneratedPageType) => {
-    setSelectedPageType(pageType)
-    setSelectedTemplateId(pageType === 'dashboard' ? 'dashboard-01-blue-business' : 'website-01-fui')
-  }
+  const typedSourceText = url.trim()
+  const hasTypedPublisherText = Boolean(typedSourceText && detectInputIntent(typedSourceText) === 'generate-page')
+  const hasPublisherSource = Boolean(queuedPublisherFile || hasTypedPublisherText)
+  const hasDataSource = queuedPublisherFile?.kind === 'data'
 
   const handleUnifiedSubmit = async (e?: FormEvent) => {
     if (e) e.preventDefault()
@@ -147,40 +145,51 @@ export default function HomeWorkspace({
       return
     }
 
-    setError(null)
-    try {
-      await generatePage(value, selectedTemplateId, selectedPageType)
-      setUrl('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '生成失败，请重试')
-    }
+    setError('请在下方选择一个模板生成')
   }
 
-  const handleTextUpload = async (file: File) => {
+  const handleTextUpload = (file: File) => {
     if (isBusy) return
     setError(null)
-    setTextUploadFile(file)
-    setTextUploadPhase('generating')
-    try {
-      await generatePage(await file.text(), selectedTemplateId, selectedPageType)
-      setTextUploadFile(null)
-      setTextUploadPhase('idle')
-    } catch (err) {
-      setTextUploadPhase('error')
-      setError(err instanceof Error ? err.message : '生成失败，请重试')
-    }
+    setQueuedPublisherFile({ file, kind: 'text' })
+    setTextUploadFile(null)
+    setTextUploadPhase('idle')
   }
 
-  const handleDataUpload = async (file: File) => {
+  const handleDataUpload = (file: File) => {
     if (isBusy) return
     setError(null)
-    const dashboardTemplateId = selectedPageType === 'dashboard' ? selectedTemplateId : 'dashboard-01-blue-business'
-    setSelectedPageType('dashboard')
-    setSelectedTemplateId(dashboardTemplateId)
-    setTextUploadFile(file)
-    setTextUploadPhase('generating')
+    setQueuedPublisherFile({ file, kind: 'data' })
+    setTextUploadFile(null)
+    setTextUploadPhase('idle')
+  }
+
+  const handleTemplateGenerate = async (templateId: string, pageType: GeneratedPageType) => {
+    if (isBusy) return
+    if (hasDataSource && pageType === 'product-website') return
+    if (!hasPublisherSource) {
+      setError('请先上传文件或粘贴内容')
+      return
+    }
+
+    setError(null)
+    const activeFile = queuedPublisherFile?.file || null
+    if (activeFile) {
+      setTextUploadFile(activeFile)
+      setTextUploadPhase('generating')
+    }
+
     try {
-      await generateDashboardFromFile(file, dashboardTemplateId)
+      if (queuedPublisherFile?.kind === 'data') {
+        await generateDashboardFromFile(queuedPublisherFile.file, templateId)
+      } else {
+        const sourceText = queuedPublisherFile?.kind === 'text'
+          ? await queuedPublisherFile.file.text()
+          : typedSourceText
+        await generatePage(sourceText, templateId, pageType)
+        if (!queuedPublisherFile) setUrl('')
+      }
+      setQueuedPublisherFile(null)
       setTextUploadFile(null)
       setTextUploadPhase('idle')
     } catch (err) {
@@ -195,9 +204,10 @@ export default function HomeWorkspace({
       return
     }
     if (isTextUpload(file)) {
-      void handleTextUpload(file)
+      handleTextUpload(file)
       return
     }
+    setQueuedPublisherFile(null)
     handleFilePreview(file)
   }
 
@@ -225,7 +235,7 @@ export default function HomeWorkspace({
           filter: drop-shadow(0 20px 40px rgba(0,0,0,0.12));
         }
       `}</style>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FFFFFF', overflow: 'hidden', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+      <main style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#FFFFFF', overflow: 'hidden', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
           <HelpCircle size={18} strokeWidth={1} style={{ color: '#C7C7CC', cursor: 'pointer', transition: 'color 0.2s' }}
             onMouseEnter={e => e.currentTarget.style.color = '#8E8E93'}
@@ -312,8 +322,11 @@ export default function HomeWorkspace({
       )}
 
       {(!report || isExtracting) && (
-        <div style={{
+        <div
+          data-testid="home-workspace-start"
+          style={{
           flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
+          minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain',
           padding: '48px', paddingTop: '18vh', gap: '0', position: 'relative', animation: 'fadeIn 0.4s ease-out'
         }}>
           {error && (
@@ -330,9 +343,9 @@ export default function HomeWorkspace({
             </div>
           )}
 
-          <div style={{ width: '100%', maxWidth: '640px' }}>
+          <div style={{ width: '100%', maxWidth: '1120px' }}>
             <div style={{
-              textAlign: 'left', marginBottom: '56px', display: 'flex', flexDirection: 'column',
+              textAlign: 'left', margin: '0 auto 56px', maxWidth: '640px', display: 'flex', flexDirection: 'column',
               alignItems: 'flex-start', gap: '0', animation: 'fadeIn 0.6s ease-out'
             }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '32px', width: '100%' }}>
@@ -349,7 +362,7 @@ export default function HomeWorkspace({
             </div>
             </div>
 
-            <form onSubmit={handleUnifiedSubmit} style={{ position: 'relative', marginBottom: '18px' }}>
+            <form onSubmit={handleUnifiedSubmit} style={{ position: 'relative', margin: '0 auto 18px', maxWidth: '640px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center',
                 backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)',
@@ -416,60 +429,7 @@ export default function HomeWorkspace({
               </div>
             </form>
 
-            {shouldShowPublisherOptions && (
-              <div style={{ margin: '0 0 24px', display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '10px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#8E8E93', flexShrink: 0 }}>页面类型</span>
-                  <select
-                    aria-label="页面类型"
-                    value={selectedPageType}
-                    onChange={e => handlePageTypeChange(e.target.value as GeneratedPageType)}
-                    disabled={isBusy}
-                    style={{
-                      flex: 1,
-                      height: '34px',
-                      border: '1px solid rgba(0,0,0,0.08)',
-                      borderRadius: '10px',
-                      background: '#FFFFFF',
-                      color: '#1D1D1F',
-                      fontSize: '12px',
-                      padding: '0 10px',
-                      outline: 'none',
-                    }}
-                  >
-                    {PAGE_TYPES.map(pageType => (
-                      <option key={pageType.id} value={pageType.id}>{pageType.name}</option>
-                    ))}
-                  </select>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#8E8E93', flexShrink: 0 }}>模板</span>
-                  <select
-                    aria-label="模板"
-                    value={selectedTemplateId}
-                    onChange={e => setSelectedTemplateId(e.target.value)}
-                    disabled={isBusy}
-                    style={{
-                      flex: 1,
-                      height: '34px',
-                      border: '1px solid rgba(0,0,0,0.08)',
-                      borderRadius: '10px',
-                      background: '#FFFFFF',
-                      color: '#1D1D1F',
-                      fontSize: '12px',
-                      padding: '0 10px',
-                      outline: 'none',
-                    }}
-                  >
-                    {templateOptions.map(template => (
-                      <option key={template.id} value={template.id}>{template.name}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '4px 0 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '4px auto 24px', maxWidth: '640px' }}>
               <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.03)' }} />
               <span style={{
                 fontSize: '9px', color: '#BDBDBD', fontWeight: 600,
@@ -480,8 +440,8 @@ export default function HomeWorkspace({
 
             <div
               style={{
-                width: '100%', height: '200px', borderRadius: '24px',
-                border: isTextUploadActive
+                width: '100%', maxWidth: '640px', margin: '0 auto', height: '200px', borderRadius: '24px',
+                border: isPublisherFileQueued || isTextUploadActive
                   ? '1px solid rgba(0,0,0,0.12)'
                   : uploadState === 'dragover'
                   ? '1.5px solid rgba(0,0,0,0.22)'
@@ -493,14 +453,14 @@ export default function HomeWorkspace({
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 justifyContent: 'center', gap: '12px', cursor: 'pointer',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                backgroundColor: isTextUploadActive
+                backgroundColor: isPublisherFileQueued || isTextUploadActive
                   ? '#FBFBFD'
                   : uploadState === 'dragover'
                   ? 'rgba(0,0,0,0.015)'
                   : uploadState === 'hover'
                   ? 'rgba(255,255,255,0.6)'
                   : 'transparent',
-                boxShadow: isTextUploadActive || uploadState === 'selected' || uploadState === 'extracting'
+                boxShadow: isPublisherFileQueued || isTextUploadActive || uploadState === 'selected' || uploadState === 'extracting'
                   ? 'none'
                   : 'inset 0 1px 4px rgba(0,0,0,0.01)',
                 transform: uploadState === 'hover' ? 'scale(1.002)' : 'scale(1)',
@@ -519,6 +479,7 @@ export default function HomeWorkspace({
               onClick={() => {
                 if (isBusy) return
                 if (pendingFile) return
+                if (isPublisherFileQueued) return
                 if (isTextUploadActive) {
                   if (textUploadPhase === 'error') {
                     setTextUploadFile(null)
@@ -604,6 +565,43 @@ export default function HomeWorkspace({
                 </>
               )}
 
+              {queuedPublisherFile && !isTextUploadActive && (
+                <>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '12px',
+                    backgroundColor: '#F2F2F7',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#3C3C3E'
+                  }}>
+                    <FileText size={18} strokeWidth={1.8} />
+                  </div>
+                  <div style={{ textAlign: 'center', maxWidth: '80%' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 650, color: '#1D1D1F', marginBottom: '4px', letterSpacing: '-0.01em' }}>
+                      {queuedPublisherFile.file.name}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#8E8E93', fontWeight: 450 }}>
+                      {queuedPublisherFile.kind === 'data' ? '已识别为数据文件' : '已识别为文本内容'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#AEAEB2', marginTop: '4px' }}>
+                      {(queuedPublisherFile.file.size / 1024).toFixed(1)} KB · 请在下方选择模板
+                    </div>
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); setQueuedPublisherFile(null) }}
+                    style={{
+                      position: 'absolute', top: '10px', right: '10px',
+                      width: '26px', height: '26px', borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.06)', border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', color: '#3C3C3E'
+                    }}
+                    aria-label="移除已上传文件"
+                  >
+                    <X size={12} strokeWidth={2} />
+                  </button>
+                </>
+              )}
+
               {isTextUploadActive && (
                 <>
                   <div style={{
@@ -638,7 +636,7 @@ export default function HomeWorkspace({
                 </>
               )}
 
-              {!isTextUploadActive && uploadState !== 'selected' && uploadState !== 'extracting' && (
+              {!queuedPublisherFile && !isTextUploadActive && uploadState !== 'selected' && uploadState !== 'extracting' && (
                 <>
                   <div className="upload-icon-float" style={{
                     width: '36px', height: '36px', borderRadius: '10px',
@@ -654,11 +652,57 @@ export default function HomeWorkspace({
                     <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1F', marginBottom: '5px', letterSpacing: '-0.01em' }}>
                       {uploadState === 'dragover' ? '释放以解析' : '点击上传 / 将图片、.md 或 .txt 拖拽至此'}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>图片用于提取风格，Markdown/TXT 用于生成页面，CSV/JSON/XLSX 用于生成 Dashboard</div>
+                    <div style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: 400 }}>图片用于提取风格，Markdown/TXT/CSV/JSON/XLSX 上传后选择模板生成</div>
                   </div>
                 </>
               )}
             </div>
+
+            {shouldShowPublisherOptions && (
+              <div style={{ marginTop: '28px', paddingBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px', marginBottom: '14px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <h2 style={{ margin: 0, fontSize: '15px', lineHeight: 1.2, fontWeight: 700, color: '#1D1D1F', letterSpacing: '-0.01em' }}>
+                        选择模板生成
+                      </h2>
+                      <span style={{
+                        height: '22px', padding: '0 8px', borderRadius: '999px',
+                        background: '#F2F2F7', color: '#636366', display: 'inline-flex',
+                        alignItems: 'center', fontSize: '11px', fontWeight: 650
+                      }}>
+                        共 {TEMPLATE_TOTAL} 个模板
+                      </span>
+                    </div>
+                    <p style={{ margin: '6px 0 0', fontSize: '12px', lineHeight: 1.4, color: '#8E8E93' }}>
+                      {hasDataSource
+                        ? '数据文件只支持生成 Dashboard，请选择一个看板模板。'
+                        : hasPublisherSource
+                        ? '选择官网或 Dashboard 模板，用当前内容生成同款页面。'
+                        : '先上传文件或粘贴内容，再点击模板生成。'}
+                    </p>
+                  </div>
+                </div>
+
+                <TemplateSection
+                  title="产品官网模板"
+                  pageType="product-website"
+                  templates={WEBSITE_TEMPLATES}
+                  disabledReason={hasDataSource ? '数据文件不能生成官网' : !hasPublisherSource ? '请先上传或粘贴内容' : null}
+                  isBusy={isBusy}
+                  onGenerate={handleTemplateGenerate}
+                />
+
+                <TemplateSection
+                  title="Dashboard 模板"
+                  pageType="dashboard"
+                  templates={DASHBOARD_TEMPLATES}
+                  disabledReason={!hasPublisherSource ? '请先上传或粘贴内容' : null}
+                  isBusy={isBusy}
+                  onGenerate={handleTemplateGenerate}
+                />
+              </div>
+            )}
 
             {isExtracting && (() => {
               const phaseText =
@@ -723,5 +767,141 @@ export default function HomeWorkspace({
       )}
     </main>
     </>
+  )
+}
+
+function TemplateSection({
+  title,
+  pageType,
+  templates,
+  disabledReason,
+  isBusy,
+  onGenerate,
+}: {
+  title: string
+  pageType: GeneratedPageType
+  templates: TemplateOption[]
+  disabledReason: string | null
+  isBusy: boolean
+  onGenerate: (templateId: string, pageType: GeneratedPageType) => void
+}) {
+  return (
+    <section style={{ marginTop: '20px' }}>
+      <h3 style={{ margin: '0 0 10px', fontSize: '12px', fontWeight: 700, color: '#3C3C3E', letterSpacing: '-0.01em' }}>
+        {title}
+      </h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+        {templates.map(template => (
+          <TemplateCard
+            key={template.id}
+            template={template}
+            pageType={pageType}
+            disabledReason={disabledReason}
+            isBusy={isBusy}
+            onGenerate={onGenerate}
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function TemplateCard({
+  template,
+  pageType,
+  disabledReason,
+  isBusy,
+  onGenerate,
+}: {
+  template: TemplateOption
+  pageType: GeneratedPageType
+  disabledReason: string | null
+  isBusy: boolean
+  onGenerate: (templateId: string, pageType: GeneratedPageType) => void
+}) {
+  const isDisabled = Boolean(disabledReason) || isBusy
+  const pageLabel = pageType === 'dashboard' ? 'Dashboard' : '官网'
+  const actionLabel = `用 ${template.name} 生成${pageLabel === '官网' ? '官网' : ` ${pageLabel}`}`
+  const disabledLabel = disabledReason === '数据文件不能生成官网'
+    ? `数据文件不能生成 ${template.name} 官网`
+    : `${disabledReason || '生成中'}：${template.name}`
+
+  return (
+    <article
+      style={{
+        border: '1px solid rgba(0,0,0,0.08)',
+        borderRadius: '12px',
+        background: isDisabled ? '#FAFAFA' : '#FFFFFF',
+        opacity: isDisabled ? 0.56 : 1,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        data-testid={`template-preview-${template.id}`}
+        style={{
+          height: '132px',
+          background: '#F5F5F7',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        <iframe
+          title={`${template.name} 模板预览`}
+          src={`/api/template-preview/${template.id}`}
+          loading="lazy"
+          sandbox="allow-scripts"
+          tabIndex={-1}
+          style={{
+            width: '1280px',
+            height: '760px',
+            border: 'none',
+            transform: 'scale(0.18)',
+            transformOrigin: '0 0',
+            pointerEvents: 'none',
+            background: '#FFFFFF',
+          }}
+        />
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            boxShadow: `inset 0 -28px 40px ${template.tone}10`,
+            pointerEvents: 'none',
+          }}
+        />
+      </div>
+      <div style={{ padding: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
+          <h4 style={{ margin: 0, fontSize: '12px', lineHeight: 1.2, color: '#1D1D1F', fontWeight: 700 }}>
+            {template.name}
+          </h4>
+          <span style={{ fontSize: '10px', color: '#AEAEB2', flexShrink: 0 }}>{pageLabel}</span>
+        </div>
+        <p style={{ margin: '5px 0 10px', minHeight: '28px', fontSize: '11px', lineHeight: 1.3, color: '#8E8E93' }}>
+          {template.description}
+        </p>
+        <button
+          type="button"
+          disabled={isDisabled}
+          aria-label={isDisabled ? disabledLabel : actionLabel}
+          onClick={() => onGenerate(template.id, pageType)}
+          style={{
+            width: '100%',
+            height: '30px',
+            borderRadius: '8px',
+            border: '1px solid rgba(0,0,0,0.08)',
+            background: isDisabled ? '#F2F2F7' : '#1D1D1F',
+            color: isDisabled ? '#8E8E93' : '#FFFFFF',
+            fontSize: '11px',
+            fontWeight: 650,
+            cursor: isDisabled ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {isDisabled ? disabledReason || '生成中...' : `用这个生成${pageLabel === '官网' ? '官网' : ' Dashboard'}`}
+        </button>
+      </div>
+    </article>
   )
 }
