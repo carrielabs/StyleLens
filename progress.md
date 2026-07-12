@@ -31,6 +31,6 @@
    - `npm test`：19 个测试文件通过，128 个测试通过，4 个跳过。
    - `npx tsc --noEmit`：通过，无类型错误。
    - `npm run build`：通过，退出码 0。
-5. 已提交并准备 push：
-   - commit：`b8e42f4 feat: split extraction and publisher workspaces`
+5. 已提交并 push：
+   - 实现提交：`589061f feat: split extraction and publisher workspaces`
    - 目标：`origin/main`
