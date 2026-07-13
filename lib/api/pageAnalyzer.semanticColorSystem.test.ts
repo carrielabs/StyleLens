@@ -7,6 +7,224 @@ import type { PageColorCandidate } from '@/lib/types'
 import { buildSemanticColorSystem } from '@/lib/api/pageAnalyzer'
 
 describe('buildSemanticColorSystem', () => {
+  it('does not build semantic slots from css-only inferred colors', () => {
+    const candidates: PageColorCandidate[] = [
+      {
+        hex: '#FF3B30',
+        property: 'background-color',
+        selectorHint: '.debug-error',
+        count: 3,
+        roleHints: ['background'],
+        layerHints: ['global'],
+        componentKinds: ['section'],
+        evidenceScore: 80,
+        meta: {
+          source: 'inferred',
+          confidence: 'medium',
+          evidenceCount: 3,
+        },
+      },
+      {
+        hex: '#FFFFFF',
+        property: 'color',
+        selectorHint: '.debug-error',
+        count: 2,
+        roleHints: ['text'],
+        layerHints: ['global'],
+        componentKinds: ['text'],
+        evidenceScore: 60,
+        meta: {
+          source: 'inferred',
+          confidence: 'medium',
+          evidenceCount: 2,
+        },
+      },
+    ]
+
+    const semantic = buildSemanticColorSystem(candidates)
+
+    expect(semantic).toBeUndefined()
+  })
+
+  it('prefers body text color over CTA foreground for primary text', () => {
+    const candidates: PageColorCandidate[] = [
+      {
+        hex: '#F6F9FC',
+        property: 'background-color',
+        selectorHint: '[anchor:body]',
+        count: 12,
+        roleHints: ['background'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 180,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 12,
+        },
+      },
+      {
+        hex: '#425466',
+        property: 'color',
+        selectorHint: '[anchor:body-text]',
+        count: 24,
+        roleHints: ['text'],
+        layerHints: ['global'],
+        componentKinds: ['text'],
+        evidenceScore: 140,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 24,
+        },
+      },
+      {
+        hex: '#635BFF',
+        property: 'color',
+        selectorHint: 'a.primary-link',
+        count: 18,
+        roleHints: ['text', 'primary'],
+        layerHints: ['hero', 'global'],
+        componentKinds: ['link', 'text'],
+        evidenceScore: 220,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 18,
+        },
+      },
+      {
+        hex: '#635BFF',
+        property: 'cta-background',
+        selectorHint: 'a.primary-link',
+        count: 18,
+        roleHints: ['primary', 'cta', 'background'],
+        layerHints: ['hero', 'global'],
+        componentKinds: ['button'],
+        evidenceScore: 220,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 18,
+        },
+      },
+    ]
+
+    const semantic = buildSemanticColorSystem(candidates)
+
+    expect(semantic?.textPrimary?.hex).toBe('#425466')
+  })
+
+  it('prefers repeated neutral text over saturated link text for primary text', () => {
+    const candidates: PageColorCandidate[] = [
+      {
+        hex: '#F6F9FC',
+        property: 'background-color',
+        selectorHint: '[anchor:body]',
+        count: 16,
+        roleHints: ['background'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 160,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 16,
+        },
+      },
+      {
+        hex: '#425466',
+        property: 'color',
+        selectorHint: 'p.body-copy',
+        count: 40,
+        roleHints: ['text'],
+        layerHints: ['global', 'content'],
+        componentKinds: ['text'],
+        evidenceScore: 180,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 40,
+        },
+      },
+      {
+        hex: '#000EFF',
+        property: 'color',
+        selectorHint: 'a.nav-link',
+        count: 8,
+        roleHints: ['text', 'primary'],
+        layerHints: ['global'],
+        componentKinds: ['link', 'text'],
+        evidenceScore: 260,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 8,
+        },
+      },
+    ]
+
+    const semantic = buildSemanticColorSystem(candidates)
+
+    expect(semantic?.textPrimary?.hex).toBe('#425466')
+  })
+
+  it('keeps text color even when the same hex is also used as a surface', () => {
+    const candidates: PageColorCandidate[] = [
+      {
+        hex: '#FFFFFF',
+        property: 'background-color',
+        selectorHint: '[anchor:body]',
+        count: 20,
+        roleHints: ['background'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 180,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 20,
+        },
+      },
+      {
+        hex: '#000000',
+        property: 'background-color',
+        selectorHint: '.logo-lockup',
+        count: 6,
+        roleHints: ['background', 'surface'],
+        layerHints: ['content', 'global'],
+        componentKinds: ['surface'],
+        evidenceScore: 80,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'medium',
+          evidenceCount: 6,
+        },
+      },
+      {
+        hex: '#000000',
+        property: 'color',
+        selectorHint: '[anchor:body-text]',
+        count: 18,
+        roleHints: ['text'],
+        layerHints: ['global'],
+        componentKinds: ['text'],
+        evidenceScore: 120,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 18,
+        },
+      },
+    ]
+
+    const semantic = buildSemanticColorSystem(candidates)
+
+    expect(semantic?.pageBackground?.hex).toBe('#FFFFFF')
+    expect(semantic?.surface?.hex).toBe('#000000')
+    expect(semantic?.textPrimary?.hex).toBe('#000000')
+  })
+
   it('keeps hero and page shell colors separated when screenshot hero evidence exists', () => {
     const candidates: PageColorCandidate[] = [
       {

@@ -5,14 +5,36 @@
 import type { PageStyleAnalysis } from '@/lib/types'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { analyzePageStyles } from '@/lib/api/pageAnalyzer'
+import { PAGE_STYLE_BASELINES, type SemanticColorSlot } from '@/test/fixtures/page-style-baselines'
 
-const TARGETS = [
-  'https://linear.app',
-  'https://stripe.com',
-  'https://www.apple.com',
-  'https://www.notion.com/',
-]
 const RUN_REAL_WORLD_TESTS = process.env.STYLELENS_REAL_WORLD_TESTS === '1'
+
+function normalizeHex(value?: string) {
+  return value?.trim().toUpperCase()
+}
+
+function semanticSlotHex(analysis: PageStyleAnalysis, slot: SemanticColorSlot) {
+  return normalizeHex(analysis.semanticColorSystem?.[slot]?.hex)
+}
+
+function expectSlotToMatchBaseline(
+  analysis: PageStyleAnalysis,
+  slot: SemanticColorSlot,
+  acceptedHexes: string[]
+) {
+  const actual = semanticSlotHex(analysis, slot)
+  expect(actual, `${slot} should be one of ${acceptedHexes.join(', ')}`).toBeDefined()
+  expect(acceptedHexes.map(normalizeHex)).toContain(actual)
+}
+
+function expectSlotToAvoidForbidden(
+  analysis: PageStyleAnalysis,
+  slot: SemanticColorSlot,
+  forbiddenHexes: string[]
+) {
+  const actual = semanticSlotHex(analysis, slot)
+  expect(forbiddenHexes.map(normalizeHex)).not.toContain(actual)
+}
 
 function createPageAnalysis(overrides: Partial<PageStyleAnalysis> = {}): PageStyleAnalysis {
   return {
@@ -225,15 +247,16 @@ describe('screenshotter viewport aggregation', () => {
   })
 })
 
-;(RUN_REAL_WORLD_TESTS ? describe : describe.skip)('pageAnalyzer real-world verification', () => {
-  for (const url of TARGETS) {
+;(RUN_REAL_WORLD_TESTS ? describe : describe.skip)('pageAnalyzer real-world baseline verification', () => {
+  for (const baseline of PAGE_STYLE_BASELINES) {
     it(
-      `extracts semantic color slots for ${url}`,
+      `matches semantic color baseline for ${baseline.id}`,
       async () => {
-        const analysis = await analyzePageStyles(url)
+        const analysis = await analyzePageStyles(baseline.url)
 
         const summary = {
-          url,
+          id: baseline.id,
+          url: baseline.url,
           heroBackground: analysis.semanticColorSystem?.heroBackground?.hex,
           pageBackground: analysis.semanticColorSystem?.pageBackground?.hex,
           surface: analysis.semanticColorSystem?.surface?.hex,
@@ -258,6 +281,14 @@ describe('screenshotter viewport aggregation', () => {
           || analysis.semanticColorSystem?.pageBackground
         ).toBeDefined()
         expect(analysis.semanticColorSystem?.textPrimary).toBeDefined()
+
+        for (const [slot, acceptedHexes] of Object.entries(baseline.expected) as Array<[SemanticColorSlot, string[]]>) {
+          expectSlotToMatchBaseline(analysis, slot, acceptedHexes)
+        }
+
+        for (const [slot, forbiddenHexes] of Object.entries(baseline.forbidden || {}) as Array<[SemanticColorSlot, string[]]>) {
+          expectSlotToAvoidForbidden(analysis, slot, forbiddenHexes)
+        }
       },
       60_000
     )

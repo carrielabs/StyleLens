@@ -1464,6 +1464,13 @@ function pickSlot(candidates: PageColorCandidate[], predicate: (candidate: PageC
 
 export function buildSemanticColorSystem(candidates: PageColorCandidate[]): SemanticColorSystem | undefined {
   if (!candidates.length) return undefined
+  const hasExplicitSourceMeta = candidates.some(candidate => Boolean(candidate.meta?.source))
+  const hasMeasuredEvidence = candidates.some(candidate =>
+    !candidate.meta?.source ||
+    candidate.meta.source === 'dom-computed' ||
+    candidate.meta.source === 'screenshot-sampled'
+  )
+  if (hasExplicitSourceMeta && !hasMeasuredEvidence) return undefined
 
   const anchorBoost = (candidate: PageColorCandidate) => {
     const hint = (candidate.selectorHint || '').toLowerCase()
@@ -1623,8 +1630,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
   const pageBackgroundMode = inferLayerMode(globalBackgroundCandidates, 'light')
   const prefersDarkText = backgroundMode === 'light'
   const preferredTextCandidates = ranked.filter(candidate =>
-    isLikelyTextCandidate(candidate) &&
-    !candidate.layerHints.includes('content')
+    isLikelyTextCandidate(candidate)
   )
   const fallbackTextCandidates = ranked.filter(candidate =>
     (candidate.property === 'css-variable' && candidate.roleHints.includes('text'))
@@ -1759,19 +1765,49 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
     })[0]
   if (surface) used.add(surface.hex.toUpperCase())
 
-  const textPrimary = preferredTextCandidates
-    .filter(candidate => !used.has(candidate.hex.toUpperCase()))
-    .sort((a, b) => {
-      const anchorDiff = anchorBoost(b) - anchorBoost(a)
-      if (anchorDiff !== 0) return anchorDiff
+  const hasReadableContrastAgainstPage = (candidate: PageColorCandidate) => {
+    if (!pageBackground) return true
+    return Math.abs(getColorBrightness(candidate.hex) - getColorBrightness(pageBackground.hex)) >= 80
+      || getColorDistance(candidate.hex, pageBackground.hex) >= 96
+  }
 
+  const scorePrimaryTextCandidate = (candidate: PageColorCandidate) => {
+    const hint = (candidate.selectorHint || '').toLowerCase()
+    const kinds = candidate.componentKinds || []
+    const chroma = getColorChroma(candidate.hex)
+    let score = candidate.evidenceScore || candidate.count || 0
+
+    score += Math.min(candidate.count || 0, 40) * 8
+    score += Math.min(candidate.meta?.evidenceCount || 0, 40) * 6
+    score += anchorBoost(candidate) * 40
+
+    if (kinds.includes('text')) score += 40
+    if (kinds.includes('link')) score -= 120
+    if (kinds.includes('button')) score -= 160
+    if (candidate.roleHints.includes('primary') || candidate.roleHints.includes('accent') || candidate.roleHints.includes('cta')) score -= 120
+    if (candidate.roleHints.includes('text-secondary')) score -= 40
+    if (/\b(a|button)\b|link|nav|cta|button|btn/.test(hint)) score -= 90
+    if (/body|copy|paragraph|content|main|\[anchor:body-text\]|\[anchor:main-text\]/.test(hint)) score += 120
+    if (candidate.property !== 'color') score -= 80
+    if (chroma >= 120) score -= 180
+    else if (chroma >= 72) score -= 90
+    else if (chroma <= 48) score += 70
+
+    return score
+  }
+
+  const textPrimary = preferredTextCandidates
+    .filter(candidate => hasReadableContrastAgainstPage(candidate))
+    .sort((a, b) => {
       const aBrightness = getColorBrightness(a.hex)
       const bBrightness = getColorBrightness(b.hex)
+      const scoreDiff = scorePrimaryTextCandidate(b) - scorePrimaryTextCandidate(a)
+      if (scoreDiff !== 0) return scoreDiff
       if (prefersDarkText && aBrightness !== bBrightness) return aBrightness - bBrightness
       if (!prefersDarkText && aBrightness !== bBrightness) return bBrightness - aBrightness
       return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
     })[0] || fallbackTextCandidates
-      .filter(candidate => !used.has(candidate.hex.toUpperCase()))
+      .filter(candidate => hasReadableContrastAgainstPage(candidate))
       .sort((a, b) => (b.evidenceScore || b.count) - (a.evidenceScore || a.count))[0]
   if (textPrimary) used.add(textPrimary.hex.toUpperCase())
 
