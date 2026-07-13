@@ -36,6 +36,23 @@ function expectSlotToAvoidForbidden(
   expect(forbiddenHexes.map(normalizeHex)).not.toContain(actual)
 }
 
+async function analyzePageStylesWithRetry(url: string) {
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      return await analyzePageStyles(url)
+    } catch (error) {
+      lastError = error
+      if (attempt < 2) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
+  }
+
+  throw lastError
+}
+
 function createPageAnalysis(overrides: Partial<PageStyleAnalysis> = {}): PageStyleAnalysis {
   return {
     colorCandidates: [],
@@ -247,12 +264,28 @@ describe('screenshotter viewport aggregation', () => {
   })
 })
 
+describe('pageAnalyzer baseline quality gate', () => {
+  it('keeps exactly 10 real-world baselines with non-empty expectations', () => {
+    expect(PAGE_STYLE_BASELINES).toHaveLength(10)
+
+    for (const baseline of PAGE_STYLE_BASELINES) {
+      expect(baseline.id).toMatch(/^[a-z0-9-]+$/)
+      expect(baseline.url).toMatch(/^https:\/\//)
+      expect(
+        baseline.expected.heroBackground
+        || baseline.expected.pageBackground
+      ).toBeDefined()
+      expect(baseline.expected.textPrimary).toBeDefined()
+    }
+  })
+})
+
 ;(RUN_REAL_WORLD_TESTS ? describe : describe.skip)('pageAnalyzer real-world baseline verification', () => {
   for (const baseline of PAGE_STYLE_BASELINES) {
     it(
       `matches semantic color baseline for ${baseline.id}`,
       async () => {
-        const analysis = await analyzePageStyles(baseline.url)
+        const analysis = await analyzePageStylesWithRetry(baseline.url)
 
         const summary = {
           id: baseline.id,
