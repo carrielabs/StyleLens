@@ -1,0 +1,130 @@
+{
+  "id": "report-template-corporate-v1",
+  "name": "企业经营分析报告通用模板 (中文)",
+  "version": "1.0.0",
+  "description": "适用于季度/年度经营复盘、销售分析等场景的专业报告模板。包含摘要和三个核心分析板块，风格严谨。",
+  "pageTypes": ["report", "analysis", "dashboard"],
+  "language": "zh-CN",
+  "tags": ["business", "corporate", "clean", "data-driven"],
+  "editableCapabilities": {
+    "text": true,
+    "chartData": true,
+    "sectionVisibility": true
+  },
+  "supportedSections": [
+    { "id": "section-takeaway", "name": "核心结论区", "required": true },
+    { "id": "section-finding-1", "name": "核心发现 1", "required": true },
+    { "id": "section-finding-2", "name": "核心发现 2", "required": false },
+    { "id": "section-finding-3", "name": "核心发现 3", "required": false }
+  ],
+  "supportedChartTypes": [
+    "kpi-card",
+    "line",
+    "bar",
+    "bar-horizontal",
+    "bar-stacked",
+    "area",
+    "pie",
+    "donut",
+    "funnel",
+    "radar",
+    "heatmap",
+    "scatter",
+    "mixed-line-bar"
+  ],
+  "chartModules": [
+    { "id": "chart-kpi-revenue", "type": "kpi-card", "section": "section-takeaway", "description": "总收入KPI" },
+    { "id": "chart-kpi-profit", "type": "kpi-card", "section": "section-takeaway", "description": "净利润KPI" },
+    { "id": "chart-kpi-users", "type": "kpi-card", "section": "section-takeaway", "description": "活跃用户KPI" },
+    { "id": "chart-kpi-growth", "type": "kpi-card", "section": "section-takeaway", "description": "同比增长率KPI" },
+    { "id": "chart-main-trend", "type": "mixed-line-bar", "section": "section-takeaway", "description": "核心指标趋势图（营收与利润率）" },
+    { "id": "chart-sales-rank", "type": "bar-horizontal", "section": "section-finding-1", "description": "销售区域排名TOP10" },
+    { "id": "chart-sales-composition", "type": "donut", "section": "section-finding-1", "description": "收入渠道构成占比" },
+    { "id": "chart-cost-stack", "type": "bar-stacked", "section": "section-finding-2", "description": "成本结构堆叠趋势" },
+    { "id": "chart-conversion-funnel", "type": "funnel", "section": "section-finding-2", "description": "用户转化漏斗" },
+    { "id": "chart-efficiency-radar", "type": "radar", "section": "section-finding-2", "description": "运营能力雷达图" },
+    { "id": "chart-user-scatter", "type": "scatter", "section": "section-finding-3", "description": "用户价值与活跃度分布" },
+    { "id": "chart-market-heatmap", "type": "heatmap", "section": "section-finding-3", "description": "市场渗透率热力图" }
+  ],
+  "sampleData": {
+    "text": {
+      "header.title": "2023年度公司经营与市场分析报告",
+      "header.subtitle": "汇报对象：董事会 / 数据截止：2023年12月31日",
+      "takeaway.title": "核心结论与关键业绩指标",
+      "takeaway.desc": "2023年公司整体业绩稳健增长，全年总营收达成率 105%，同比增长 18%。主要得益于下半年新产品线的成功拓展及华东市场的超预期表现。但需注意，Q4 运营成本上升较快，且新用户转化率出现小幅下滑，需在下一季度重点关注投入产出比优化。",
+      "finding1.title": "发现一：销售业绩与核心驱动力分析",
+      "finding1.desc": "本年度销售收入主要由直销渠道拉动，占比提升至 65%。从区域来看，华东大区凭借得天独厚的市场环境和高效团队，贡献了近一半的业绩，且保持了最高的增速。代理渠道虽然体量较小，但在Q4的促销活动中展现了较强的爆发力。",
+      "finding2.title": "发现二：运营效率与成本结构洞察",
+      "finding2.desc": "随着业务扩张，整体运营成本同比上升 22%，略高于营收增速，导致净利润率轻微承压。主要成本增长点在于新市场拓展的人力成本增加和Q3集中的研发投入。核心业务流程的转化漏斗在“试用->付费”环节存在瓶颈，流失率达 45%。",
+      "finding3.title": "发现三：客户价值与市场潜力评估",
+      "finding3.desc": "通过客户价值模型分析，高价值客户（活跃度高且客单价高）主要集中在一线城市和互联网行业。当前市场热力图显示，我们在西南和西北地区的渗透率仍不足 5%，是未来潜在的增长空间。需针对性制定区域拓展策略。"
+    },
+    "charts": {
+        "kpi-revenue": { "value": "¥ 8.52 亿", "label": "年度总营收", "trend": "up", "trendValue": "+18%", "footer": "目标达成率 105%" },
+        "kpi-profit": { "value": "¥ 1.26 亿", "label": "年度净利润", "trend": "down", "trendValue": "-2.5%", "footer": "净利率 14.8%" },
+        "kpi-users": { "value": "35.6 万", "label": "月活跃企业数(MAU)", "trend": "up", "trendValue": "+12%", "footer": "较年初增加 3.8万" },
+        "kpi-growth": { "value": "24.5%", "label": "复合增长率(CAGR)", "trend": "neutral", "trendValue": "持平", "footer": "近三年平均水平" },
+        "main-trend": {
+            "categories": ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],
+            "series": [
+                {"name":"营收(百万)","type":"bar","data":[58,62,75,68,72,85,90,98,92,105,118,129]},
+                {"name":"净利率(%)","type":"line","yAxisIndex":1,"data":[15,16,18,14,15,17,18,19,16,15,14,14.8]}
+            ]
+        },
+        "sales-rank": {
+            "categories": ["华东一区","华南大区","华北大区","华东二区","西南大区","华中大区","西北大区","海外市场"],
+            "series": [{"name":"销售额(百万)","data":[320, 210, 180, 150, 90, 75, 40, 25]}]
+        },
+        "sales-composition": {
+            "data": [
+                {"value": 553, "name": "直销团队"},
+                {"value": 180, "name": "线上自服务"},
+                {"value": 119, "name": "渠道代理"}
+            ]
+        },
+        "cost-stack": {
+             "categories": ["Q1","Q2","Q3","Q4"],
+             "series": [
+                 {"name":"人力成本","data":[120, 132, 150, 165], "stack": "total"},
+                 {"name":"研发投入","data":[80, 85, 120, 100], "stack": "total"},
+                 {"name":"市场营销","data":[60, 70, 75, 110], "stack": "total"},
+                 {"name":"运营杂项","data":[30, 35, 40, 45], "stack": "total"}
+             ]
+        },
+        "conversion-funnel": {
+            "data": [
+                { "value": 100, "name": "网站访问 (100%)" },
+                { "value": 60, "name": "注册试用 (60%)" },
+                { "value": 28, "name": "深度使用 (28%)" },
+                { "value": 15, "name": "付费转化 (15%)" },
+                { "value": 10, "name": "首次续费 (10%)" }
+            ]
+        },
+        "efficiency-radar": {
+            "indicator": [
+               { "name": "交付速度", "max": 100},
+               { "name": "服务质量", "max": 100},
+               { "name": "成本控制", "max": 100},
+               { "name": "客户满意度", "max": 100},
+               { "name": "团队稳定性", "max": 100}
+            ],
+            "series": [
+                { "name": "本年度水平", "value": [85, 90, 72, 88, 80] },
+                { "name": "行业基准", "value": [75, 80, 85, 80, 85] }
+            ]
+        },
+        "user-scatter": {
+             "series": [
+                 {"name": "高价值客户", "data": [[85, 9200], [90, 11000], [78, 8500], [95, 12500], [88, 9800]]},
+                 {"name": "潜力客户", "data": [[65, 4500], [70, 5200], [55, 3800], [60, 4100], [72, 5800]]},
+                 {"name": "待激活客户", "data": [[25, 1200], [30, 1500], [15, 800], [20, 1100], [35, 1800]]}
+             ]
+        },
+        "market-heatmap": {
+            "xAxis": ["一线", "新一线", "二线", "三线及以下"],
+            "yAxis": ["互联网", "金融", "制造", "零售", "政企"],
+            "data": [[0,0,85],[0,1,70],[0,2,45],[0,3,30],[0,4,20],[1,0,65],[1,1,55],[1,2,60],[1,3,40],[1,4,35],[2,0,35],[2,1,30],[2,2,75],[2,3,50],[2,4,45],[3,0,15],[3,1,10],[3,2,30],[3,3,25],[3,4,15]]
+        }
+    }
+  }
+}

@@ -8,7 +8,7 @@ StyleLens 是一个面向设计参考和页面生成的 Web 工具。
 - 上传图片 / 截图，提取视觉风格。
 - 输出风格报告、Prompt、CSS、Design Token JSON。
 - 输入文本 / Markdown / TXT，选择 8 个官网模板之一，生成可预览、可下载、可编辑的产品官网 HTML。
-- 上传 `.csv` / `.json` / `.xlsx` 数据文件，选择 15 个 Dashboard 模板之一，生成可预览、可下载、可编辑的数据看板 HTML。
+- 上传 `.csv` / `.json` / `.xlsx` 数据文件，选择 28 个 Dashboard 模板之一，生成可预览、可下载、可编辑的数据看板 HTML。
 
 ## 开发规则
 
@@ -111,7 +111,7 @@ scripts/              本地辅助脚本
 - URL / 图片继续走风格提取。
 - 文本 / `.md` / `.txt` 走产品官网生成。
 - `.csv` / `.json` / `.xlsx` 走 Dashboard 生成。
-- Publisher 当前必须支持 8 个官网模板和 15 个 Dashboard 模板；PPT、Skill、GitHub 开源不属于当前版本。
+- Publisher 当前必须支持 8 个官网模板和 28 个 Dashboard 模板；PPT、Skill、GitHub 开源不属于当前版本。
 - `walkthrough.md` 是外部流程维护文件，普通开发不要随意修改。
 - `.claude/worktrees`、`.next`、`node_modules`、本地缓存不能作为正式源码依据。
 - 测试截图素材放在 `test/fixtures/`，不要散落在仓库根目录。

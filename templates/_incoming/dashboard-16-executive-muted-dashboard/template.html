@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级数据分析 Dashboard</title>
+    <!-- 引入 Tailwind CSS 进行极速流式布局与样式 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'dash-bg': '#efeae1',
+                        'dash-card': '#fbf7f1',
+                        'dash-border': '#e2dcd0',
+                        'dash-text-main': '#3c4043',
+                        'dash-text-sub': '#8b939c',
+                        'dash-accent-blue': '#7a9fb1',
+                        'dash-accent-orange': '#d8a47f',
+                        'dash-up': '#c26d6d',
+                        'dash-down': '#7ba884',
+                    },
+                    fontFamily: {
+                        sans: ['"PingFang SC"', '"Microsoft YaHei"', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #efeae1; color: #3c4043; -webkit-font-smoothing: antialiased; }
+        .card-shadow { box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .data-number { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-variant-numeric: tabular-nums; }
+        
+        /* 隐藏滚动条但允许滚动 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        [contenteditable="true"]:hover {
+            outline: 1px dashed #7a9fb1;
+            background-color: rgba(122, 159, 177, 0.1);
+            cursor: text;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-[1440px] mx-auto space-y-6">
+        
+        <!-- Header 区域 -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-dash-border pb-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-wide" data-editable="true" contenteditable="true" data-slot="text.dashboard.title" data-key="text.dashboard.title">2026 亚太区商业运营与业绩洞察</h1>
+                <p class="text-dash-text-sub mt-1 text-sm tracking-widest uppercase" data-editable="true" contenteditable="true" data-slot="text.dashboard.subtitle" data-key="text.dashboard.subtitle">OPERATIONAL TELEMETRY · APAC REGION · Q3 REPORT</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex gap-4 text-sm text-dash-text-sub">
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-dash-accent-blue"></span> 实际达成</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-dash-border"></span> 预期目标</span>
+            </div>
+        </header>
+
+        <!-- Key Takeaway 核心摘要 -->
+        <section data-section="key-takeaway" class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow flex gap-6 items-start">
+            <div class="shrink-0 pt-1">
+                <svg class="w-6 h-6 text-dash-accent-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <div class="flex-1">
+                <h2 class="text-sm font-bold text-dash-text-main mb-2 tracking-wider" data-editable="true" contenteditable="true" data-slot="text.takeaway.title" data-key="text.takeaway.title">核心经营摘要 / KEY TAKEAWAY</h2>
+                <p class="text-[15px] leading-relaxed text-dash-text-main" data-editable="true" contenteditable="true" data-slot="text.takeaway.content" data-key="text.takeaway.content">
+                    本季度亚太区整体营收结构优化显著，总净流入达 13.55 亿。尽管在二线市场遇到短暂交付延迟（准时交付率环比下降 3.7 个百分点），但核心客户续约率及高附加值产品线（特别是企业级 SaaS 解决方案）带来了强势的利润对冲。预计 Q4 随着物流网络重组，整体毛利率将进一步拉升至 75% 以上。
+                </p>
+            </div>
+        </section>
+
+        <!-- Core Finding 1: 宏观趋势与 KPI -->
+        <section data-section="core-finding-1" class="space-y-4">
+            <h3 class="text-xs font-bold text-dash-text-sub tracking-widest" data-editable="true" contenteditable="true" data-slot="text.finding1.title" data-key="text.finding1.title">MACRO TRENDS 宏观趋势与核心指标</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- KPI 1 -->
+                <div class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold tracking-wider text-dash-text-sub" data-editable="true" contenteditable="true" data-slot="text.kpi1.title" data-key="text.kpi1.title">准时交付率 / ON-TIME DELIVERY</span>
+                    </div>
+                    <div class="mt-2 flex items-baseline gap-3">
+                        <span class="text-4xl font-bold data-number" data-editable="true" contenteditable="true" data-slot="text.kpi1.value" data-key="text.kpi1.value">79.1%</span>
+                        <div class="text-xs flex flex-col items-end">
+                            <span class="text-dash-down">vs Q2 82.8% (↓ 3.7 pp)</span>
+                            <span class="text-dash-up">vs YOY 73.6% (↑ 5.4 pp)</span>
+                        </div>
+                    </div>
+                    <!-- 挂载点：KPI Sparkline 1 -->
+                    <div id="chart-kpi-1" data-chart-type="kpi-sparkline" class="h-16 w-full mt-2 -ml-2 -mb-4"></div>
+                </div>
+
+                <!-- KPI 2 -->
+                <div class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold tracking-wider text-dash-text-sub" data-editable="true" contenteditable="true" data-slot="text.kpi2.title" data-key="text.kpi2.title">净订单额 / NET ORDERS</span>
+                    </div>
+                    <div class="mt-2 flex items-baseline gap-3">
+                        <span class="text-4xl font-bold data-number" data-editable="true" contenteditable="true" data-slot="text.kpi2.value" data-key="text.kpi2.value">¥10.29B</span>
+                        <div class="text-xs flex flex-col items-end">
+                            <span class="text-dash-down">vs Q2 ¥10.85B (↓ 5.2%)</span>
+                            <span class="text-dash-up">vs YOY ¥10.21B (↑ 0.7%)</span>
+                        </div>
+                    </div>
+                    <!-- 挂载点：KPI Sparkline 2 -->
+                    <div id="chart-kpi-2" data-chart-type="kpi-sparkline" class="h-16 w-full mt-2 -ml-2 -mb-4"></div>
+                </div>
+
+                <!-- KPI 3 -->
+                <div class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold tracking-wider text-dash-text-sub" data-editable="true" contenteditable="true" data-slot="text.kpi3.title" data-key="text.kpi3.title">总营收规模 / TURNOVER</span>
+                    </div>
+                    <div class="mt-2 flex items-baseline gap-3">
+                        <span class="text-4xl font-bold data-number" data-editable="true" contenteditable="true" data-slot="text.kpi3.value" data-key="text.kpi3.value">¥13.55B</span>
+                        <div class="text-xs flex flex-col items-end">
+                            <span class="text-dash-down">vs Q2 ¥13.95B (↓ 2.9%)</span>
+                            <span class="text-dash-up">vs YOY ¥13.13B (↑ 3.2%)</span>
+                        </div>
+                    </div>
+                    <!-- 挂载点：KPI Sparkline 3 -->
+                    <div id="chart-kpi-3" data-chart-type="kpi-sparkline" class="h-16 w-full mt-2 -ml-2 -mb-4"></div>
+                </div>
+            </div>
+
+            <!-- 主趋势面积图 -->
+            <div class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                     <span class="text-xs font-bold tracking-wider text-dash-text-sub" data-editable="true" contenteditable="true" data-slot="text.chart.trend.title" data-key="text.chart.trend.title">营收与利润复合增长趋势</span>
+                </div>
+                <!-- 挂载点：面积图 -->
+                <div id="chart-main-trend" data-chart-type="area" class="w-full h-64"></div>
+            </div>
+        </section>
+
+        <!-- Core Finding 2: 维度分解 -->
+        <section data-section="core-finding-2" class="space-y-4 pt-4">
+             <h3 class="text-xs font-bold text-dash-text-sub tracking-widest" data-editable="true" contenteditable="true" data-slot="text.finding2.title" data-key="text.finding2.title">DIMENSIONAL BREAKDOWN 多维表现拆解</h3>
+             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- 条形图 1 -->
+                <div class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold tracking-wider text-dash-text-sub" data-editable="true" contenteditable="true" data-slot="text.chart.bar1.title" data-key="text.chart.bar1.title">按客户类型划分 / BY ACCOUNT</span>
+                    </div>
+                    <div id="chart-bar-account" data-chart-type="bar-horizontal" class="w-full h-56 flex-1"></div>
+                </div>
+
+                <!-- 条形图 2 -->
+                <div class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold tracking-wider text-dash-text-sub" data-editable="true" contenteditable="true" data-slot="text.chart.bar2.title" data-key="text.chart.bar2.title">按区域市场划分 / BY REGION</span>
+                    </div>
+                    <div id="chart-bar-region" data-chart-type="bar-horizontal" class="w-full h-56 flex-1"></div>
+                </div>
+
+                <!-- 条形图 3 (堆积) -->
+                <div class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold tracking-wider text-dash-text-sub" data-editable="true" contenteditable="true" data-slot="text.chart.bar3.title" data-key="text.chart.bar3.title">产品线渗透率 / BY PRODUCT</span>
+                    </div>
+                    <div id="chart-bar-product" data-chart-type="bar-stacked-horizontal" class="w-full h-56 flex-1"></div>
+                </div>
+
+             </div>
+        </section>
+
+        <!-- Core Finding 3: 深度洞察与分布 -->
+        <section data-section="core-finding-3" class="space-y-4 pt-4">
+             <h3 class="text-xs font-bold text-dash-text-sub tracking-widest" data-editable="true" contenteditable="true" data-slot="text.finding3.title" data-key="text.finding3.title">DEEP DIVE & DISTRIBUTION 深度洞察与结构分布</h3>
+             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- 环形图 -->
+                <div class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold tracking-wider text-dash-text-sub" data-editable="true" contenteditable="true" data-slot="text.chart.donut.title" data-key="text.chart.donut.title">成本结构分布 / COST STRUCTURE</span>
+                    </div>
+                    <div id="chart-donut-distribution" data-chart-type="donut" class="w-full h-64"></div>
+                </div>
+
+                <!-- 雷达图 -->
+                <div class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold tracking-wider text-dash-text-sub" data-editable="true" contenteditable="true" data-slot="text.chart.radar.title" data-key="text.chart.radar.title">区域综合战力模型 / REGIONAL PERFORMANCE</span>
+                    </div>
+                    <div id="chart-radar-performance" data-chart-type="radar" class="w-full h-64"></div>
+                </div>
+
+                <!-- 散点图 -->
+                <div class="bg-dash-card rounded-lg p-5 border border-dash-border card-shadow">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold tracking-wider text-dash-text-sub" data-editable="true" contenteditable="true" data-slot="text.chart.scatter.title" data-key="text.chart.scatter.title">投入产出关联度 / ROI CORRELATION</span>
+                    </div>
+                    <div id="chart-scatter-correlation" data-chart-type="scatter" class="w-full h-64"></div>
+                </div>
+
+             </div>
+        </section>
+
+        <footer class="text-center text-xs text-dash-text-sub py-8 border-t border-dash-border mt-8">
+            CONFIDENTIAL & PROPRIETARY · GENERATED BY AI ANALYTICS DASHBOARD
+        </footer>
+    </div>
+
+    <!-- ECharts 初始化逻辑 -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // 全局配色方案 - 匹配羊皮纸莫兰迪风格
+            const colors = {
+                blue: '#7a9fb1',
+                orange: '#d8a47f',
+                rose: '#b07f7f',
+                green: '#8ba892',
+                yellow: '#e5c07b',
+                textMain: '#3c4043',
+                textSub: '#8b939c',
+                border: '#e2dcd0',
+                bg: 'transparent'
+            };
+
+            const commonOptions = {
+                color: [colors.blue, colors.orange, colors.rose, colors.green, colors.yellow],
+                backgroundColor: colors.bg,
+                textStyle: { fontFamily: 'sans-serif', color: colors.textSub }
+            };
+
+            // 1. 初始化所有图表实例的统一方法
+            function renderChart(id, customOption) {
+                const dom = document.getElementById(id);
+                if (!dom) return;
+                const chart = echarts.init(dom);
+                
+                // 合并通用配置和特定配置
+                const option = { ...commonOptions, ...customOption };
+                
+                // 处理坐标轴统一样式
+                if(option.xAxis) {
+                    if(Array.isArray(option.xAxis)) {
+                        option.xAxis.forEach(x => {
+                            if(!x.axisLine) x.axisLine = { lineStyle: { color: colors.border } };
+                            if(!x.axisLabel) x.axisLabel = { color: colors.textSub, fontSize: 10 };
+                            if(!x.splitLine) x.splitLine = { show: false };
+                        });
+                    } else {
+                        if(!option.xAxis.axisLine) option.xAxis.axisLine = { lineStyle: { color: colors.border } };
+                        if(!option.xAxis.axisLabel) option.xAxis.axisLabel = { color: colors.textSub, fontSize: 10 };
+                        if(!option.xAxis.splitLine) option.xAxis.splitLine = { show: false };
+                    }
+                }
+                
+                if(option.yAxis) {
+                    if(Array.isArray(option.yAxis)) {
+                        option.yAxis.forEach(y => {
+                            if(!y.axisLine) y.axisLine = { show: false };
+                            if(!y.axisTick) y.axisTick = { show: false };
+                            if(!y.axisLabel) y.axisLabel = { color: colors.textSub, fontSize: 10 };
+                            if(!y.splitLine) y.splitLine = { lineStyle: { color: colors.border, type: 'dashed' } };
+                        });
+                    } else {
+                        if(!option.yAxis.axisLine) option.yAxis.axisLine = { show: false };
+                        if(!option.yAxis.axisTick) option.yAxis.axisTick = { show: false };
+                        if(!option.yAxis.axisLabel) option.yAxis.axisLabel = { color: colors.textSub, fontSize: 10 };
+                        if(!option.yAxis.splitLine) option.yAxis.splitLine = { lineStyle: { color: colors.border, type: 'dashed' } };
+                    }
+                }
+
+                chart.setOption(option);
+                window.addEventListener('resize', () => chart.resize());
+            }
+
+            // ================= 注入示例图表数据配置 =================
+
+            // KPI Sparkline 1
+            renderChart('chart-kpi-1', {
+                grid: { left: 0, right: 0, top: 10, bottom: 0 },
+                xAxis: { show: false, type: 'category', data: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] },
+                yAxis: { show: false, type: 'value', min: 'dataMin' },
+                tooltip: { trigger: 'axis', formatter: '{b}: {c}%' },
+                series: [{ data: [75, 74, 78, 77, 80, 81, 79, 83, 82, 80, 78, 79.1], type: 'line', smooth: true, showSymbol: false, itemStyle: { color: colors.blue }, lineStyle: { width: 2 } }]
+            });
+
+            // KPI Sparkline 2
+            renderChart('chart-kpi-2', {
+                grid: { left: 0, right: 0, top: 10, bottom: 0 },
+                xAxis: { show: false, type: 'category', data: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] },
+                yAxis: { show: false, type: 'value', min: 'dataMin' },
+                tooltip: { trigger: 'axis', formatter: '{b}: {c}B' },
+                series: [{ data: [8.5, 9.1, 8.8, 9.5, 10.1, 9.9, 10.5, 11.2, 10.8, 10.4, 10.1, 10.29], type: 'line', smooth: true, showSymbol: false, itemStyle: { color: colors.orange }, lineStyle: { width: 2 } }]
+            });
+
+            // KPI Sparkline 3
+            renderChart('chart-kpi-3', {
+                grid: { left: 0, right: 0, top: 10, bottom: 0 },
+                xAxis: { show: false, type: 'category', data: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] },
+                yAxis: { show: false, type: 'value', min: 'dataMin' },
+                tooltip: { trigger: 'axis', formatter: '{b}: {c}B' },
+                series: [{ data: [11.2, 11.5, 12.0, 11.8, 12.5, 13.1, 13.5, 14.2, 13.8, 13.9, 13.6, 13.55], type: 'line', smooth: true, showSymbol: false, itemStyle: { color: colors.rose }, lineStyle: { width: 2 } }]
+            });
+
+            // 面积趋势图 Main Trend
+            renderChart('chart-main-trend', {
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+                legend: { data: ['主营业务营收', '企业级服务利润'], right: 0, top: 0, icon: 'circle', textStyle: { color: colors.textSub, fontSize: 10 } },
+                grid: { left: '3%', right: '3%', bottom: '5%', top: '15%', containLabel: true },
+                xAxis: { type: 'category', boundaryGap: false, data: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] },
+                yAxis: { type: 'value' },
+                series: [
+                    { name: '主营业务营收', type: 'line', smooth: true, showSymbol: false, areaStyle: { opacity: 0.1 }, lineStyle: { width: 2 }, data: [120, 132, 101, 134, 90, 230, 210, 200, 250, 220, 210, 240] },
+                    { name: '企业级服务利润', type: 'line', smooth: true, showSymbol: false, areaStyle: { opacity: 0.1 }, lineStyle: { width: 2 }, data: [20, 32, 11, 44, 30, 80, 90, 85, 110, 95, 90, 105] }
+                ]
+            });
+
+            // 横向条形图 - 客户类型
+            renderChart('chart-bar-account', {
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '0%', right: '10%', bottom: '0%', top: '5%', containLabel: true },
+                xAxis: { type: 'value', show: false },
+                yAxis: { type: 'category', data: ['政府及公用', '大型私有企业', '中小微企业', '海外专项', '其他类目'].reverse(), axisLabel: { fontSize: 11 } },
+                series: [{ name: '营收占比', type: 'bar', barWidth: 10, itemStyle: { borderRadius: 2, color: colors.blue }, label: { show: true, position: 'right', formatter: '{c}%', fontSize: 10, color: colors.textSub }, data: [35, 28, 18, 12, 7].reverse() }]
+            });
+
+            // 横向条形图 - 区域市场
+            renderChart('chart-bar-region', {
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '0%', right: '10%', bottom: '0%', top: '5%', containLabel: true },
+                xAxis: { type: 'value', show: false },
+                yAxis: { type: 'category', data: ['华东大区', '华南大区', '日韩市场', '东南亚及澳洲', '其他'].reverse(), axisLabel: { fontSize: 11 } },
+                series: [{ name: '营收占比', type: 'bar', barWidth: 10, itemStyle: { borderRadius: 2, color: colors.orange }, label: { show: true, position: 'right', formatter: '{c}%', fontSize: 10, color: colors.textSub }, data: [42, 25, 15, 10, 8].reverse() }]
+            });
+
+            // 横向堆积图 - 产品线
+            renderChart('chart-bar-product', {
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                legend: { show: false },
+                grid: { left: '0%', right: '10%', bottom: '0%', top: '5%', containLabel: true },
+                xAxis: { type: 'value', show: false, max: 100 },
+                yAxis: { type: 'category', data: ['SaaS 订阅', '私有化部署', '咨询服务', '硬件集成'].reverse(), axisLabel: { fontSize: 11 } },
+                series: [
+                    { name: '已完成', type: 'bar', stack: 'total', barWidth: 10, itemStyle: { borderRadius: [2,0,0,2], color: colors.green }, data: [85, 60, 45, 30].reverse() },
+                    { name: '目标差距', type: 'bar', stack: 'total', itemStyle: { borderRadius: [0,2,2,0], color: colors.border }, data: [15, 40, 55, 70].reverse() }
+                ]
+            });
+
+            // 环形图 - 成本结构
+            renderChart('chart-donut-distribution', {
+                tooltip: { trigger: 'item' },
+                legend: { top: 'bottom', icon: 'circle', textStyle: { fontSize: 10 } },
+                series: [{
+                    name: '成本占比', type: 'pie', radius: ['40%', '70%'], avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 4, borderColor: colors.bg, borderWidth: 2 },
+                    label: { show: false, position: 'center' },
+                    emphasis: { label: { show: true, fontSize: '14', fontWeight: 'bold', color: colors.textMain } },
+                    labelLine: { show: false },
+                    data: [
+                        { value: 1048, name: '研发与基础架构' },
+                        { value: 735, name: '市场与销售费用' },
+                        { value: 580, name: '行政与管理' },
+                        { value: 484, name: '履约与客服' },
+                        { value: 300, name: '其他摊销' }
+                    ]
+                }]
+            });
+
+            // 雷达图 - 综合战力
+            renderChart('chart-radar-performance', {
+                tooltip: { trigger: 'item' },
+                radar: {
+                    indicator: [
+                        { name: '转化率', max: 100 },
+                        { name: '留存率', max: 100 },
+                        { name: '客单价', max: 100 },
+                        { name: '满意度', max: 100 },
+                        { name: '交付效率', max: 100 }
+                    ],
+                    radius: '65%',
+                    splitNumber: 4,
+                    axisName: { color: colors.textSub, fontSize: 10 },
+                    splitLine: { lineStyle: { color: [colors.border] } },
+                    splitArea: { show: false },
+                    axisLine: { lineStyle: { color: colors.border } }
+                },
+                series: [{
+                    name: '能力对比', type: 'radar',
+                    data: [
+                        { value: [85, 90, 70, 95, 80], name: '一线核心市场', itemStyle: { color: colors.blue }, areaStyle: { opacity: 0.2 } },
+                        { value: [70, 75, 85, 80, 60], name: '二线拓展市场', itemStyle: { color: colors.orange }, areaStyle: { opacity: 0.2 } }
+                    ]
+                }]
+            });
+
+            // 散点图 - 投入产出相关性
+            renderChart('chart-scatter-correlation', {
+                grid: { left: '8%', right: '8%', bottom: '10%', top: '10%' },
+                tooltip: { trigger: 'item', formatter: '{a} <br/>投入(X): {c[0]}w <br/>产出(Y): {c[1]}w' },
+                xAxis: { type: 'value', name: '渠道投入量', nameTextStyle: { fontSize: 10 }, splitLine: { show: false } },
+                yAxis: { type: 'value', name: '带来新签额', nameTextStyle: { fontSize: 10 }, splitLine: { lineStyle: { type: 'dashed', color: colors.border } } },
+                series: [{
+                    name: '各渠道分布', type: 'scatter',
+                    symbolSize: function (data) { return Math.sqrt(data[1]) * 2; }, // 气泡大小逻辑
+                    itemStyle: { color: colors.rose, opacity: 0.7 },
+                    data: [
+                        [10.0, 8.04], [8.0, 6.95], [13.0, 7.58], [9.0, 8.81], [11.0, 8.33],
+                        [14.0, 9.96], [6.0, 7.24], [4.0, 4.26], [12.0, 10.84], [7.0, 4.82], [5.0, 5.68]
+                    ]
+                }]
+            });
+
+        });
+    </script>
+</body>
+</html>

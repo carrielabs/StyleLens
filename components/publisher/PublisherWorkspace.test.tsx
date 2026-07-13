@@ -50,7 +50,7 @@ describe('PublisherWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: '数据看板' }))
 
     expect(screen.getByRole('button', { name: '数据看板' }).getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getAllByTestId(/template-card-/)).toHaveLength(15)
+    expect(screen.getAllByTestId(/template-card-/)).toHaveLength(28)
     expect(screen.getByText('Consulting Data')).toBeTruthy()
   })
 

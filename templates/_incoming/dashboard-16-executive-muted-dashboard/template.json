@@ -1,0 +1,222 @@
+{
+  "id": "dashboard-16-executive-muted-dashboard",
+  "name": "Executive Muted 企业级数据分析看板",
+  "templateName": "ExecutiveMutedDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向管理层经营复盘和企业级数据分析的高密度暖纸质感 Dashboard 模板，采用克制配色、细线边界、紧凑网格和 ECharts 多图表组合。",
+  "pageTypes": [
+    "dashboard",
+    "data-report",
+    "executive-dashboard",
+    "business-review",
+    "presentation"
+  ],
+  "styleTags": [
+    "executive-muted",
+    "professional-dashboard",
+    "warm-paper",
+    "high-density",
+    "corporate",
+    "echarts"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "月度经营复盘",
+    "季度管理层汇报",
+    "财务与运营分析",
+    "B2B 多维指标监控"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "ECharts CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "pageBg": "#efeae1",
+      "cardBg": "#fbf7f1",
+      "border": "#e2dcd0",
+      "textMain": "#3c4043",
+      "textSub": "#8b939c",
+      "dataBlue": "#7a9fb1",
+      "dataOrange": "#d8a47f",
+      "dataRose": "#b07f7f",
+      "dataGreen": "#8ba892",
+      "trendUp": "#c26d6d",
+      "trendDown": "#7ba884"
+    },
+    "fonts": {
+      "body": "PingFang SC, Microsoft YaHei, -apple-system, sans-serif",
+      "number": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "chartTypeSwitch": false
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "顶部核心经营摘要",
+      "required": true,
+      "hideable": false
+    },
+    "core-finding-1": {
+      "desc": "宏观趋势、KPI 和主趋势面积图",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-2": {
+      "desc": "客户、区域、产品线维度拆解",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-3": {
+      "desc": "成本结构、能力雷达与投入产出散点分析",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "kpi-sparkline",
+    "line",
+    "bar",
+    "bar-horizontal",
+    "bar-stacked",
+    "bar-stacked-horizontal",
+    "area",
+    "donut",
+    "radar",
+    "scatter"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-slot 和 contenteditable"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "ECharts 图表容器；数据位于底部 ECharts option"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "核心 Dashboard 模块"
+    },
+    "textSlots": [
+      "text.dashboard.title",
+      "text.dashboard.subtitle",
+      "text.takeaway.title",
+      "text.takeaway.content",
+      "text.finding1.title",
+      "text.finding2.title",
+      "text.finding3.title",
+      "text.kpi1.title",
+      "text.kpi1.value",
+      "text.kpi2.title",
+      "text.kpi2.value",
+      "text.kpi3.title",
+      "text.kpi3.value",
+      "text.chart.trend.title",
+      "text.chart.bar1.title",
+      "text.chart.bar2.title",
+      "text.chart.bar3.title",
+      "text.chart.donut.title",
+      "text.chart.radar.title",
+      "text.chart.scatter.title"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-kpi-1", "type": "kpi-sparkline", "sampleData": true },
+    { "id": "chart-kpi-2", "type": "kpi-sparkline", "sampleData": true },
+    { "id": "chart-kpi-3", "type": "kpi-sparkline", "sampleData": true },
+    { "id": "chart-main-trend", "type": "area", "sampleData": true },
+    { "id": "chart-bar-account", "type": "bar-horizontal", "sampleData": true },
+    { "id": "chart-bar-region", "type": "bar-horizontal", "sampleData": true },
+    { "id": "chart-bar-product", "type": "bar-stacked-horizontal", "sampleData": true },
+    { "id": "chart-donut-distribution", "type": "donut", "sampleData": true },
+    { "id": "chart-radar-performance", "type": "radar", "sampleData": true },
+    { "id": "chart-scatter-correlation", "type": "scatter", "sampleData": true }
+  ],
+  "hiddenBehaviors": {
+    "emptyChart": "hide-module",
+    "emptyText": "collapse"
+  },
+  "slotLimits": {
+    "dashboard-title": 40,
+    "dashboard-subtitle": 60,
+    "section-title": 50,
+    "kpi-title": 40,
+    "kpi-value": 18,
+    "takeaway-content": 140,
+    "chart-title": 40
+  },
+  "llmInjectionRules": [
+    "所有新增可编辑文字必须同时包含 data-editable=\"true\"、contenteditable=\"true\" 和 data-slot。",
+    "图表容器 ID 必须保持 chart-* 格式。",
+    "替换图表数据时修改底部 ECharts option，不触碰布局和样式代码。",
+    "Key Takeaway 必须保持结论先行，避免空泛标题。",
+    "保持暖纸背景、细线边界、克制配色，不添加大面积渐变、强阴影或毛玻璃。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "templateConfigArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "editableCount": 20,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 4,
+    "chartCount": 10,
+    "usesECharts": true,
+    "sourceCleanup": [
+      "按仓库模板规范补齐标准文件。",
+      "保留 Gemini 原始 HTML、视觉方向和 ECharts 配置。",
+      "将用户提供的配置结构规范化为仓库 template.json 格式。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#7a9fb1",
+    "presets": [
+      "#7a9fb1",
+      "#d8a47f",
+      "#b07f7f",
+      "#8ba892",
+      "#c26d6d",
+      "#7ba884",
+      "#3c4043"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-dash-accent-blue\"]",
+        "[class*=\"text-dash-accent-orange\"]",
+        "[class*=\"text-dash-up\"]",
+        "[class*=\"text-dash-down\"]",
+        "[class*=\"text-dash-text-main\"]",
+        "[class*=\"text-dash-text-sub\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-dash-bg\"]",
+        "[class*=\"bg-dash-card\"]",
+        "[class*=\"bg-dash-accent-blue\"]",
+        "[class*=\"bg-dash-border\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-dash-border\"]"
+      ]
+    }
+  }
+}

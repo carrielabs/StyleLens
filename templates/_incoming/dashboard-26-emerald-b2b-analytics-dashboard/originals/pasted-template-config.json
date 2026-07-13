@@ -1,0 +1,56 @@
+{
+  "id": "premium-b2b-analytics-dashboard",
+  "name": "国际范企业级 B 端数据分析复盘报告模板",
+  "pageTypes": [
+    "dashboard",
+    "executive-report",
+    "business-review"
+  ],
+  "styleTags": [
+    "emerald-theme",
+    "clean-layout",
+    "high-information-density",
+    "interactive-hover"
+  ],
+  "supportedSections": [
+    "key-takeaway",
+    "core-finding-1",
+    "core-finding-2",
+    "core-finding-3"
+  ],
+  "supportedChartTypes": [
+    "kpi",
+    "area",
+    "column",
+    "donut",
+    "bar",
+    "funnel",
+    "radar",
+    "heatmap",
+    "waterfall",
+    "scatter",
+    "table"
+  ],
+  "editableCapabilities": {
+    "textEditable": true,
+    "chartConfigurable": true,
+    "dragToReorder": true,
+    "hideEmptyModules": true
+  },
+  "sampleData": {
+    "text": {
+      "header_title": "2026年第二季度客户行为洞察与经营分析报告",
+      "header_subtitle": "基于 FreshCart 全渠道 24,000+ 笔交易数据及用户轨迹深度挖掘与复盘",
+      "takeaway_title": "核心业务洞察与高管摘要",
+      "takeaway_item_1": "【新客获取超预期，转化链路亟待深耕】Q2 新增客户数达到 542 人，环比大增 24%，但核心流失点仍集中在‘购物车-结算’环节，流失率高达 22.4%，主要阻碍为配送费门槛。",
+      "takeaway_item_2": "【高频主力客群稳定，高价值客群画像分明】周频与双周频的黏性客群贡献了高达 68.2% 的营业额。客群画像中，25-34岁高净值白领客户占据半壁江山（占比 34.6%），客单偏好集中在有机乳制品及预制生鲜。",
+      "takeaway_item_3": "【利润品类增长强劲，品类联动效应凸显】生鲜果蔬仍为第一流量入口，但肉禽海鲜本季度利润率提升 8.2%，成为整体客单价拉升的引擎。建议在 Q3 强推‘肉禽 + 调味半成品’组合包策略。",
+      "finding_1_title": "客户增长大盘与价值段分布",
+      "finding_1_desc": "大盘数据显示新注册客群呈现爆发式增长。核心价值段分层中，高生命周期价值（CLV）的客群主要集中在 25-45 岁区间，具有极强的粘性和复购意愿。",
+      "finding_2_title": "交易频次与留存转化路径",
+      "finding_2_desc": "分析交易频度分布可看出，周频复购率最高。通过对加购至支付的转化漏斗进行拆解，流失主要发生在配送优惠选择与支付网关切换节点。",
+      "finding_3_title": "品类偏好与核心单品贡献度",
+      "finding_3_desc": "生鲜果蔬在销售总量中占据霸主地位，高附加值的肉禽类商品紧随其后。通过散点关联模型，高客单价用户常伴随乳制品的捆绑购买行为。"
+    }
+  }
+}

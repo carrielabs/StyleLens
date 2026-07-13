@@ -64,6 +64,19 @@ const DATA_DASHBOARD_TEMPLATE_IDS = [
   'dashboard-13-corporate-blue-analytics-report',
   'dashboard-14-financial-blue-analytics-report',
   'dashboard-15-consulting-data-report',
+  'dashboard-16-executive-muted-dashboard',
+  'dashboard-17-dark-enterprise-analytics',
+  'dashboard-18-enterprise-green-analytics-report',
+  'dashboard-19-warm-soft-enterprise-dashboard',
+  'dashboard-20-live-commerce-dark-analytics',
+  'dashboard-21-corporate-operating-analysis-report',
+  'dashboard-22-glassmorphism-analytics-dashboard',
+  'dashboard-23-enterprise-teal-report',
+  'dashboard-24-cream-macaron-medical-analytics',
+  'dashboard-25-space-cyber-charging-safety-dashboard',
+  'dashboard-26-emerald-b2b-analytics-dashboard',
+  'dashboard-27-powerbi-hr-operations-report',
+  'dashboard-28-macos-glass-transaction-dashboard',
 ] as const
 const DEFAULT_DATA_DASHBOARD_TEMPLATE_ID = 'dashboard-15-consulting-data-report'
 const MAX_ROWS = 1000
@@ -146,7 +159,7 @@ function normalizeDashboardTemplateId(templateId?: string): DataDashboardTemplat
   if (DATA_DASHBOARD_TEMPLATE_IDS.includes(nextTemplateId as DataDashboardTemplateId)) {
     return nextTemplateId as DataDashboardTemplateId
   }
-  throw new Error('数据文件生成 Dashboard 只能使用已支持的 15 个 Dashboard 模板')
+  throw new Error('数据文件生成 Dashboard 只能使用已支持的 28 个 Dashboard 模板')
 }
 
 async function parseCsv(input: DataFileInput): Promise<ParsedDataset> {

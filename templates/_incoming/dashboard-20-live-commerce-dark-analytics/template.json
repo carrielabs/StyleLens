@@ -1,0 +1,248 @@
+{
+  "id": "dashboard-20-live-commerce-dark-analytics",
+  "name": "Live Commerce Dark Analytics 直播经营复盘数据大屏",
+  "templateName": "LiveCommerceDarkAnalyticsDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向直播、电商单场经营复盘、大盘流量监控、业务分析和投放效果追踪的深色高密度数据 Dashboard，采用暗夜石板配色、紧凑模块、ECharts 图表和可编辑文本插槽。",
+  "pageTypes": [
+    "dashboard",
+    "data-report",
+    "live-stream-analysis",
+    "business-review",
+    "traffic-monitoring"
+  ],
+  "styleTags": [
+    "dark",
+    "enterprise",
+    "high-density",
+    "live-commerce",
+    "professional",
+    "echarts"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "直播单场经营复盘",
+    "电商业务复盘",
+    "大盘流量监控",
+    "月度或季度业务分析",
+    "广告投放效果追踪"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "ECharts CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#141414",
+      "surface": "#1F1F1F",
+      "surfaceAlt": "#252525",
+      "border": "#333333",
+      "textMain": "#E5E5E5",
+      "textMuted": "#999999",
+      "amber": "#EAB308",
+      "teal": "#14B8A6",
+      "blue": "#3B82F6",
+      "purple": "#8B5CF6",
+      "rose": "#F43F5E"
+    },
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, PingFang SC, Microsoft YaHei, sans-serif",
+      "mono": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeOverride": false
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "顶部核心结论和 KPI 阵列",
+      "required": true,
+      "hideable": false
+    },
+    "core-finding-1": {
+      "desc": "流量来源与场观趋势",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-2": {
+      "desc": "综合趋势、转化漏斗和点击分布",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-3": {
+      "desc": "人群画像、用户标签和互动排行",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "kpi_grid",
+    "donut",
+    "area",
+    "line",
+    "funnel",
+    "bar_horizontal",
+    "bar_stacked",
+    "radar",
+    "ranking"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-editable、contenteditable、data-slot 和 data-key"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[data-chart-type]",
+      "desc": "图表、KPI 阵列和排行模块均通过 id 和 data-chart-type 定位"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "Key Takeaway + 3 个 Core Finding 模块；core-finding-1 有两个同名 section 节点"
+    },
+    "textSlots": [
+      "text.key_takeaway.title",
+      "text.key_takeaway.summary",
+      "text.core_finding_1.traffic_source_title",
+      "text.core_finding_1.traffic_trend_title",
+      "text.core_finding_2.title",
+      "text.core_finding_3.title"
+    ],
+    "kpiSlots": {
+      "kpi_collection": {
+        "selector": "#kpi-collection",
+        "type": "array",
+        "items": {
+          "label": "string",
+          "value": "number|string",
+          "unit": "string",
+          "subLabel": "string"
+        }
+      }
+    }
+  },
+  "chartModules": [
+    { "id": "kpi-collection", "type": "kpi_grid", "section": "key-takeaway" },
+    { "id": "chart-traffic-source", "type": "donut", "section": "core-finding-1" },
+    { "id": "chart-traffic-trend", "type": "area", "section": "core-finding-1" },
+    { "id": "chart-comprehensive-trend", "type": "line", "section": "core-finding-2" },
+    { "id": "chart-conversion-funnel", "type": "funnel", "section": "core-finding-2" },
+    { "id": "chart-click-distribution", "type": "bar_horizontal", "section": "core-finding-2" },
+    { "id": "chart-user-demographics", "type": "bar_stacked", "section": "core-finding-3" },
+    { "id": "chart-user-persona", "type": "radar", "section": "core-finding-3" },
+    { "id": "ranking-interaction-dimensions", "type": "ranking", "section": "core-finding-3" }
+  ],
+  "sampleData": {
+    "metadata": {
+      "report_name": "业务全景指标复盘分析"
+    },
+    "text": {
+      "text.key_takeaway.title": "业务全景指标复盘分析",
+      "text.key_takeaway.summary": "整体流量获取效率保持高位稳定。关键链路漏斗中，进房至点击转化表现优异，展现出极强的用户吸引力。受众分布呈现年轻化趋势，互动深度处于行业基线以上。"
+    },
+    "kpis": [
+      { "id": "kpi-1", "name": "人均停留时长", "value": "48", "unit": "秒", "sub": "粉丝均值 62 秒" },
+      { "id": "kpi-2", "name": "全场曝光人数", "value": "288,633", "unit": "", "sub": "转化率 5.83%" },
+      { "id": "kpi-3", "name": "进入人次", "value": "16,840", "unit": "", "sub": "粉丝占比 1.16%" }
+    ]
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container"
+  },
+  "slotLimits": {
+    "report-title": 30,
+    "summary-text": 300,
+    "section-title": 32,
+    "kpi-label": 18,
+    "kpi-value": 18,
+    "kpi-unit": 8,
+    "kpi-sub-label": 24,
+    "ranking-name": 24,
+    "ranking-value": 12
+  },
+  "llmInjectionRules": [
+    "所有新增可编辑文字必须同时包含 data-editable=\"true\"、contenteditable=\"true\"、data-slot 和 data-key。",
+    "图表容器必须保持 id 和 data-chart-type 在同一个 DOM 节点上。",
+    "KPI 阵列保持 #kpi-collection 和 data-chart-type=\"kpi_grid\"。",
+    "替换图表数据时优先修改底部 ECharts setOption 中的数据配置，不触碰布局和样式代码。",
+    "保持暗夜石板背景、细边框、高密度布局和克制图表配色，不添加营销化装饰。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "pastedTextFile": "originals/pasted-text.html",
+    "sourceAndPastedTextIdentical": true,
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "sourceConfigArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataEditableHasDataSlot": true,
+    "dataEditableHasDataKey": true,
+    "editableCount": 6,
+    "duplicateSlotCount": 0,
+    "dataSectionElementCount": 5,
+    "uniqueDataSectionCount": 4,
+    "chartCount": 9,
+    "chartLibrary": "ECharts",
+    "usesTailwindCdn": true,
+    "sourceComplianceFindings": [
+      "原始 HTML 和粘贴文件完全一致。",
+      "原始 HTML 有 data-section、data-chart-type、data-editable、contenteditable、data-slot 和 data-key。",
+      "原始 HTML 将 core-finding-1 拆成 core-finding-1 与 core-finding-1-b，入库版已统一为 core-finding-1。",
+      "原始 HTML 部分图表的 id 在子节点、data-chart-type 在父节点，入库版已统一到同一节点。",
+      "Gemini 配置声明 scatter、heatmap、waterfall 等类型，但 HTML 实际未绘制这些模块，入库版以 HTML 实际模块为准。",
+      "Gemini 配置声明 chart-interaction-scatter，但 HTML 中不存在该节点，未凭空新增。"
+    ],
+    "sourceCleanup": [
+      "按模板 20 命名为 dashboard-20-live-commerce-dark-analytics。",
+      "归档 Gemini 原始 HTML、粘贴 HTML、设计规范、槽位说明和原始配置。",
+      "补齐 template.json、README.md、design-standard.md、template-slots.md 和 preview-metadata.md。",
+      "为 KPI 阵列补充 #kpi-collection，为排行模块补充 #ranking-interaction-dimensions。"
+    ],
+    "standardReview": [
+      "设计规范符合深色企业级高密度 Dashboard 标准，和 HTML 视觉方向基本一致。",
+      "插槽说明方向可用，但原始 HTML 的 section 和图表节点结构与说明不完全一致，入库版已修正。",
+      "原始 template config 可作为参考，但 chartModules 与 HTML 实际模块不一致，入库版 template.json 已按实际 HTML 重新整理。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#EAB308",
+    "presets": [
+      "#EAB308",
+      "#14B8A6",
+      "#3B82F6",
+      "#8B5CF6",
+      "#F43F5E",
+      "#E5E5E5",
+      "#999999"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-dash-accent\"]",
+        "[class*=\"text-white\"]",
+        "[class*=\"text-red\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-dash\"]",
+        "[class*=\"bg-[#252525]\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-dash-border\"]"
+      ]
+    }
+  }
+}

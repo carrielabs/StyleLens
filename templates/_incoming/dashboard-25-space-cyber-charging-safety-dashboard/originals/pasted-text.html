@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电动自行车充电站AI智慧安全监管平台 - 数据大屏</title>
+    
+    <!-- 引入高可用 jsDelivr CDN，确保脚本更快速且稳定地加载 -->
+    <script src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.2/css/all.min.css" rel="stylesheet"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js" id="echarts-cdn"></script>
+    <script src="https://cdn.tailwindcss.com" id="tailwind-cdn"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <style>
+        /* ==================== 1. CSS 变量与本地样式兜底 (防白屏、防未加载报错) ==================== */
+        :root {
+            --cyber-dark: #020617;
+            --cyber-panel: rgba(7, 20, 43, 0.75);
+            --cyber-cyan: #06b6d4;
+            --cyber-green: #10b981;
+            --cyber-amber: #f59e0b;
+            --cyber-red: #ef4444;
+        }
+
+        /* 兜底静态类，确保在 Tailwind 尚未加载完成时，核心底色和文字不失真 */
+        body {
+            background-color: var(--cyber-dark);
+            background-image: 
+                linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: center;
+            color: #f1f5f9;
+            font-family: Consolas, Menlo, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+            overflow-x: hidden;
+        }
+
+        .bg-cyberDark { background-color: var(--cyber-dark); }
+        .bg-cyberPanel { background-color: var(--cyber-panel); }
+        .text-cyberCyan { color: var(--cyber-cyan); }
+        .text-cyberGreen { color: var(--cyber-green); }
+        .text-cyberAmber { color: var(--cyber-amber); }
+        .text-cyberRed { color: var(--cyber-red); }
+
+        /* 霓虹发光文字 */
+        .text-neon-glow {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+        }
+        .text-neon-red-glow {
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+        }
+
+        /* 隐藏滚动条但保留滚动能力 */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(2, 6, 23, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(6, 182, 212, 0.3);
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(6, 182, 212, 0.6);
+        }
+
+        /* 科技面板四个角定位描边，完美契合小红书参考原图的科幻细节 */
+        .cyber-panel-corner {
+            position: relative;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            box-shadow: inset 0 0 15px rgba(6, 182, 212, 0.05);
+        }
+        .cyber-panel-corner::before,
+        .cyber-panel-corner::after,
+        .cyber-panel-corner-inner::before,
+        .cyber-panel-corner-inner::after {
+            content: "";
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-color: rgba(6, 182, 212, 0.85);
+            border-style: solid;
+            pointer-events: none;
+        }
+        /* 左上角 */
+        .cyber-panel-corner::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+        /* 右上角 */
+        .cyber-panel-corner::after { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+        /* 左下角 */
+        .cyber-panel-corner-inner::before { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+        /* 右下角 */
+        .cyber-panel-corner-inner::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+        /* 呼吸红警示，用于火警板块 */
+        @keyframes alarm-pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.2), inset 0 0 10px rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.6), inset 0 0 20px rgba(239, 68, 68, 0.3); border-color: rgba(239, 68, 68, 1); }
+        }
+        .alarm-breathing {
+            animation: alarm-pulse 2s infinite;
+        }
+
+        /* 可编辑激活标记 */
+        [contenteditable="true"]:focus {
+            outline: 2px dashed rgba(6, 182, 212, 0.7);
+            background: rgba(6, 182, 212, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="text-slate-100 p-4 min-h-screen flex flex-col justify-between bg-cyberDark">
+
+    <!-- 全局通知 Toast 容器 -->
+    <div id="toast-container" class="fixed top-24 right-6 z-50 flex flex-col gap-2"></div>
+
+    <!-- 顶部 Header & Key Takeaway 核心汇总 -->
+    <header class="w-full mb-4" data-section="key-takeaway">
+        <!-- 头部修饰条 -->
+        <div class="flex justify-between items-center relative z-10">
+            <!-- 左侧：系统时间 -->
+            <div class="text-xs text-cyberCyan flex items-center gap-2">
+                <i class="fa-regular fa-clock text-sm"></i>
+                <span id="current-time-string">2026-07-13 13:41:00</span>
+            </div>
+
+            <!-- 中间：炫酷大标题 -->
+            <div class="flex flex-col items-center">
+                <div class="bg-gradient-to-r from-transparent via-cyan-950 to-transparent border-b border-cyberCyan/50 px-12 py-2 flex flex-col items-center shadow-lg relative">
+                    <h1 class="text-2xl md:text-3xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-slate-100 via-cyan-300 to-cyan-500 text-neon-glow"
+                        data-editable="true" contenteditable="true" data-slot="text.platformTitle" data-key="text.platformTitle">
+                        电动自行车充电站AI智慧安全监管平台
+                    </h1>
+                </div>
+            </div>
+
+            <!-- 右侧：快捷工具与状态导航 -->
+            <div class="flex items-center gap-3">
+                <button onclick="triggerNotification('系统数据同步已成功', 'success')" class="text-xs bg-slate-900 border border-cyberCyan/30 text-cyberCyan px-3 py-1.5 rounded flex items-center gap-2 hover:bg-cyberCyan/20 transition duration-300">
+                    <i class="fa-solid fa-arrows-rotate animate-spin"></i>
+                    <span>一键重载数据</span>
+                </button>
+                <div class="flex items-center gap-1.5 bg-emerald-950/40 px-2.5 py-1 rounded border border-emerald-500/30">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span class="text-xs text-cyberGreen font-semibold">AI守护在线</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 顶部核心决策四大 KPI 卡片架设 (高度还原参考图中的卡片组) -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <!-- 站点总数 -->
+            <div class="cyber-panel-corner bg-cyberPanel rounded-lg p-3 flex flex-col justify-between transition duration-300 hover:shadow-cyberGlow hover:border-cyberCyan/60">
+                <div class="cyber-panel-corner-inner"></div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-400">全国联网站点数</span>
+                    <i class="fa-solid fa-network-wired text-cyberCyan"></i>
+                </div>
+                <div class="mt-2 flex items-baseline">
+                    <span class="text-3xl font-black text-cyberCyan tracking-tight text-neon-glow" id="kpi-total-stations"
+                          data-editable="true" contenteditable="true" data-slot="text.totalStations" data-key="text.totalStations">19380</span>
+                    <span class="text-xs text-slate-400 ml-1">个</span>
+                </div>
+                <div class="text-[10px] text-cyberGreen mt-1 flex items-center gap-1">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                    <span>同比上月增加 12.4%</span>
+                </div>
+            </div>
+
+            <!-- 端口总数 -->
+            <div class="cyber-panel-corner bg-cyberPanel rounded-lg p-3 flex flex-col justify-between transition duration-300 hover:shadow-cyberGlow hover:border-cyberCyan/60">
+                <div class="cyber-panel-corner-inner"></div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-400">接入智能端口数</span>
+                    <i class="fa-solid fa-plug text-cyberAmber"></i>
+                </div>
+                <div class="mt-2 flex items-baseline">
+                    <span class="text-3xl font-black text-cyberAmber tracking-tight" id="kpi-total-ports"
+                          data-editable="true" contenteditable="true" data-slot="text.totalPorts" data-key="text.totalPorts">839000</span>
+                    <span class="text-xs text-slate-400 ml-1">个</span>
+                </div>
+                <div class="text-[10px] text-cyberAmber mt-1 flex items-center gap-1">
+                    <i class="fa-solid fa-bolt-lightning"></i>
+                    <span>设备开机率 99.95%</span>
+                </div>
+            </div>
+
+            <!-- 车辆总数 -->
+            <div class="cyber-panel-corner bg-cyberPanel rounded-lg p-3 flex flex-col justify-between transition duration-300 hover:shadow-cyberGlow hover:border-cyberCyan/60">
+                <div class="cyber-panel-corner-inner"></div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-400">建档电动车档案</span>
+                    <i class="fa-solid fa-motorcycle text-cyberCyan"></i>
+                </div>
+                <div class="mt-2 flex items-baseline">
+                    <span class="text-3xl font-black text-cyberCyan tracking-tight text-neon-glow" id="kpi-total-vehicles"
+                          data-editable="true" contenteditable="true" data-slot="text.totalVehicles" data-key="text.totalVehicles">3920300</span>
+                    <span class="text-xs text-slate-400 ml-1">辆</span>
+                </div>
+                <div class="text-[10px] text-cyberGreen mt-1 flex items-center gap-1">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>一车一码绑定率 100%</span>
+                </div>
+            </div>
+
+            <!-- 累计充电能耗 -->
+            <div class="cyber-panel-corner bg-cyberPanel rounded-lg p-3 flex flex-col justify-between transition duration-300 hover:shadow-cyberGlow hover:border-cyberCyan/60">
+                <div class="cyber-panel-corner-inner"></div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-400">今日累计用电量</span>
+                    <i class="fa-solid fa-chart-simple text-emerald-400"></i>
+                </div>
+                <div class="mt-2 flex items-baseline">
+                    <span class="text-3xl font-black text-emerald-400 tracking-tight" id="kpi-total-usage"
+                          data-editable="true" contenteditable="true" data-slot="text.totalUsage" data-key="text.totalUsage">39490094</span>
+                    <span class="text-xs text-slate-400 ml-1">kWh</span>
+                </div>
+                <div class="text-[10px] text-emerald-400 mt-1 flex items-center gap-1">
+                    <i class="fa-solid fa-leaf"></i>
+                    <span>等效减少碳排放 3.9 万吨</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Takeaway 特色核心总结板块 (大屏顶部高级智库提炼) -->
+        <div class="mt-4 cyber-panel-corner bg-gradient-to-r from-cyan-950/40 via-slate-900/50 to-transparent p-3 rounded-lg border-l-4 border-l-cyberCyan">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="bg-cyberCyan/10 text-cyberCyan px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">AI Takeaway</span>
+                    <div class="text-xs font-semibold text-slate-300"
+                         data-editable="true" contenteditable="true" data-slot="text.takeawaySummary" data-key="text.takeawaySummary">
+                        今日全国各联网电站运行评定为【卓越】。全国峰值负荷控制策略响应极佳，未见大规模异常，AI 边缘监测共防御阻断不规范充电行为及隐患共 1,289 起。
+                    </div>
+                </div>
+                <div class="text-[11px] text-slate-500 self-end whitespace-nowrap">
+                    点击以上任意文本或数字可实时修改
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 核心板块 1: Core Finding 1 - 设备运营与流量分析 -->
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4" data-section="core-finding-1">
+        <!-- 图表1: 智能充电端口实时使用环形图 (完美还原参考图左上角 KPI Ring) -->
+        <div class="cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                <h3 class="text-xs font-bold text-cyberCyan flex items-center gap-2">
+                    <span class="w-1.5 h-3 bg-cyberCyan rounded-sm"></span>
+                    <span data-editable="true" contenteditable="true" data-slot="text.finding1Title" data-key="text.finding1Title">智能充电端口分布</span>
+                </h3>
+                <span class="text-[10px] bg-cyan-950 text-cyberCyan px-2 py-0.5 rounded">实时更新</span>
+            </div>
+            
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <div class="col-span-7 h-44 relative" id="chart-port-status-ring" data-chart-type="ring-pie">
+                    <!-- ECharts 加载 -->
+                </div>
+                <div class="col-span-5 flex flex-col gap-2.5">
+                    <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block">空闲端口</span>
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-base font-black text-slate-100" id="stat-empty-ports">17389</span>
+                            <span class="text-[9px] text-emerald-400">58.2%</span>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block">占用中端口</span>
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-base font-black text-cyberCyan text-neon-glow" id="stat-occupied-ports">12089</span>
+                            <span class="text-[9px] text-cyberCyan">40.5%</span>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block">故障端口</span>
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-base font-black text-cyberRed" id="stat-fault-ports">398</span>
+                            <span class="text-[9px] text-cyberRed">1.3%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图表2: 每日充电电量统计 (柱状图) -->
+        <div class="cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                <h3 class="text-xs font-bold text-cyberCyan flex items-center gap-2">
+                    <span class="w-1.5 h-3 bg-cyberCyan rounded-sm"></span>
+                    <span>每日充电能耗趋势</span>
+                </h3>
+                <div class="flex gap-1 text-[10px]">
+                    <button class="bg-cyberCyan text-cyberDark px-2 py-0.5 rounded font-bold transition duration-300">7日</button>
+                    <button class="bg-slate-800 text-slate-400 px-2 py-0.5 rounded hover:bg-slate-700 transition duration-300">30日</button>
+                </div>
+            </div>
+            <div class="h-44" id="chart-daily-power-bar" data-chart-type="column-bar">
+                <!-- ECharts 加载 -->
+            </div>
+        </div>
+
+        <!-- 图表3: 新增车辆注册变化 (面积折线图) -->
+        <div class="cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                <h3 class="text-xs font-bold text-cyberCyan flex items-center gap-2">
+                    <span class="w-1.5 h-3 bg-cyberCyan rounded-sm"></span>
+                    <span>注册车辆增长曲线</span>
+                </h3>
+                <span class="text-[10px] text-slate-500">累计总量：38,490</span>
+            </div>
+            <div class="h-44" id="chart-vehicle-trend-area" data-chart-type="smooth-line-area">
+                <!-- ECharts 加载 -->
+            </div>
+        </div>
+    </section>
+
+    <!-- 核心板块 2: Core Finding 2 - 安全排查与社区网格治理 -->
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-4 mb-4" data-section="core-finding-2">
+        <!-- 事故报警面板 (高度还原原图中具有红警、监控切图的核心组件) -->
+        <div class="xl:col-span-5 cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between alarm-breathing animate-pulse-red" id="alarm-box">
+            <div class="cyber-panel-corner-inner"></div>
+            <!-- 火警头部 -->
+            <div class="flex items-center justify-between border-b border-red-900/50 pb-2 mb-3">
+                <div class="flex items-center gap-2 text-cyberRed">
+                    <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-neon-red-glow">实时火灾安全预警 (FIRE ALARM)</h3>
+                </div>
+                <button onclick="dismissAlarm()" class="text-[10px] bg-red-950/70 border border-red-500/40 text-red-200 px-2.5 py-1 rounded hover:bg-red-800 transition duration-300">
+                    一键消除火警
+                </button>
+            </div>
+
+            <!-- 火警详细数据 -->
+            <div class="grid grid-cols-3 gap-3 items-start">
+                <div class="col-span-2 space-y-1.5 text-xs text-slate-300">
+                    <div class="flex gap-2">
+                        <span class="text-slate-400">报警站点：</span>
+                        <span class="font-bold text-red-400" data-editable="true" contenteditable="true" data-slot="text.alarmStation" data-key="text.alarmStation">城市花园站</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <span class="text-slate-400">异常视频源：</span>
+                        <span class="text-cyberCyan font-semibold">视频监控02号 - A区广场</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <span class="text-slate-400">时间戳：</span>
+                        <span class="text-slate-200" id="alarm-time-display">2026-07-13 12:03:02</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-slate-400">详细位置：</span>
+                        <span class="text-slate-300 text-[11px] leading-relaxed" data-editable="true" contenteditable="true" data-slot="text.alarmLocation" data-key="text.alarmLocation">广州市番禺区大龙商业便民服务中心停车场 A区广场</span>
+                    </div>
+                </div>
+                
+                <!-- 预警核心热力图像模拟 -->
+                <div class="col-span-1 bg-red-950/20 border border-red-500/30 rounded p-1 text-center flex flex-col justify-between h-full">
+                    <span class="text-[9px] text-red-400 block mb-1">红外火情分析</span>
+                    <div class="flex-1 flex items-center justify-center relative">
+                        <!-- 动态同心发光圈 -->
+                        <span class="absolute w-8 h-8 bg-red-600 rounded-full opacity-60 animate-ping"></span>
+                        <span class="absolute w-4 h-4 bg-red-500 rounded-full"></span>
+                    </div>
+                    <span class="text-[10px] text-red-500 font-extrabold mt-1">温度: 124℃</span>
+                </div>
+            </div>
+
+            <!-- 现场实拍切片 -->
+            <div class="mt-3">
+                <span class="text-[10px] text-slate-400 block mb-1.5">火灾点抓拍瞬间/监控视频</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="relative bg-slate-900 border border-slate-800 rounded overflow-hidden aspect-[16/9] flex items-center justify-center">
+                        <!-- 模拟热成像图 -->
+                        <div class="absolute inset-0 bg-gradient-to-tr from-yellow-900/60 via-red-950/90 to-red-600/40 opacity-90"></div>
+                        <span class="absolute top-1 left-1 text-[8px] bg-red-600 text-slate-100 px-1 py-0.2 rounded font-bold">INFRARED 1</span>
+                        <i class="fa-solid fa-fire text-red-500 text-lg animate-pulse z-10"></i>
+                    </div>
+                    <div class="relative bg-slate-900 border border-slate-800 rounded overflow-hidden aspect-[16/9] flex items-center justify-center">
+                        <!-- 模拟CCTV实时切图 -->
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 opacity-90"></div>
+                        <span class="absolute top-1 left-1 text-[8px] bg-cyan-950 text-cyberCyan px-1 py-0.2 rounded font-bold">CCTV 2</span>
+                        <div class="text-[10px] text-red-400 font-semibold z-10 flex items-center gap-1">
+                            <i class="fa-solid fa-video"></i>
+                            <span>实时高危烟雾判定</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 社区列表与网格治理使用率表格 (高度还原原图右侧社区面板) -->
+        <div class="xl:col-span-4 cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                <h3 class="text-xs font-bold text-cyberCyan flex items-center gap-2">
+                    <span class="w-1.5 h-3 bg-cyberCyan rounded-sm"></span>
+                    <span>社区网格资产负荷榜</span>
+                </h3>
+                <span class="text-[10px] text-slate-500">网格数量: 1,489</span>
+            </div>
+
+            <!-- 数据表格 -->
+            <div class="flex-1 overflow-y-auto max-h-56">
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 text-[10px] uppercase">
+                            <th class="py-1.5">社区网格</th>
+                            <th class="py-1.5 text-center">站点数</th>
+                            <th class="py-1.5 text-center">端口数</th>
+                            <th class="py-1.5 text-right">平均利用率</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800 text-slate-300">
+                        <tr class="hover:bg-slate-950/40 transition">
+                            <td class="py-2 font-medium">东怡社区</td>
+                            <td class="py-2 text-center">12</td>
+                            <td class="py-2 text-center">128</td>
+                            <td class="py-2 text-right text-emerald-400 font-bold">64%</td>
+                        </tr>
+                        <tr class="hover:bg-slate-950/40 transition">
+                            <td class="py-2 font-medium">美心社区</td>
+                            <td class="py-2 text-center">3</td>
+                            <td class="py-2 text-center">36</td>
+                            <td class="py-2 text-right text-cyberAmber font-bold">23%</td>
+                        </tr>
+                        <tr class="hover:bg-slate-950/40 transition">
+                            <td class="py-2 font-medium">金海岸社区</td>
+                            <td class="py-2 text-center">22</td>
+                            <td class="py-2 text-center">235</td>
+                            <td class="py-2 text-right text-cyberAmber font-bold">28%</td>
+                        </tr>
+                        <tr class="hover:bg-slate-950/40 transition">
+                            <td class="py-2 font-medium">城市花园社区</td>
+                            <td class="py-2 text-center">1</td>
+                            <td class="py-2 text-center">7</td>
+                            <td class="py-2 text-right text-cyberCyan font-bold">76%</td>
+                        </tr>
+                        <tr class="hover:bg-slate-950/40 transition">
+                            <td class="py-2 font-medium">番禺大道南社区</td>
+                            <td class="py-2 text-center">10</td>
+                            <td class="py-2 text-center">129</td>
+                            <td class="py-2 text-right text-cyberRed font-bold">89%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 视频监控网格单元 (4个直播流监控窗口) -->
+        <div class="xl:col-span-3 cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                <h3 class="text-xs font-bold text-cyberCyan flex items-center gap-2">
+                    <span class="w-1.5 h-3 bg-cyberCyan rounded-sm"></span>
+                    <span>高危网格实时监控流</span>
+                </h3>
+                <span class="text-[10px] text-cyberGreen flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-cyberGreen animate-ping"></span>
+                    <span>LIVE</span>
+                </span>
+            </div>
+
+            <!-- 四路监控网格排版 -->
+            <div class="grid grid-cols-2 gap-2 flex-1">
+                <div class="relative bg-slate-950 rounded border border-slate-800 overflow-hidden group aspect-[4/3] flex flex-col justify-between p-1.5">
+                    <div class="flex justify-between items-center text-[8px] z-10">
+                        <span class="text-slate-300">大龙市场站</span>
+                        <span class="text-cyberGreen">正常</span>
+                    </div>
+                    <div class="absolute inset-0 bg-slate-900 flex items-center justify-center text-slate-600">
+                        <i class="fa-solid fa-video-slash text-sm mb-1 group-hover:scale-110 transition duration-300"></i>
+                    </div>
+                    <div class="z-10 bg-black/50 p-0.5 rounded text-[8px] text-slate-400 self-start">CAM-01</div>
+                </div>
+
+                <div class="relative bg-slate-950 rounded border border-slate-800 overflow-hidden group aspect-[4/3] flex flex-col justify-between p-1.5">
+                    <div class="flex justify-between items-center text-[8px] z-10">
+                        <span class="text-slate-300">富海雅居站</span>
+                        <span class="text-cyberGreen">正常</span>
+                    </div>
+                    <div class="absolute inset-0 bg-slate-900 flex items-center justify-center text-slate-600">
+                        <i class="fa-solid fa-video-slash text-sm mb-1 group-hover:scale-110 transition duration-300"></i>
+                    </div>
+                    <div class="z-10 bg-black/50 p-0.5 rounded text-[8px] text-slate-400 self-start">CAM-02</div>
+                </div>
+
+                <div class="relative bg-slate-950 rounded border border-slate-800 overflow-hidden group aspect-[4/3] flex flex-col justify-between p-1.5">
+                    <div class="flex justify-between items-center text-[8px] z-10">
+                        <span class="text-slate-300">伴山豪庭站</span>
+                        <span class="text-cyberGreen">正常</span>
+                    </div>
+                    <div class="absolute inset-0 bg-slate-900 flex items-center justify-center text-slate-600">
+                        <i class="fa-solid fa-video-slash text-sm mb-1 group-hover:scale-110 transition duration-300"></i>
+                    </div>
+                    <div class="z-10 bg-black/50 p-0.5 rounded text-[8px] text-slate-400 self-start">CAM-03</div>
+                </div>
+
+                <div class="relative bg-slate-950 rounded border border-slate-800 overflow-hidden group aspect-[4/3] flex flex-col justify-between p-1.5">
+                    <div class="flex justify-between items-center text-[8px] z-10">
+                        <span class="text-slate-300">东湖雅苑站</span>
+                        <span class="text-cyberAmber">多车拥堵</span>
+                    </div>
+                    <div class="absolute inset-0 bg-slate-900 flex items-center justify-center text-slate-600">
+                        <i class="fa-solid fa-video-slash text-sm mb-1 group-hover:scale-110 transition duration-300"></i>
+                    </div>
+                    <div class="z-10 bg-black/50 p-0.5 rounded text-[8px] text-slate-400 self-start">CAM-04</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 核心板块 3: Core Finding 3 - 多维效能研判与故障流转研判 -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4" data-section="core-finding-3">
+        <!-- 漏斗图 (故障处理漏斗) -->
+        <div class="cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between h-64">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                <h3 class="text-xs font-bold text-cyberCyan flex items-center gap-1.5">
+                    <i class="fa-solid fa-filter text-cyberAmber"></i>
+                    <span>安全隐患流转率</span>
+                </h3>
+                <span class="text-[9px] text-slate-500">转化率: 98%</span>
+            </div>
+            <div class="flex-1" id="chart-fault-funnel" data-chart-type="funnel"></div>
+        </div>
+
+        <!-- 雷达图 (充电站运行安全能效评估) -->
+        <div class="cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between h-64">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                <h3 class="text-xs font-bold text-cyberCyan flex items-center gap-1.5">
+                    <i class="fa-solid fa-bullseye text-cyberCyan"></i>
+                    <span>网格运行效能评估</span>
+                </h3>
+                <span class="text-[9px] text-slate-500">5个安全象限</span>
+            </div>
+            <div class="flex-1" id="chart-station-radar" data-chart-type="radar"></div>
+        </div>
+
+        <!-- 热力图 (24小时充电能耗高峰热力) -->
+        <div class="cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between h-64">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                <h3 class="text-xs font-bold text-cyberCyan flex items-center gap-1.5">
+                    <i class="fa-solid fa-fire-flame-curved text-red-500"></i>
+                    <span>高载时段用能热力图</span>
+                </h3>
+                <span class="text-[9px] text-slate-500">热点指数</span>
+            </div>
+            <div class="flex-1" id="chart-peak-heatmap" data-chart-type="heatmap"></div>
+        </div>
+
+        <!-- 散点图 (充电时间与用电量相关性) -->
+        <div class="cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between h-64">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                <h3 class="text-xs font-bold text-cyberCyan flex items-center gap-1.5">
+                    <i class="fa-solid fa-chart-line text-emerald-400"></i>
+                    <span>充电时数与用能分布</span>
+                </h3>
+                <span class="text-[9px] text-slate-500">离散分析</span>
+            </div>
+            <div class="flex-1" id="chart-duration-scatter" data-chart-type="scatter"></div>
+        </div>
+
+        <!-- 瀑布图 (综合能效阶梯损耗分摊) -->
+        <div class="cyber-panel-corner bg-cyberPanel p-4 rounded-lg flex flex-col justify-between h-64">
+            <div class="cyber-panel-corner-inner"></div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                <h3 class="text-xs font-bold text-cyberCyan flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-down-wide-short text-cyberCyan"></i>
+                    <span>月度能耗漏损分摊</span>
+                </h3>
+                <span class="text-[9px] text-slate-500">损耗分级</span>
+            </div>
+            <div class="flex-1" id="chart-energy-waterfall" data-chart-type="waterfall"></div>
+        </div>
+    </section>
+
+    <!-- 底部 Footer / 厂商声明区域 -->
+    <footer class="w-full flex flex-col md:flex-row justify-between items-center text-[10px] text-slate-500 border-t border-slate-900 pt-3">
+        <div class="flex items-center gap-2">
+            <span>数据源: 广东省安全物联数据中心 (AI安全监管中枢)</span>
+            <span class="w-1 h-1 rounded-full bg-slate-700"></span>
+            <span>更新频次: 实时</span>
+        </div>
+        <div class="mt-1 md:mt-0 flex items-center gap-4">
+            <span>广州市番禺区大龙街道办 &copy; 2026 版权所有</span>
+            <span class="text-cyberCyan/60">广东循车科技有限公司提供技术支持</span>
+        </div>
+    </footer>
+
+    <!-- 全局核心图表交互与编辑状态脚本 -->
+    <script>
+        // 定义全局变量和示例数据
+        window.CHART_DATA = {
+            portStatus: [
+                { value: 17389, name: '空闲' },
+                { value: 12089, name: '占用中' },
+                { value: 398, name: '故障' }
+            ],
+            dailyPower: {
+                dates: ['07/07', '07/08', '07/09', '07/10', '07/11', '07/12', '07/13'],
+                values: [2100, 3100, 2900, 3400, 2300, 1800, 2600]
+            },
+            vehicleTrend: {
+                dates: ['07/07', '07/08', '07/09', '07/10', '07/11', '07/12', '07/13'],
+                values: [34200, 35100, 36800, 38490, 39900, 41200, 42800]
+            }
+        };
+
+        // UI 通知气泡触发
+        function triggerNotification(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `flex items-center gap-2 px-4 py-2 text-xs font-bold rounded shadow-lg border transition duration-300 transform translate-x-12 opacity-0`;
+            
+            if (type === 'success') {
+                toast.className += ' bg-emerald-950/90 text-emerald-400 border-emerald-500/40 shadow-emerald-900/30';
+                toast.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${msg}</span>`;
+            } else if (type === 'danger') {
+                toast.className += ' bg-red-950/90 text-red-400 border-red-500/40 shadow-red-900/30';
+                toast.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>${msg}</span>`;
+            } else {
+                toast.className += ' bg-slate-900/95 text-cyberCyan border-cyberCyan/40 shadow-cyan-950/30';
+                toast.innerHTML = `<i class="fa-solid fa-bell"></i> <span>${msg}</span>`;
+            }
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-x-12', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('translate-x-12', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // 模拟火警一键消警交互
+        function dismissAlarm() {
+            const alarmBox = document.getElementById('alarm-box');
+            if (alarmBox) {
+                alarmBox.classList.remove('alarm-breathing', 'border-red-500/80');
+                alarmBox.classList.add('border-slate-800', 'shadow-none');
+                
+                // 将红警头部更换为安全绿色调
+                const head = alarmBox.querySelector('.text-cyberRed');
+                if (head) {
+                    head.classList.remove('text-cyberRed');
+                    head.classList.add('text-cyberGreen');
+                    head.innerHTML = `<i class="fa-solid fa-circle-check"></i> <h3 class="text-xs font-bold tracking-wider text-emerald-400">火警隐患已全面消除 (FIRE DISMISSED)</h3>`;
+                }
+                
+                triggerNotification('城市花园站安全隐患已成功消警并闭环！', 'success');
+            }
+        }
+
+        // 实时数字时钟
+        function updateClock() {
+            const timeSpan = document.getElementById('current-time-string');
+            if (timeSpan) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const date = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                timeSpan.textContent = `${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
+            }
+        }
+
+        // ==================== 2. 核心初始化控制台 (防未加载报错机制) ====================
+        function initializeApp() {
+            // A. 优雅设置 Tailwind 额外配置 (若未加载则静默)
+            if (typeof tailwind !== 'undefined') {
+                tailwind.config = {
+                    theme: {
+                        extend: {
+                            colors: {
+                                cyberDark: '#020617',
+                                cyberPanel: 'rgba(7, 20, 43, 0.75)',
+                                cyberCyan: '#06b6d4',
+                                cyberGreen: '#10b981',
+                                cyberAmber: '#f59e0b',
+                                cyberRed: '#ef4444',
+                            },
+                            boxShadow: {
+                                cyberGlow: '0 0 15px rgba(6, 182, 212, 0.25)',
+                                cyberGlowRed: '0 0 15px rgba(239, 68, 68, 0.45)',
+                                cyberGlowGreen: '0 0 15px rgba(16, 185, 129, 0.25)',
+                            }
+                        }
+                    }
+                };
+            }
+
+            // B. 启动时钟
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // C. 轮询并渲染图表 (确保 ECharts 初始化时不抛出未定义异常)
+            waitForEChartsAndInit();
+
+            // D. 绑定文本行内实时编辑反馈
+            const editables = document.querySelectorAll('[data-editable="true"]');
+            editables.forEach(elem => {
+                elem.addEventListener('blur', () => {
+                    const slot = elem.getAttribute('data-slot');
+                    const newValue = elem.innerText.trim();
+                    triggerNotification(`文案 [${slot}] 已修改为: "${newValue.substring(0, 15)}..."`, 'info');
+                });
+            });
+        }
+
+        // 递归等待 ECharts 加载完成
+        function waitForEChartsAndInit() {
+            if (typeof echarts !== 'undefined') {
+                try {
+                    renderAllCharts();
+                } catch (e) {
+                    console.error("ECharts 绘制图表异常：", e);
+                }
+            } else {
+                console.log("ECharts 库尚未就绪，100ms 后重试...");
+                setTimeout(waitForEChartsAndInit, 100);
+            }
+        }
+
+        // 核心图表绘制函数
+        function renderAllCharts() {
+            // 1. 智能端口使用率分布 (Ring-Pie)
+            const ringChartDom = document.getElementById('chart-port-status-ring');
+            if (ringChartDom) {
+                const myChart = echarts.init(ringChartDom);
+                myChart.setOption({
+                    tooltip: {
+                        trigger: 'item',
+                        backgroundColor: 'rgba(7, 20, 43, 0.95)',
+                        borderColor: '#06b6d4',
+                        textStyle: { color: '#cbd5e1' }
+                    },
+                    series: [{
+                        name: '端口状态',
+                        type: 'pie',
+                        radius: ['60%', '85%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 4,
+                            borderColor: '#020617',
+                            borderWidth: 2
+                        },
+                        label: { show: false },
+                        data: window.CHART_DATA.portStatus,
+                        color: ['#475569', '#06b6d4', '#ef4444']
+                    }]
+                });
+            }
+
+            // 2. 每日充电能耗趋势 (Column-Bar)
+            const barChartDom = document.getElementById('chart-daily-power-bar');
+            if (barChartDom) {
+                const myChart = echarts.init(barChartDom);
+                myChart.setOption({
+                    tooltip: {
+                        trigger: 'axis',
+                        backgroundColor: 'rgba(7, 20, 43, 0.95)',
+                        borderColor: '#06b6d4',
+                        textStyle: { color: '#cbd5e1' }
+                    },
+                    grid: { top: '10%', bottom: '15%', left: '10%', right: '5%' },
+                    xAxis: {
+                        type: 'category',
+                        data: window.CHART_DATA.dailyPower.dates,
+                        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+                        axisLabel: { color: '#94a3b8', fontSize: 10 }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.03)', type: 'dashed' } },
+                        axisLabel: { color: '#94a3b8', fontSize: 10 }
+                    },
+                    series: [{
+                        data: window.CHART_DATA.dailyPower.values,
+                        type: 'bar',
+                        barWidth: '40%',
+                        itemStyle: {
+                            borderRadius: [3, 3, 0, 0],
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#06b6d4' },
+                                { offset: 1, color: '#0369a1' }
+                            ])
+                        }
+                    }]
+                });
+            }
+
+            // 3. 注册车辆增长曲线 (Line Area)
+            const lineChartDom = document.getElementById('chart-vehicle-trend-area');
+            if (lineChartDom) {
+                const myChart = echarts.init(lineChartDom);
+                myChart.setOption({
+                    tooltip: {
+                        trigger: 'axis',
+                        backgroundColor: 'rgba(7, 20, 43, 0.95)',
+                        borderColor: '#06b6d4',
+                        textStyle: { color: '#cbd5e1' }
+                    },
+                    grid: { top: '10%', bottom: '15%', left: '12%', right: '5%' },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: window.CHART_DATA.vehicleTrend.dates,
+                        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+                        axisLabel: { color: '#94a3b8', fontSize: 10 }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.03)', type: 'dashed' } },
+                        axisLabel: { color: '#94a3b8', fontSize: 10 }
+                    },
+                    series: [{
+                        data: window.CHART_DATA.vehicleTrend.values,
+                        type: 'line',
+                        smooth: true,
+                        lineStyle: { color: '#06b6d4', width: 2 },
+                        itemStyle: { color: '#06b6d4' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(6, 182, 212, 0.3)' },
+                                { offset: 1, color: 'rgba(6, 182, 212, 0)' }
+                            ])
+                        }
+                    }]
+                });
+            }
+
+            // 4. 隐患治理流转漏斗 (Funnel Chart)
+            const funnelChartDom = document.getElementById('chart-fault-funnel');
+            if (funnelChartDom) {
+                const myChart = echarts.init(funnelChartDom);
+                myChart.setOption({
+                    tooltip: { trigger: 'item' },
+                    series: [{
+                        name: '隐患治理',
+                        type: 'funnel',
+                        left: '5%', right: '5%', top: '5%', bottom: '5%',
+                        sort: 'descending',
+                        label: { show: true, position: 'inside', formatter: '{b} ({c})', color: '#fff', fontSize: 9 },
+                        data: [
+                            { value: 1289, name: '安全事件接入' },
+                            { value: 940, name: 'AI联动阻断' },
+                            { value: 240, name: '网格员介入' },
+                            { value: 109, name: '隐患已消除' }
+                        ],
+                        color: ['#0f172a', '#0369a1', '#d97706', '#059669']
+                    }]
+                });
+            }
+
+            // 5. 综合能效雷达图 (Radar)
+            const radarChartDom = document.getElementById('chart-station-radar');
+            if (radarChartDom) {
+                const myChart = echarts.init(radarChartDom);
+                myChart.setOption({
+                    radar: {
+                        indicator: [
+                            { name: '异常检测', max: 100 },
+                            { name: '绿能占比', max: 100 },
+                            { name: '平均满载率', max: 100 },
+                            { name: '消火自动闭环', max: 100 },
+                            { name: '安全开机率', max: 100 }
+                        ],
+                        splitArea: { show: false },
+                        splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
+                        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+                        name: { textStyle: { color: '#94a3b8', fontSize: 8 } }
+                    },
+                    series: [{
+                        type: 'radar',
+                        data: [{
+                            value: [94, 85, 78, 99, 95],
+                            name: '今日能效评估',
+                            itemStyle: { color: '#06b6d4' },
+                            areaStyle: { color: 'rgba(6, 182, 212, 0.2)' }
+                        }]
+                    }]
+                });
+            }
+
+            // 6. 热力图 (24小时充电能耗高峰)
+            const heatmapChartDom = document.getElementById('chart-peak-heatmap');
+            if (heatmapChartDom) {
+                const myChart = echarts.init(heatmapChartDom);
+                const hours = ['1-6h', '7-12h', '13-18h', '19-24h'];
+                const days = ['周一', '周三', '周五', '周日'];
+                const data = [
+                    [0, 0, 1], [0, 1, 3], [0, 2, 7], [0, 3, 5],
+                    [1, 0, 2], [1, 1, 8], [1, 2, 9], [1, 3, 4],
+                    [2, 0, 4], [2, 1, 9], [2, 2, 10], [2, 3, 6],
+                    [3, 0, 1], [3, 1, 5], [3, 2, 8], [3, 3, 3]
+                ];
+                myChart.setOption({
+                    tooltip: { position: 'top' },
+                    grid: { top: '10%', bottom: '15%', left: '12%', right: '5%' },
+                    xAxis: { type: 'category', data: hours, splitArea: { show: true }, axisLabel: { fontSize: 8, color: '#94a3b8' } },
+                    yAxis: { type: 'category', data: days, splitArea: { show: true }, axisLabel: { fontSize: 8, color: '#94a3b8' } },
+                    visualMap: { min: 0, max: 10, calculating: true, orient: 'horizontal', left: 'center', bottom: '0%', show: false, inRange: { color: ['#0f172a', '#0369a1', '#ef4444'] } },
+                    series: [{ name: '充电热度', type: 'heatmap', data: data, label: { show: true, fontSize: 8, color: '#fff' } }]
+                });
+            }
+
+            // 7. 散点图 (用电时数与充电量分布)
+            const scatterChartDom = document.getElementById('chart-duration-scatter');
+            if (scatterChartDom) {
+                const myChart = echarts.init(scatterChartDom);
+                myChart.setOption({
+                    grid: { top: '10%', bottom: '15%', left: '12%', right: '5%' },
+                    xAxis: { splitLine: { lineStyle: { color: 'rgba(255,255,255,0.03)' } }, axisLabel: { fontSize: 8, color: '#94a3b8' } },
+                    yAxis: { splitLine: { lineStyle: { color: 'rgba(255,255,255,0.03)' } }, axisLabel: { fontSize: 8, color: '#94a3b8' } },
+                    series: [{
+                        symbolSize: 8,
+                        data: [[1.2, 3.4], [2.5, 6.7], [3.1, 7.8], [4.5, 9.2], [1.8, 4.1], [3.9, 8.5], [5.2, 11.4], [2.1, 5.0]],
+                        type: 'scatter',
+                        itemStyle: { color: '#10b981' }
+                    }]
+                });
+            }
+
+            // 8. 瀑布图 (综合损耗分摊)
+            const waterfallChartDom = document.getElementById('chart-energy-waterfall');
+            if (waterfallChartDom) {
+                const myChart = echarts.init(waterfallChartDom);
+                myChart.setOption({
+                    grid: { top: '10%', bottom: '15%', left: '12%', right: '5%' },
+                    xAxis: { type: 'category', data: ['总用能', '核心损耗', '馈损率', '端损率', '实际充入'], axisLabel: { fontSize: 8, color: '#94a3b8' } },
+                    yAxis: { type: 'value', axisLabel: { fontSize: 8, color: '#94a3b8' } },
+                    series: [
+                        { name: '辅助', type: 'bar', stack: '总量', itemStyle: { borderColor: 'transparent', color: 'transparent' }, data: [0, 75, 55, 35, 0] },
+                        { name: '用能', type: 'bar', stack: '总量', label: { show: true, position: 'inside', fontSize: 8, color: '#fff' }, data: [100, 25, 20, 20, 35], itemStyle: { color: '#06b6d4' } }
+                    ]
+                });
+            }
+
+            // 联动响应大屏缩放
+            window.addEventListener('resize', () => {
+                const charts = document.querySelectorAll('[data-chart-type]');
+                charts.forEach(c => {
+                    const inst = echarts.getInstanceByDom(c);
+                    if (inst) inst.resize();
+                });
+            });
+        }
+
+        // ==================== 3. 页面生命周期挂载点 ====================
+        function bootstrap() {
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                initializeApp();
+            } else {
+                window.addEventListener('DOMContentLoaded', initializeApp);
+            }
+        }
+        bootstrap();
+    </script>
+</body>
+</html>

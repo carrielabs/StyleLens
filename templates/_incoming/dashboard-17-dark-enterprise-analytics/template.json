@@ -1,0 +1,210 @@
+{
+  "id": "dashboard-17-dark-enterprise-analytics",
+  "name": "Dark Enterprise Analytics 高管业务效能洞察 Dashboard",
+  "templateName": "DarkEnterpriseAnalyticsDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向高管经营复盘、年度或季度业务报告、核心系统状态监控和深度数据分析的深色企业级数据 Dashboard，采用极深背景、克制卡片、香槟金 KPI、ECharts 图表和可编辑文本插槽。",
+  "pageTypes": [
+    "dashboard",
+    "data-report",
+    "executive-summary",
+    "business-review",
+    "analytics-report"
+  ],
+  "styleTags": [
+    "dark",
+    "enterprise-analytics",
+    "minimalist",
+    "professional",
+    "high-density",
+    "echarts",
+    "no-gradient"
+  ],
+  "deliveryType": "scrolling-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "medium-high",
+  "bestFor": [
+    "高管经营复盘",
+    "年度业务报告",
+    "季度业务报告",
+    "核心系统状态监控",
+    "业务效能分析"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "ECharts CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#0A0A0A",
+      "surface": "#161616",
+      "accent": "#E6D3C0",
+      "textMain": "#E5E7EB",
+      "textMuted": "#888888",
+      "positive": "#34D399",
+      "negative": "#F87171",
+      "info": "#60A5FA",
+      "border": "#2A2A2A",
+      "tooltip": "#222222"
+    },
+    "fonts": {
+      "body": "system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif",
+      "mono": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataDrive": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeColorCustomization": false
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "核心总结区和全局 KPI",
+      "required": true,
+      "hideable": false
+    },
+    "finding-1": {
+      "desc": "趋势与区域贡献分析",
+      "required": true,
+      "hideable": true
+    },
+    "finding-2": {
+      "desc": "业务结构、漏斗转化和成本拆解",
+      "required": true,
+      "hideable": true
+    },
+    "finding-3": {
+      "desc": "多维特征、分布和风险排行",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "kpi",
+    "area",
+    "horizontal-bar",
+    "donut",
+    "funnel",
+    "stacked-bar",
+    "radar",
+    "scatter",
+    "ranking"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-editable、contenteditable、data-slot 和 data-key"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[data-chart-type]",
+      "desc": "ECharts 图表和 HTML 排行模块，均通过 id 和 data-chart-type 定位"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "Key Takeaway + 3 个 Core Finding 模块"
+    }
+  },
+  "slotLimits": {
+    "report-title": 24,
+    "report-subtitle": 56,
+    "section-title": 24,
+    "chart-title": 32,
+    "chart-desc": 60,
+    "kpi-label": 18,
+    "kpi-value": 18,
+    "ranking-name": 18,
+    "ranking-value": 12
+  },
+  "llmInjectionRules": [
+    "所有新增可编辑文字必须同时包含 data-editable=\"true\"、contenteditable=\"true\"、data-slot 和 data-key。",
+    "图表容器 ID 必须保持 chart-* 或 kpi-* 格式，排行模块保留 ranking-list-module。",
+    "替换图表数据时优先修改底部 ECharts setOption 中的 data，不触碰布局和样式代码。",
+    "模块结构保持 key-takeaway、finding-1、finding-2、finding-3。",
+    "保持极深背景、克制卡片和香槟金主指标，不添加花哨渐变、厚重阴影或营销化装饰。"
+  ],
+  "sampleData": {
+    "text": {
+      "report_title": "核心业务效能洞察",
+      "report_subtitle": "基于 2025 财年多维经营数据的自动化复盘与风险排查分析"
+    },
+    "charts": {
+      "chart-revenue-trend": {
+        "type": "area",
+        "description": "近 12 个月关键指标波动折线图"
+      },
+      "chart-product-donut": {
+        "type": "donut",
+        "description": "产品线收入占比"
+      },
+      "chart-value-scatter": {
+        "type": "scatter",
+        "description": "客单价 vs 活跃度分布"
+      }
+    }
+  },
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "pastedTextFile": "originals/pasted-text.html",
+    "sourceAndPastedTextIdentical": true,
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "sourceConfigArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataEditableHasDataSlot": true,
+    "dataEditableHasDataKey": true,
+    "editableCount": 32,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 4,
+    "chartCount": 12,
+    "chartLibrary": "ECharts",
+    "sourceComplianceFindings": [
+      "Gemini 配置声明 chartModules 为 13，但 HTML 实际包含 12 个 data-chart-type 模块。",
+      "HTML 已包含 data-section、data-chart-type、data-editable、contenteditable、data-slot 和 data-key。",
+      "原始 HTML 部分图表 tooltip 会覆盖通用深色配置，入库版已统一为 #222 深色提示框。",
+      "原始 HTML 未实现后端传入 null 时的暂无数据渲染逻辑，本次保留为后续接入层处理。"
+    ],
+    "sourceCleanup": [
+      "按仓库规范命名为 dashboard-17-dark-enterprise-analytics。",
+      "归档 Gemini 原始 HTML、粘贴 HTML、设计规范、槽位说明和原始配置。",
+      "补齐 template.json、README.md、design-standard.md、template-slots.md 和 preview-metadata.md。",
+      "统一 ECharts tooltip 深色样式，避免局部配置回退到默认白色提示框。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#E6D3C0",
+    "presets": [
+      "#E6D3C0",
+      "#60A5FA",
+      "#34D399",
+      "#F87171",
+      "#888888",
+      "#E5E7EB"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-accent\"]",
+        "[class*=\"text-info\"]",
+        "[class*=\"text-positive\"]",
+        "[class*=\"text-negative\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-accent\"]",
+        "[class*=\"bg-card\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border\"]"
+      ]
+    }
+  }
+}

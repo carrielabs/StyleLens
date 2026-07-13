@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>macOS Glass Transaction Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'premium': '0 25px 60px -15px rgba(0, 0, 0, 0.12)',
+                        'inner-glass': 'inset 0 1px 1px rgba(255, 255, 255, 0.4)',
+                        'inner-glass-dark': 'inset 0 1px 1px rgba(255, 255, 255, 0.08)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* 苹果系统动态模糊渐变背景 */
+        .macos-bg {
+            background: radial-gradient(circle at 10% 10%, #ffcfb3 0%, transparent 40%),
+                        radial-gradient(circle at 90% 15%, #e1c4ff 0%, transparent 45%),
+                        radial-gradient(circle at 80% 85%, #bce3ff 0%, transparent 50%),
+                        radial-gradient(circle at 15% 90%, #ffccd7 0%, transparent 45%),
+                        linear-gradient(135deg, #f0f4ff 0%, #f9f5fc 100%);
+            transition: background 0.8s ease;
+        }
+        .dark .macos-bg {
+            background: radial-gradient(circle at 10% 10%, #3a1f18 0%, transparent 40%),
+                        radial-gradient(circle at 90% 15%, #25123d 0%, transparent 45%),
+                        radial-gradient(circle at 80% 85%, #0f223a 0%, transparent 50%),
+                        radial-gradient(circle at 15% 90%, #30111e 0%, transparent 45%),
+                        linear-gradient(135deg, #090a0f 0%, #0c0d12 100%);
+        }
+        /* 极致通透玻璃材质 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.38);
+            backdrop-filter: blur(40px) saturate(210%);
+            -webkit-backdrop-filter: blur(40px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .dark .glass-panel {
+            background: rgba(18, 18, 26, 0.5);
+            backdrop-filter: blur(40px) saturate(190%);
+            -webkit-backdrop-filter: blur(40px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        /* 子卡片通透效果与 macOS 风格平滑悬浮效果 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.48);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 30px rgba(31, 38, 135, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .dark .glass-card {
+            background: rgba(28, 28, 40, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        }
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 45px rgba(31, 38, 135, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+            border-color: rgba(255, 255, 255, 0.7);
+        }
+        .dark .glass-card:hover {
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+        /* 折线微调动画 */
+        .sparkpath {
+            transition: stroke-width 0.3s ease, stroke 0.3s ease;
+        }
+        .glass-card:hover .sparkpath {
+            stroke-width: 3.5px;
+        }
+        .glass-card:hover .sparkarea {
+            opacity: 0.18;
+        }
+    </style>
+</head>
+<body class="h-full macos-bg text-slate-800 dark:text-slate-100 p-4 md:p-8 overflow-y-auto no-scrollbar transition-colors duration-500" data-template-id="dashboard-28-macos-glass-transaction-dashboard">
+
+    <!-- 顶层流式数据看板容器（铺满页面） -->
+    <div class="max-w-[1580px] mx-auto space-y-8">
+        
+        <!-- 头部主横幅：包含标题与智能核心洞察 -->
+        <div class="glass-panel rounded-3xl p-6 md:p-8 shadow-premium relative overflow-hidden" data-section="key-takeaway">
+            
+            <!-- 柔和背景炫光 -->
+            <div class="absolute -right-24 -top-24 w-96 h-96 bg-purple-500/10 dark:bg-purple-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+            <div class="absolute -left-24 -bottom-24 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+            <!-- 顶部第一层：系统品牌（去除了左侧 Icon 与右侧搜索、小太阳控制项） -->
+            <div class="flex items-center justify-between border-b border-white/30 dark:border-white/5 pb-6">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h2 class="font-black text-2xl leading-tight tracking-wide text-slate-900 dark:text-white" data-editable="true" contenteditable="true" data-slot="text.brand_title" data-key="text.brand_title">DASHBOARD DIGITAL</h2>
+                        <span class="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] px-2 py-0.5 rounded-full font-bold">ENTERPRISE PRO</span>
+                    </div>
+                    <p class="text-xs opacity-60 mt-0.5 tracking-wider" data-editable="true" contenteditable="true" data-slot="text.brand_sub" data-key="text.brand_sub">数字化交易全景中台 • 全实时数据处理矩阵</p>
+                </div>
+            </div>
+
+            <!-- 顶部第二层：核心洞察（Core Insights） -->
+            <div class="mt-6">
+                <div class="flex items-center space-x-2 mb-4 text-xs font-bold tracking-widest text-indigo-600 dark:text-indigo-400 uppercase">
+                    <i data-lucide="sparkles" class="w-4 h-4 animate-pulse"></i>
+                    <span>DASHBOARD CORE INSIGHTS | 核心数据洞察</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    <!-- 洞察项 1: 异常突发观测 -->
+                    <div class="p-4 rounded-2xl bg-amber-500/5 dark:bg-amber-400/5 border border-amber-500/20 flex space-x-3.5">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h4 class="text-xs font-bold text-amber-800 dark:text-amber-300" data-editable="true" contenteditable="true" data-slot="text.insight_1_title" data-key="text.insight_1_title">流量峰值预警 (13:00 - 15:00)</h4>
+                            <p class="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300" data-editable="true" contenteditable="true" data-slot="text.insight_1_desc" data-key="text.insight_1_desc">
+                                社交渠道（Social Media）于午间产生流量峰值，转化率高出均值 18%，建议加大此时段的广告预算配比。
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 洞察项 2: 周期业绩预测 -->
+                    <div class="p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-400/5 border border-emerald-500/20 flex space-x-3.5">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h4 class="text-xs font-bold text-emerald-800 dark:text-amber-300" data-editable="true" contenteditable="true" data-slot="text.insight_2_title" data-key="text.insight_2_title">周期业绩预测与提速</h4>
+                            <p class="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300" data-editable="true" contenteditable="true" data-slot="text.insight_2_desc" data-key="text.insight_2_desc">
+                                根据本季度数据走势推演，下月（八月）总交易净额预计突破 <span class="font-bold text-emerald-600 dark:text-emerald-400">$910K</span>，有望刷新本年度业绩高点。
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 洞察项 3: 渠道优化策略 -->
+                    <div class="p-4 rounded-2xl bg-indigo-500/5 dark:bg-indigo-400/5 border border-indigo-500/20 flex space-x-3.5">
+                        <div class="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="compass" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h4 class="text-xs font-bold text-indigo-800 dark:text-indigo-300" data-editable="true" contenteditable="true" data-slot="text.insight_3_title" data-key="text.insight_3_title">多渠道优化建议</h4>
+                            <p class="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300" data-editable="true" contenteditable="true" data-slot="text.insight_3_desc" data-key="text.insight_3_desc">
+                                广告渠道配比占比已达 72% 的阶段饱和态。后续扩容应侧重于高质触达的 Organic Streams 和联盟生态。
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 栅格卡片网络：包含 10 个具有高交互、高度和谐质感的数据指标卡 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+            
+            <!-- ================= CARD 1: 交易总净额 ================= -->
+            <div id="chart-net-revenue-kpi" data-section="key-takeaway" data-chart-type="kpi" class="lg:col-span-3 glass-card p-6 rounded-2xl flex flex-col justify-between group cursor-pointer">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold opacity-60 uppercase tracking-wider">总交易净额</span>
+                    <span class="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 transition-transform duration-300 group-hover:scale-110">
+                        <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                    </span>
+                </div>
+                <div class="my-4">
+                    <p class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-800 dark:from-white dark:via-slate-200 dark:to-slate-400">$879,274</p>
+                    <span class="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full inline-flex items-center mt-1.5 transition-colors group-hover:bg-emerald-500/20">
+                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 mr-0.5"></i>同比增长 24%
+                    </span>
+                </div>
+                <!-- 底层高度协调微型 sparkline -->
+                <div class="h-10 w-full mt-2">
+                    <svg class="w-full h-full" viewBox="0 0 120 24" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="glow-card1" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- 面积填充 hover 联动 -->
+                        <path d="M0,18 Q30,4 60,14 T120,8 L120,24 L0,24 Z" fill="url(#glow-card1)" class="sparkarea opacity-0 transition-opacity duration-300" />
+                        <!-- 折线曲线，完美统一粗细和顺滑度 -->
+                        <path d="M0,18 Q30,4 60,14 T120,8" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" class="sparkpath" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- ================= CARD 2: 事务处理量 ================= -->
+            <div id="chart-transaction-volume-kpi" data-section="key-takeaway" data-chart-type="kpi" class="lg:col-span-3 glass-card p-6 rounded-2xl flex flex-col justify-between group cursor-pointer">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold opacity-60 uppercase tracking-wider">事务处理总量</span>
+                    <span class="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400 transition-transform duration-300 group-hover:scale-110">
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                    </span>
+                </div>
+                <div class="my-4">
+                    <p class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-indigo-700 dark:from-white dark:to-indigo-300">367,821</p>
+                    <span class="text-[10px] font-bold text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full inline-flex items-center mt-1.5 transition-colors group-hover:bg-purple-500/20">
+                        <i data-lucide="activity" class="w-3.5 h-3.5 mr-0.5"></i>环比递增 12.3%
+                    </span>
+                </div>
+                <!-- 曲线微型 sparkline -->
+                <div class="h-10 w-full mt-2">
+                    <svg class="w-full h-full" viewBox="0 0 120 24" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="glow-card2" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#a855f7" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M0,18 Q30,6 60,15 T120,10 L120,24 L0,24 Z" fill="url(#glow-card2)" class="sparkarea opacity-0 transition-opacity duration-300" />
+                        <path d="M0,18 Q30,6 60,15 T120,10" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" class="sparkpath" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- ================= CARD 3: 广告推广总收益 ================= -->
+            <div id="chart-promo-revenue-kpi" data-section="key-takeaway" data-chart-type="kpi" class="lg:col-span-3 glass-card p-6 rounded-2xl flex flex-col justify-between group cursor-pointer">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold opacity-60 uppercase tracking-wider">广告投放总收益</span>
+                    <span class="w-8 h-8 rounded-full bg-lime-500/10 flex items-center justify-center text-lime-600 dark:text-lime-400 transition-transform duration-300 group-hover:scale-110">
+                        <i data-lucide="percent" class="w-4 h-4"></i>
+                    </span>
+                </div>
+                <div class="my-4">
+                    <p class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-indigo-700 dark:from-white dark:to-indigo-300">$231,489</p>
+                    <span class="text-[10px] font-bold text-lime-600 bg-lime-500/10 px-2 py-0.5 rounded-full inline-flex items-center mt-1.5 transition-colors group-hover:bg-lime-500/20">
+                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 mr-0.5"></i>达到本期目标 92%
+                    </span>
+                </div>
+                <!-- 曲线微型 sparkline -->
+                <div class="h-10 w-full mt-2">
+                    <svg class="w-full h-full" viewBox="0 0 120 24" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="glow-card3" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#bef264" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="#bef264" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M0,18 Q30,8 60,16 T120,12 L120,24 L0,24 Z" fill="url(#glow-card3)" class="sparkarea opacity-0 transition-opacity duration-300" />
+                        <path d="M0,18 Q30,8 60,16 T120,12" fill="none" stroke="#bef264" stroke-width="2.5" stroke-linecap="round" class="sparkpath" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- ================= CARD 4: 系统边缘状态 ================= -->
+            <div id="chart-edge-availability-kpi" data-section="key-takeaway" data-chart-type="kpi" class="lg:col-span-3 glass-card p-6 rounded-2xl flex flex-col justify-between group cursor-pointer">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold opacity-60 uppercase tracking-wider">全球节点可用性</span>
+                    <div class="flex items-center space-x-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                        <span class="text-[10px] font-bold text-emerald-500">Live</span>
+                    </div>
+                </div>
+                <div class="my-4">
+                    <p class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-indigo-700 dark:from-white dark:to-indigo-300">99.98%</p>
+                    <span class="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full inline-flex items-center mt-1.5 transition-colors group-hover:bg-blue-500/20">
+                        <i data-lucide="server" class="w-3.5 h-3.5 mr-0.5"></i>48 边缘节点集群在线
+                    </span>
+                </div>
+                <!-- 曲线微型 sparkline -->
+                <div class="h-10 w-full mt-2">
+                    <svg class="w-full h-full" viewBox="0 0 120 24" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="glow-card4" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M0,18 Q30,5 60,13 T120,9 L120,24 L0,24 Z" fill="url(#glow-card4)" class="sparkarea opacity-0 transition-opacity duration-300" />
+                        <path d="M0,18 Q30,5 60,13 T120,9" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" class="sparkpath" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- ================= CARD 5: 真实高发光热力点阵图（重构） ================= -->
+            <div id="chart-traffic-heatmap" data-section="core-finding-1" data-chart-type="heatmap" class="lg:col-span-7 glass-card p-6 rounded-3xl flex flex-col justify-between relative group overflow-hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold opacity-90" data-editable="true" contenteditable="true" data-slot="text.finding_1_title" data-key="text.finding_1_title">Total Traffic 热力点阵</h3>
+                        <p class="text-[10px] opacity-50" data-editable="true" contenteditable="true" data-slot="text.finding_1_desc" data-key="text.finding_1_desc">按维度细分的实时数据分布（悬浮圆点激活十字对准线及高保真信息卡）</p>
+                    </div>
+                    <span class="w-8 h-8 rounded-full bg-white/60 dark:bg-black/20 flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm">
+                        <i data-lucide="grid" class="w-4 h-4 text-indigo-500"></i>
+                    </span>
+                </div>
+
+                <!-- 重构后的 2D 矩阵容器 -->
+                <div class="my-6 relative flex flex-col items-center justify-center">
+                    
+                    <!-- SVG 动态十字线图层 -->
+                    <div class="absolute inset-0 w-full h-[150px] pointer-events-none z-10">
+                        <div id="crosshairX" class="absolute left-0 right-0 h-[1px] border-t border-dashed border-indigo-400/40 opacity-0 transition-all duration-200"></div>
+                        <div id="crosshairY" class="absolute top-0 bottom-0 w-[1px] border-l border-dashed border-indigo-400/40 opacity-0 transition-all duration-200"></div>
+                    </div>
+
+                    <!-- 点阵主网络 -->
+                    <div class="grid grid-cols-[50px_1fr] gap-x-4 items-center w-full max-w-lg z-20">
+                        
+                        <!-- Y 轴通道分类 -->
+                        <div class="flex flex-col justify-between h-[110px] text-[10px] font-bold opacity-50 space-y-4 text-right pr-2">
+                            <span id="row-Ads">Ads</span>
+                            <span id="row-Web">Web</span>
+                            <span id="row-Social">Social</span>
+                        </div>
+
+                        <!-- 真正可见的热力点集合 (标准化 Tailwind 尺寸 w-5 h-5 确保渲染) -->
+                        <div class="grid grid-cols-7 gap-y-4 gap-x-3 h-[110px] items-center">
+                            
+                            <!-- 第一行：Advertising (Ads - 绿色系) -->
+                            <div class="flex justify-center">
+                                <span data-val="124,500" data-channel="Advertising" data-day="星期日" data-col="0" data-row="Ads" class="dot-item adv w-5 h-5 rounded-full bg-lime-400/90 shadow-[0_0_14px_rgba(163,230,53,0.85)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="43,200" data-channel="Advertising" data-day="星期一" data-col="1" data-row="Ads" class="dot-item adv w-5 h-5 rounded-full bg-lime-400/35 shadow-[0_0_8px_rgba(163,230,53,0.4)] border border-white/20 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="152,000" data-channel="Advertising" data-day="星期二" data-col="2" data-row="Ads" class="dot-item adv w-5 h-5 rounded-full bg-lime-400/95 shadow-[0_0_16px_rgba(163,230,53,0.9)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="12,400" data-channel="Advertising" data-day="星期三" data-col="3" data-row="Ads" class="dot-item adv w-5 h-5 rounded-full bg-slate-300/40 dark:bg-slate-700/40 border border-white/10 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="35,600" data-channel="Advertising" data-day="星期四" data-col="4" data-row="Ads" class="dot-item adv w-5 h-5 rounded-full bg-lime-400/30 shadow-[0_0_6px_rgba(163,230,53,0.3)] border border-white/20 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="189,400" data-channel="Advertising" data-day="星期五" data-col="5" data-row="Ads" class="dot-item adv w-5 h-5 rounded-full bg-lime-400/95 shadow-[0_0_18px_rgba(163,230,53,0.95)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="9,800" data-channel="Advertising" data-day="星期六" data-col="6" data-row="Ads" class="dot-item adv w-5 h-5 rounded-full bg-slate-300/40 dark:bg-slate-700/40 border border-white/10 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+
+                            <!-- 第二行：Websites (Web - 紫色系) -->
+                            <div class="flex justify-center">
+                                <span data-val="210,500" data-channel="Websites" data-day="星期日" data-col="0" data-row="Web" class="dot-item web w-5 h-5 rounded-full bg-purple-500/90 shadow-[0_0_15px_rgba(168,85,247,0.85)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="14,200" data-channel="Websites" data-day="星期一" data-col="1" data-row="Web" class="dot-item web w-5 h-5 rounded-full bg-slate-300/40 dark:bg-slate-700/40 border border-white/10 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="234,000" data-channel="Websites" data-day="星期二" data-col="2" data-row="Web" class="dot-item web w-5 h-5 rounded-full bg-purple-500/95 shadow-[0_0_18px_rgba(168,85,247,0.95)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="65,100" data-channel="Websites" data-day="星期三" data-col="3" data-row="Web" class="dot-item web w-5 h-5 rounded-full bg-purple-500/35 shadow-[0_0_8px_rgba(168,85,247,0.4)] border border-white/20 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="198,300" data-channel="Websites" data-day="星期四" data-col="4" data-row="Web" class="dot-item web w-5 h-5 rounded-full bg-purple-500/90 shadow-[0_0_15px_rgba(168,85,247,0.85)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="21,500" data-channel="Websites" data-day="星期五" data-col="5" data-row="Web" class="dot-item web w-5 h-5 rounded-full bg-slate-300/40 dark:bg-slate-700/40 border border-white/10 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="245,600" data-channel="Websites" data-day="星期六" data-col="6" data-row="Web" class="dot-item web w-5 h-5 rounded-full bg-purple-500/95 shadow-[0_0_18px_rgba(168,85,247,0.95)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+
+                            <!-- 第三行：Social Media (Social - 蓝色系) -->
+                            <div class="flex justify-center">
+                                <span data-val="45,200" data-channel="Social" data-day="星期日" data-col="0" data-row="Social" class="dot-item social w-5 h-5 rounded-full bg-blue-500/35 shadow-[0_0_8px_rgba(59,130,246,0.4)] border border-white/20 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="123,500" data-channel="Social" data-day="星期一" data-col="1" data-row="Social" class="dot-item social w-5 h-5 rounded-full bg-blue-500/90 shadow-[0_0_15px_rgba(59,130,246,0.85)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="38,900" data-channel="Social" data-day="星期二" data-col="2" data-row="Social" class="dot-item social w-5 h-5 rounded-full bg-blue-500/35 shadow-[0_0_8px_rgba(59,130,246,0.4)] border border-white/20 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="114,800" data-channel="Social" data-day="星期三" data-col="3" data-row="Social" class="dot-item social w-5 h-5 rounded-full bg-blue-500/90 shadow-[0_0_15px_rgba(59,130,246,0.85)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="18,500" data-channel="Social" data-day="星期四" data-col="4" data-row="Social" class="dot-item social w-5 h-5 rounded-full bg-slate-300/40 dark:bg-slate-700/40 border border-white/10 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="195,400" data-channel="Social" data-day="星期五" data-col="5" data-row="Social" class="dot-item social w-5 h-5 rounded-full bg-blue-500/95 shadow-[0_0_18px_rgba(59,130,246,0.95)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+                            <div class="flex justify-center">
+                                <span data-val="210,000" data-channel="Social" data-day="星期六" data-col="6" data-row="Social" class="dot-item social w-5 h-5 rounded-full bg-blue-500/95 shadow-[0_0_18px_rgba(59,130,246,0.95)] border border-white/50 cursor-pointer hover:scale-135 transition-all duration-300"></span>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- X轴星期标志 (横向与点阵对齐) -->
+                    <div class="grid grid-cols-[50px_1fr] gap-x-4 w-full max-w-lg mt-3">
+                        <div></div>
+                        <div class="grid grid-cols-7 text-center text-[10px] opacity-45 font-bold font-mono">
+                            <span id="col-0">S</span>
+                            <span id="col-1">M</span>
+                            <span id="col-2">T</span>
+                            <span id="col-3">W</span>
+                            <span id="col-4">T</span>
+                            <span id="col-5">F</span>
+                            <span id="col-6">S</span>
+                        </div>
+                    </div>
+
+                    <!-- 点阵卡片专属浮动 Tooltip -->
+                    <div id="dotTooltip" class="absolute hidden bg-slate-900/95 text-white text-[11px] px-3 py-2 rounded-xl border border-white/20 shadow-2xl pointer-events-none z-50 transition-all duration-100 backdrop-blur-md">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full" id="dotTooltipColor"></span>
+                            <span class="font-bold text-slate-100" id="dotTooltipTitle">Advertising</span>
+                        </div>
+                        <div class="mt-1 text-slate-300 font-mono">
+                            <span id="dotTooltipDay">星期一</span> • <span class="text-lime-400 font-bold" id="dotTooltipVal">12k</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 交互图例 -->
+                <div class="border-t border-white/20 dark:border-white/5 pt-4 flex flex-wrap gap-4 items-center justify-between">
+                    <div class="flex items-center space-x-4 text-[10px] font-bold">
+                        <button onclick="filterDots('adv')" class="flex items-center space-x-1.5 hover:opacity-80 transition-all">
+                            <span class="w-2.5 h-2.5 rounded-full bg-lime-400 shadow-[0_0_6px_rgba(163,230,53,0.5)]"></span>
+                            <span>Advertising</span>
+                        </button>
+                        <button onclick="filterDots('web')" class="flex items-center space-x-1.5 hover:opacity-80 transition-all">
+                            <span class="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-[0_0_6px_rgba(168,85,247,0.5)]"></span>
+                            <span>Websites</span>
+                        </button>
+                        <button onclick="filterDots('social')" class="flex items-center space-x-1.5 hover:opacity-80 transition-all">
+                            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)]"></span>
+                            <span>Social Media</span>
+                        </button>
+                    </div>
+                    <button onclick="resetDots()" class="text-[9px] uppercase tracking-wider text-purple-600 dark:text-purple-400 font-bold hover:underline">
+                        重置过滤
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= CARD 6: 环形多维嵌套占比图 ================= -->
+            <div id="chart-channel-nested-ring" data-section="core-finding-1" data-chart-type="ring" class="lg:col-span-5 glass-card p-6 rounded-3xl flex flex-col justify-between group">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold opacity-90">Granular Details</h3>
+                        <p class="text-[10px] opacity-50">多维度数据源匹配度分析（鼠标移入各个轨道触发核心占比反馈）</p>
+                    </div>
+                    <span class="w-8 h-8 rounded-full bg-white/60 dark:bg-black/20 flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm">
+                        <i data-lucide="donut" class="w-4 h-4 text-purple-500"></i>
+                    </span>
+                </div>
+
+                <!-- 高阶 3 环 nested charts (加设鼠标悬停各轨道加粗反馈与数值联动) -->
+                <div class="flex justify-center items-center relative my-4">
+                    <svg class="w-44 h-44 transform -rotate-90" viewBox="0 0 120 120">
+                        <!-- 外环 (Lime) -->
+                        <circle cx="60" cy="60" r="50" class="stroke-slate-200 dark:stroke-slate-800" stroke-width="6" fill="none" />
+                        <circle cx="60" cy="60" r="50" stroke="url(#gradientLime)" stroke-width="8" fill="none" stroke-dasharray="314.16" stroke-dashoffset="100" stroke-linecap="round" class="cursor-pointer ring-track duration-300 drop-shadow-[0_0_8px_rgba(163,230,53,0.3)] hover:stroke-[11]" onmouseover="hoverRing('adv', 82)" onmouseout="hoverOffRing()" />
+                        
+                        <!-- 中环 (Purple) -->
+                        <circle cx="60" cy="60" r="38" class="stroke-slate-200 dark:stroke-slate-800" stroke-width="6" fill="none" />
+                        <circle cx="60" cy="60" r="38" stroke="url(#gradientPurple)" stroke-width="8" fill="none" stroke-dasharray="238.76" stroke-dashoffset="60" stroke-linecap="round" class="cursor-pointer ring-track duration-300 drop-shadow-[0_0_8px_rgba(168,85,247,0.4)] hover:stroke-[11]" onmouseover="hoverRing('web', 64)" onmouseout="hoverOffRing()" />
+                        
+                        <!-- 内环 (Blue) -->
+                        <circle cx="60" cy="60" r="26" class="stroke-slate-200 dark:stroke-slate-800" stroke-width="6" fill="none" />
+                        <circle cx="60" cy="60" r="26" stroke="url(#gradientBlue)" stroke-width="8" fill="none" stroke-dasharray="163.36" stroke-dashoffset="40" stroke-linecap="round" class="cursor-pointer ring-track duration-300 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] hover:stroke-[11]" onmouseover="hoverRing('social', 48)" onmouseout="hoverOffRing()" />
+
+                        <!-- 渐变定义 -->
+                        <defs>
+                            <linearGradient id="gradientLime" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#bef264" />
+                                <stop offset="100%" stop-color="#a3e635" />
+                            </linearGradient>
+                            <linearGradient id="gradientPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#c084fc" />
+                                <stop offset="100%" stop-color="#a855f7" />
+                            </linearGradient>
+                            <linearGradient id="gradientBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#60a5fa" />
+                                <stop offset="100%" stop-color="#2563eb" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    
+                    <!-- 内部文字指标 -->
+                    <div class="absolute text-center">
+                        <p class="text-[10px] uppercase opacity-40 tracking-wider" id="ringTitle">综合配比</p>
+                        <p class="text-2xl font-black text-slate-800 dark:text-white leading-tight" id="ringValue">72%</p>
+                    </div>
+                </div>
+
+                <!-- 环形对应的子信息块 -->
+                <div class="grid grid-cols-3 gap-2 border-t border-white/20 dark:border-white/5 pt-4 text-center">
+                    <div id="legend-adv" class="transition-all duration-300">
+                        <p class="text-[8px] opacity-40 uppercase font-mono">ADVERTISING</p>
+                        <p class="text-xs font-bold text-lime-500 mt-0.5">$879,274</p>
+                    </div>
+                    <div id="legend-web" class="border-x border-white/20 dark:border-white/5 transition-all duration-300">
+                        <p class="text-[8px] opacity-40 uppercase font-mono">WEBSITES</p>
+                        <p class="text-xs font-bold text-purple-500 mt-0.5">$879,274</p>
+                    </div>
+                    <div id="legend-social" class="transition-all duration-300">
+                        <p class="text-[8px] opacity-40 uppercase font-mono">SOCIAL</p>
+                        <p class="text-xs font-bold text-blue-500 mt-0.5">$879,274</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= CARD 7: 时间区间调节器 ================= -->
+            <div id="chart-time-range-wave" data-section="core-finding-2" data-chart-type="column" class="lg:col-span-12 glass-card p-6 rounded-3xl flex flex-col justify-between group">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold opacity-90" data-editable="true" contenteditable="true" data-slot="text.finding_2_title" data-key="text.finding_2_title">Time Range Selector（时间分布波形分析）</h3>
+                        <p class="text-[10px] opacity-50" data-editable="true" contenteditable="true" data-slot="text.finding_2_desc" data-key="text.finding_2_desc">实时流量的区间化调节，鼠标划过任意波形条进行高度与时间联动定位</p>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-white/40 dark:bg-black/20 border border-white/30 px-3 py-1.5 rounded-full text-xs font-mono">
+                        <i data-lucide="clock" class="w-3.5 h-3.5 text-purple-400"></i>
+                        <span id="currentTimeLabel">13:00</span>
+                    </div>
+                </div>
+
+                <!-- 动态交互微型直方图 (JS 动态生成实现) -->
+                <div class="my-4 flex items-end justify-between space-x-[4px] h-16 px-1" id="audioWavesContainer">
+                    <!-- JS 将在此动态渲染 24 个可微悬浮波形条 -->
+                </div>
+
+                <!-- 拟物化拖动条 -->
+                <div class="relative w-full mt-2">
+                    <input type="range" min="0" max="23" value="13" id="timelineSlider" oninput="updateTimeline(this.value)" class="w-full accent-purple-500 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-[9px] opacity-40 font-mono mt-1 px-1">
+                        <span>00:00</span>
+                        <span>06:00</span>
+                        <span>12:00</span>
+                        <span>18:00</span>
+                        <span>23:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= CARD 8: 年度趋势折线曲面图 ================= -->
+            <div id="chart-annual-trend-area" data-section="core-finding-2" data-chart-type="area" class="lg:col-span-6 glass-card p-6 rounded-3xl relative group">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold opacity-90">Total Traffic Annual Trend</h3>
+                        <p class="text-[10px] opacity-50">年度流波动及趋势拟合波动线图（划过折线触发高精度数据追踪）</p>
+                    </div>
+                    
+                    <div class="flex items-center space-x-6 bg-white/40 dark:bg-black/10 px-4 py-2 rounded-xl border border-white/30 text-xs">
+                        <div class="flex items-center space-x-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-lime-400 animate-pulse"></span>
+                            <span class="opacity-60">年平均月流量</span>
+                        </div>
+                        <p class="font-bold text-slate-800 dark:text-white">$879,274</p>
+                    </div>
+                </div>
+
+                <!-- 年度趋势折线图 (SVG 交互式绘制) -->
+                <div class="relative w-full h-44 mt-6">
+                    <svg class="w-full h-full" viewBox="0 0 1000 160" preserveAspectRatio="none" id="lineChartSvg" onmousemove="handleChartHover(event)" onmouseleave="handleChartLeave()">
+                        <defs>
+                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#bef264" stop-opacity="0.35" />
+                                <stop offset="100%" stop-color="#bef264" stop-opacity="0.0" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- 辅助网格水平线 -->
+                        <line x1="0" y1="40" x2="1000" y2="40" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+                        <line x1="0" y1="80" x2="1000" y2="80" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+                        <line x1="0" y1="120" x2="1000" y2="120" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+
+                        <!-- 折线渐变充填底色 -->
+                        <path d="M 0 130 L 90 90 L 180 120 L 270 100 L 360 110 L 450 80 L 540 120 L 630 110 L 720 70 L 810 60 L 900 100 L 1000 140 L 1000 160 L 0 160 Z" fill="url(#chartGradient)" />
+
+                        <!-- 核心折线轨迹 -->
+                        <path d="M 0 130 Q 90 90, 180 120 T 360 110 T 540 120 T 720 70 T 900 100 T 1000 140" fill="none" stroke="#bef264" stroke-width="3.5" stroke-linecap="round" class="drop-shadow-[0_2px_8px_rgba(190,242,100,0.5)] transition-all duration-300 group-hover:stroke-[4]" />
+
+                        <!-- 折线关键数据锚点 -->
+                        <circle cx="90" cy="95" r="4.5" fill="#bef264" stroke="#ffffff" stroke-width="2" class="cursor-pointer hover:scale-150 duration-200" />
+                        <circle cx="270" cy="110" r="4.5" fill="#bef264" stroke="#ffffff" stroke-width="2" class="cursor-pointer hover:scale-150 duration-200" />
+                        <circle cx="450" cy="90" r="4.5" fill="#bef264" stroke="#ffffff" stroke-width="2" class="cursor-pointer hover:scale-150 duration-200" />
+                        <circle cx="630" cy="115" r="4.5" fill="#bef264" stroke="#ffffff" stroke-width="2" class="cursor-pointer hover:scale-150 duration-200" />
+                        <circle cx="810" cy="65" r="4.5" fill="#bef264" stroke="#ffffff" stroke-width="2" class="cursor-pointer hover:scale-150 duration-200" />
+
+                        <!-- 悬停指示垂直光标线 -->
+                        <line id="hoverLine" x1="0" y1="0" x2="0" y2="160" stroke="rgba(190,242,100,0.6)" stroke-width="1.5" stroke-dasharray="4" class="hidden pointer-events-none" />
+                    </svg>
+                    
+                    <!-- 自定义浮动 Tooltip -->
+                    <div id="chartTooltip" class="absolute hidden bg-slate-900/90 text-white text-[10px] px-2.5 py-1.5 rounded-xl border border-white/20 shadow-lg pointer-events-none z-40 transition-all duration-100">
+                        <p class="font-bold text-lime-400" id="tooltipVal">$879,274</p>
+                        <p class="text-[8px] opacity-60" id="tooltipMonth">十月数据</p>
+                    </div>
+                </div>
+
+                <!-- 底部 X 轴标注 -->
+                <div class="flex justify-between text-[9px] opacity-40 font-bold mt-2 font-mono px-1">
+                    <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+                </div>
+            </div>
+
+            <!-- ================= CARD 9: 胶囊对比图 ================= -->
+            <div id="chart-channel-capsule-comparison" data-section="core-finding-3" data-chart-type="capsule-bar" class="lg:col-span-3 glass-card p-6 rounded-3xl flex flex-col justify-between group cursor-pointer">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold opacity-90" data-editable="true" contenteditable="true" data-slot="text.finding_3_title" data-key="text.finding_3_title">Compare 比较图</h3>
+                        <p class="text-[10px] opacity-50" data-editable="true" contenteditable="true" data-slot="text.finding_3_desc" data-key="text.finding_3_desc">最出色的活动数据层级与维度浮雕条</p>
+                    </div>
+                    <span class="w-8 h-8 rounded-full bg-white/60 dark:bg-black/20 flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm transition-transform duration-300 group-hover:scale-110">
+                        <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-500"></i>
+                    </span>
+                </div>
+
+                <!-- 胶囊立体堆叠度量图 -->
+                <div class="my-4 space-y-4">
+                    <!-- 第 1 个浮雕条 (Green) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[10px] font-bold px-1">
+                            <span class="opacity-60">Top Campaigns</span>
+                            <span class="text-lime-500 group-hover:scale-105 duration-300 transition-transform inline-block">+912%</span>
+                        </div>
+                        <div class="h-8 w-full bg-slate-100 dark:bg-slate-800/50 rounded-xl p-1 shadow-inner">
+                            <div class="h-full w-[85%] rounded-lg bg-gradient-to-r from-lime-300 via-lime-400 to-emerald-400 border border-white/30 flex items-center pl-3 shadow-[0_4px_12px_rgba(163,230,53,0.3)] transition-all duration-300 group-hover:w-[90%]">
+                                <span class="text-[8px] font-extrabold text-emerald-950 tracking-wide uppercase">Live</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 第 2 个浮雕条 (Slate Grey) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[10px] font-bold px-1">
+                            <span class="opacity-60">Organic Streams</span>
+                            <span class="text-indigo-400 group-hover:scale-105 duration-300 transition-transform inline-block">+280%</span>
+                        </div>
+                        <div class="h-8 w-full bg-slate-100 dark:bg-slate-800/50 rounded-xl p-1 shadow-inner">
+                            <div class="h-full w-[60%] rounded-lg bg-gradient-to-r from-slate-300 via-slate-400 to-indigo-400 border border-white/30 flex items-center pl-3 shadow-[0_4px_12px_rgba(148,163,184,0.3)] transition-all duration-300 group-hover:w-[70%]">
+                                <span class="text-[8px] font-extrabold text-slate-900 tracking-wide uppercase">Organic</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-[9px] opacity-40 text-right font-mono">根据昨日流量自动刷新</p>
+            </div>
+
+            <!-- ================= CARD 10: 边缘网络延迟与状态 ================= -->
+            <div id="chart-edge-latency-status" data-section="core-finding-3" data-chart-type="latency" class="lg:col-span-3 glass-card p-6 rounded-3xl flex flex-col justify-between group cursor-pointer">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold opacity-90">API Edge Status</h3>
+                        <p class="text-[10px] opacity-50">主要边缘访问节点心跳与延迟（鼠标移入触发测速刷新）</p>
+                    </div>
+                    <span class="w-8 h-8 rounded-full bg-white/60 dark:bg-black/20 flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm transition-transform duration-300 group-hover:scale-110">
+                        <i data-lucide="network" class="w-4 h-4 text-emerald-500"></i>
+                    </span>
+                </div>
+
+                <div class="space-y-3 font-mono text-[11px] my-2">
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-white/40 dark:bg-black/15 border border-white/20 hover:bg-white/70 dark:hover:bg-black/30 transition-all duration-300">
+                        <span class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="font-bold">Tokyo Node</span>
+                        </span>
+                        <span class="text-emerald-500 font-bold" id="pingTokyo">12 ms</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-white/40 dark:bg-black/15 border border-white/20 hover:bg-white/70 dark:hover:bg-black/30 transition-all duration-300">
+                        <span class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="font-bold">Hong Kong</span>
+                        </span>
+                        <span class="text-emerald-500 font-bold" id="pingHK">18 ms</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-white/40 dark:bg-black/15 border border-white/20 hover:bg-white/70 dark:hover:bg-black/30 transition-all duration-300">
+                        <span class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span class="font-bold">Silicon Valley</span>
+                        </span>
+                        <span class="text-amber-500 font-bold" id="pingSV">115 ms</span>
+                    </div>
+                </div>
+                <p class="text-[9px] opacity-40 text-right">移动至对应节点模拟即时网络回调</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- 交互与渲染控制 JS -->
+    <script>
+        // 初始化 Lucide 图标
+        lucide.createIcons();
+
+        // macOS 风格系统深色/浅色模式自动同步
+        function syncSystemTheme() {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncSystemTheme);
+        syncSystemTheme();
+
+        // ======================= CARD 5 Dot Grid Heatmap Real Hovers =======================
+        const dotItems = document.querySelectorAll('.dot-item');
+        const dotTooltip = document.getElementById('dotTooltip');
+        const dotTooltipColor = document.getElementById('dotTooltipColor');
+        const dotTooltipTitle = document.getElementById('dotTooltipTitle');
+        const dotTooltipDay = document.getElementById('dotTooltipDay');
+        const dotTooltipVal = document.getElementById('dotTooltipVal');
+        
+        const crosshairX = document.getElementById('crosshairX');
+        const crosshairY = document.getElementById('crosshairY');
+
+        dotItems.forEach(dot => {
+            dot.addEventListener('mouseenter', (e) => {
+                const target = e.target;
+                const channel = target.getAttribute('data-channel');
+                const val = target.getAttribute('data-val');
+                const day = target.getAttribute('data-day');
+                const colIdx = target.getAttribute('data-col');
+                const rowId = target.getAttribute('data-row');
+                
+                let dotColorClass = 'bg-lime-400';
+                if (channel === 'Websites') dotColorClass = 'bg-purple-500';
+                if (channel === 'Social') dotColorClass = 'bg-blue-500';
+
+                // 渲染 Tooltip 内容
+                dotTooltipColor.className = `w-2 h-2 rounded-full ${dotColorClass}`;
+                dotTooltipTitle.innerText = channel;
+                dotTooltipDay.innerText = day;
+                dotTooltipVal.innerText = val + " pv";
+
+                dotTooltip.classList.remove('hidden');
+
+                // 精准定位 tooltip
+                const rect = target.getBoundingClientRect();
+                const containerRect = target.parentElement.parentElement.parentElement.getBoundingClientRect();
+                const leftPos = rect.left - containerRect.left + (rect.width / 2) - 60;
+                const topPos = rect.top - containerRect.top - 54;
+
+                dotTooltip.style.left = `${leftPos}px`;
+                dotTooltip.style.top = `${topPos}px`;
+
+                // 触发十字准线定位
+                const targetCenterY = rect.top - containerRect.top + (rect.height / 2);
+                const targetCenterX = rect.left - containerRect.left + (rect.width / 2);
+
+                crosshairX.style.top = `${targetCenterY}px`;
+                crosshairY.style.left = `${targetCenterX}px`;
+                crosshairX.style.opacity = '1';
+                crosshairY.style.opacity = '1';
+
+                // 高亮轴标签
+                document.getElementById(`row-${rowId}`).classList.add('text-indigo-500', 'font-black', 'scale-110');
+                document.getElementById(`col-${colIdx}`).classList.add('text-indigo-500', 'font-black', 'scale-110');
+            });
+
+            dot.addEventListener('mouseleave', (e) => {
+                dotTooltip.classList.add('hidden');
+                crosshairX.style.opacity = '0';
+                crosshairY.style.opacity = '0';
+
+                const target = e.target;
+                const colIdx = target.getAttribute('data-col');
+                const rowId = target.getAttribute('data-row');
+
+                // 移除高亮轴标签
+                document.getElementById(`row-${rowId}`).className = '';
+                document.getElementById(`col-${colIdx}`).className = '';
+            });
+        });
+
+        // 频道图例筛选与重置
+        function filterDots(type) {
+            dotItems.forEach(dot => {
+                if (dot.classList.contains(type)) {
+                    dot.style.opacity = '1';
+                    dot.style.transform = 'scale(1.25)';
+                } else {
+                    dot.style.opacity = '0.12';
+                    dot.style.transform = 'scale(0.8)';
+                }
+            });
+        }
+
+        function resetDots() {
+            dotItems.forEach(dot => {
+                dot.style.opacity = '1';
+                dot.style.transform = 'scale(1)';
+            });
+        }
+
+        // ======================= CARD 6 Nested Circle Rings Hovers =======================
+        function hoverRing(type, value) {
+            const label = document.getElementById('ringTitle');
+            const num = document.getElementById('ringValue');
+            const itemAdv = document.getElementById('legend-adv');
+            const itemWeb = document.getElementById('legend-web');
+            const itemSocial = document.getElementById('legend-social');
+
+            if (type === 'adv') {
+                label.innerText = '推广占比';
+                num.innerText = value + '%';
+                itemAdv.classList.add('scale-105', 'font-black');
+            } else if (type === 'web') {
+                label.innerText = '网站占比';
+                num.innerText = value + '%';
+                itemWeb.classList.add('scale-105', 'font-black');
+            } else if (type === 'social') {
+                label.innerText = '社交占比';
+                num.innerText = value + '%';
+                itemSocial.classList.add('scale-105', 'font-black');
+            }
+        }
+
+        function hoverOffRing() {
+            document.getElementById('ringTitle').innerText = '综合配比';
+            document.getElementById('ringValue').innerText = '72%';
+            document.getElementById('legend-adv').className = 'transition-all duration-300';
+            document.getElementById('legend-web').className = 'border-x border-white/20 dark:border-white/5 transition-all duration-300';
+            document.getElementById('legend-social').className = 'transition-all duration-300';
+        }
+
+        // ======================= CARD 7 Time Wave Selector Hovers =======================
+        const waveContainer = document.getElementById('audioWavesContainer');
+        const mockWaveData = [12, 18, 25, 32, 45, 24, 18, 38, 55, 29, 21, 24, 39, 48, 22, 14, 18, 31, 52, 26, 12, 19, 34, 45];
+        
+        for (let i = 0; i < 24; i++) {
+            const bar = document.createElement('div');
+            const height = mockWaveData[i] + 15; 
+            bar.className = 'w-full bg-purple-500/35 rounded-t-sm transition-all duration-300 ease-out cursor-pointer hover:bg-purple-400 hover:shadow-[0_0_12px_rgba(168,85,247,0.7)] hover:scale-x-125';
+            bar.style.height = `${height}px`;
+
+            bar.addEventListener('mouseenter', () => {
+                bar.style.height = `${height + 12}px`;
+                bar.classList.add('bg-purple-400');
+                
+                const paddedHour = i.toString().padStart(2, '0');
+                document.getElementById('currentTimeLabel').innerText = `${paddedHour}:00`;
+                document.getElementById('timelineSlider').value = i;
+            });
+
+            bar.addEventListener('mouseleave', () => {
+                bar.style.height = `${height}px`;
+                bar.classList.remove('bg-purple-400');
+            });
+
+            waveContainer.appendChild(bar);
+        }
+
+        function updateTimeline(val) {
+            const label = document.getElementById('currentTimeLabel');
+            const paddedVal = val.toString().padStart(2, '0');
+            label.innerText = `${paddedVal}:00`;
+            
+            const bars = waveContainer.querySelectorAll('div');
+            bars.forEach((b, idx) => {
+                if (idx == val) {
+                    b.classList.add('bg-purple-400');
+                    b.style.transform = 'scale(1.1)';
+                } else {
+                    b.classList.remove('bg-purple-400');
+                    b.style.transform = 'scale(1)';
+                }
+            });
+        }
+
+        // ======================= CARD 8 Line Area Crosshair Track Hovers =======================
+        function handleChartHover(event) {
+            const svg = document.getElementById('lineChartSvg');
+            const rect = svg.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const percentageX = x / rect.width;
+
+            const hoverLine = document.getElementById('hoverLine');
+            const tooltip = document.getElementById('chartTooltip');
+            const tooltipVal = document.getElementById('tooltipVal');
+            const tooltipMonth = document.getElementById('tooltipMonth');
+
+            hoverLine.setAttribute('x1', percentageX * 1000);
+            hoverLine.setAttribute('x2', percentageX * 1000);
+            hoverLine.classList.remove('hidden');
+
+            const months = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+            const activeMonthIndex = Math.min(Math.floor(percentageX * 12), 11);
+            const mockValues = ['$198,242', '$287,192', '$231,489', '$321,980', '$432,231', '$682,192', '$732,231', '$879,274', '$710,240', '$850,290', '$621,092', '$410,249'];
+
+            tooltipMonth.innerText = `${months[activeMonthIndex]} 数据`;
+            tooltipVal.innerText = mockValues[activeMonthIndex];
+
+            tooltip.style.left = `${(percentageX * 100) - 5}%`;
+            tooltip.style.top = `20px`;
+            tooltip.classList.remove('hidden');
+        }
+
+        function handleChartLeave() {
+            document.getElementById('hoverLine').classList.add('hidden');
+            document.getElementById('chartTooltip').classList.add('hidden');
+        }
+
+        // ======================= CARD 10 Latency Refresh Hover =======================
+        const nodes = [
+            { id: 'pingTokyo', min: 10, range: 8 },
+            { id: 'pingHK', min: 15, range: 10 },
+            { id: 'pingSV', min: 110, range: 15 }
+        ];
+
+        nodes.forEach(node => {
+            const element = document.getElementById(node.id);
+            if (element) {
+                element.parentElement.addEventListener('mouseenter', () => {
+                    const freshPing = Math.floor(Math.random() * node.range) + node.min;
+                    element.innerText = `${freshPing} ms`;
+                    element.classList.add('scale-105', 'text-indigo-400');
+                    setTimeout(() => {
+                        element.classList.remove('scale-105', 'text-indigo-400');
+                    }, 300);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业经营数据分析报告 - 高级暖色版</title>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 引入高品质无衬线字体以提升设计感 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* 提取自参考图的暖色调色板 */
+            --bg-page: #E4D8CD;      /* 整体大背景：奶茶/土色 */
+            --bg-card: #F5EFEB;      /* 卡片背景：暖白/米色 */
+            --bg-card-hover: #FCF8F5;
+            
+            /* 文字颜色 */
+            --text-primary: #1A1A1A; /* 主标题：近乎纯黑 */
+            --text-regular: #4A4A4A; /* 正文 */
+            --text-secondary: #968F88; /* 辅助信息：暖灰色 */
+            
+            /* 边框与分割线 */
+            --border-color: #E6DCD1;
+            
+            /* 点缀与状态色 (提取自参考图图标和标签) */
+            --color-purple: #C8A2FF;
+            --color-orange: #FF9B70;
+            --color-blue: #7EA9FF;
+            --color-yellow: #FFC656;
+            --color-green: #7AC794;  /* Approved/Completed */
+            --color-red: #F08080;    /* In review/At risk */
+            
+            /* UI 尺寸参数 */
+            --spacing-section: 48px;
+            --spacing-card: 20px;
+            --radius-card: 24px;     /* 大圆角 */
+            --radius-pill: 50px;
+            --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.03); /* 非常柔和的阴影 */
+        }
+
+        body {
+            font-family: 'Inter', "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-regular);
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px 32px;
+        }
+
+        .report-container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        /* 可编辑文本样式 */
+        [contenteditable="true"] {
+            outline: none;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        [contenteditable="true"]:hover, [contenteditable="true"]:focus {
+            border-bottom-color: var(--text-secondary);
+        }
+
+        /* 头部样式 */
+        .report-header {
+            margin-bottom: 56px;
+        }
+        .report-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 12px 0;
+            letter-spacing: -0.5px;
+        }
+        .report-header p {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* 布局网格 */
+        .grid-row { display: flex; gap: var(--spacing-card); margin-bottom: var(--spacing-card); flex-wrap: wrap; }
+        .col-1-4 { flex: 1 1 calc(25% - var(--spacing-card)); min-width: 240px; }
+        .col-1-2 { flex: 1 1 calc(50% - var(--spacing-card)); min-width: 450px; }
+        .col-1-3 { flex: 1 1 calc(33.33% - var(--spacing-card)); min-width: 300px; }
+        .col-2-3 { flex: 2 1 calc(66.66% - var(--spacing-card)); min-width: 600px; }
+        .col-full { flex: 1 1 100%; }
+
+        /* 卡片通用样式 */
+        .card {
+            background-color: var(--bg-card);
+            border-radius: var(--radius-card);
+            padding: 28px;
+            box-shadow: var(--shadow-card);
+            transition: background-color 0.3s;
+            box-sizing: border-box;
+        }
+        .card:hover {
+            background-color: var(--bg-card-hover);
+        }
+
+        /* 模块化标题 */
+        .section-title-wrap {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 24px;
+            max-width: 800px;
+        }
+
+        /* --- KPI 卡片特制样式 (还原参考图 Overview) --- */
+        .kpi-card {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .kpi-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+        .kpi-icon-wrap svg { width: 24px; height: 24px; }
+        
+        /* 四种不同颜色的 KPI 图标背景 */
+        .icon-purple { background-color: rgba(200, 162, 255, 0.2); color: var(--color-purple); }
+        .icon-orange { background-color: rgba(255, 155, 112, 0.2); color: var(--color-orange); }
+        .icon-blue { background-color: rgba(126, 169, 255, 0.2); color: var(--color-blue); }
+        .icon-yellow { background-color: rgba(255, 198, 86, 0.2); color: var(--color-yellow); }
+
+        .kpi-content {
+            display: flex;
+            flex-direction: column;
+        }
+        .kpi-label { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;}
+        .kpi-value { font-size: 32px; font-weight: 700; color: var(--text-primary); line-height: 1.2; margin-bottom: 8px;}
+        
+        .kpi-trend { font-size: 12px; display: flex; align-items: center; font-weight: 500;}
+        .kpi-trend.up { color: var(--color-green); }
+        .kpi-trend.down { color: var(--color-red); }
+        .kpi-trend svg { width: 12px; height: 12px; margin-right: 4px; }
+        .kpi-trend span { color: var(--text-secondary); margin-left: 4px; font-weight: 400;}
+
+        /* --- 图表容器 --- */
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .chart-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+        .chart-stage { width: 100%; min-height: 320px; }
+        .chart-stage.tall { min-height: 400px; }
+
+        /* 状态药丸标签 */
+        .status-pill {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-completed { background-color: rgba(122, 199, 148, 0.15); color: #52A370; }
+        .status-delayed { background-color: rgba(255, 198, 86, 0.15); color: #D49D28; }
+        .status-risk { background-color: rgba(240, 128, 128, 0.15); color: #C95A5A; }
+        .status-ongoing { background-color: rgba(255, 155, 112, 0.15); color: #D66D42; }
+
+        /* 内容板块间距 */
+        .report-section { margin-bottom: 64px; }
+
+    </style>
+</head>
+<body>
+
+<div class="report-container">
+    
+    <!-- ================= 报告头部 ================= -->
+    <header class="report-header">
+        <h1 contenteditable="true" data-editable="true" data-slot="text.header.title" data-key="text.header.title">
+            Dashboard UI 设计分享 / 经营看板
+        </h1>
+        <p contenteditable="true" data-editable="true" data-slot="text.header.subtitle" data-key="text.header.subtitle">
+            2023 年度全盘数据与项目进展追踪
+        </p>
+    </header>
+
+    <!-- ================= Section 1: Overview (核心结论) ================= -->
+    <section class="report-section" data-section="section-takeaway">
+        <div class="section-title-wrap">
+            <h2 class="section-title" contenteditable="true" data-editable="true" data-slot="text.takeaway.title" data-key="text.takeaway.title">
+                Overview
+            </h2>
+        </div>
+        <div class="section-desc" contenteditable="true" data-editable="true" data-slot="text.takeaway.desc" data-key="text.takeaway.desc">
+            整体收入与项目推进情况良好，核心指标均达成预期。设计团队资源利用率提升，但部分开发项目存在延期风险，需关注。
+        </div>
+
+        <!-- 还原参考图的高级 KPI 卡片 -->
+        <div class="grid-row">
+            <!-- KPI 1 -->
+            <div class="col-1-4">
+                <div class="card kpi-card" id="chart-kpi-revenue" data-chart-type="kpi-card">
+                    <div class="kpi-icon-wrap icon-purple">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-label" data-key="label">Total revenue</div>
+                        <div class="kpi-value" data-key="value">$53,009,89</div>
+                        <div class="kpi-trend up">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                            <span data-key="trendValue">12% increase from last month</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- KPI 2 -->
+            <div class="col-1-4">
+                <div class="card kpi-card" id="chart-kpi-profit" data-chart-type="kpi-card">
+                    <div class="kpi-icon-wrap icon-orange">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-label" data-key="label">Projects</div>
+                        <div class="kpi-value" data-key="value">95 <span style="font-size: 16px; color: var(--text-secondary);">/100</span></div>
+                        <div class="kpi-trend down">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="transform: rotate(180deg);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                            <span data-key="trendValue">10% decrease from last month</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- KPI 3 -->
+            <div class="col-1-4">
+                <div class="card kpi-card" id="chart-kpi-users" data-chart-type="kpi-card">
+                    <div class="kpi-icon-wrap icon-blue">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-label" data-key="label">Time spent</div>
+                        <div class="kpi-value" data-key="value">1022 <span style="font-size: 16px; color: var(--text-secondary);">/1300 Hrs</span></div>
+                        <div class="kpi-trend up">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                            <span data-key="trendValue">8% increase from last month</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- KPI 4 -->
+            <div class="col-1-4">
+                <div class="card kpi-card" id="chart-kpi-growth" data-chart-type="kpi-card">
+                    <div class="kpi-icon-wrap icon-yellow">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-label" data-key="label">Resources</div>
+                        <div class="kpi-value" data-key="value">101 <span style="font-size: 16px; color: var(--text-secondary);">/120</span></div>
+                        <div class="kpi-trend up">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                            <span data-key="trendValue">2% increase from last month</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 核心图表区域 (深度定制) -->
+        <div class="grid-row">
+            <!-- 趋势与分布面积图 -->
+            <div class="col-2-3">
+                <div class="card">
+                    <div class="chart-header">
+                        <div class="chart-title">Revenue & Time Trend</div>
+                    </div>
+                    <div id="chart-main-trend" class="chart-stage" data-chart-type="area"></div>
+                </div>
+            </div>
+            <!-- 还原图2中的半环形进度图 (Overall Progress) -->
+            <div class="col-1-3">
+                <div class="card">
+                    <div class="chart-header">
+                        <div class="chart-title">Overall Progress</div>
+                    </div>
+                    <div id="chart-overall-progress" class="chart-stage" data-chart-type="gauge"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= Section 2: Workload & Analysis (核心发现1) ================= -->
+    <section class="report-section" data-section="section-finding-1">
+        <div class="section-title-wrap">
+            <h2 class="section-title" contenteditable="true" data-editable="true" data-slot="text.finding1.title" data-key="text.finding1.title">
+                Workload & Distribution
+            </h2>
+        </div>
+        <div class="section-desc" contenteditable="true" data-editable="true" data-slot="text.finding1.desc" data-key="text.finding1.desc">
+            团队成员的工作负载分布情况。部分核心成员如 Dmitry 承担了较多高优先级项目，需注意劳逸结合与资源平衡。
+        </div>
+        
+        <div class="grid-row">
+            <!-- 还原图2中的 "Projects Workload" 特殊散点/柱状图 -->
+            <div class="col-1-2">
+                <div class="card">
+                    <div class="chart-header">
+                        <div class="chart-title">Projects Workload</div>
+                    </div>
+                    <!-- 采用定制的散点连线图模拟设计稿效果 -->
+                    <div id="chart-workload" class="chart-stage" data-chart-type="scatter-line"></div>
+                </div>
+            </div>
+             <!-- 环形图 (极简风格) -->
+            <div class="col-1-2">
+                <div class="card">
+                    <div class="chart-header">
+                        <div class="chart-title">Resource Allocation</div>
+                    </div>
+                    <div id="chart-resource-pie" class="chart-stage" data-chart-type="donut"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= Section 3: Performance (核心发现2) ================= -->
+    <section class="report-section" data-section="section-finding-2">
+        <div class="section-title-wrap">
+            <h2 class="section-title" contenteditable="true" data-editable="true" data-slot="text.finding2.title" data-key="text.finding2.title">
+                Performance & Efficiency
+            </h2>
+        </div>
+        <div class="section-desc" contenteditable="true" data-editable="true" data-slot="text.finding2.desc" data-key="text.finding2.desc">
+            各个阶段的转化漏斗表现平稳，但在特定业务线的成本结构上，我们观察到一定的优化空间。
+        </div>
+
+        <div class="grid-row">
+            <!-- 极简柱状图 -->
+            <div class="col-1-2">
+                <div class="card">
+                    <div class="chart-header">
+                        <div class="chart-title">Cost Structure</div>
+                    </div>
+                    <div id="chart-cost-bar" class="chart-stage" data-chart-type="bar-stacked"></div>
+                </div>
+            </div>
+            <!-- 圆润雷达图 -->
+            <div class="col-1-2">
+                 <div class="card">
+                    <div class="chart-header">
+                        <div class="chart-title">Efficiency Radar</div>
+                    </div>
+                    <div id="chart-efficiency-radar" class="chart-stage" data-chart-type="radar"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    /* =========================================================
+       深度定制 ECharts 主题，契合 UI/UX 暖色高级设计风格
+       ========================================================= */
+    
+    // 提取设计稿调色板
+    const themeColors = {
+        primary: '#1A1A1A',
+        secondary: '#968F88',
+        axisLine: '#E6DCD1',
+        splitLine: '#EFE7E0',
+        green: '#7AC794',
+        orange: '#FF9B70',
+        yellow: '#FFC656',
+        purple: '#C8A2FF',
+        blue: '#7EA9FF',
+        darkCircle: '#2B2B2B', // Workload 图表深色圆
+        emptyCircle: '#E8DFD5', // Workload 图表空心圆边框
+        bgCard: '#F5EFEB'      // 新增卡片背景色用于图表边框
+    };
+
+    const commonOption = {
+        textStyle: {
+            fontFamily: 'Inter, "Helvetica Neue", Arial, sans-serif',
+            color: themeColors.secondary
+        },
+        title: { show: false }, // 由 HTML 控制标题
+        tooltip: {
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            borderColor: themeColors.axisLine,
+            borderWidth: 1,
+            textStyle: { color: themeColors.primary },
+            padding: [12, 16],
+            extraCssText: 'box-shadow: 0 4px 16px rgba(0,0,0,0.05); border-radius: 12px;'
+        },
+        legend: {
+            bottom: 0,
+            icon: 'circle',
+            itemWidth: 10,
+            itemHeight: 10,
+            textStyle: { color: themeColors.secondary, fontSize: 13 }
+        },
+        color: [themeColors.orange, themeColors.green, themeColors.yellow, themeColors.purple, themeColors.blue]
+    };
+
+    // 极简坐标轴预设
+    const baseGrid = { top: 30, bottom: 40, left: 20, right: 20, containLabel: true };
+    const cleanXAxis = {
+        axisLine: { show: false }, // 隐藏轴线，更具现代感
+        axisTick: { show: false },
+        axisLabel: { color: themeColors.secondary, margin: 16, fontWeight: 500 },
+        splitLine: { show: false }
+    };
+    const cleanYAxis = {
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: themeColors.secondary, margin: 16 },
+        splitLine: { show: true, lineStyle: { color: themeColors.splitLine, type: 'dashed' } }
+    };
+
+    function initChart(id, option) {
+        const chartDom = document.getElementById(id);
+        if (!chartDom) return;
+        const finalOption = deepMerge({}, commonOption, option);
+        const myChart = echarts.init(chartDom);
+        myChart.setOption(finalOption);
+        window.addEventListener('resize', () => myChart.resize());
+    }
+
+    function deepMerge(target, ...sources) {
+        sources.forEach(source => {
+            Object.keys(source).forEach(key => {
+                const value = source[key];
+                if (value && typeof value === 'object' && !Array.isArray(value) && value !== null) {
+                    target[key] = deepMerge(target[key] || {}, value);
+                } else {
+                    target[key] = value;
+                }
+            });
+        });
+        return target;
+    }
+
+    /* =================== 渲染高保真图表 =================== */
+
+    // 1. Area Trend (主趋势图 - 渐变柔和风)
+    initChart('chart-main-trend', {
+        grid: baseGrid,
+        tooltip: { trigger: 'axis' },
+        xAxis: { ...cleanXAxis, type: 'category', data: ["Jan","Feb","Mar","Apr","May","Jun"] },
+        yAxis: { ...cleanYAxis, type: 'value' },
+        series: [
+            {
+                name: 'Revenue',
+                type: 'line',
+                smooth: true,
+                symbol: 'none', // 隐藏节点
+                lineStyle: { width: 3, color: themeColors.orange },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(255, 155, 112, 0.4)' },
+                        { offset: 1, color: 'rgba(255, 155, 112, 0.0)' }
+                    ])
+                },
+                data: [42, 58, 48, 85, 70, 95]
+            },
+            {
+                name: 'Time Spent',
+                type: 'line',
+                smooth: true,
+                symbol: 'none',
+                lineStyle: { width: 3, color: themeColors.purple },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(200, 162, 255, 0.4)' },
+                        { offset: 1, color: 'rgba(200, 162, 255, 0.0)' }
+                    ])
+                },
+                data: [30, 45, 60, 55, 80, 75]
+            }
+        ]
+    });
+
+    // 2. Overall Progress (完美复刻图2中的仪表盘半环)
+    initChart('chart-overall-progress', {
+        series: [{
+            type: 'gauge',
+            startAngle: 180,
+            endAngle: 0,
+            radius: '90%',
+            center: ['50%', '70%'],
+            min: 0, max: 100,
+            pointer: { show: false }, // 隐藏指针
+            // 外圈刻度线
+            axisLine: {
+                lineStyle: { width: 4, color: [[1, themeColors.splitLine]] }
+            },
+            axisTick: { 
+                show: true, splitNumber: 5, length: 8, 
+                lineStyle: { color: themeColors.secondary, width: 1 } 
+            },
+            splitLine: { 
+                show: true, length: 12, 
+                lineStyle: { color: themeColors.secondary, width: 2 } 
+            },
+            axisLabel: { show: false },
+            // 进度条配置
+            progress: {
+                show: true,
+                overlap: false,
+                roundCap: true,
+                clip: false,
+                itemStyle: {
+                    // 渐变色：绿 -> 黄 -> 橙红
+                    color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                        { offset: 0.1, color: themeColors.green },
+                        { offset: 0.5, color: themeColors.yellow },
+                        { offset: 0.9, color: themeColors.orange }
+                    ])
+                }
+            },
+            // 中心数据文字
+            detail: {
+                valueAnimation: true,
+                offsetCenter: ['0%', '-20%'],
+                fontSize: 36,
+                fontWeight: 700,
+                color: themeColors.primary,
+                formatter: '{value}%'
+            },
+            title: {
+                offsetCenter: ['0%', '15%'],
+                fontSize: 14,
+                color: themeColors.secondary
+            },
+            data: [{ value: 72, name: 'Completed' }]
+        }]
+    });
+
+    // 3. Projects Workload (复刻图2中的圆圈堆叠效果)
+    // 使用 pictorialBar (象形柱图) 是实现这种效果的最佳方式
+    initChart('chart-workload', {
+        grid: { ...baseGrid, bottom: 20 },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'none' } },
+        xAxis: { 
+            ...cleanXAxis, 
+            type: 'category', 
+            data: ['Sam', 'Meldy', 'Ken', 'Dmitry', 'Vego', 'Kadin', 'Meim'],
+            axisLabel: { fontSize: 12 }
+        },
+        yAxis: { show: false, max: 10 }, // 隐藏Y轴，设置最大值以对齐
+        series: [
+            {
+                name: 'Total Capacity',
+                type: 'pictorialBar',
+                symbol: 'circle',
+                itemStyle: { 
+                    color: 'transparent', 
+                    borderColor: themeColors.emptyCircle, 
+                    borderWidth: 2 
+                },
+                symbolRepeat: 'fixed', // 固定重复
+                symbolMargin: 4,
+                symbolSize: [18, 18],
+                symbolBoundingData: 10, // 背景圆点堆叠到最大值 10
+                data: [10, 10, 10, 10, 10, 10, 10],
+                z: 1
+            },
+            {
+                name: 'Current Workload',
+                type: 'pictorialBar',
+                symbol: 'circle',
+                itemStyle: { color: themeColors.darkCircle }, // 黑色填充圆点
+                symbolRepeat: true,
+                symbolMargin: 4,
+                symbolSize: [18, 18],
+                symbolClip: true, // 裁剪以展示实际数值
+                // 给 Dmitry 设定橙色突出显示
+                data: [
+                    3, 4, 1, 
+                    { value: 6, itemStyle: { color: themeColors.orange } }, 
+                    4, 1, 2
+                ],
+                z: 2
+            }
+        ]
+    });
+
+    // 4. Resource Allocation (极简环形图)
+    initChart('chart-resource-pie', {
+        tooltip: { trigger: 'item' },
+        legend: { orient: 'vertical', right: 0, top: 'middle', align: 'left' },
+        series: [{
+            name: 'Resource', type: 'pie', radius: ['50%', '75%'], center: ['40%', '50%'],
+            itemStyle: { borderRadius: 8, borderColor: themeColors.bgCard, borderWidth: 4 },
+            label: { show: false },
+            data: [
+                { value: 40, name: 'Design', itemStyle: { color: themeColors.orange } },
+                { value: 30, name: 'Development', itemStyle: { color: themeColors.green } },
+                { value: 20, name: 'Marketing', itemStyle: { color: themeColors.yellow } },
+                { value: 10, name: 'Management', itemStyle: { color: themeColors.purple } }
+            ]
+        }]
+    });
+
+    // 5. Cost Structure (圆角柱状图)
+    initChart('chart-cost-bar', {
+        grid: baseGrid,
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        xAxis: { ...cleanXAxis, type: 'category', data: ["Q1", "Q2", "Q3", "Q4"] },
+        yAxis: { ...cleanYAxis, type: 'value' },
+        series: [
+            {
+                name: 'Fixed Cost', type: 'bar', stack: 'total', barWidth: 32,
+                itemStyle: { color: themeColors.blue, borderRadius: [0, 0, 8, 8] },
+                data: [120, 132, 101, 134]
+            },
+            {
+                name: 'Variable Cost', type: 'bar', stack: 'total', barWidth: 32,
+                itemStyle: { color: themeColors.orange, borderRadius: [8, 8, 0, 0] }, // 顶部圆角
+                data: [220, 182, 191, 234]
+            }
+        ]
+    });
+
+    // 6. Efficiency Radar (柔和多边形雷达)
+    initChart('chart-efficiency-radar', {
+        tooltip: {},
+        radar: {
+            indicator: [
+               { name: 'Quality', max: 100}, { name: 'Speed', max: 100}, { name: 'Cost', max: 100},
+               { name: 'Impact', max: 100}, { name: 'Scope', max: 100}
+            ],
+            shape: 'circle', // 圆形雷达盘，更显柔和
+            splitNumber: 4,
+            axisName: { color: themeColors.secondary, fontSize: 13 },
+            splitLine: { lineStyle: { color: themeColors.splitLine } },
+            splitArea: { show: false },
+            axisLine: { lineStyle: { color: themeColors.splitLine } }
+        },
+        series: [{
+            name: 'Efficiency', type: 'radar',
+            data: [
+                {
+                    value: [85, 90, 72, 88, 80],
+                    name: 'Current',
+                    itemStyle: { color: themeColors.green },
+                    areaStyle: { color: 'rgba(122, 199, 148, 0.3)' },
+                    lineStyle: { width: 2 }
+                }
+            ]
+        }]
+    });
+
+</script>
+</body>
+</html>

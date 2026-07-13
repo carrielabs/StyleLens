@@ -1,0 +1,253 @@
+{
+  "id": "dashboard-24-cream-macaron-medical-analytics",
+  "sourceConfigId": "tpl_intelly_pastel_fullwidth_003",
+  "name": "Cream Macaron Medical Analytics 奶油马卡龙医疗分析看板",
+  "templateName": "CreamMacaronMedicalAnalyticsDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向诊所运营、患者画像、候诊效率、科室绩效和财务盈余分析的奶油马卡龙风格 B 端数据看板。入库版保留 Gemini 原始 ECharts 页面结构，并按仓库规范补齐配置、槽位说明和审计记录。",
+  "pageTypes": [
+    "dashboard",
+    "analytics",
+    "executive-report",
+    "medical-dashboard",
+    "business-review"
+  ],
+  "styleTags": [
+    "cream-macaron",
+    "pastel",
+    "medical",
+    "fullwidth",
+    "data-labels",
+    "interactive-hover",
+    "echarts"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "诊所经营分析",
+    "医疗运营复盘",
+    "患者画像分析",
+    "候诊效率监控",
+    "科室收入与盈余分析"
+  ],
+  "requiredRuntime": [
+    "Tailwind CDN",
+    "ECharts CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#FAF3E0",
+      "textMain": "#1C1C1C",
+      "textSub": "#828282",
+      "cardYellow": "#FCE79C",
+      "cardPink": "#F8C8DC",
+      "cardBlue": "#BFE0F7",
+      "cardGreen": "#C1EBD6",
+      "surface": "#FFFFFF"
+    },
+    "fonts": {
+      "body": "SF Pro Display, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeOverride": false
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "执行摘要与核心概览，包含账单环形图、患者统计柱状图和候诊延迟面积图",
+      "required": true,
+      "hideable": false
+    },
+    "core-finding-1": {
+      "desc": "患者详情、多系统健康度评估雷达图和诊疗流程转化漏斗",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-2": {
+      "desc": "时段患者流入热力图与年龄/治疗资费散点分布",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-3": {
+      "desc": "优势科室业绩排行与季度财务盈余变动瀑布图",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "doughnut",
+    "bar",
+    "area",
+    "radar",
+    "funnel",
+    "heatmap",
+    "scatter",
+    "horizontal-bar",
+    "waterfall"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-editable、contenteditable、data-slot 和 data-key"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "9 个 ECharts 图表容器"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "4 个核心数据区"
+    },
+    "textSlots": [
+      "text.header.title",
+      "text.header.desc",
+      "text.kpi.main.title",
+      "text.kpi.main.value",
+      "text.overview.title",
+      "text.section2.title",
+      "text.radar.title",
+      "text.funnel.title",
+      "text.section3.title",
+      "text.heatmap.title",
+      "text.scatter.title",
+      "text.section4.title",
+      "text.ranking.title",
+      "text.waterfall.title"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-main-pie", "type": "doughnut", "section": "key-takeaway", "description": "患者账单构成环形图" },
+    { "id": "chart-user-stats", "type": "bar", "section": "key-takeaway", "description": "患者统计柱状图" },
+    { "id": "chart-wait-time", "type": "area", "section": "key-takeaway", "description": "候诊等待延迟面积图" },
+    { "id": "chart-clinical-radar", "type": "radar", "section": "core-finding-1", "description": "多系统健康度评估雷达图" },
+    { "id": "chart-diagnostic-funnel", "type": "funnel", "section": "core-finding-1", "description": "诊疗流程转化漏斗" },
+    { "id": "chart-temporal-heatmap", "type": "heatmap", "section": "core-finding-2", "description": "时段患者流入热力图" },
+    { "id": "chart-cost-scatter", "type": "scatter", "section": "core-finding-2", "description": "年龄与诊疗资费散点分布" },
+    { "id": "chart-dept-ranking", "type": "horizontal-bar", "section": "core-finding-3", "description": "优势科室业绩排行横向条形图" },
+    { "id": "chart-operational-waterfall", "type": "waterfall", "section": "core-finding-3", "description": "季度财务盈余变动瀑布图" }
+  ],
+  "sampleData": {
+    "text": {
+      "text.header.title": "Good morning, Dr. Olivia",
+      "text.header.desc": "Intelly wishes you a good and productive day. 45 patients waiting for your treatment today. You also have one live event in your calendar today.",
+      "text.kpi.main.title": "Your patients billing & invoices",
+      "text.kpi.main.value": "23,4k",
+      "text.overview.title": "Visits summary:",
+      "text.section2.title": "Core Finding 1 - 综合体征评测与就诊流程漏斗",
+      "text.radar.title": "Health systems overview (Radar)",
+      "text.funnel.title": "Treatment Flow Funnel (Funnel)",
+      "text.section3.title": "Core Finding 2 - 患者门诊时段热力与诊疗资费分布",
+      "text.heatmap.title": "Hourly patient influx (Heatmap)",
+      "text.scatter.title": "Age vs Treatment costs (Scatter)",
+      "text.section4.title": "Core Finding 3 - 科室综合创收排名与盈余拆解",
+      "text.ranking.title": "Dominant departments performance (Horizontal Bar)",
+      "text.waterfall.title": "Operational surplus analysis (Waterfall)"
+    }
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container"
+  },
+  "slotLimits": {
+    "header-title": 48,
+    "header-desc": 160,
+    "card-title": 40,
+    "kpi-value": 16,
+    "section-title": 48,
+    "chart-title": 48
+  },
+  "llmInjectionRules": [
+    "替换文本时优先通过 data-key 或 data-slot 精确匹配，只注入纯文本。",
+    "替换图表数据时只修改底部 ECharts 配置中的 labels、axis data、radar indicator、series.data 和 formatter，不触碰布局样式。",
+    "Tooltip 需保留 commonTooltipStyle 的白底、浅边框、圆角和轻阴影。",
+    "瀑布图注入时必须保留辅助占位柱与真实渲染柱的隔离逻辑。",
+    "缺少图表数据时隐藏对应图表卡片或 data-section，避免空白容器。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "templateConfigArchived": true,
+    "templateConfigFile": "originals/pasted-template-config.json",
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "editableCount": 14,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 4,
+    "chartCount": 9,
+    "usesECharts": true,
+    "standardReview": [
+      "HTML 是完整单页 Dashboard，可直接浏览器打开，包含 data-section、data-slot、contenteditable 和 chart-* 容器。",
+      "视觉风格符合用户给出的奶油马卡龙规范：奶油背景、低饱和色卡、大圆角卡片和轻 Hover 上浮。",
+      "图表 Tooltip 已统一为白底、浅边框、12px 圆角和轻阴影，符合交互规范。",
+      "柱状图、横向条形图、面积图、雷达图、漏斗图、热力图和瀑布图均已有显式数据标签；散点图以 Tooltip 为主，避免点位密集时遮挡。",
+      "原始配置声明 11 个文本槽位，但实际 HTML 有 14 个 data-slot，入库配置已按实际结构补齐。",
+      "原始 HTML 使用英文 lang 和标题，入库版已改为 zh-CN 与中文页面标题。",
+      "项目要求预览图，但本轮低性能模式未生成 preview.png。"
+    ],
+    "sourceCleanup": [
+      "按模板 24 命名为 dashboard-24-cream-macaron-medical-analytics。",
+      "保留 Gemini 原始 HTML 到 originals/source-template.html 和 originals/pasted-text.html。",
+      "补齐 README.md、design-standard.md、template-slots.md、template.json、preview-metadata.md 和模板注册。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#FCE79C",
+    "presets": [
+      "#FAF3E0",
+      "#FCE79C",
+      "#F8C8DC",
+      "#BFE0F7",
+      "#C1EBD6",
+      "#FFFFFF",
+      "#1C1C1C",
+      "#828282"
+    ],
+    "targets": {
+      "tailwindColors": {
+        "app.bg": "页面奶油背景",
+        "app.text": "主文字",
+        "app.subtext": "次要文字",
+        "card.yellow": "柠檬黄卡片",
+        "card.pink": "蜜桃粉卡片",
+        "card.blue": "雾霾蓝卡片",
+        "card.green": "薄荷绿卡片",
+        "card.white": "白色卡片"
+      },
+      "colorSelectors": [
+        "[class*=\"text-app\"]",
+        "[class*=\"text-yellow\"]",
+        "[class*=\"text-pink\"]",
+        "[class*=\"text-blue\"]",
+        "[class*=\"text-teal\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-card\"]",
+        "[class*=\"bg-app\"]",
+        ".hover-card"
+      ],
+      "chartPalette": [
+        "card.yellow",
+        "card.pink",
+        "card.blue",
+        "card.green",
+        "app.text",
+        "app.subtext"
+      ]
+    }
+  }
+}

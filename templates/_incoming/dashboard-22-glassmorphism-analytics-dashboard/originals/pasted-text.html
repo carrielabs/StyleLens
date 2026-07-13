@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>国际范 B 端数据分析 Dashboard</title>
+    <!-- 引入 Tailwind CSS 用于快速构建高级 UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 ECharts 用于图表渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 引入 Inter 字体以匹配国际化设计感 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #F0F4F8; /* 极浅的蓝灰底色 */
+            color: #111827;
+            overflow-x: hidden;
+        }
+
+        /* ---------------- 背景氛围光效 (1:1 还原原图背景) ---------------- */
+        .ambient-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            background: linear-gradient(180deg, #F5F7FA 0%, #EBF0F5 100%);
+        }
+        .ambient-glow-blue {
+            position: absolute;
+            top: -10%; right: -5%;
+            width: 50vw; height: 50vw;
+            background: radial-gradient(circle, rgba(200,225,255,0.6) 0%, rgba(255,255,255,0) 70%);
+            border-radius: 50%;
+            filter: blur(80px);
+        }
+        .ambient-glow-orange {
+            position: absolute;
+            bottom: -20%; left: -10%;
+            width: 60vw; height: 60vw;
+            background: radial-gradient(circle, rgba(255,235,210,0.6) 0%, rgba(255,255,255,0) 70%);
+            border-radius: 50%;
+            filter: blur(100px);
+        }
+
+        /* ---------------- 卡片统一样式 (玻璃态感) ---------------- */
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.02);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ---------------- 自定义分段条形图 (还原底部的条形码图) ---------------- */
+        .segmented-bar-container {
+            display: flex;
+            gap: 3px;
+            height: 32px;
+            align-items: flex-end;
+            width: 100%;
+        }
+        .segment-line {
+            flex: 1;
+            border-radius: 2px;
+        }
+
+        /* 聚焦状态提示 */
+        [contenteditable="true"]:focus {
+            outline: none;
+            background-color: rgba(37, 99, 235, 0.05);
+            border-radius: 4px;
+        }
+
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+    <script>
+        window.tailwind = window.tailwind || {};
+        window.tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            blue: '#3B82F6',   // 主蓝色
+                            green: '#10B981',  // 绿色
+                            purple: '#8B5CF6', // 紫色
+                            orange: '#F59E0B', // 橙色/黄色
+                            textMain: '#1F2937',
+                            textSub: '#6B7280',
+                            bgGray: '#F3F4F6'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="p-6 md:p-8 min-h-screen">
+
+    <!-- 氛围背景 -->
+    <div class="ambient-bg">
+        <div class="ambient-glow-blue"></div>
+        <div class="ambient-glow-orange"></div>
+    </div>
+
+    <!-- 页面主体容器 -->
+    <main class="max-w-[1440px] mx-auto">
+
+        <!-- 页面标题区 -->
+        <header class="mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-1" data-editable="true" contenteditable="true" data-slot="header.title" data-key="header.title">
+                    Analytics & Report
+                </h1>
+                <p class="text-gray-500 text-sm" data-editable="true" contenteditable="true" data-slot="header.meta" data-key="header.meta">
+                    Insights into your storage usage and file activity
+                </p>
+            </div>
+        </header>
+
+        <!-- ================= Section 1: KPI 总览 (Row 1) ================= -->
+        <section data-section="key-takeaway" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            
+            <!-- Card 1: Total Storage -->
+            <div class="dashboard-card h-40">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-base font-medium text-gray-700" data-editable="true" contenteditable="true" data-slot="kpi1.title" data-key="kpi1.title">Total Storage</h3>
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                </div>
+                <div class="flex justify-between items-end h-full relative">
+                    <div class="z-10 relative top-2">
+                        <div class="text-2xl font-bold text-gray-900 leading-none mb-1" data-editable="true" contenteditable="true" data-slot="kpi1.value" data-key="kpi1.value">20.8 GB <span class="text-sm font-normal text-gray-500">of 50 GB</span></div>
+                        <div class="text-[11px] text-blue-500 font-medium flex items-center" data-editable="true" contenteditable="true" data-slot="kpi1.trend" data-key="kpi1.trend">
+                            <svg class="w-3 h-3 mr-0.5 fill-current" viewBox="0 0 20 20"><path d="M10 3l5 5H5l5-5z"/></svg>
+                            +20% vs last month
+                        </div>
+                    </div>
+                    <!-- 右侧图表容器 -->
+                    <div id="chart-kpi-1" data-chart-type="gauge-ring" class="absolute -right-4 -bottom-6 w-32 h-32"></div>
+                </div>
+            </div>
+
+            <!-- Card 2: Total Views -->
+            <div class="dashboard-card h-40">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-base font-medium text-gray-700" data-editable="true" contenteditable="true" data-slot="kpi2.title" data-key="kpi2.title">Total Views</h3>
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                </div>
+                <div class="flex justify-between items-end h-full relative">
+                    <div class="z-10 relative top-2">
+                        <div class="text-2xl font-bold text-gray-900 leading-none mb-1" data-editable="true" contenteditable="true" data-slot="kpi2.value" data-key="kpi2.value">1247</div>
+                        <div class="text-[11px] text-green-500 font-medium flex items-center" data-editable="true" contenteditable="true" data-slot="kpi2.trend" data-key="kpi2.trend">
+                            <svg class="w-3 h-3 mr-0.5 fill-current" viewBox="0 0 20 20"><path d="M10 3l5 5H5l5-5z"/></svg>
+                            +12% vs last month
+                        </div>
+                    </div>
+                    <div id="chart-kpi-2" data-chart-type="gauge-ring" class="absolute -right-4 -bottom-6 w-32 h-32"></div>
+                </div>
+            </div>
+
+            <!-- Card 3: Downloads -->
+            <div class="dashboard-card h-40">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-base font-medium text-gray-700" data-editable="true" contenteditable="true" data-slot="kpi3.title" data-key="kpi3.title">Downloads</h3>
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                </div>
+                <div class="flex justify-between items-end h-full relative">
+                    <div class="z-10 relative top-2">
+                        <div class="text-2xl font-bold text-gray-900 leading-none mb-1" data-editable="true" contenteditable="true" data-slot="kpi3.value" data-key="kpi3.value">892</div>
+                        <div class="text-[11px] text-blue-400 font-medium flex items-center" data-editable="true" contenteditable="true" data-slot="kpi3.trend" data-key="kpi3.trend">
+                            <svg class="w-3 h-3 mr-0.5 fill-current" viewBox="0 0 20 20"><path d="M10 3l5 5H5l5-5z"/></svg>
+                            +12% vs last month
+                        </div>
+                    </div>
+                    <div id="chart-kpi-3" data-chart-type="gauge-ring" class="absolute -right-4 -bottom-6 w-32 h-32"></div>
+                </div>
+            </div>
+
+            <!-- Card 4: Share -->
+            <div class="dashboard-card h-40">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-base font-medium text-gray-700" data-editable="true" contenteditable="true" data-slot="kpi4.title" data-key="kpi4.title">Share</h3>
+                    <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                </div>
+                <div class="flex justify-between items-end h-full relative">
+                    <div class="z-10 relative top-2">
+                        <div class="text-2xl font-bold text-gray-900 leading-none mb-1" data-editable="true" contenteditable="true" data-slot="kpi4.value" data-key="kpi4.value">284</div>
+                        <div class="text-[11px] text-orange-400 font-medium flex items-center" data-editable="true" contenteditable="true" data-slot="kpi4.trend" data-key="kpi4.trend">
+                            <svg class="w-3 h-3 mr-0.5 fill-current" viewBox="0 0 20 20"><path d="M10 3l5 5H5l5-5z"/></svg>
+                            +15% vs last month
+                        </div>
+                    </div>
+                    <div id="chart-kpi-4" data-chart-type="gauge-ring" class="absolute -right-4 -bottom-6 w-32 h-32"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= Section 2: 趋势分析 (Row 2) ================= -->
+        <section data-section="core-finding-1" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            
+            <!-- Trend Card 1 -->
+            <div class="dashboard-card h-64">
+                <h3 class="text-base font-medium text-gray-800 mb-6" data-editable="true" contenteditable="true" data-slot="trend1.title" data-key="trend1.title">Activity Trends (January)</h3>
+                <div class="flex h-full relative">
+                    <!-- 左侧数据图例 -->
+                    <div class="w-1/3 flex flex-col justify-center space-y-4 z-10 relative -top-4">
+                        <div>
+                            <div class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>Download</div>
+                            <div class="text-xl font-semibold text-gray-900" data-editable="true" contenteditable="true" data-slot="trend1.d_value" data-key="trend1.d_value">135</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full border border-gray-300"></span>Uploads</div>
+                            <div class="text-xl font-semibold text-gray-900" data-editable="true" contenteditable="true" data-slot="trend1.u_value" data-key="trend1.u_value">10,793</div>
+                        </div>
+                    </div>
+                    <!-- 右侧大半圆仪表盘 -->
+                    <div id="chart-trend-1" data-chart-type="gauge-half" class="absolute right-0 bottom-6 w-[80%] h-[120%]"></div>
+                </div>
+                <div class="text-[10px] text-gray-400 mt-auto" data-editable="true" contenteditable="true" data-slot="trend1.compare" data-key="trend1.compare">+0.08% Compared to past year</div>
+            </div>
+
+            <!-- Trend Card 2 -->
+            <div class="dashboard-card h-64">
+                <h3 class="text-base font-medium text-gray-800 mb-6" data-editable="true" contenteditable="true" data-slot="trend2.title" data-key="trend2.title">Activity Trends (February)</h3>
+                <div class="flex h-full relative">
+                    <div class="w-1/3 flex flex-col justify-center space-y-4 z-10 relative -top-4">
+                        <div>
+                            <div class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Download</div>
+                            <div class="text-xl font-semibold text-gray-900" data-editable="true" contenteditable="true" data-slot="trend2.d_value" data-key="trend2.d_value">120</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full border border-gray-300"></span>Uploads</div>
+                            <div class="text-xl font-semibold text-gray-900" data-editable="true" contenteditable="true" data-slot="trend2.u_value" data-key="trend2.u_value">09,793</div>
+                        </div>
+                    </div>
+                    <div id="chart-trend-2" data-chart-type="gauge-half" class="absolute right-0 bottom-6 w-[80%] h-[120%]"></div>
+                </div>
+                <div class="text-[10px] text-gray-400 mt-auto" data-editable="true" contenteditable="true" data-slot="trend2.compare" data-key="trend2.compare">+0.10% Compared to january</div>
+            </div>
+
+            <!-- Trend Card 3 -->
+            <div class="dashboard-card h-64">
+                <h3 class="text-base font-medium text-gray-800 mb-6" data-editable="true" contenteditable="true" data-slot="trend3.title" data-key="trend3.title">Activity Trends (March)</h3>
+                <div class="flex h-full relative">
+                    <div class="w-1/3 flex flex-col justify-center space-y-4 z-10 relative -top-4">
+                        <div>
+                            <div class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>Download</div>
+                            <div class="text-xl font-semibold text-gray-900" data-editable="true" contenteditable="true" data-slot="trend3.d_value" data-key="trend3.d_value">200</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full border border-gray-300"></span>Uploads</div>
+                            <div class="text-xl font-semibold text-gray-900" data-editable="true" contenteditable="true" data-slot="trend3.u_value" data-key="trend3.u_value">11,793</div>
+                        </div>
+                    </div>
+                    <div id="chart-trend-3" data-chart-type="gauge-half" class="absolute right-0 bottom-6 w-[80%] h-[120%]"></div>
+                </div>
+                <div class="text-[10px] text-gray-400 mt-auto" data-editable="true" contenteditable="true" data-slot="trend3.compare" data-key="trend3.compare">+0.20% Compared to February</div>
+            </div>
+        </section>
+
+        <!-- ================= Section 3: 底部综合面板 (Row 3) ================= -->
+        <section data-section="core-finding-2" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Storage Usages by Type (跨越7列) -->
+            <div class="dashboard-card lg:col-span-7 h-[220px]">
+                <h3 class="text-base font-medium text-gray-800 mb-6" data-editable="true" contenteditable="true" data-slot="usage.title" data-key="usage.title">Storage Usages by Type</h3>
+                
+                <!-- 图例区 -->
+                <div class="flex justify-between items-center mb-6 pr-4">
+                    <div class="flex flex-col">
+                        <div class="flex items-center gap-2 text-sm font-medium text-gray-800"><span class="w-3 h-3 rounded-sm bg-blue-500"></span> Documents</div>
+                        <div class="text-[10px] text-gray-400 mt-1">25GB is Used out of 40%</div>
+                    </div>
+                    <div class="w-px h-8 bg-gray-200"></div>
+                    <div class="flex flex-col">
+                        <div class="flex items-center gap-2 text-sm font-medium text-gray-800"><span class="w-3 h-3 rounded-sm bg-green-500"></span> Images</div>
+                        <div class="text-[10px] text-gray-400 mt-1">20GB is Used out of 30%</div>
+                    </div>
+                    <div class="w-px h-8 bg-gray-200"></div>
+                    <div class="flex flex-col">
+                        <div class="flex items-center gap-2 text-sm font-medium text-gray-800"><span class="w-3 h-3 rounded-sm bg-purple-500"></span> Videos</div>
+                        <div class="text-[10px] text-gray-400 mt-1">15GB is Used out of 30%</div>
+                    </div>
+                    <div class="w-px h-8 bg-gray-200"></div>
+                    <div class="flex flex-col">
+                        <div class="flex items-center gap-2 text-sm font-medium text-gray-800"><span class="w-3 h-3 rounded-sm bg-orange-400"></span> Archives</div>
+                        <div class="text-[10px] text-gray-400 mt-1">5GB is Used out of 10%</div>
+                    </div>
+                </div>
+
+                <!-- 纯 HTML/CSS 还原的分段条形图 (Barcode style) -->
+                <div class="segmented-bar-container mt-auto pb-2" id="segmented-bar" data-chart-type="custom-segmented">
+                    <!-- JS 自动生成竖线 -->
+                </div>
+            </div>
+
+            <!-- Top Accessed Files (跨越5列) -->
+            <div class="dashboard-card lg:col-span-5 h-[220px]">
+                <h3 class="text-base font-medium text-gray-800 mb-4" data-editable="true" contenteditable="true" data-slot="files.title" data-key="files.title">Top Accessed Files This Month</h3>
+                
+                <div class="flex flex-col gap-3 overflow-y-auto pr-2">
+                    <!-- File Item 1 -->
+                    <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-500"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg></div>
+                            <span class="text-sm text-gray-700 font-medium" data-editable="true" contenteditable="true" data-slot="file1.name">Pitch_Deck_2025.pdf</span>
+                        </div>
+                        <div class="flex items-center gap-6 text-xs text-gray-400">
+                            <span data-editable="true" contenteditable="true" data-slot="file1.dl">12 downloads</span>
+                            <span data-editable="true" contenteditable="true" data-slot="file1.view">48 views</span>
+                        </div>
+                    </div>
+                    <!-- File Item 2 -->
+                    <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg></div>
+                            <span class="text-sm text-gray-700 font-medium" data-editable="true" contenteditable="true" data-slot="file2.name">Brand_Guidelines.docx</span>
+                        </div>
+                        <div class="flex items-center gap-6 text-xs text-gray-400">
+                            <span data-editable="true" contenteditable="true" data-slot="file2.dl">8 downloads</span>
+                            <span data-editable="true" contenteditable="true" data-slot="file2.view">32 views</span>
+                        </div>
+                    </div>
+                    <!-- File Item 3 -->
+                    <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-500"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg></div>
+                            <span class="text-sm text-gray-700 font-medium" data-editable="true" contenteditable="true" data-slot="file3.name">Campaign_Banners.pdf</span>
+                        </div>
+                        <div class="flex items-center gap-6 text-xs text-gray-400">
+                            <span data-editable="true" contenteditable="true" data-slot="file3.dl">8 downloads</span>
+                            <span data-editable="true" contenteditable="true" data-slot="file3.view">32 views</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- ECharts & JS 渲染逻辑 -->
+    <script type="text/javascript">
+        // 核心色彩配置，与 UI 严格对应
+        const themeColors = {
+            blue: '#2563EB',
+            green: '#10B981',
+            lightBlue: '#3B82F6',
+            orange: '#F59E0B',
+            bgTrack: '#F3F4F6' // 灰色轨道
+        };
+
+        // 1. 创建 Row 1 的“小半圆环 (240度)”
+        function initKpiGauge(id, color, value, label) {
+            const chartDom = document.getElementById(id);
+            if (!chartDom) return;
+            const myChart = echarts.init(chartDom);
+            const option = {
+                series: [{
+                    type: 'gauge',
+                    startAngle: 210, // 左下方开始
+                    endAngle: -30,   // 右下方结束 (跨度240度)
+                    radius: '85%',
+                    center: ['65%', '55%'], // 偏向右下角，匹配原图布局
+                    min: 0, max: 100,
+                    pointer: { show: false }, // 隐藏中心指针
+                    progress: {
+                        show: true,
+                        overlap: false,
+                        roundCap: true, // 圆角端点
+                        clip: false,
+                        itemStyle: { color: color }
+                    },
+                    axisLine: { lineStyle: { width: 5, color: [[1, themeColors.bgTrack]] } },
+                    splitLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: { show: false },
+                    data: [{
+                        value: value,
+                        name: label,
+                        title: { show: false },
+                        detail: {
+                            show: true,
+                            offsetCenter: ['-20%', '0%'], // 数字居中偏左
+                            fontSize: 20,
+                            fontWeight: 'bold',
+                            color: '#111827',
+                            formatter: '{value}%'
+                        }
+                    }]
+                }]
+            };
+            myChart.setOption(option);
+            return myChart;
+        }
+
+        // 2. 创建 Row 2 的“大半圆环 (180度)”
+        function initTrendGauge(id, color, percent, innerLabel, innerSub) {
+            const chartDom = document.getElementById(id);
+            if (!chartDom) return;
+            const myChart = echarts.init(chartDom);
+            const option = {
+                series: [{
+                    type: 'gauge',
+                    startAngle: 180, // 纯半圆
+                    endAngle: 0,
+                    radius: '110%',
+                    center: ['60%', '65%'],
+                    min: 0, max: 100,
+                    pointer: { show: false },
+                    progress: {
+                        show: true,
+                        overlap: false,
+                        roundCap: true, // 用圆角模拟末端的点
+                        clip: false,
+                        itemStyle: { color: color }
+                    },
+                    axisLine: { lineStyle: { width: 2, color: [[1, themeColors.bgTrack]] } }, // 非常细的轨道
+                    splitLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: { show: false },
+                    data: [{
+                        value: percent,
+                        detail: { show: false } // 不使用内置数字，因为原图排版更复杂
+                    }]
+                }]
+            };
+            myChart.setOption(option);
+
+            // 用绝对定位在图表中间插入自定义 HTML 标签以精准还原原图的内部文字气泡
+            const labelHtml = `
+                <div style="position:absolute; top:45%; left:50%; transform:translate(-50%, -50%); display:flex; flex-direction:column; align-items:center;">
+                    <div style="background-color:${color}; color:white; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; margin-bottom:6px;">${innerLabel}</div>
+                    <div style="font-size:11px; color:#6B7280; font-weight:500;">${innerSub}</div>
+                </div>
+            `;
+            chartDom.style.position = 'relative';
+            chartDom.insertAdjacentHTML('beforeend', labelHtml);
+
+            return myChart;
+        }
+
+        // 3. 渲染 Row 3 的分段条形图 (使用 DOM 渲染以确保100%还原 UI)
+        function renderSegmentedBar() {
+            const container = document.getElementById('segmented-bar');
+            if(!container) return;
+            container.innerHTML = ''; // Clear
+            
+            // 数据配置：颜色及数量比例
+            const segments = [
+                { color: '#3B82F6', count: 40, height: '16px' }, // Blue
+                { color: '#10B981', count: 30, height: '20px' }, // Green
+                { color: '#8B5CF6', count: 30, height: '24px' }, // Purple
+                { color: '#F59E0B', count: 20, height: '14px' }  // Orange
+            ];
+
+            segments.forEach(group => {
+                for(let i=0; i<group.count; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'segment-line';
+                    // 为了产生高低错落感，加一点随机微调或使用固定样式
+                    let h = group.height;
+                    if(i % 3 === 0) h = parseInt(h) + 4 + 'px'; 
+                    if(i % 5 === 0) h = parseInt(h) - 4 + 'px';
+
+                    line.style.backgroundColor = group.color;
+                    line.style.height = h;
+                    line.style.opacity = (i % 2 === 0) ? '0.8' : '0.4'; // 还原明暗相间的质感
+                    container.appendChild(line);
+                }
+                // 分组间距
+                if(group !== segments[segments.length-1]){
+                    const gap = document.createElement('div');
+                    gap.style.width = '12px';
+                    container.appendChild(gap);
+                }
+            });
+        }
+
+
+        // 初始化执行
+        window.addEventListener('load', () => {
+            if (typeof echarts === 'undefined') {
+                console.error("ECharts 未加载"); return;
+            }
+            
+            const charts = [];
+            // Row 1
+            charts.push(initKpiGauge('chart-kpi-1', themeColors.blue, 37, ''));
+            charts.push(initKpiGauge('chart-kpi-2', themeColors.green, 45, ''));
+            charts.push(initKpiGauge('chart-kpi-3', themeColors.lightBlue, 50, ''));
+            charts.push(initKpiGauge('chart-kpi-4', themeColors.orange, 20, ''));
+            
+            // Row 2
+            charts.push(initTrendGauge('chart-trend-1', themeColors.lightBlue, 15, '0.12%', '135 of 1108'));
+            charts.push(initTrendGauge('chart-trend-2', themeColors.blue, 18, '0.14%', '120 of 1000'));
+            charts.push(initTrendGauge('chart-trend-3', themeColors.blue, 25, '0.20%', '200 of 1500'));
+
+            // Row 3
+            renderSegmentedBar();
+
+            // 响应式调整
+            window.addEventListener('resize', () => {
+                charts.forEach(chart => chart && chart.resize());
+            });
+        });
+    </script>
+</body>
+</html>

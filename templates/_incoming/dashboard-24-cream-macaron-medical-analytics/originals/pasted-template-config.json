@@ -1,0 +1,54 @@
+{
+  "id": "tpl_intelly_pastel_fullwidth_003",
+  "name": "奶油马卡龙全幅高精数据标注与高级Hover交互看板",
+  "pageTypes": ["Dashboard", "Analytics", "Executive Report"],
+  "styleTags": ["Pastel", "Macaroon", "Fullwidth", "DataLabels", "InteractiveHover", "Medical"],
+  "supportedSections": [
+    "key-takeaway",
+    "core-finding-1",
+    "core-finding-2",
+    "core-finding-3"
+  ],
+  "supportedChartTypes": [
+    "doughnut",
+    "bar",
+    "area",
+    "radar",
+    "funnel",
+    "heatmap",
+    "scatter",
+    "horizontal-bar",
+    "waterfall"
+  ],
+  "editableCapabilities": {
+    "textEditing": true,
+    "chartDataInjection": true,
+    "moduleHiding": true
+  },
+  "schema": {
+    "slots": [
+      { "key": "text.header.title", "type": "string" },
+      { "key": "text.header.desc", "type": "string" },
+      { "key": "text.kpi.main.title", "type": "string" },
+      { "key": "text.kpi.main.value", "type": "string" },
+      { "key": "text.overview.title", "type": "string" },
+      { "key": "text.radar.title", "type": "string" },
+      { "key": "text.funnel.title", "type": "string" },
+      { "key": "text.heatmap.title", "type": "string" },
+      { "key": "text.scatter.title", "type": "string" },
+      { "key": "text.ranking.title", "type": "string" },
+      { "key": "text.waterfall.title", "type": "string" }
+    ]
+  },
+  "chartModules": {
+    "chart-main-pie": { "type": "doughnut" },
+    "chart-user-stats": { "type": "bar" },
+    "chart-wait-time": { "type": "area" },
+    "chart-clinical-radar": { "type": "radar" },
+    "chart-diagnostic-funnel": { "type": "funnel" },
+    "chart-temporal-heatmap": { "type": "heatmap" },
+    "chart-cost-scatter": { "type": "scatter" },
+    "chart-dept-ranking": { "type": "horizontal-bar" },
+    "chart-operational-waterfall": { "type": "waterfall" }
+  }
+}

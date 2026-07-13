@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人力资源年度经营复盘看板</title>
+    <!-- Tailwind CSS 引入 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter 引入 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- ECharts 引入 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+                    },
+                    colors: {
+                        pbi: {
+                            bg: '#EBF1F6',
+                            panel: '#2C3E50',
+                            panelLight: '#34495E',
+                            cardBorder: '#DDE3EA',
+                            textDark: '#1E293B',
+                            textMuted: '#64748B',
+                            navy: '#2C3E50',
+                            yellow: '#EAB308',
+                            orange: '#E67E22',
+                            red: '#C0392B',
+                            green: '#27AE60',
+                            grey: '#64748B'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 隐藏滚动条但保留滚动功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* 可编辑文字的状态高亮 */
+        [contenteditable="true"]:hover {
+            outline: 2px dashed #2563EB;
+            background-color: rgba(37, 99, 235, 0.05);
+            border-radius: 2px;
+        }
+        [contenteditable="true"]:focus {
+            outline: 2px solid #1D4ED8;
+            background-color: rgba(37, 99, 235, 0.08);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-[#EBF1F6] text-pbi-textDark font-sans antialiased p-4 md:p-6 min-h-screen">
+
+<div class="max-w-[1400px] mx-auto flex flex-col gap-4">
+
+    <!-- ==================== HEADER PANEL (Power BI 风格硬朗顶栏) ==================== -->
+    <header class="bg-[#2C3E50] rounded-t-lg shadow-md overflow-hidden text-white flex flex-col">
+        <!-- Top Row: Title ONLY (精简 Timeline 与重置指标按钮，确保数据报告定位) -->
+        <div class="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight flex items-center gap-2" data-editable="true" contenteditable="true" data-slot="text.report_title" data-key="text.report_title">
+                    📊 人力资源年度经营分析与复盘数据报告
+                </h1>
+                <p class="text-xs text-slate-300 mt-1" data-editable="true" contenteditable="true" data-slot="text.filter_info" data-key="text.filter_info">
+                    发布单位：集团人力资源部管理中心 | 报告周期：2024财年经营盘点
+                </p>
+            </div>
+            <div class="text-xs text-slate-400 bg-[#1E2D3B] px-3 py-1.5 rounded-md border border-slate-700/80 self-start sm:self-auto shrink-0">
+                数据状态：<span class="text-emerald-400 font-semibold">● 已归档已校验</span>
+            </div>
+        </div>
+
+        <!-- Bottom Row: 报告核心切片页签切换 -->
+        <div class="bg-[#1E2D3B] px-4 flex gap-1">
+            <button id="tab-workforce" onclick="switchTab('workforce')" class="flex items-center gap-2 px-6 py-3 text-xs font-semibold rounded-t-md border-b-2 transition-all bg-white text-[#2C3E50] border-blue-600">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" /></svg>
+                Workforce (员工结构与招聘转化)
+            </button>
+            <button id="tab-retention" onclick="switchTab('retention')" class="flex items-center gap-2 px-6 py-3 text-xs font-semibold rounded-t-md border-b-2 border-transparent text-slate-400 hover:text-white transition-all">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
+                Retention Rate (流失留存与组织效能)
+            </button>
+        </div>
+    </header>
+
+    <!-- ==================== KEY TAKEAWAY (顶级总结，定性分析) ==================== -->
+    <section data-section="key-takeaway" class="bg-white rounded border border-[#DDE3EA] shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 border-l-[6px] border-emerald-600">
+        <h2 class="text-xs font-extrabold text-emerald-800 flex items-center gap-2 mb-2 uppercase tracking-wide">
+            📌 核心管理发现与建议 (Key Takeaway)
+        </h2>
+        <div class="text-xs text-slate-600 leading-relaxed font-medium space-y-1.5" data-editable="true" contenteditable="true" data-slot="text.summary_content" data-key="text.summary_content">
+            <p>1. <b>核心流失回归显著</b>：本年度员工流失主要集中在技术岗位，中级经理（Manager）及高年资的核心系统架构师流失率逼近10.21%，且流失率与年薪呈高相关性，表明中层激励机制亟需升级。</p>
+            <p>2. <b>多元化布局深化</b>：女性员工比例实现平稳增长（占比52.35%），平均及中位数年薪基本与男性齐平，拉美及亚太外派办事处在2024财年完成了既定编制的快速扩充。</p>
+        </div>
+    </section>
+
+    <!-- ==================== TAB VIEW 1: WORKFORCE ==================== -->
+    <div id="view-workforce" class="flex flex-col gap-4">
+        
+        <!-- Section Title 1 -->
+        <div class="flex items-center justify-between mt-1 px-1">
+            <h3 class="text-sm font-bold text-[#1E2D3B] flex items-center gap-1.5" data-editable="true" contenteditable="true" data-slot="text.f1_title" data-key="text.f1_title">
+                核心观察 1: 员工多样性与关键部门分布
+            </h3>
+        </div>
+
+        <!-- Demographics Grid (1 Left Panel + 1 Right Panel) -->
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4" data-section="workforce-demographics">
+            
+            <!-- Left Side Card: Workforce by Gender (性别构成 KPI) -->
+            <div class="xl:col-span-4 bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex flex-col justify-between">
+                <div>
+                    <h4 class="text-xs font-bold text-pbi-textMuted border-b border-slate-100 pb-2 mb-4">Employees Workforce by Gender</h4>
+                    
+                    <!-- SVG Avatars & Ratios -->
+                    <div class="grid grid-cols-2 gap-4 text-center py-2">
+                        <!-- Male Section -->
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 flex items-center justify-center bg-slate-50 rounded-full border border-slate-100 mb-2">
+                                <svg class="w-10 h-10 text-[#2C3E50]" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
+                            </div>
+                            <span class="text-sm font-extrabold text-[#2C3E50]">47.65%</span>
+                            <div class="bg-[#2C3E50] text-white text-[10px] py-0.5 px-3 rounded-full font-bold mt-1.5">Male</div>
+                        </div>
+                        <!-- Female Section -->
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 flex items-center justify-center bg-rose-50 rounded-full border border-rose-100 mb-2">
+                                <svg class="w-10 h-10 text-[#C0392B]" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
+                            </div>
+                            <span class="text-sm font-extrabold text-[#C0392B]">52.35%</span>
+                            <div class="bg-[#C0392B] text-white text-[10px] py-0.5 px-3 rounded-full font-bold mt-1.5">Female</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workforce Sub KPIs -->
+                <div class="grid grid-cols-2 gap-3 mt-4 border-t border-slate-100 pt-3">
+                    <div class="border-r border-slate-100 pr-2">
+                        <p class="text-[18px] font-bold text-[#2C3E50]">436</p>
+                        <p class="text-[10px] text-pbi-textMuted font-medium">Working Employees (Male)</p>
+                    </div>
+                    <div class="pl-2">
+                        <p class="text-[18px] font-bold text-[#C0392B]">479</p>
+                        <p class="text-[10px] text-pbi-textMuted font-medium">Working Employees (Female)</p>
+                    </div>
+                    <div class="border-r border-slate-100 pr-2 pt-1">
+                        <p class="text-[18px] font-bold text-amber-600">37</p>
+                        <p class="text-[10px] text-pbi-textMuted font-medium">Employees Left (Male)</p>
+                    </div>
+                    <div class="pl-2 pt-1">
+                        <p class="text-[18px] font-bold text-rose-700">32</p>
+                        <p class="text-[10px] text-pbi-textMuted font-medium">Employees Left (Female)</p>
+                    </div>
+                </div>
+
+                <!-- Salary Level KPIs -->
+                <div class="grid grid-cols-2 gap-3 mt-3 border-t border-slate-100 pt-3 bg-slate-50/50 p-2 rounded">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-700">$115.44K</p>
+                        <p class="text-[9px] text-pbi-textMuted">Avg Salary (Male)</p>
+                        <p class="text-xs font-semibold text-slate-700 mt-1">$115.44K</p>
+                        <p class="text-[9px] text-pbi-textMuted">Median Salary (Male)</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-red-800">$112.75K</p>
+                        <p class="text-[9px] text-pbi-textMuted">Avg Salary (Female)</p>
+                        <p class="text-xs font-semibold text-red-800 mt-1">$112.75K</p>
+                        <p class="text-[9px] text-pbi-textMuted">Median Salary (Female)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side Card: Ethnicity, Country, Age (多色阶柱状图/网格图) -->
+            <div class="xl:col-span-8 bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex flex-col">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-4">
+                    <span class="text-xs font-bold text-pbi-textMuted">Employees Workforce Distribution (Multi-Color Panels)</span>
+                    <!-- Switch View Tabs -->
+                    <div class="flex bg-slate-100 p-0.5 rounded border border-slate-200 text-xs">
+                        <button id="btn-wf-headcount" onclick="toggleWorkforceView('headcount')" class="px-3 py-1 rounded font-bold bg-white text-[#2C3E50] shadow-sm transition-all">Headcount</button>
+                        <button id="btn-wf-proportion" onclick="toggleWorkforceView('proportion')" class="px-3 py-1 rounded font-semibold text-slate-500 hover:text-[#2C3E50] transition-all">Proportion</button>
+                    </div>
+                </div>
+
+                <!-- 3 Chart Row Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <!-- Ethnicity Column -->
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Ethnicity</span>
+                        <div id="chart-ethnicity-dist" data-chart-type="Bar" class="w-full h-56"></div>
+                    </div>
+                    <!-- Country Column -->
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Country</span>
+                        <div id="chart-country-dist" data-chart-type="Bar" class="w-full h-56"></div>
+                    </div>
+                    <!-- Age Column -->
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Age</span>
+                        <div id="chart-age-dist" data-chart-type="Bar" class="w-full h-56"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Title 2 (新增招聘与技能分布) -->
+        <div class="flex items-center justify-between mt-2 px-1">
+            <h3 class="text-sm font-bold text-[#1E2D3B]" data-editable="true" contenteditable="true" data-slot="text.new_sec_title" data-key="text.new_sec_title">
+                核心观察 2: 招聘漏斗效率、部门编制及核心岗位技能雷达
+            </h3>
+        </div>
+
+        <!-- Horizontal Expansion Row (3 New Charts) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4" data-section="hiring-and-skills">
+            <!-- New Chart 1: Funnel Chart -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex flex-col justify-between">
+                <span class="text-xs font-bold text-pbi-textMuted border-b border-slate-100 pb-2 mb-3">Recruitment Funnel Conversion (招聘漏斗)</span>
+                <div id="chart-recruitment-funnel" data-chart-type="Funnel" class="w-full h-64"></div>
+            </div>
+
+            <!-- New Chart 2: Radar Chart -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex flex-col justify-between">
+                <span class="text-xs font-bold text-pbi-textMuted border-b border-slate-100 pb-2 mb-3">Core Competency Radar (技术技能建模雷达)</span>
+                <div id="chart-competency-radar" data-chart-type="Radar" class="w-full h-64"></div>
+            </div>
+
+            <!-- New Chart 3: Doughnut Chart -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex flex-col justify-between">
+                <span class="text-xs font-bold text-pbi-textMuted border-b border-slate-100 pb-2 mb-3">Headcount by Department (部门在职占比)</span>
+                <div id="chart-dept-doughnut" data-chart-type="Doughnut" class="w-full h-64"></div>
+            </div>
+        </div>
+
+        <!-- Section Title 3 -->
+        <div class="flex items-center justify-between mt-2 px-1">
+            <h3 class="text-sm font-bold text-[#1E2D3B] flex items-center gap-1.5" data-editable="true" contenteditable="true" data-slot="text.f2_title" data-key="text.f2_title">
+                核心观察 3: 薪酬分布与职级关联度多维对比
+            </h3>
+        </div>
+
+        <!-- Salary Scatter Card -->
+        <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4" data-section="salary-distribution">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                <span class="text-xs font-bold text-pbi-textMuted">Salary Distribution by Job Title & Level (High, Median, Low Range)</span>
+                <!-- BI Legends -->
+                <div class="flex items-center gap-4 text-[10px]">
+                    <span class="flex items-center gap-1 font-semibold"><span class="w-2.5 h-2.5 bg-[#C0392B] rounded-full inline-block"></span>Highest Annual Salary</span>
+                    <span class="flex items-center gap-1 font-semibold"><span class="w-2.5 h-2.5 bg-[#F1C40F] rounded-full inline-block"></span>Median Annual Salary</span>
+                    <span class="flex items-center gap-1 font-semibold"><span class="w-2.5 h-2.5 bg-[#27AE60] rounded-full inline-block"></span>Lowest Annual Salary</span>
+                </div>
+            </div>
+            <!-- Scatter ECharts -->
+            <div id="chart-salary-scatter" data-chart-type="Scatter" class="w-full h-80"></div>
+        </div>
+
+    </div>
+
+    <!-- ==================== TAB VIEW 2: RETENTION RATE ==================== -->
+    <div id="view-retention" class="hidden flex flex-col gap-4">
+        
+        <!-- Section Title 4 -->
+        <div class="flex items-center justify-between mt-1 px-1">
+            <h3 class="text-sm font-bold text-[#1E2D3B] flex items-center gap-1.5" data-editable="true" contenteditable="true" data-slot="text.f3_title" data-key="text.f3_title">
+                核心观察 4: 留存流失与效能趋势深度对比分析
+            </h3>
+        </div>
+
+        <!-- KPI Mini Sparkline Cards Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" data-section="retention-kpis">
+            
+            <!-- KPI Card 1: Retention Rate -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex items-center justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-400 block mb-1">Retention Rate</span>
+                    <span class="text-2xl font-bold text-amber-600">89.79%</span>
+                    <span class="text-[10px] text-slate-400 block mt-1">2013 - 2022 Total</span>
+                </div>
+                <div class="w-40 h-16">
+                    <div id="sparkline-retention" data-chart-type="Sparkline" class="w-full h-full"></div>
+                </div>
+            </div>
+
+            <!-- KPI Card 2: Turnover Rate -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex items-center justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-400 block mb-1">Turnover Rate</span>
+                    <span class="text-2xl font-bold text-[#2C3E50]">10.21%</span>
+                    <span class="text-[10px] text-slate-400 block mt-1">2013 - 2022 Average</span>
+                </div>
+                <div class="w-40 h-16">
+                    <div id="sparkline-turnover" data-chart-type="Sparkline" class="w-full h-full"></div>
+                </div>
+            </div>
+
+            <!-- KPI Card 3: Employees Left -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex items-center justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-400 block mb-1">Employees Left</span>
+                    <span class="text-2xl font-bold text-rose-700">69</span>
+                    <span class="text-[10px] text-slate-400 block mt-1">2013 - 2022 Total</span>
+                </div>
+                <div class="w-40 h-16">
+                    <div id="sparkline-left" data-chart-type="Sparkline" class="w-full h-full"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Correlation and Trend Grid (Switchable views) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            <!-- Card 4: Retention Rate correlated to Average Salary -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex flex-col justify-between" data-section="retention-correlation">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                    <span class="text-xs font-bold text-pbi-textMuted">Is Retention Rate correlated to Average Salary?</span>
+                    <!-- Switch Mode Selector Slider -->
+                    <div class="flex items-center gap-1 bg-slate-100 p-0.5 rounded border border-slate-200 text-xs">
+                        <button id="btn-corr-chart" onclick="toggleCorrView('chart')" class="p-1 px-3.5 rounded font-bold bg-white text-[#2C3E50] shadow-sm transition-all">Chart</button>
+                        <button id="btn-corr-table" onclick="toggleCorrView('table')" class="p-1 px-3.5 rounded font-semibold text-slate-500 hover:text-[#2C3E50] transition-all">Table</button>
+                    </div>
+                </div>
+
+                <!-- Main Content Slot for Correlation -->
+                <div class="h-80 relative">
+                    <!-- Chart Content -->
+                    <div id="container-corr-chart" class="w-full h-full">
+                        <div id="chart-retention-scatter" data-chart-type="Scatter" class="w-full h-full"></div>
+                    </div>
+                    <!-- Table Content -->
+                    <div id="container-corr-table" class="hidden w-full h-full overflow-y-auto no-scrollbar">
+                        <table class="w-full text-left text-[11px] border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                    <th class="p-2 font-bold">Job Title</th>
+                                    <th class="p-2 font-bold text-right">Retention Rate</th>
+                                    <th class="p-2 font-bold text-right">Average Salary</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-2 font-medium">Manager</td>
+                                    <td class="p-2 text-right">94.41%</td>
+                                    <td class="p-2 text-right">$118,307</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-2 font-medium">System Administrator</td>
+                                    <td class="p-2 text-right">93.79%</td>
+                                    <td class="p-2 text-right">$183,526</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-2 font-medium">Field Engineer</td>
+                                    <td class="p-2 text-right">93.33%</td>
+                                    <td class="p-2 text-right">$76,354</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-2 font-medium">Development Engineer</td>
+                                    <td class="p-2 text-right">92.31%</td>
+                                    <td class="p-2 text-right">$65,340</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-2 font-medium">Systems Analyst</td>
+                                    <td class="p-2 text-right">90.91%</td>
+                                    <td class="p-2 text-right">$53,929</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-2 font-medium">Solutions Architect</td>
+                                    <td class="p-2 text-right">90.00%</td>
+                                    <td class="p-2 text-right">$63,196</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 5: Retention Rate over Time -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex flex-col justify-between" data-section="retention-trends">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                    <span class="text-xs font-bold text-pbi-textMuted">Retention Rate over Time (Combo Bar/Line)</span>
+                    <!-- Switch Mode Selector Slider -->
+                    <div class="flex items-center gap-1 bg-slate-100 p-0.5 rounded border border-slate-200 text-xs">
+                        <button id="btn-trend-chart" onclick="toggleTrendView('chart')" class="p-1 px-3.5 rounded font-bold bg-white text-[#2C3E50] shadow-sm transition-all">Chart</button>
+                        <button id="btn-trend-table" onclick="toggleTrendView('table')" class="p-1 px-3.5 rounded font-semibold text-slate-500 hover:text-[#2C3E50] transition-all">Table</button>
+                    </div>
+                </div>
+
+                <!-- Main Content Slot for Trend -->
+                <div class="h-80 relative">
+                    <!-- Chart Content -->
+                    <div id="container-trend-chart" class="w-full h-full">
+                        <div id="chart-retention-trend" data-chart-type="Combo-Line-Bar" class="w-full h-full"></div>
+                    </div>
+                    <!-- Table Content -->
+                    <div id="container-trend-table" class="hidden w-full h-full overflow-y-auto no-scrollbar">
+                        <table class="w-full text-left text-[11px] border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                    <th class="p-2 font-bold">Year</th>
+                                    <th class="p-2 font-bold text-right">Retention Rate</th>
+                                    <th class="p-2 font-bold text-right">Beg. Period</th>
+                                    <th class="p-2 font-bold text-right">End Period</th>
+                                    <th class="p-2 font-bold text-right">Employees Left</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-2 font-medium">2013</td>
+                                    <td class="p-2 text-right">99.56%</td>
+                                    <td class="p-2 text-right">436</td>
+                                    <td class="p-2 text-right">473</td>
+                                    <td class="p-2 text-right">2</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-2 font-medium">2014</td>
+                                    <td class="p-2 text-right">99.20%</td>
+                                    <td class="p-2 text-right">473</td>
+                                    <td class="p-2 text-right">521</td>
+                                    <td class="p-2 text-right">4</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-2 font-medium">2015</td>
+                                    <td class="p-2 text-right">99.45%</td>
+                                    <td class="p-2 text-right">521</td>
+                                    <td class="p-2 text-right">565</td>
+                                    <td class="p-2 text-right">3</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-2 font-medium">2016</td>
+                                    <td class="p-2 text-right">99.66%</td>
+                                    <td class="p-2 text-right">565</td>
+                                    <td class="p-2 text-right">615</td>
+                                    <td class="p-2 text-right">2</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Section Title 5 (新增流失原因排名与热力风险) -->
+        <div class="flex items-center justify-between mt-2 px-1">
+            <h3 class="text-sm font-bold text-[#1E2D3B]">
+                核心观察 5: 组织流失原因排名、编制变动分解与业务部流失风险热力矩阵
+            </h3>
+        </div>
+
+        <!-- High Level Multi-Chart Grid for Retention Rate -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4" data-section="retention-deep-dive">
+            <!-- New Chart 1: Horizontal Bar for Turnover Causes -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex flex-col justify-between">
+                <span class="text-xs font-bold text-pbi-textMuted border-b border-slate-100 pb-2 mb-3">Causes of Turnover (离职归因多色排行榜)</span>
+                <div id="chart-turnover-causes" data-chart-type="HorizontalBar" class="w-full h-64"></div>
+            </div>
+
+            <!-- New Chart 2: Waterfall for Headcount reconciliation -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex flex-col justify-between">
+                <span class="text-xs font-bold text-pbi-textMuted border-b border-slate-100 pb-2 mb-3">Headcount Change Breakdown (年度编制增减瀑布图)</span>
+                <div id="chart-headcount-waterfall" data-chart-type="Waterfall" class="w-full h-64"></div>
+            </div>
+
+            <!-- New Chart 3: Attrition Risk Grid Heatmap -->
+            <div class="bg-white border border-[#DDE3EA] rounded shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 flex flex-col justify-between">
+                <span class="text-xs font-bold text-pbi-textMuted border-b border-slate-100 pb-2 mb-3">Attrition Risk Heatmap (各部门离职风险预警热力图)</span>
+                <div id="chart-risk-heatmap" data-chart-type="Heatmap" class="w-full h-64"></div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ==================== 图表绘制与生命周期脚本 ==================== -->
+<script>
+    // 全局控制变量
+    let activeTab = 'workforce';
+    let workforceMode = 'headcount'; // headcount | proportion
+    
+    // ECharts 实例统一容器
+    const charts = {};
+
+    window.onload = function() {
+        // 初始化 Workforce 模块下的全量图表（包含新增）
+        initWorkforceCharts();
+        
+        // 初始化 Retention 模块下的全量图表（包含新增）
+        initSparklines();
+        initRetentionDashboardCharts();
+
+        // 窗口 Resize 自适应重绘注册
+        window.addEventListener('resize', () => {
+            Object.values(charts).forEach(chart => {
+                if (chart) chart.resize();
+            });
+        });
+    };
+
+    // 页签（Workforce vs Retention）切换核心函数
+    function switchTab(tabId) {
+        if (activeTab === tabId) return;
+        activeTab = tabId;
+
+        const tabWfBtn = document.getElementById('tab-workforce');
+        const tabRetBtn = document.getElementById('tab-retention');
+        const viewWf = document.getElementById('view-workforce');
+        const viewRet = document.getElementById('view-retention');
+
+        if (tabId === 'workforce') {
+            tabWfBtn.className = "flex items-center gap-2 px-6 py-3 text-xs font-semibold rounded-t-md border-b-2 transition-all bg-white text-[#2C3E50] border-blue-600";
+            tabRetBtn.className = "flex items-center gap-2 px-6 py-3 text-xs font-semibold rounded-t-md border-b-2 border-transparent text-slate-400 hover:text-white transition-all";
+            
+            viewWf.classList.remove('hidden');
+            viewRet.classList.add('hidden');
+        } else {
+            tabWfBtn.className = "flex items-center gap-2 px-6 py-3 text-xs font-semibold rounded-t-md border-b-2 border-transparent text-slate-400 hover:text-white transition-all";
+            tabRetBtn.className = "flex items-center gap-2 px-6 py-3 text-xs font-semibold rounded-t-md border-b-2 transition-all bg-white text-[#2C3E50] border-blue-600";
+            
+            viewWf.classList.add('hidden');
+            viewRet.classList.remove('hidden');
+        }
+
+        // 核心技术保障：在选项卡切换后的 50ms 重新自适应触发 resize()，解决零尺寸渲染Bug
+        setTimeout(() => {
+            Object.values(charts).forEach(chart => {
+                if (chart) chart.resize();
+            });
+        }, 50);
+    }
+
+    // Workforce 数据透视切换 (人数 vs Waffle 网格百分比)
+    function toggleWorkforceView(mode) {
+        if (workforceMode === mode) return;
+        workforceMode = mode;
+
+        const btnH = document.getElementById('btn-wf-headcount');
+        const btnP = document.getElementById('btn-wf-proportion');
+
+        if (mode === 'headcount') {
+            btnH.className = "px-3 py-1 rounded font-bold bg-white text-[#2C3E50] shadow-sm transition-all";
+            btnP.className = "px-3 py-1 rounded font-semibold text-slate-500 hover:text-[#2C3E50] transition-all";
+        } else {
+            btnH.className = "px-3 py-1 rounded font-semibold text-slate-500 hover:text-[#2C3E50] transition-all";
+            btnP.className = "px-3 py-1 rounded font-bold bg-white text-[#2C3E50] shadow-sm transition-all";
+        }
+
+        // 重新着色与重构渲染
+        renderEthnicityChart();
+        renderCountryChart();
+        renderAgeChart();
+    }
+
+    // 留存率薪水散点相关性视图切换
+    function toggleCorrView(view) {
+        const btnChart = document.getElementById('btn-corr-chart');
+        const btnTable = document.getElementById('btn-corr-table');
+        const containerChart = document.getElementById('container-corr-chart');
+        const containerTable = document.getElementById('container-corr-table');
+
+        if (view === 'chart') {
+            btnChart.className = "p-1 px-3.5 rounded font-bold bg-white text-[#2C3E50] shadow-sm transition-all";
+            btnTable.className = "p-1 px-3.5 rounded font-semibold text-slate-500 hover:text-[#2C3E50] transition-all";
+            containerChart.classList.remove('hidden');
+            containerTable.classList.add('hidden');
+            setTimeout(() => { if (charts.retScatter) charts.retScatter.resize(); }, 30);
+        } else {
+            btnChart.className = "p-1 px-3.5 rounded font-semibold text-slate-500 hover:text-[#2C3E50] transition-all";
+            btnTable.className = "p-1 px-3.5 rounded font-bold bg-white text-[#2C3E50] shadow-sm transition-all";
+            containerChart.classList.add('hidden');
+            containerTable.classList.remove('hidden');
+        }
+    }
+
+    // 年度趋势视图切换 (Combo 折线图 vs 原始表格)
+    function toggleTrendView(view) {
+        const btnChart = document.getElementById('btn-trend-chart');
+        const btnTable = document.getElementById('btn-trend-table');
+        const containerChart = document.getElementById('container-trend-chart');
+        const containerTable = document.getElementById('container-trend-table');
+
+        if (view === 'chart') {
+            btnChart.className = "p-1 px-3.5 rounded font-bold bg-white text-[#2C3E50] shadow-sm transition-all";
+            btnTable.className = "p-1 px-3.5 rounded font-semibold text-slate-500 hover:text-[#2C3E50] transition-all";
+            containerChart.classList.remove('hidden');
+            containerTable.classList.add('hidden');
+            setTimeout(() => { if (charts.retTrend) charts.retTrend.resize(); }, 30);
+        } else {
+            btnChart.className = "p-1 px-3.5 rounded font-semibold text-slate-500 hover:text-[#2C3E50] transition-all";
+            btnTable.className = "p-1 px-3.5 rounded font-bold bg-white text-[#2C3E50] shadow-sm transition-all";
+            containerChart.classList.add('hidden');
+            containerTable.classList.remove('hidden');
+        }
+    }
+
+    // ==================== 视图一: WORKFORCE (员工结构与招聘转化) ====================
+    
+    function initWorkforceCharts() {
+        renderEthnicityChart();
+        renderCountryChart();
+        renderAgeChart();
+        renderRecruitmentFunnel();
+        renderCompetencyRadar();
+        renderDepartmentDoughnut();
+        renderSalaryDistributionChart();
+    }
+
+    // 1. 族裔分布图 (多色方案)
+    function renderEthnicityChart() {
+        const elem = document.getElementById('chart-ethnicity-dist');
+        if (!elem) return;
+        if (charts.ethnicity) charts.ethnicity.dispose();
+
+        const chart = echarts.init(elem);
+        charts.ethnicity = chart;
+
+        let option = {};
+        if (workforceMode === 'headcount') {
+            option = {
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { top: '8%', bottom: '15%', left: '15%', right: '8%' },
+                xAxis: { type: 'category', data: ['Asian', 'Black', 'Caucasian', 'Latino'], axisLabel: { interval: 0, fontSize: 10 } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#ECEFF1' } } },
+                series: [{
+                    data: [366, 64, 252, 233],
+                    type: 'bar',
+                    barWidth: '55%',
+                    itemStyle: {
+                        color: function(params) {
+                            // 与截图高度一致的 Power BI 色阶配色
+                            const colors = ['#2C3E50', '#7F8C8D', '#EAB308', '#E67E22'];
+                            return colors[params.dataIndex];
+                        },
+                        borderRadius: [2, 2, 0, 0]
+                    }
+                }]
+            };
+        } else {
+            // Waffle Grid 华夫饼模拟 (Heatmap)
+            const waffleData = [];
+            let cellIndex = 0;
+            for (let r = 0; r < 10; r++) {
+                for (let c = 0; c < 10; c++) {
+                    let cat = 0; // Asian 40%
+                    if (cellIndex >= 40 && cellIndex < 68) cat = 1; // Caucasian 27.54%
+                    else if (cellIndex >= 68 && cellIndex < 93) cat = 2; // Latino 25.46%
+                    else if (cellIndex >= 93) cat = 3; // Black 6.99%
+                    waffleData.push([c, r, cat]);
+                    cellIndex++;
+                }
+            }
+
+            option = {
+                tooltip: { 
+                    formatter: function() { 
+                        return `<b>族裔比例 (Proportion)</b><br/>Asian: 40.00%<br/>Caucasian: 27.54%<br/>Latino: 25.46%<br/>Black: 6.99%`;
+                    }
+                },
+                grid: { top: '2%', bottom: '12%', left: '5%', right: '5%', containLabel: true },
+                xAxis: { type: 'category', show: false },
+                yAxis: { type: 'category', show: false },
+                visualMap: {
+                    type: 'piecewise',
+                    show: true,
+                    orient: 'horizontal',
+                    bottom: '0%',
+                    left: 'center',
+                    itemGap: 4,
+                    itemWidth: 8,
+                    itemHeight: 8,
+                    textStyle: { fontSize: 8 },
+                    pieces: [
+                        { value: 0, label: 'Asian', color: '#2C3E50' },
+                        { value: 1, label: 'Caucasian', color: '#EAB308' },
+                        { value: 2, label: 'Latino', color: '#E67E22' },
+                        { value: 3, label: 'Black', color: '#7F8C8D' }
+                    ]
+                },
+                series: [{
+                    type: 'heatmap',
+                    data: waffleData,
+                    label: { show: false },
+                    itemStyle: { borderColor: '#FFF', borderWidth: 1.5 }
+                }]
+            };
+        }
+        chart.setOption(option);
+    }
+
+    // 2. 国家区域分布图 (多色方案)
+    function renderCountryChart() {
+        const elem = document.getElementById('chart-country-dist');
+        if (!elem) return;
+        if (charts.country) charts.country.dispose();
+
+        const chart = echarts.init(elem);
+        charts.country = chart;
+
+        let option = {};
+        if (workforceMode === 'headcount') {
+            option = {
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { top: '8%', bottom: '15%', left: '15%', right: '8%' },
+                xAxis: { type: 'category', data: ['Brazil', 'China', 'United States'], axisLabel: { interval: 0, fontSize: 10 } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#ECEFF1' } } },
+                series: [{
+                    data: [128, 197, 590],
+                    type: 'bar',
+                    barWidth: '55%',
+                    itemStyle: {
+                        color: function(params) {
+                            const colors = ['#E67E22', '#EAB308', '#2C3E50'];
+                            return colors[params.dataIndex];
+                        },
+                        borderRadius: [2, 2, 0, 0]
+                    }
+                }]
+            };
+        } else {
+            // Waffle Grid: US (64格), China (22格), Brazil (14格)
+            const waffleData = [];
+            let cellIndex = 0;
+            for (let r = 0; r < 10; r++) {
+                for (let c = 0; c < 10; c++) {
+                    let cat = 0; // US
+                    if (cellIndex >= 64 && cellIndex < 86) cat = 1; // China
+                    else if (cellIndex >= 86) cat = 2; // Brazil
+                    waffleData.push([c, r, cat]);
+                    cellIndex++;
+                }
+            }
+
+            option = {
+                tooltip: { 
+                    formatter: function() { 
+                        return `<b>地区分布比例 (Proportion)</b><br/>United States: 64.48%<br/>China: 21.53%<br/>Brazil: 13.99%`;
+                    }
+                },
+                grid: { top: '2%', bottom: '12%', left: '5%', right: '5%', containLabel: true },
+                xAxis: { type: 'category', show: false },
+                yAxis: { type: 'category', show: false },
+                visualMap: {
+                    type: 'piecewise',
+                    show: true,
+                    orient: 'horizontal',
+                    bottom: '0%',
+                    left: 'center',
+                    itemGap: 4,
+                    itemWidth: 8,
+                    itemHeight: 8,
+                    textStyle: { fontSize: 8 },
+                    pieces: [
+                        { value: 0, label: 'United States', color: '#2C3E50' },
+                        { value: 1, label: 'China', color: '#EAB308' },
+                        { value: 2, label: 'Brazil', color: '#E67E22' }
+                    ]
+                },
+                series: [{
+                    type: 'heatmap',
+                    data: waffleData,
+                    label: { show: false },
+                    itemStyle: { borderColor: '#FFF', borderWidth: 1.5 }
+                }]
+            };
+        }
+        chart.setOption(option);
+    }
+
+    // 3. 年龄段分布 (多色方案)
+    function renderAgeChart() {
+        const elem = document.getElementById('chart-age-dist');
+        if (!elem) return;
+        if (charts.age) charts.age.dispose();
+
+        const chart = echarts.init(elem);
+        charts.age = chart;
+
+        let option = {};
+        if (workforceMode === 'headcount') {
+            option = {
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { top: '8%', bottom: '15%', left: '15%', right: '8%' },
+                xAxis: { type: 'category', data: ['<30', '30-39', '40-49', '50-59', '>60'], axisLabel: { interval: 0, fontSize: 10 } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#ECEFF1' } } },
+                series: [{
+                    data: [109, 218, 260, 218, 110],
+                    type: 'bar',
+                    barWidth: '55%',
+                    itemStyle: {
+                        color: function(params) {
+                            const colors = ['#7F8C8D', '#EAB308', '#C0392B', '#2C3E50', '#BDC3C7'];
+                            return colors[params.dataIndex];
+                        },
+                        borderRadius: [2, 2, 0, 0]
+                    }
+                }]
+            };
+        } else {
+            // Waffle Grid Age
+            const waffleData = [];
+            let cellIndex = 0;
+            for (let r = 0; r < 10; r++) {
+                for (let c = 0; c < 10; c++) {
+                    let cat = 0; // <30
+                    if (cellIndex >= 12 && cellIndex < 36) cat = 1; // 30-39
+                    else if (cellIndex >= 36 && cellIndex < 64) cat = 2; // 40-49
+                    else if (cellIndex >= 64 && cellIndex < 88) cat = 3; // 50-59
+                    else if (cellIndex >= 88) cat = 4; // >60
+                    waffleData.push([c, r, cat]);
+                    cellIndex++;
+                }
+            }
+
+            option = {
+                tooltip: { 
+                    formatter: function() { 
+                        return `<b>年龄构成比例 (Proportion)</b><br/>Below 30: 11.91%<br/>30-39: 23.83%<br/>40-49: 28.42%<br/>50-59: 23.83%<br/>Above 60: 12.01%`;
+                    }
+                },
+                grid: { top: '2%', bottom: '12%', left: '5%', right: '5%', containLabel: true },
+                xAxis: { type: 'category', show: false },
+                yAxis: { type: 'category', show: false },
+                visualMap: {
+                    type: 'piecewise',
+                    show: true,
+                    orient: 'horizontal',
+                    bottom: '0%',
+                    left: 'center',
+                    itemGap: 4,
+                    itemWidth: 8,
+                    itemHeight: 8,
+                    textStyle: { fontSize: 8 },
+                    pieces: [
+                        { value: 0, label: 'Below 30', color: '#7F8C8D' },
+                        { value: 1, label: '30-39', color: '#EAB308' },
+                        { value: 2, label: '40-49', color: '#C0392B' },
+                        { value: 3, label: '50-59', color: '#2C3E50' },
+                        { value: 4, label: 'Above 60', color: '#BDC3C7' }
+                    ]
+                },
+                series: [{
+                    type: 'heatmap',
+                    data: waffleData,
+                    label: { show: false },
+                    itemStyle: { borderColor: '#FFF', borderWidth: 1.5 }
+                }]
+            };
+        }
+        chart.setOption(option);
+    }
+
+    // 4. (新增) 招聘漏斗图 Funnel
+    function renderRecruitmentFunnel() {
+        const elem = document.getElementById('chart-recruitment-funnel');
+        if (!elem) return;
+        const chart = echarts.init(elem);
+        charts.hiringFunnel = chart;
+
+        const option = {
+            tooltip: { trigger: 'item', formatter: '{b} : {c}%' },
+            series: [{
+                name: '招聘转化效率',
+                type: 'funnel',
+                left: '10%', right: '10%', top: '10%', bottom: '10%',
+                width: '80%', minSize: '20%',
+                label: { show: true, position: 'inside', fontSize: 10, formatter: '{b} ({c}%)' },
+                itemStyle: {
+                    borderWidth: 1,
+                    borderColor: '#FFF',
+                    color: function(params) {
+                        const colors = ['#2C3E50', '#34495E', '#16A085', '#27AE60', '#F1C40F'];
+                        return colors[params.dataIndex];
+                    }
+                },
+                data: [
+                    { value: 100, name: '简历筛选' },
+                    { value: 65, name: '初试测评' },
+                    { value: 38, name: '复试评估' },
+                    { value: 18, name: 'Offer发出' },
+                    { value: 12, name: '正式入职' }
+                ]
+            }]
+        };
+        chart.setOption(option);
+    }
+
+    // 5. (新增) 员工能力模型雷达图 Radar
+    function renderCompetencyRadar() {
+        const elem = document.getElementById('chart-competency-radar');
+        if (!elem) return;
+        const chart = echarts.init(elem);
+        charts.competencyRadar = chart;
+
+        const option = {
+            tooltip: {},
+            radar: {
+                indicator: [
+                    { name: '技术攻坚 (Tech)', max: 100 },
+                    { name: '跨界协作 (Cooperation)', max: 100 },
+                    { name: '项目管控 (Execution)', max: 100 },
+                    { name: '产品共情 (Empathy)', max: 100 },
+                    { name: '组织自驱 (Self-drive)', max: 100 }
+                ],
+                radius: '68%',
+                axisName: { textStyle: { color: '#64748B', fontSize: 9 } }
+            },
+            series: [{
+                name: '在职 vs 流失特征雷达',
+                type: 'radar',
+                data: [
+                    {
+                        value: [85, 78, 88, 70, 92],
+                        name: '在职核心员工',
+                        itemStyle: { color: '#27AE60' },
+                        areaStyle: { color: 'rgba(39, 174, 96, 0.25)' }
+                    },
+                    {
+                        value: [92, 60, 72, 85, 65],
+                        name: '离职变动员工',
+                        itemStyle: { color: '#C0392B' },
+                        areaStyle: { color: 'rgba(192, 57, 43, 0.25)' }
+                    }
+                ]
+            }]
+        };
+        chart.setOption(option);
+    }
+
+    // 6. (新增) 部门在职占比环形图 Doughnut
+    function renderDepartmentDoughnut() {
+        const elem = document.getElementById('chart-dept-doughnut');
+        if (!elem) return;
+        const chart = echarts.init(elem);
+        charts.deptDoughnut = chart;
+
+        const option = {
+            tooltip: { trigger: 'item' },
+            legend: { bottom: '0%', left: 'center', itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 9 } },
+            series: [{
+                name: '在职人数占比',
+                type: 'pie',
+                radius: ['45%', '70%'],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                    borderRadius: 4,
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    color: function(params) {
+                        const colors = ['#2C3E50', '#EAB308', '#27AE60', '#E67E22', '#94A3B8'];
+                        return colors[params.dataIndex % colors.length];
+                    }
+                },
+                label: { show: false },
+                data: [
+                    { value: 435, name: '研发工程部' },
+                    { value: 240, name: '产品设计中心' },
+                    { value: 128, name: '全球商务销售' },
+                    { value: 68, name: '组织发展与HR' },
+                    { value: 44, name: '财务综合后勤' }
+                ]
+            }]
+        };
+        chart.setOption(option);
+    }
+
+    // 7. 薪资职级散点图 (多色对比方案)
+    function renderSalaryDistributionChart() {
+        const elem = document.getElementById('chart-salary-scatter');
+        if (!elem) return;
+        const chart = echarts.init(elem);
+        charts.salaryScatter = chart;
+
+        const jobTitles = ['Vice President', 'Administrator', 'Director', 'Manager', 'Engineer', 'Architect', 'Analyst', 'Representative', 'Partner', 'Coordinator'];
+        
+        const highestData = [225000, 200000, 175000, 160000, 130000, 105000, 100000, 100000, 100000, 60000];
+        const medianData  = [115400, 112000, 110000, 95000,  88000,  76000,  69000,  65000,  62000,  45000];
+        const lowestData  = [60000,  62000,  65000,  62000,  55000,  48000,  45000,  42000,  40000,  32000];
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                formatter: function(params) {
+                    const title = params[0].name;
+                    let out = `<b>${title} Annual Salary</b><br/>`;
+                    params.forEach(p => {
+                        out += `${p.seriesName}: $${(p.value/1000).toFixed(2)}K<br/>`;
+                    });
+                    return out;
+                }
+            },
+            grid: { top: '10%', bottom: '15%', left: '8%', right: '4%' },
+            xAxis: {
+                type: 'category',
+                data: jobTitles,
+                axisLabel: { interval: 0, fontSize: 10, rotate: 10 },
+                axisLine: { lineStyle: { color: '#64748B' } }
+            },
+            yAxis: {
+                type: 'value',
+                min: 0,
+                max: 250000,
+                axisLabel: {
+                    formatter: function(val) { return `$${val / 1000}K`; },
+                    fontSize: 10
+                },
+                splitLine: { lineStyle: { type: 'dashed', color: '#ECEFF1' } }
+            },
+            series: [
+                {
+                    name: 'Highest Annual Salary',
+                    type: 'scatter',
+                    data: highestData,
+                    symbolSize: 12,
+                    itemStyle: { color: '#C0392B' }
+                },
+                {
+                    name: 'Median Annual Salary',
+                    type: 'scatter',
+                    data: medianData,
+                    symbolSize: 12,
+                    itemStyle: { color: '#F1C40F' }
+                },
+                {
+                    name: 'Lowest Annual Salary',
+                    type: 'scatter',
+                    data: lowestData,
+                    symbolSize: 12,
+                    itemStyle: { color: '#27AE60' }
+                }
+            ]
+        };
+
+        chart.setOption(option);
+    }
+
+    // ==================== 视图二: RETENTION RATE (流失留存与组织效能) ====================
+    
+    function initSparklines() {
+        const sData1 = [89.12, 89.45, 89.20, 89.85, 89.79];
+        const sData2 = [10.88, 10.55, 10.80, 10.15, 10.21];
+        const sData3 = [74, 71, 75, 68, 69];
+
+        renderMiniSparkline('sparkline-retention', sData1, '#D97706');
+        renderMiniSparkline('sparkline-turnover', sData2, '#2C3E50');
+        renderMiniSparkline('sparkline-left', sData3, '#C0392B');
+    }
+
+    function renderMiniSparkline(id, data, color) {
+        const elem = document.getElementById(id);
+        if (!elem) return;
+        const chart = echarts.init(elem);
+        charts[id] = chart;
+
+        const option = {
+            grid: { top: 2, bottom: 2, left: 2, right: 2 },
+            xAxis: { type: 'category', show: false },
+            yAxis: { type: 'value', show: false },
+            series: [{
+                data: data,
+                type: 'line',
+                smooth: true,
+                symbol: 'none',
+                lineStyle: { width: 2, color: color },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: color + '44' },
+                        { offset: 1, color: color + '00' }
+                    ])
+                }
+            }]
+        };
+        chart.setOption(option);
+    }
+
+    function initRetentionDashboardCharts() {
+        renderRetentionScatter();
+        renderRetentionTrend();
+        
+        // 渲染新增的 3 种中高级深度分析图表
+        renderTurnoverCauses();
+        renderHeadcountWaterfall();
+        renderRiskHeatmap();
+    }
+
+    // 留存率与薪资散点回归分析 (多色优雅拟合)
+    function renderRetentionScatter() {
+        const elem = document.getElementById('chart-retention-scatter');
+        if (!elem) return;
+        const chart = echarts.init(elem);
+        charts.retScatter = chart;
+
+        const data = [
+            [48061, 88.06], [53929, 90.91], [63196, 90.00], [65340, 92.31], 
+            [74749, 86.67], [76272, 88.24], [76354, 93.33], [82162, 88.24],
+            [86858, 86.67], [115765, 88.24], [118307, 94.41], [138850, 89.40],
+            [176704, 87.50], [183526, 93.79]
+        ];
+
+        const trendLine = [[40000, 88.5], [190000, 92.0]];
+
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: function(params) {
+                    if (params.seriesIndex === 0) {
+                        return `<b>岗位关联明细</b><br/>年均薪酬: $${params.value[0].toLocaleString()}<br/>保留率: ${params.value[1]}%`;
+                    }
+                    return `拟合线性回归趋势线`;
+                }
+            },
+            grid: { top: '10%', bottom: '15%', left: '10%', right: '5%' },
+            xAxis: {
+                type: 'value',
+                min: 40000,
+                max: 200000,
+                axisLabel: {
+                    formatter: function(val) { return `$${val/1000}K`; },
+                    fontSize: 9
+                },
+                splitLine: { lineStyle: { type: 'dashed', color: '#ECEFF1' } }
+            },
+            yAxis: {
+                type: 'value',
+                min: 70,
+                max: 100,
+                axisLabel: { formatter: '{value}%', fontSize: 9 },
+                splitLine: { lineStyle: { type: 'dashed', color: '#ECEFF1' } }
+            },
+            series: [
+                {
+                    name: '岗位数据',
+                    type: 'scatter',
+                    data: data,
+                    symbolSize: 9,
+                    itemStyle: { color: '#2C3E50' }
+                },
+                {
+                    name: '拟合线',
+                    type: 'line',
+                    data: trendLine,
+                    symbol: 'none',
+                    lineStyle: { type: 'dashed', color: '#EAB308', width: 2 }
+                }
+            ]
+        };
+        chart.setOption(option);
+    }
+
+    // 历年留存双轴图 (双色渐变方案)
+    function renderRetentionTrend() {
+        const elem = document.getElementById('chart-retention-trend');
+        if (!elem) return;
+        const chart = echarts.init(elem);
+        charts.retTrend = chart;
+
+        const years = ['2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022'];
+        const begPeriod = [436, 473, 521, 565, 615, 677, 741, 802, 856, 922];
+        const endPeriod = [473, 521, 565, 615, 677, 741, 802, 856, 922, 915];
+        const retentionRate = [99.56, 99.20, 99.45, 99.66, 98.76, 99.44, 99.09, 98.55, 97.75, 99.24];
+
+        const option = {
+            tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+            grid: { top: '15%', bottom: '15%', left: '10%', right: '10%' },
+            legend: {
+                data: ['期初员工总数', '期末员工总数', '年度保留率'],
+                textStyle: { fontSize: 8 },
+                top: '0%'
+            },
+            xAxis: {
+                type: 'category',
+                data: years,
+                axisLabel: { fontSize: 9 }
+            },
+            yAxis: [
+                {
+                    type: 'value',
+                    name: '在职人数',
+                    min: 0,
+                    max: 1000,
+                    axisLabel: { fontSize: 9 },
+                    splitLine: { lineStyle: { type: 'dashed', color: '#ECEFF1' } }
+                },
+                {
+                    type: 'value',
+                    name: '保留率',
+                    min: 90,
+                    max: 100,
+                    axisLabel: { formatter: '{value}%', fontSize: 9 },
+                    splitLine: { show: false }
+                }
+            ],
+            series: [
+                {
+                    name: '期初员工总数',
+                    type: 'bar',
+                    data: begPeriod,
+                    itemStyle: { color: '#94A3B8' }
+                },
+                {
+                    name: '期末员工总数',
+                    type: 'bar',
+                    data: endPeriod,
+                    itemStyle: { color: '#2C3E50' }
+                },
+                {
+                    name: '年度保留率',
+                    type: 'line',
+                    yAxisIndex: 1,
+                    data: retentionRate,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    lineStyle: { color: '#D97706', width: 2 },
+                    itemStyle: { color: '#D97706' }
+                }
+            ]
+        };
+        chart.setOption(option);
+    }
+
+    // 8. (新增) 离职原因多色横向柱状图 HorizontalBar
+    function renderTurnoverCauses() {
+        const elem = document.getElementById('chart-turnover-causes');
+        if (!elem) return;
+        const chart = echarts.init(elem);
+        charts.turnoverCauses = chart;
+
+        const option = {
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+            grid: { top: '8%', bottom: '10%', left: '20%', right: '8%' },
+            xAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#ECEFF1' } } },
+            yAxis: {
+                type: 'category',
+                data: ['薪资待遇', '发展瓶颈', '组织变动', '身体家庭', '通勤环境', '其它诱因'],
+                axisLabel: { fontSize: 10, interval: 0 }
+            },
+            series: [{
+                name: '提及人数',
+                type: 'bar',
+                data: [32, 18, 12, 8, 5, 2],
+                barWidth: '55%',
+                itemStyle: {
+                    color: function(params) {
+                        const colors = ['#C0392B', '#E67E22', '#F1C40F', '#34495E', '#7F8C8D', '#BDC3C7'];
+                        return colors[params.dataIndex];
+                    },
+                    borderRadius: [0, 2, 2, 0]
+                }
+            }]
+        };
+        chart.setOption(option);
+    }
+
+    // 9. (新增) 年度编制变化瀑布图 Waterfall
+    function renderHeadcountWaterfall() {
+        const elem = document.getElementById('chart-headcount-waterfall');
+        if (!elem) return;
+        const chart = echarts.init(elem);
+        charts.waterfall = chart;
+
+        // 瀑布图构造数据
+        const base = [0, 922, 922, 915, 0];
+        const change = [922, 62, -69, -69, 915];
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: function (params) {
+                    let tar;
+                    if (params[1].value !== '-') { tar = params[1]; } 
+                    else { tar = params[0]; }
+                    return tar.name + '<br/>数量: ' + tar.value;
+                }
+            },
+            grid: { top: '10%', bottom: '12%', left: '12%', right: '8%' },
+            xAxis: {
+                type: 'category',
+                data: ['期初编制', '新增入职', '主动离职', '解聘/退休', '期末存量']
+            },
+            yAxis: {
+                type: 'value',
+                splitLine: { lineStyle: { type: 'dashed', color: '#ECEFF1' } }
+            },
+            series: [
+                {
+                    name: '占位符',
+                    type: 'bar',
+                    stack: 'total',
+                    itemStyle: { borderColor: 'transparent', color: 'transparent' },
+                    emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' } },
+                    data: base
+                },
+                {
+                    name: '变动增减额',
+                    type: 'bar',
+                    stack: 'total',
+                    label: { show: true, position: 'inside', fontSize: 9 },
+                    data: change,
+                    itemStyle: {
+                        color: function(params) {
+                            if (params.dataIndex === 0 || params.dataIndex === 4) return '#2C3E50'; // 两个基准总和
+                            return params.value > 0 ? '#27AE60' : '#C0392B'; // 绿色代表增加，红色代表流失
+                        }
+                    }
+                }
+            ]
+        };
+        chart.setOption(option);
+    }
+
+    // 10. (新增) 流失风险梯度热力矩阵 Heatmap
+    function renderRiskHeatmap() {
+        const elem = document.getElementById('chart-risk-heatmap');
+        if (!elem) return;
+        const chart = echarts.init(elem);
+        charts.riskHeatmap = chart;
+
+        // 5x5 热力矩阵 (部门 x 季度)
+        const qtr = ['Q1', 'Q2', 'Q3', 'Q4'];
+        const depts = ['HR', '销售', '客服', '研发', '产品'];
+        
+        // 风险系数: 0-10 等级
+        const data = [
+            [0,0,2],[1,0,3],[2,0,9],[3,0,1], // Q1
+            [0,1,1],[1,1,8],[2,1,4],[3,1,2], // Q2
+            [0,2,3],[1,2,5],[2,2,8],[3,2,9], // Q3
+            [0,3,1],[1,3,2],[2,3,4],[3,3,10] // Q4
+        ];
+
+        const option = {
+            tooltip: { position: 'top' },
+            grid: { top: '8%', bottom: '15%', left: '15%', right: '8%' },
+            xAxis: { type: 'category', data: qtr, splitArea: { show: true } },
+            yAxis: { type: 'category', data: depts, splitArea: { show: true } },
+            visualMap: {
+                min: 0,
+                max: 10,
+                calculable: true,
+                orient: 'horizontal',
+                left: 'center',
+                bottom: '0%',
+                itemHeight: 10,
+                textStyle: { fontSize: 8 },
+                // 警示度渐变：绿 -> 黄 -> 橙 -> 红
+                inRange: { color: ['#27AE60', '#F1C40F', '#E67E22', '#C0392B'] }
+            },
+            series: [{
+                name: '流失风险偏度',
+                type: 'heatmap',
+                data: data,
+                label: { show: true, fontSize: 8 },
+                emphasis: {
+                    itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.5)' }
+                }
+            }]
+        };
+        chart.setOption(option);
+    }
+</script>
+
+</body>
+</html>

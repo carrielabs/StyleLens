@@ -1,0 +1,273 @@
+{
+  "id": "dashboard-28-macos-glass-transaction-dashboard",
+  "sourceConfigId": "premium-macos-dashboard-template",
+  "name": "macOS Glass Transaction Dashboard macOS 玻璃态数字交易分析大屏",
+  "templateName": "MacOSGlassTransactionDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向数字化交易中台、跨境收单、渠道流量、API 节点状态和企业经营复盘的 macOS 玻璃态交互数据大屏。",
+  "pageTypes": [
+    "dashboard",
+    "enterprise-report",
+    "operations-analysis",
+    "financial-review",
+    "digital-settlement-screen"
+  ],
+  "styleTags": [
+    "glassmorphism",
+    "macos-style",
+    "premium-dashboard",
+    "interactive-hover",
+    "transaction-analytics"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "数字化交易分析大屏",
+    "跨境收单与清结算复盘",
+    "渠道流量热力分析",
+    "API 边缘节点监控",
+    "企业经营数据可视化"
+  ],
+  "requiredRuntime": [
+    "Tailwind CDN",
+    "Lucide CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#F0F4FF",
+      "surfaceGlass": "rgba(255, 255, 255, 0.48)",
+      "surfaceGlassDark": "rgba(28, 28, 40, 0.45)",
+      "emerald": "#10B981",
+      "lime": "#BEF264",
+      "purple": "#A855F7",
+      "indigo": "#4F46E5",
+      "blue": "#3B82F6",
+      "textMain": "#0F172A",
+      "textSub": "#64748B"
+    },
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeOverride": false,
+    "systemThemeSync": true
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "顶部品牌、三条核心洞察和四个 KPI 指标",
+      "required": true,
+      "hideable": false
+    },
+    "core-finding-1": {
+      "desc": "流量热力点阵和渠道嵌套圆环",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-2": {
+      "desc": "时间区间波形和年度趋势面积折线",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-3": {
+      "desc": "渠道胶囊对比和边缘节点延迟状态",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "kpi",
+    "heatmap",
+    "ring",
+    "column",
+    "area",
+    "capsule-bar",
+    "latency"
+  ],
+  "sourceSupportedChartTypes": [
+    "kpi",
+    "funnel",
+    "heatmap",
+    "ring",
+    "radar",
+    "line",
+    "area",
+    "column",
+    "stacked-column",
+    "waterfall",
+    "ranking",
+    "latency"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-editable、contenteditable、data-slot 和 data-key"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[data-chart-type], [id^=\"chart-\"]",
+      "desc": "实际 10 个 chart-* 图表/数据模块"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "4 类核心数据区，部分区内有多个图表模块"
+    },
+    "textSlots": [
+      "text.brand_title",
+      "text.brand_sub",
+      "text.insight_1_title",
+      "text.insight_1_desc",
+      "text.insight_2_title",
+      "text.insight_2_desc",
+      "text.insight_3_title",
+      "text.insight_3_desc",
+      "text.finding_1_title",
+      "text.finding_1_desc",
+      "text.finding_2_title",
+      "text.finding_2_desc",
+      "text.finding_3_title",
+      "text.finding_3_desc"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-net-revenue-kpi", "type": "kpi", "section": "key-takeaway", "description": "总交易净额指标卡" },
+    { "id": "chart-transaction-volume-kpi", "type": "kpi", "section": "key-takeaway", "description": "事务处理总量指标卡" },
+    { "id": "chart-promo-revenue-kpi", "type": "kpi", "section": "key-takeaway", "description": "广告投放总收益指标卡" },
+    { "id": "chart-edge-availability-kpi", "type": "kpi", "section": "key-takeaway", "description": "全球节点可用性指标卡" },
+    { "id": "chart-traffic-heatmap", "type": "heatmap", "section": "core-finding-1", "description": "流量热力点阵" },
+    { "id": "chart-channel-nested-ring", "type": "ring", "section": "core-finding-1", "description": "渠道多维嵌套圆环" },
+    { "id": "chart-time-range-wave", "type": "column", "section": "core-finding-2", "description": "时间区间波形柱状调节器" },
+    { "id": "chart-annual-trend-area", "type": "area", "section": "core-finding-2", "description": "年度趋势面积折线图" },
+    { "id": "chart-channel-capsule-comparison", "type": "capsule-bar", "section": "core-finding-3", "description": "渠道胶囊对比图" },
+    { "id": "chart-edge-latency-status", "type": "latency", "section": "core-finding-3", "description": "边缘节点延迟状态" }
+  ],
+  "sampleData": {
+    "text": {
+      "text.brand_title": "DASHBOARD DIGITAL",
+      "text.brand_sub": "数字化交易全景中台 • 全实时数据处理矩阵",
+      "text.insight_1_title": "流量峰值预警 (13:00 - 15:00)",
+      "text.insight_1_desc": "社交渠道（Social Media）于午间产生流量峰值，转化率高出均值 18%，建议加大此时段的广告预算配比。",
+      "text.insight_2_title": "周期业绩预测与提速",
+      "text.insight_2_desc": "根据本季度数据走势推演，下月（八月）总交易净额预计突破 $910K，有望刷新本年度业绩高点。",
+      "text.insight_3_title": "多渠道优化建议",
+      "text.insight_3_desc": "广告渠道配比占比已达 72% 的阶段饱和态。后续扩容应侧重于高质触达的 Organic Streams 和联盟生态。",
+      "text.finding_1_title": "Total Traffic 热力点阵",
+      "text.finding_1_desc": "按维度细分的实时数据分布（悬浮圆点激活十字对准线及高保真信息卡）",
+      "text.finding_2_title": "Time Range Selector（时间分布波形分析）",
+      "text.finding_2_desc": "实时流量的区间化调节，鼠标划过任意波形条进行高度与时间联动定位",
+      "text.finding_3_title": "Compare 比较图",
+      "text.finding_3_desc": "最出色的活动数据层级与维度浮雕条"
+    },
+    "charts": {
+      "net_revenue": { "value": "$879,274", "trend": "同比增长 24%", "sparkline": [18, 4, 14, 8, 12, 15, 7, 10] },
+      "transactions": { "value": "367,821", "trend": "环比递增 12.3%", "sparkline": [18, 6, 15, 10, 14, 11, 8, 12] },
+      "promo_revenue": { "value": "$231,489", "trend": "达到本期目标 92%", "sparkline": [18, 8, 16, 12, 14, 9, 13, 11] },
+      "edge_availability": { "value": "99.98%", "trend": "48 边缘节点集群在线", "sparkline": [18, 5, 13, 9, 12, 11, 14, 10] },
+      "annual_trend": [
+        { "month": "Jan", "value": 198242 },
+        { "month": "Feb", "value": 287192 },
+        { "month": "Mar", "value": 231489 },
+        { "month": "Apr", "value": 321980 },
+        { "month": "May", "value": 432231 },
+        { "month": "Jun", "value": 682192 },
+        { "month": "Jul", "value": 732231 },
+        { "month": "Aug", "value": 879274 },
+        { "month": "Sep", "value": 710240 },
+        { "month": "Oct", "value": 850290 },
+        { "month": "Nov", "value": 621092 },
+        { "month": "Dec", "value": 410249 }
+      ]
+    }
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container",
+    "invalidMetric": "hide-trend-badge"
+  },
+  "slotLimits": {
+    "brand-title": 18,
+    "brand-sub": 30,
+    "insight-title": 24,
+    "insight-desc": 110,
+    "finding-title": 32,
+    "finding-desc": 90,
+    "kpi-value": 16
+  },
+  "llmInjectionRules": [
+    "文本替换优先匹配 data-key 或 data-slot，只注入纯文本。",
+    "图表数据注入时优先匹配 chartModules 中的 chart-* ID，不改布局样式。",
+    "当前 HTML 使用原生 SVG、DOM 和 Vanilla JavaScript，不要擅自改成 ECharts 或 Chart.js。",
+    "原始说明中未实际交付的 funnel、radar、waterfall、ranking 不作为当前模板必填模块。",
+    "缺少图表数据时隐藏对应 data-chart-type 容器，不删除 Key Takeaway。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "templateConfigArchived": true,
+    "templateConfigFile": "originals/pasted-template-config.json",
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "editableCount": 14,
+    "duplicateSlotCount": 0,
+    "uniqueDataSections": 4,
+    "dataSectionElementCount": 11,
+    "chartCount": 10,
+    "chartModuleCount": 10,
+    "dataChartTypeCount": 10,
+    "usesECharts": false,
+    "usesChartJs": false,
+    "usesLucide": true,
+    "standardReview": [
+      "HTML 是完整单页 Dashboard，可直接浏览器打开。",
+      "原始 HTML 缺少 data-section、data-slot、data-key、data-editable、contenteditable 和 data-chart-type，入库版已补齐。",
+      "原始槽位说明声称 12 个核心图表卡片区，实际 HTML 交付 10 个图表/数据模块；入库版按实际 10 个登记。",
+      "原始配置列出 funnel、radar、waterfall、ranking、stacked-column 等图表类型，但 HTML 未交付对应容器。",
+      "原始 HTML 使用 Tailwind CDN、Lucide CDN 和 Vanilla JavaScript，未使用 ECharts 或 Chart.js。",
+      "视觉基本符合 macOS 玻璃态、半透明卡片、动态渐变背景、系统字体和 hover 交互规范。",
+      "项目要求预览图，但本轮低性能模式未生成 preview.png。"
+    ],
+    "sourceCleanup": [
+      "按模板 28 命名为 dashboard-28-macos-glass-transaction-dashboard。",
+      "模板命名为 macOS Glass Transaction Dashboard macOS 玻璃态数字交易分析大屏。",
+      "保留 Gemini 原始 HTML 到 originals/source-template.html 和 originals/pasted-text.html。",
+      "补齐 README.md、design-standard.md、template-slots.md、template.json、preview-metadata.md 和模板注册。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#A855F7",
+    "presets": [
+      "#F0F4FF",
+      "#FFFFFF",
+      "#10B981",
+      "#BEF264",
+      "#A855F7",
+      "#4F46E5",
+      "#3B82F6",
+      "#0F172A",
+      "#64748B"
+    ],
+    "targets": {
+      "tailwindColors": {
+        "emerald": "交易增长和健康状态",
+        "lime": "高亮趋势和年度折线",
+        "purple": "技术吞吐与时间波形",
+        "blue": "网络稳定与节点状态",
+        "slate": "文字、网格和低热度点"
+      }
+    }
+  }
+}

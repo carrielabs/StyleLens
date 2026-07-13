@@ -1,0 +1,230 @@
+{
+  "id": "dashboard-21-corporate-operating-analysis-report",
+  "name": "Corporate Operating Analysis 企业经营分析报告",
+  "templateName": "CorporateOperatingAnalysisReportDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向管理层经营汇报、阶段性业务复盘和专项数据分析的企业经营分析报告模板。当前入库版保留 Gemini 原始暖色 HTML，并按仓库规范补齐配置与审计说明。",
+  "pageTypes": [
+    "dashboard",
+    "data-report",
+    "analysis",
+    "business-review",
+    "executive-summary"
+  ],
+  "styleTags": [
+    "corporate-operating-analysis",
+    "warm-business-report",
+    "editable-dashboard",
+    "echarts",
+    "management-report"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "medium",
+  "bestFor": [
+    "管理层经营汇报",
+    "业务部门阶段复盘",
+    "专项数据分析报告",
+    "企业经营指标展示"
+  ],
+  "requiredRuntime": [
+    "ECharts CDN",
+    "Vanilla JavaScript",
+    "Google Fonts CDN"
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#1A1A1A",
+      "background": "#E4D8CD",
+      "surface": "#F5EFEB",
+      "textMain": "#1A1A1A",
+      "textSub": "#968F88",
+      "border": "#E6DCD1",
+      "green": "#7AC794",
+      "orange": "#FF9B70",
+      "yellow": "#FFC656",
+      "purple": "#C8A2FF",
+      "blue": "#7EA9FF",
+      "red": "#F08080"
+    },
+    "fonts": {
+      "body": "Inter, PingFang SC, Microsoft YaHei, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeOverride": false
+  },
+  "supportedSections": {
+    "section-takeaway": {
+      "desc": "报告核心结论、4 个 KPI 卡片和 2 个核心图表",
+      "required": true,
+      "hideable": false
+    },
+    "section-finding-1": {
+      "desc": "工作负载与资源分布分析",
+      "required": true,
+      "hideable": true
+    },
+    "section-finding-2": {
+      "desc": "绩效、成本结构与效率分析",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "kpi-card",
+    "area",
+    "gauge",
+    "scatter-line",
+    "donut",
+    "bar-stacked",
+    "radar"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "当前 HTML 中 8 个可编辑文本槽位均带 data-editable、contenteditable、data-slot 和 data-key"
+    },
+    "kpiCards": {
+      "type": "array",
+      "selector": "[data-chart-type=\"kpi-card\"]",
+      "desc": "KPI 卡片以 chart-kpi-* ID 标记；内部 label/value/trendValue 目前仅有 data-key，未全部声明为 contenteditable"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "ECharts 图表容器；样例数据写在底部 setOption 配置中"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "报告模块容器"
+    },
+    "textSlots": [
+      "text.header.title",
+      "text.header.subtitle",
+      "text.takeaway.title",
+      "text.takeaway.desc",
+      "text.finding1.title",
+      "text.finding1.desc",
+      "text.finding2.title",
+      "text.finding2.desc"
+    ],
+    "kpiSlots": [
+      "chart-kpi-revenue",
+      "chart-kpi-profit",
+      "chart-kpi-users",
+      "chart-kpi-growth"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-kpi-revenue", "type": "kpi-card", "section": "section-takeaway", "description": "总收入 KPI 卡片" },
+    { "id": "chart-kpi-profit", "type": "kpi-card", "section": "section-takeaway", "description": "项目或利润 KPI 卡片" },
+    { "id": "chart-kpi-users", "type": "kpi-card", "section": "section-takeaway", "description": "时间或用户 KPI 卡片" },
+    { "id": "chart-kpi-growth", "type": "kpi-card", "section": "section-takeaway", "description": "增长或资源 KPI 卡片" },
+    { "id": "chart-main-trend", "type": "area", "section": "section-takeaway", "description": "收入与时间趋势面积图" },
+    { "id": "chart-overall-progress", "type": "gauge", "section": "section-takeaway", "description": "整体进度半环仪表盘" },
+    { "id": "chart-workload", "type": "scatter-line", "section": "section-finding-1", "description": "项目工作负载象形柱图" },
+    { "id": "chart-resource-pie", "type": "donut", "section": "section-finding-1", "description": "资源分配环形图" },
+    { "id": "chart-cost-bar", "type": "bar-stacked", "section": "section-finding-2", "description": "成本结构堆叠柱状图" },
+    { "id": "chart-efficiency-radar", "type": "radar", "section": "section-finding-2", "description": "效率雷达图" }
+  ],
+  "sampleData": {
+    "text": {
+      "text.header.title": "2023 年度公司经营与项目进展分析报告",
+      "text.header.subtitle": "汇报对象：管理层 / 数据截止：2023 年 12 月 31 日",
+      "text.takeaway.title": "核心结论",
+      "text.takeaway.desc": "整体收入与项目推进情况良好，核心指标均达成预期。设计团队资源利用率提升，但部分开发项目存在延期风险，需关注。",
+      "text.finding1.title": "工作负载与资源分布",
+      "text.finding1.desc": "团队成员的工作负载分布情况。部分核心成员承担了较多高优先级项目，需注意资源平衡。",
+      "text.finding2.title": "绩效与效率复盘",
+      "text.finding2.desc": "各阶段转化表现平稳，但特定业务线的成本结构仍存在优化空间。"
+    }
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container"
+  },
+  "slotLimits": {
+    "report-title": 40,
+    "report-subtitle": 80,
+    "section-title": 32,
+    "summary-text": 180,
+    "analysis-text": 180
+  },
+  "llmInjectionRules": [
+    "替换文本时优先通过 data-key 精确匹配，只注入纯文本。",
+    "替换图表数据时只修改底部 ECharts setOption 数据，不触碰布局和样式。",
+    "缺少图表数据时隐藏对应图表容器，避免空白或报错。",
+    "当前 HTML 与原始配置 JSON 不完全一致，自动注入时以本 template.json 的 chartModules 为准。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "templateConfigArchived": true,
+    "templateConfigFile": "originals/pasted-template-config.json",
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "editableCount": 8,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 3,
+    "chartCount": 10,
+    "kpiCount": 4,
+    "usesECharts": true,
+    "standardReview": [
+      "HTML 能作为单页 ECharts 报告模板入库，基础结构、data-section、chart-* ID 和文本槽位存在。",
+      "与用户给出的设计规范存在明显偏差：HTML 使用暖色大圆角卡片，规范要求商务灰蓝、小圆角和更严谨报告风。",
+      "与原始配置 JSON 存在明显偏差：JSON 声明 4 个报告板块和 12 个图表模块，HTML 实际只有 3 个板块和 10 个 chart-* 容器。",
+      "文本槽位缺少 finding3；KPI 内部字段和图表标题未全部声明为可编辑文本。",
+      "HTML 引入 Google Fonts 和 ECharts CDN，属于外部运行依赖。"
+    ],
+    "sourceCleanup": [
+      "按模板 21 命名规范归档到 dashboard-21-corporate-operating-analysis-report。",
+      "保留 Gemini 原始 HTML，不擅自重构视觉和图表结构。",
+      "将入库 template.json 按实际 HTML 结构重写，原始 JSON 归档到 originals。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#FF9B70",
+    "presets": [
+      "#FF9B70",
+      "#7AC794",
+      "#FFC656",
+      "#C8A2FF",
+      "#7EA9FF",
+      "#F08080",
+      "#1A1A1A"
+    ],
+    "targets": {
+      "cssVariables": {
+        "--color-orange": "主强调橙",
+        "--color-green": "增长绿",
+        "--color-yellow": "警示黄",
+        "--color-purple": "辅助紫",
+        "--color-blue": "辅助蓝",
+        "--color-red": "风险红",
+        "--text-primary": "主文本"
+      },
+      "colorSelectors": [
+        ".icon-orange",
+        ".icon-green",
+        ".icon-yellow",
+        ".icon-purple",
+        ".icon-blue",
+        ".kpi-trend.up",
+        ".kpi-trend.down"
+      ]
+    }
+  }
+}

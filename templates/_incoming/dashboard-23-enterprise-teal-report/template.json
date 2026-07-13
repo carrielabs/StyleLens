@@ -1,0 +1,260 @@
+{
+  "id": "dashboard-23-enterprise-teal-report",
+  "sourceConfigId": "enterprise_report_emerson_style_v1",
+  "name": "Enterprise Teal Report 企业级蓝绿经营分析报告",
+  "templateName": "EnterpriseTealReportDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向年度总结、经营复盘、ESG 可持续发展报告和董事会汇报的企业级数据分析报告模板。入库版保留 Gemini 原始 Chart.js 页面结构，并按仓库规范补齐配置、槽位说明和审计记录。",
+  "pageTypes": [
+    "dashboard",
+    "data-report",
+    "business-review",
+    "executive-summary",
+    "esg-report"
+  ],
+  "styleTags": [
+    "enterprise-teal-report",
+    "corporate",
+    "professional",
+    "clean",
+    "infographic",
+    "chartjs"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "企业年度经营分析",
+    "季度经营复盘",
+    "ESG 可持续发展报告",
+    "管理层战略复盘",
+    "董事会或投资者正式汇报"
+  ],
+  "requiredRuntime": [
+    "Chart.js CDN",
+    "Chart.js DataLabels CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#00A99D",
+      "secondary": "#1B365D",
+      "background": "#F4F7F9",
+      "surface": "#FFFFFF",
+      "textMain": "#1F2937",
+      "textSub": "#4B5563",
+      "textMuted": "#9CA3AF",
+      "border": "#D9E2EC",
+      "yellow": "#F2C94C",
+      "orange": "#F2994A",
+      "danger": "#E74C3C"
+    },
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Microsoft YaHei, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeOverride": false
+  },
+  "supportedSections": {
+    "key_takeaway": {
+      "desc": "关键结论摘要和 3 个 KPI 指标卡",
+      "required": true,
+      "hideable": false
+    },
+    "core_finding_1": {
+      "desc": "运营效率与成本结构分析",
+      "required": true,
+      "hideable": true
+    },
+    "core_finding_2": {
+      "desc": "市场份额、区域排名与产品增长分析",
+      "required": true,
+      "hideable": true
+    },
+    "core_finding_3": {
+      "desc": "能力评估、风险预警与未来展望",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "kpi_card",
+    "mixed_chart",
+    "waterfall_chart",
+    "donut_chart",
+    "bar_chart_vertical",
+    "area_chart",
+    "radar_chart",
+    "scatter_chart"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-editable、contenteditable 和 data-slot；多数核心文本同时带 data-key"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "3 个 KPI 卡片和 7 个 Chart.js 图表容器"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "报告核心模块容器"
+    },
+    "textSlots": [
+      "text.report_title",
+      "text.key_takeaway_summary",
+      "kpi.revenue.label",
+      "kpi.revenue.value",
+      "kpi.revenue.trend",
+      "kpi.profit.label",
+      "kpi.profit.value",
+      "kpi.profit.trend",
+      "kpi.efficiency.label",
+      "kpi.efficiency.value",
+      "kpi.efficiency.trend",
+      "text.finding_1_title",
+      "text.finding_1_analysis",
+      "text.finding_2_title",
+      "text.finding_2_analysis",
+      "donut.center.val",
+      "donut.center.lbl",
+      "text.finding_3_title",
+      "text.finding_3_analysis"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-kpi-revenue", "type": "kpi_card", "section": "key_takeaway", "description": "年度总营收 KPI 卡片" },
+    { "id": "chart-kpi-profit", "type": "kpi_card", "section": "key_takeaway", "description": "净利润 KPI 卡片" },
+    { "id": "chart-kpi-efficiency", "type": "kpi_card", "section": "key_takeaway", "description": "运营费用率 KPI 卡片" },
+    { "id": "chart-finding-1-trend", "type": "mixed_chart", "section": "core_finding_1", "description": "季度营收与毛利率趋势混合图" },
+    { "id": "chart-finding-1-waterfall", "type": "waterfall_chart", "section": "core_finding_1", "description": "年度净利润变动因素瀑布图" },
+    { "id": "chart-finding-2-donut", "type": "donut_chart", "section": "core_finding_2", "description": "产品线营收贡献环形图" },
+    { "id": "chart-finding-2-rank", "type": "bar_chart_vertical", "section": "core_finding_2", "description": "大区市场份额 Top 5 柱状图" },
+    { "id": "chart-finding-2-growth", "type": "area_chart", "section": "core_finding_2", "description": "产品营收增长趋势面积图" },
+    { "id": "chart-finding-3-radar", "type": "radar_chart", "section": "core_finding_3", "description": "核心竞争力多维雷达图" },
+    { "id": "chart-finding-3-scatter", "type": "scatter_chart", "section": "core_finding_3", "description": "区域投入产出气泡图" }
+  ],
+  "sampleData": {
+    "text": {
+      "text.report_title": "2024年度企业经营与战略发展分析报告",
+      "text.key_takeaway_summary": "本年度核心业务保持稳健增长，总营收同比提升 12.5%，主要得益于新产品线在 Q3 的成功爆发。运营效率指标显著改善，但供应链成本波动仍是当前面临的主要外部风险。未来需重点关注高毛利市场的渗透率提升。",
+      "kpi.revenue.label": "年度总营收",
+      "kpi.revenue.value": "¥12.8 亿",
+      "kpi.revenue.trend": "▲ +12.5%",
+      "kpi.profit.label": "净利润",
+      "kpi.profit.value": "¥3.2 亿",
+      "kpi.profit.trend": "▲ +15.2%",
+      "kpi.efficiency.label": "运营费用率",
+      "kpi.efficiency.value": "8.5%",
+      "kpi.efficiency.trend": "▼ -1.2pp",
+      "text.finding_1_title": "核心发现 1：运营效率与成本结构优化",
+      "text.finding_1_analysis": "通过数字化转型举措，核心生产环节的人均产出率在下半年实现了 8% 的环比增长。成本结构方面，固定成本占比进一步压缩，但原材料价格波动导致可变成本在 Q4 有所回升，需持续关注采购策略的优化。",
+      "text.finding_2_title": "核心发现 2：市场份额与主要增长来源",
+      "text.finding_2_analysis": "我们在华东区域的市场份额首次突破 35%，确立了区域领先地位。从收入构成来看，A 类核心产品依然是营收基石，贡献了近 60% 的份额；B 类创新业务增速最快，同比增长超过 45%，是未来的核心增长引擎。",
+      "donut.center.val": "¥12.8亿",
+      "donut.center.lbl": "总营收",
+      "text.finding_3_title": "核心发现 3：综合能力评估与风险预警",
+      "text.finding_3_analysis": "基于多维能力评估模型，我们在「产品研发」和「客户服务」维度表现优异，但在「渠道掌控力」方面略显薄弱，低于行业平均水平。右侧气泡图显示，区域D虽然产出高但投入也极大，ROI 较低；区域C则属于低投入低产出的潜力待挖掘区。"
+    }
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container"
+  },
+  "slotLimits": {
+    "report-title": 40,
+    "key-takeaway-summary": 120,
+    "kpi-label": 16,
+    "kpi-value": 16,
+    "kpi-trend": 12,
+    "section-title": 32,
+    "analysis-text": 180,
+    "donut-center-value": 12,
+    "donut-center-label": 12
+  },
+  "llmInjectionRules": [
+    "替换文本时优先通过 data-key 或 data-slot 精确匹配，只注入纯文本。",
+    "替换图表数据时只修改底部 Chart.js 配置中的 labels、datasets 和 data，不触碰布局样式。",
+    "缺少图表数据时隐藏对应 chart-module 或 KPI 卡片，避免空白容器。",
+    "原始配置声明了更多推荐图表类型，入库版以当前 HTML 实际 chartModules 为准。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "templateConfigArchived": true,
+    "templateConfigFile": "originals/pasted-template-config.json",
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "editableCount": 19,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 4,
+    "chartCount": 10,
+    "canvasChartCount": 7,
+    "kpiCount": 3,
+    "usesChartJs": true,
+    "standardReview": [
+      "HTML 是完整单页 Dashboard，可直接浏览器打开，包含 data-section、data-slot、contenteditable 和 chart-* 容器。",
+      "视觉风格基本符合用户给出的企业级蓝绿报告规范：浅灰背景、白色模块、蓝绿色主色、克制图表和正式报告结构。",
+      "原始 HTML 默认标题与导航含较多英文和 Emerson 品牌字样，入库版已改为通用中文企业经营报告文案；原始文件已归档。",
+      "原始配置 JSON 的 supportedChartTypes 是推荐能力集合，实际 HTML 只实现 3 个 KPI 卡片和 7 个 Chart.js 图表，入库配置已按实际结构重写。",
+      "项目要求预览图，但本轮低性能模式未生成 preview.png。"
+    ],
+    "sourceCleanup": [
+      "按模板 23 命名为 dashboard-23-enterprise-teal-report。",
+      "保留 Gemini 原始 HTML 到 originals/source-template.html 和 originals/pasted-text.html。",
+      "补齐 README.md、design-standard.md、template-slots.md、template.json、preview-metadata.md 和模板注册。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#00A99D",
+    "presets": [
+      "#00A99D",
+      "#1B365D",
+      "#F2C94C",
+      "#F2994A",
+      "#E74C3C",
+      "#333333",
+      "#666666"
+    ],
+    "targets": {
+      "cssVariables": {
+        "--color-primary-teal": "主强调蓝绿色",
+        "--color-secondary-blue": "标题与稳健数据深蓝",
+        "--bg-main": "页面浅灰蓝背景",
+        "--bg-card": "模块白色背景",
+        "--color-text-main": "主文本",
+        "--color-text-body": "正文文本",
+        "--color-trend-down": "风险或下降指标"
+      },
+      "chartPalette": [
+        "emersonPalette.teal",
+        "emersonPalette.blue",
+        "emersonPalette.yellow",
+        "emersonPalette.orange",
+        "emersonPalette.grey"
+      ],
+      "colorSelectors": [
+        ".kpi-card",
+        ".key-takeaway-panel",
+        ".section-title",
+        ".donut-center-value",
+        ".trend-up",
+        ".trend-down"
+      ]
+    }
+  }
+}

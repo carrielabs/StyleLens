@@ -1,0 +1,75 @@
+{
+  "id": "glassmorphism-dashboard-v2",
+  "name": "国际范毛玻璃数据分析 Dashboard",
+  "description": "1:1 还原现代 B 端设计的轻量级数据看板，支持仪表盘和自定义条形图，移除多余导航。",
+  "pageTypes": ["dashboard", "report"],
+  "tags": ["glassmorphism", "modern", "b-end", "dashboard"],
+  "editableCapabilities": {
+    "text": true,
+    "chart": true,
+    "layout": false
+  },
+  "supportedSections": [
+    "header",
+    "key-takeaway",
+    "core-finding-1",
+    "core-finding-2"
+  ],
+  "supportedChartTypes": [
+    "gauge-ring",
+    "gauge-half",
+    "custom-segmented"
+  ],
+  "schema": {
+    "slots": [
+      { "key": "header.title", "type": "text" },
+      { "key": "header.meta", "type": "text" },
+      { "key": "kpi1.title", "type": "text" },
+      { "key": "kpi1.value", "type": "text" },
+      { "key": "kpi1.trend", "type": "text" },
+      { "key": "trend1.title", "type": "text" },
+      { "key": "trend1.d_value", "type": "text" },
+      { "key": "trend1.u_value", "type": "text" },
+      { "key": "trend1.compare", "type": "text" },
+      { "key": "file1.name", "type": "text" },
+      { "key": "file1.dl", "type": "text" },
+      { "key": "file1.view", "type": "text" }
+    ],
+    "charts": [
+      { "id": "chart-kpi-1", "type": "gauge-ring" },
+      { "id": "chart-kpi-2", "type": "gauge-ring" },
+      { "id": "chart-kpi-3", "type": "gauge-ring" },
+      { "id": "chart-kpi-4", "type": "gauge-ring" },
+      { "id": "chart-trend-1", "type": "gauge-half" },
+      { "id": "chart-trend-2", "type": "gauge-half" },
+      { "id": "chart-trend-3", "type": "gauge-half" },
+      { "id": "segmented-bar", "type": "custom-segmented" }
+    ]
+  },
+  "sampleData": {
+    "text": {
+      "header.title": "Analytics & Report",
+      "header.meta": "Insights into your storage usage and file activity",
+      "kpi1.title": "Total Storage",
+      "kpi1.value": "20.8 GB",
+      "kpi1.trend": "+20% vs last month"
+    },
+    "charts": {
+      "chart-kpi-1": { "value": 37 },
+      "chart-kpi-2": { "value": 45 },
+      "chart-kpi-3": { "value": 50 },
+      "chart-kpi-4": { "value": 20 },
+      "chart-trend-1": { "percent": 15, "label": "0.12%", "subLabel": "135 of 1108" },
+      "chart-trend-2": { "percent": 18, "label": "0.14%", "subLabel": "120 of 1000" },
+      "chart-trend-3": { "percent": 25, "label": "0.20%", "subLabel": "200 of 1500" },
+      "segmented-bar": {
+        "groups": [
+          { "color": "#3B82F6", "count": 40 },
+          { "color": "#10B981", "count": 30 },
+          { "color": "#8B5CF6", "count": 30 },
+          { "color": "#F59E0B", "count": 20 }
+        ]
+      }
+    }
+  }
+}

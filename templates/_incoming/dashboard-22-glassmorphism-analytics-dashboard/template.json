@@ -1,0 +1,300 @@
+{
+  "id": "dashboard-22-glassmorphism-analytics-dashboard",
+  "name": "Glassmorphism Analytics Dashboard 国际范毛玻璃数据分析看板",
+  "templateName": "GlassmorphismAnalyticsDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向存储用量、文件访问和活动趋势分析的浅色毛玻璃数据 Dashboard，支持 240 度 KPI 仪表盘、180 度趋势仪表盘和 DOM 分段条形图。",
+  "pageTypes": [
+    "dashboard",
+    "data-report",
+    "analytics",
+    "business-review"
+  ],
+  "styleTags": [
+    "glassmorphism",
+    "modern-dashboard",
+    "light-analytics",
+    "storage-report",
+    "echarts"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "medium",
+  "bestFor": [
+    "存储用量分析",
+    "文件访问统计",
+    "活动趋势报告",
+    "轻量级运营看板",
+    "B 端数据汇报"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "ECharts CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#3B82F6",
+      "background": "#F0F4F8",
+      "surface": "rgba(255, 255, 255, 0.75)",
+      "textMain": "#111827",
+      "textSub": "#6B7280",
+      "textMuted": "#9CA3AF",
+      "blue": "#3B82F6",
+      "green": "#10B981",
+      "orange": "#F59E0B",
+      "purple": "#8B5CF6"
+    },
+    "fonts": {
+      "body": "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeOverride": false
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "页面头部和 4 个 KPI 总览卡片",
+      "required": true,
+      "hideable": false
+    },
+    "core-finding-1": {
+      "desc": "3 个周期活动趋势仪表盘",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-2": {
+      "desc": "存储类型分段条形图和热门文件列表",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "gauge-ring",
+    "gauge-half",
+    "custom-segmented"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-slot 和 contenteditable"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[data-chart-type]",
+      "desc": "ECharts 图表容器和 DOM 分段条形图容器"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "Dashboard 核心模块"
+    },
+    "textSlots": [
+      "header.title",
+      "header.meta",
+      "kpi1.title",
+      "kpi1.value",
+      "kpi1.trend",
+      "kpi2.title",
+      "kpi2.value",
+      "kpi2.trend",
+      "kpi3.title",
+      "kpi3.value",
+      "kpi3.trend",
+      "kpi4.title",
+      "kpi4.value",
+      "kpi4.trend",
+      "trend1.title",
+      "trend1.d_value",
+      "trend1.u_value",
+      "trend1.compare",
+      "trend2.title",
+      "trend2.d_value",
+      "trend2.u_value",
+      "trend2.compare",
+      "trend3.title",
+      "trend3.d_value",
+      "trend3.u_value",
+      "trend3.compare",
+      "usage.title",
+      "files.title",
+      "file1.name",
+      "file1.dl",
+      "file1.view",
+      "file2.name",
+      "file2.dl",
+      "file2.view",
+      "file3.name",
+      "file3.dl",
+      "file3.view"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-kpi-1", "type": "gauge-ring", "section": "key-takeaway", "titleSlot": "kpi1.title", "styleNote": "Blue KPI gauge" },
+    { "id": "chart-kpi-2", "type": "gauge-ring", "section": "key-takeaway", "titleSlot": "kpi2.title", "styleNote": "Green KPI gauge" },
+    { "id": "chart-kpi-3", "type": "gauge-ring", "section": "key-takeaway", "titleSlot": "kpi3.title", "styleNote": "Light blue KPI gauge" },
+    { "id": "chart-kpi-4", "type": "gauge-ring", "section": "key-takeaway", "titleSlot": "kpi4.title", "styleNote": "Orange KPI gauge" },
+    { "id": "chart-trend-1", "type": "gauge-half", "section": "core-finding-1", "titleSlot": "trend1.title" },
+    { "id": "chart-trend-2", "type": "gauge-half", "section": "core-finding-1", "titleSlot": "trend2.title" },
+    { "id": "chart-trend-3", "type": "gauge-half", "section": "core-finding-1", "titleSlot": "trend3.title" },
+    { "id": "segmented-bar", "type": "custom-segmented", "section": "core-finding-2", "titleSlot": "usage.title" }
+  ],
+  "sampleData": {
+    "texts": {
+      "header.title": "Analytics & Report",
+      "header.meta": "Insights into your storage usage and file activity",
+      "kpi1.title": "Total Storage",
+      "kpi1.value": "20.8 GB of 50 GB",
+      "kpi1.trend": "+20% vs last month",
+      "kpi2.title": "Total Views",
+      "kpi2.value": "1247",
+      "kpi2.trend": "+12% vs last month",
+      "kpi3.title": "Downloads",
+      "kpi3.value": "892",
+      "kpi3.trend": "+12% vs last month",
+      "kpi4.title": "Share",
+      "kpi4.value": "284",
+      "kpi4.trend": "+15% vs last month",
+      "trend1.title": "Activity Trends (January)",
+      "trend1.d_value": "135",
+      "trend1.u_value": "10,793",
+      "trend1.compare": "+0.08% Compared to past year",
+      "trend2.title": "Activity Trends (February)",
+      "trend2.d_value": "120",
+      "trend2.u_value": "09,793",
+      "trend2.compare": "+0.10% Compared to january",
+      "trend3.title": "Activity Trends (March)",
+      "trend3.d_value": "200",
+      "trend3.u_value": "11,793",
+      "trend3.compare": "+0.20% Compared to February",
+      "usage.title": "Storage Usages by Type",
+      "files.title": "Top Accessed Files This Month",
+      "file1.name": "Pitch_Deck_2025.pdf",
+      "file1.dl": "12 downloads",
+      "file1.view": "48 views",
+      "file2.name": "Brand_Guidelines.docx",
+      "file2.dl": "8 downloads",
+      "file2.view": "32 views",
+      "file3.name": "Campaign_Banners.pdf",
+      "file3.dl": "8 downloads",
+      "file3.view": "32 views"
+    },
+    "charts": {
+      "chart-kpi-1": { "value": 37 },
+      "chart-kpi-2": { "value": 45 },
+      "chart-kpi-3": { "value": 50 },
+      "chart-kpi-4": { "value": 20 },
+      "chart-trend-1": { "percent": 15, "label": "0.12%", "subLabel": "135 of 1108" },
+      "chart-trend-2": { "percent": 18, "label": "0.14%", "subLabel": "120 of 1000" },
+      "chart-trend-3": { "percent": 25, "label": "0.20%", "subLabel": "200 of 1500" },
+      "segmented-bar": {
+        "groups": [
+          { "color": "#3B82F6", "count": 40, "height": "16px" },
+          { "color": "#10B981", "count": 30, "height": "20px" },
+          { "color": "#8B5CF6", "count": 30, "height": "24px" },
+          { "color": "#F59E0B", "count": 20, "height": "14px" }
+        ]
+      }
+    }
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container"
+  },
+  "slotLimits": {
+    "header-title": 20,
+    "header-meta": 40,
+    "kpi-title": 20,
+    "kpi-value": 24,
+    "kpi-trend": 24,
+    "trend-title": 32,
+    "trend-value": 16,
+    "trend-compare": 36,
+    "file-name": 36,
+    "file-stat": 18
+  },
+  "llmInjectionRules": [
+    "所有新增可编辑文字必须同时包含 data-editable=\"true\"、contenteditable=\"true\" 和 data-slot。",
+    "图表容器 ID 必须保持 chart-* 或 segmented-bar 格式。",
+    "替换 KPI 图表数据时优先修改 initKpiGauge 调用中的 value，不触碰布局和样式代码。",
+    "替换趋势图表数据时优先修改 initTrendGauge 调用中的 percent、label 和 subLabel。",
+    "保持浅色毛玻璃、弥散光背景和蓝绿橙紫数据色，不添加厚重卡片阴影。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "pastedTextFile": "originals/pasted-text.html",
+    "sourceAndPastedTextIdentical": true,
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "sourceConfigArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataEditableHasDataSlot": true,
+    "dataEditableHasDataKey": false,
+    "editableCount": 37,
+    "duplicateSlotCount": 0,
+    "dataSectionElementCount": 3,
+    "uniqueDataSectionCount": 3,
+    "chartCount": 8,
+    "kpiCount": 4,
+    "chartLibrary": "ECharts",
+    "usesTailwindCdn": true,
+    "sourceComplianceFindings": [
+      "原始 HTML 和粘贴文件完全一致。",
+      "原始 HTML 已包含 data-section、data-chart-type、data-editable、contenteditable 和 data-slot。",
+      "原始配置 JSON 只登记了 12 个文本槽位，未覆盖 HTML 实际存在的 37 个文本槽位。",
+      "原始配置的 id 未按仓库编号命名，入库版已规范化。"
+    ],
+    "sourceCleanup": [
+      "按模板 22 命名为 dashboard-22-glassmorphism-analytics-dashboard。",
+      "归档 Gemini 原始 HTML、粘贴 HTML、设计规范、槽位说明和原始配置。",
+      "补齐 template.json、README.md、design-standard.md、template-slots.md 和 preview-metadata.md。",
+      "未凭空新增布局或功能，仅补齐仓库元数据和文档。"
+    ],
+    "standardReview": [
+      "HTML 基本符合仓库入库标准，槽位、图表 ID 和模块结构清楚。",
+      "设计规范可用，和 HTML 的浅色毛玻璃视觉方向一致。",
+      "原始 template config 可作为参考，但槽位登记不完整，入库版已按实际 HTML 重新整理。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#3B82F6",
+    "presets": [
+      "#3B82F6",
+      "#10B981",
+      "#F59E0B",
+      "#8B5CF6",
+      "#111827",
+      "#6B7280"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-blue\"]",
+        "[class*=\"text-green\"]",
+        "[class*=\"text-orange\"]",
+        "[class*=\"text-purple\"]",
+        "[class*=\"text-gray\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-blue\"]",
+        "[class*=\"bg-green\"]",
+        "[class*=\"bg-orange\"]",
+        "[class*=\"bg-purple\"]",
+        "[class*=\"bg-gray\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-gray\"]",
+        "[class*=\"border-blue\"]"
+      ]
+    }
+  }
+}

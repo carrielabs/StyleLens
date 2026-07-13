@@ -68,7 +68,7 @@ lib/
 ## 请求链路：从模板库到生成 HTML
 
 1. 用户在左侧切换到 `生成页面与看板`。
-2. 前端展示 8 个官网模板或 15 个 Dashboard 模板，模板封面和全屏预览都通过 `GET /api/template-preview/[templateId]` 读取真实模板 HTML。
+2. 前端展示 8 个官网模板或 28 个 Dashboard 模板，模板封面和全屏预览都通过 `GET /api/template-preview/[templateId]` 读取真实模板 HTML。
 3. 官网生成：用户选择官网模板，在右侧抽屉粘贴文本或上传 `.md` / `.txt`，前端调用 `POST /api/generate`，服务端用 `lib/publisher` 把内容注入所选模板并加上编辑运行时。
 4. Dashboard 生成：用户选择 Dashboard 模板，上传 `.csv` / `.json` / `.xlsx`，前端调用 `POST /api/generate-dashboard-data`，服务端解析数据文件、生成指标模型、注入所选 Dashboard 模板并加上 Dashboard 编辑数据。
 5. 生成结果进入 `GeneratedPagePreview`，用 sandbox iframe 预览，顶部悬浮操作条提供返回模板库和下载 HTML。

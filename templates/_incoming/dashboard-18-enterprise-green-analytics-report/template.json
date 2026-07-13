@@ -1,0 +1,236 @@
+{
+  "id": "dashboard-18-enterprise-green-analytics-report",
+  "name": "Enterprise Green Analytics 企业级绿调数据分析报告看板",
+  "templateName": "EnterpriseGreenAnalyticsReportDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向管理层汇报、季度经营分析、项目复盘和产品数据追踪的浅色企业级数据分析 Dashboard，采用冷灰背景、白色卡片、企业绿强调色和 ECharts 多图表组合。",
+  "pageTypes": [
+    "dashboard",
+    "data-report",
+    "analytics",
+    "executive-summary",
+    "business-review"
+  ],
+  "styleTags": [
+    "enterprise-green",
+    "professional-dashboard",
+    "light-dashboard",
+    "minimal-analytics",
+    "echarts"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "管理层经营汇报",
+    "季度或年度经营分析",
+    "项目复盘报告",
+    "产品数据追踪",
+    "多维业务分析"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "ECharts CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#10B981",
+      "background": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "textMain": "#0F172A",
+      "textSub": "#64748B",
+      "border": "#E2E8F0",
+      "warning": "#EF4444",
+      "blue": "#3B82F6",
+      "amber": "#F59E0B",
+      "purple": "#8B5CF6"
+    },
+    "fonts": {
+      "body": "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeOverride": false
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "核心结论摘要和 4 个 KPI 卡片",
+      "required": true,
+      "hideable": false
+    },
+    "core-finding-1": {
+      "desc": "趋势与构成分析",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-2": {
+      "desc": "分布与排行分析",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-3": {
+      "desc": "效率与转化分析",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "kpi",
+    "line",
+    "bar-horizontal",
+    "stacked-bar",
+    "area",
+    "donut",
+    "funnel",
+    "radar",
+    "scatter",
+    "waterfall"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-slot 和 contenteditable"
+    },
+    "kpiCards": {
+      "type": "array",
+      "selector": "[data-chart-type=\"kpi\"]",
+      "desc": "KPI 卡片通过 data-slot 替换 name、value、trend"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "ECharts 图表容器；数据位于底部 setOption 配置"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "核心 Dashboard 模块"
+    },
+    "textSlots": [
+      "text.global.reportTitle",
+      "text.global.reportDate",
+      "text.takeaway.title",
+      "text.takeaway.summary",
+      "text.finding1.title",
+      "text.finding1.analysis",
+      "text.finding2.title",
+      "text.finding2.analysis",
+      "text.finding3.title",
+      "text.finding3.analysis"
+    ],
+    "kpiSlots": [
+      "kpi.mainRevenue",
+      "kpi.activeUsers",
+      "kpi.conversionRate",
+      "kpi.npsScore"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-trend-line", "type": "line", "section": "core-finding-1" },
+    { "id": "chart-mix-stackbar", "type": "stacked-bar", "section": "core-finding-1" },
+    { "id": "chart-user-area", "type": "area", "section": "core-finding-1" },
+    { "id": "chart-segment-donut", "type": "donut", "section": "core-finding-2" },
+    { "id": "chart-region-bar-h", "type": "bar-horizontal", "section": "core-finding-2" },
+    { "id": "chart-scatter-ltv", "type": "scatter", "section": "core-finding-2" },
+    { "id": "chart-funnel-sales", "type": "funnel", "section": "core-finding-3" },
+    { "id": "chart-radar-perf", "type": "radar", "section": "core-finding-3" },
+    { "id": "chart-profit-waterfall", "type": "waterfall", "section": "core-finding-3" }
+  ],
+  "sampleData": {
+    "kpi.mainRevenue": { "name": "季度总营收", "value": "¥ 12.5M", "trend": "+15.2%" },
+    "kpi.activeUsers": { "name": "月均活跃用户 (MAU)", "value": "84,500", "trend": "+8.4%" },
+    "kpi.conversionRate": { "name": "核心路径转化率", "value": "4.2%", "trend": "-0.5%" },
+    "kpi.npsScore": { "name": "客户净推荐值 (NPS)", "value": "68", "trend": "+2" }
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container"
+  },
+  "slotLimits": {
+    "report-title": 40,
+    "report-date": 60,
+    "section-title": 40,
+    "summary-text": 220,
+    "analysis-text": 180,
+    "kpi-name": 32,
+    "kpi-value": 18,
+    "kpi-trend": 12
+  },
+  "llmInjectionRules": [
+    "所有新增可编辑文字必须同时包含 data-editable=\"true\"、contenteditable=\"true\" 和 data-slot。",
+    "图表容器 ID 必须保持 chart-* 格式。",
+    "KPI 卡片只替换 name、value、trend 文案；趋势正负色由解析器按数值切换。",
+    "替换图表数据时优先修改 ECharts setOption 中的数据配置，不触碰布局和样式代码。",
+    "保持冷灰背景、白色卡片、企业绿强调色和克制图表配色，不添加高饱和大面积背景。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "editableCount": 22,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 4,
+    "chartCount": 9,
+    "kpiCount": 4,
+    "usesECharts": true,
+    "sourceCleanup": [
+      "按模板 18 命名规范归档到 dashboard-18-enterprise-green-analytics-report。",
+      "保留 Gemini 原始 HTML、视觉方向和 ECharts 配置。",
+      "将用户提供的配置结构规范化为仓库 template.json 格式。",
+      "实际 HTML 使用 ECharts setOption 直接写入样例数据，未实现交付说明中提到的 dataset 驱动。"
+    ],
+    "standardReview": [
+      "HTML 基本符合仓库入库标准：模块、图表 ID、data-chart-type、data-slot 和 contenteditable 齐全。",
+      "设计规范可用，和 HTML 的浅色企业绿视觉方向一致。",
+      "槽位说明可用，但数据注入说明中的 dataset 驱动与当前 HTML 实现不完全一致。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#10b981",
+    "presets": [
+      "#10b981",
+      "#3b82f6",
+      "#f59e0b",
+      "#8b5cf6",
+      "#ef4444",
+      "#0f172a",
+      "#64748b"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-emerald\"]",
+        "[class*=\"text-blue\"]",
+        "[class*=\"text-amber\"]",
+        "[class*=\"text-purple\"]",
+        "[class*=\"text-red\"]",
+        "[class*=\"text-slate\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-emerald\"]",
+        "[class*=\"bg-blue\"]",
+        "[class*=\"bg-amber\"]",
+        "[class*=\"bg-purple\"]",
+        "[class*=\"bg-red\"]",
+        "[class*=\"bg-slate\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-emerald\"]",
+        "[class*=\"border-slate\"]"
+      ]
+    }
+  }
+}

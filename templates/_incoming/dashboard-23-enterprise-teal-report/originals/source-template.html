@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2024 Emerson Sustainability Report - ESG Dashboard</title>
+    <!-- 引入 Chart.js 用于图表渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入 Chart.js 数据标签插件 -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+    <style>
+        /* --- CSS Reset & Premium Editorial Typography --- */
+        :root {
+            --bg-main: #F4F7F9;
+            --bg-card: #FFFFFF;
+            --color-primary-teal: #00A99D;
+            --color-secondary-blue: #1B365D;
+            --color-text-main: #1F2937;
+            --color-text-body: #4B5563;
+            --color-text-muted: #9CA3AF;
+            --color-border: #D9E2EC;
+            --color-trend-up: #00A99D;
+            --color-trend-down: #E74C3C;
+            --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-family-base);
+            background-color: var(--bg-main);
+            color: var(--color-text-main);
+            line-height: 1.5;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* --- ESG Outer Container (Mimics a Printed Page) --- */
+        .report-container {
+            width: 100%;
+            max-width: 1440px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--color-border);
+            padding: 40px 48px;
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Header Navigation (Emerson Style Sticky Nav) --- */
+        .emerson-nav-header {
+            position: sticky;
+            top: -40px; /* 抵消外部容器 padding-top */
+            background-color: var(--bg-card);
+            z-index: 100;
+            border-bottom: 2px solid var(--color-secondary-blue);
+            padding-top: 20px;
+            padding-bottom: 12px;
+            margin-bottom: 32px;
+        }
+        .nav-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .report-brand {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: var(--color-text-body);
+        }
+        .nav-main-menu {
+            display: flex;
+            gap: 24px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: var(--color-text-muted);
+        }
+        .nav-main-menu span { 
+            cursor: pointer; 
+            transition: color 0.2s; 
+            padding-bottom: 14px;
+        }
+        .nav-main-menu span:hover { color: var(--color-secondary-blue); }
+        .nav-main-menu span.active {
+            color: var(--color-secondary-blue);
+            position: relative;
+        }
+        .nav-main-menu span.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: var(--color-primary-teal);
+        }
+        .nav-sub-menu {
+            display: flex;
+            gap: 20px;
+            font-size: 11px;
+            color: var(--color-text-muted);
+            border-top: 1px solid var(--color-border);
+            padding-top: 10px;
+        }
+        .nav-sub-menu span { 
+            cursor: pointer; 
+            transition: color 0.2s;
+        }
+        .nav-sub-menu span:hover { color: var(--color-primary-teal); }
+        .nav-sub-menu span.active {
+            color: var(--color-primary-teal);
+            font-weight: 600;
+        }
+
+        /* --- Report Header --- */
+        header.report-main-header {
+            margin-bottom: 32px;
+        }
+        h1.report-title {
+            font-size: 32px;
+            font-weight: 400;
+            color: var(--color-primary-teal);
+            letter-spacing: -0.02em;
+        }
+
+        /* --- Sections Layout --- */
+        .report-section {
+            margin-bottom: 40px;
+            position: relative;
+            scroll-margin-top: 140px; /* 防止吸顶导航遮挡内容标题 */
+        }
+        .section-header-block {
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        h2.section-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--color-secondary-blue);
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .analysis-text {
+            font-size: 14px;
+            color: var(--color-text-body);
+            max-width: 1000px;
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+
+        /* --- Key Takeaways Panel --- */
+        .key-takeaway-panel {
+            background-color: #F8FAFC;
+            border-left: 4px solid var(--color-primary-teal);
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+        .key-takeaway-summary {
+            font-size: 15px;
+            color: var(--color-secondary-blue);
+            line-height: 1.6;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+        .kpi-cards-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--color-border);
+            padding: 20px;
+            position: relative;
+        }
+        .kpi-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+        .kpi-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--color-secondary-blue);
+            line-height: 1.1;
+            margin-bottom: 6px;
+        }
+        .kpi-trend {
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .trend-up { color: var(--color-trend-up); }
+        .trend-down { color: var(--color-trend-down); }
+
+        /* --- Chart Grid System --- */
+        .chart-grid-row {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .col-span-4 { grid-column: span 4; }
+        .col-span-5 { grid-column: span 5; }
+        .col-span-6 { grid-column: span 6; }
+        .col-span-7 { grid-column: span 7; }
+        .col-span-8 { grid-column: span 8; }
+        .col-span-12 { grid-column: span 12; }
+
+        /* --- Premium Card Styling --- */
+        .chart-module {
+            background: var(--bg-card);
+            border: 1px solid var(--color-border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+        .chart-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--color-secondary-blue);
+        }
+        .chart-icon-wrapper {
+            width: 24px;
+            height: 24px;
+            color: var(--color-primary-teal);
+            opacity: 0.8;
+        }
+        .chart-container-wrapper {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+
+        /* --- Donut Center Text Alignment Fix --- */
+        .donut-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            height: 100%;
+        }
+        .donut-center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 120px;
+            height: 120px;
+        }
+        .donut-center-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--color-secondary-blue);
+            line-height: 1.1;
+        }
+        .donut-center-label {
+            font-size: 11px;
+            color: var(--color-text-muted);
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* --- Footer Styles --- */
+        footer.report-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--color-border);
+            padding-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--color-text-muted);
+            font-weight: 500;
+        }
+
+        /* --- Editable Component Highlight --- */
+        [contenteditable="true"] {
+            outline: none;
+            border-bottom: 1px dashed transparent;
+            transition: all 0.2s;
+        }
+        [contenteditable="true"]:hover {
+            background-color: rgba(0, 169, 157, 0.05);
+            border-bottom-color: var(--color-primary-teal);
+        }
+        [contenteditable="true"]:focus {
+            background-color: rgba(0, 169, 157, 0.08);
+            border-bottom-color: var(--color-secondary-blue);
+        }
+
+        /* --- Responsive Viewports --- */
+        @media (max-width: 1200px) {
+            .col-span-4 { grid-column: span 6; }
+            .col-span-5 { grid-column: span 12; }
+            .col-span-7 { grid-column: span 12; }
+            .kpi-cards-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .chart-grid-row { display: flex; flex-direction: column; }
+            .report-container { padding: 20px; }
+            .nav-main-menu { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="report-container">
+    <div class="emerson-nav-header">
+        <div class="nav-top-row">
+            <span class="report-brand">2024 EMERSON SUSTAINABILITY REPORT</span>
+            <div class="nav-main-menu">
+                <span data-target="key-takeaway">ABOUT EMERSON</span>
+                <span class="active" data-target="core-finding-1">PLANET</span>
+                <span data-target="core-finding-2">OUR PEOPLE</span>
+                <span data-target="core-finding-3">INTEGRITY</span>
+                <span data-target="key-takeaway">SOURCING</span>
+                <span data-target="core-finding-3">REPORTING</span>
+            </div>
+        </div>
+        <div class="nav-sub-menu">
+            <span class="active" data-target="key-takeaway">Overview</span>
+            <span data-target="core-finding-1">Goals</span>
+            <span data-target="core-finding-2">Climate</span>
+            <span data-target="core-finding-3">Circularity</span>
+            <span data-target="core-finding-1">Compliance</span>
+            <span data-target="core-finding-2">Engagement</span>
+            <span data-target="core-finding-2">Customers</span>
+            <span data-target="core-finding-3">Partnerships</span>
+        </div>
+    </div>
+
+    <!-- Main Title -->
+    <header class="report-main-header">
+        <h1 class="report-title" data-editable="true" contenteditable="true" data-slot="text.report_title" data-key="text.report_title">
+            Greenhouse Gas Emissions At-A-Glance
+        </h1>
+    </header>
+
+    <!-- =========================================
+         Section: Key Takeaways Summary
+         ========================================= -->
+    <section class="report-section" data-section="key_takeaway" id="key-takeaway">
+        <div class="key-takeaway-panel">
+            <div class="key-takeaway-summary" data-editable="true" contenteditable="true" data-slot="text.key_takeaway_summary" data-key="text.key_takeaway_summary">
+                本年度核心业务保持稳健增长，总营收同比提升 12.5%，主要得益于新产品线在 Q3 的成功爆发。运营效率指标显著改善，但供应链成本波动仍是当前面临的主要外部风险。未来需重点关注高毛利市场的渗透率提升。
+            </div>
+
+            <!-- KPI Row -->
+            <div class="kpi-cards-row" id="section-key-takeaway-charts">
+                <!-- KPI Card 1 -->
+                <div class="kpi-card" data-chart-type="kpi_card">
+                    <div class="kpi-label" data-editable="true" contenteditable="true" data-slot="kpi.revenue.label">年度总营收</div>
+                    <div class="kpi-value" data-editable="true" contenteditable="true" data-slot="kpi.revenue.value">¥12.8 亿</div>
+                    <div class="kpi-trend trend-up">
+                        <span data-editable="true" contenteditable="true" data-slot="kpi.revenue.trend">▲ +12.5%</span> <span>同比</span>
+                    </div>
+                </div>
+                <!-- KPI Card 2 -->
+                <div class="kpi-card" data-chart-type="kpi_card" style="border-top: 3px solid var(--color-secondary-blue);">
+                    <div class="kpi-label" data-editable="true" contenteditable="true" data-slot="kpi.profit.label">净利润</div>
+                    <div class="kpi-value" data-editable="true" contenteditable="true" data-slot="kpi.profit.value">¥3.2 亿</div>
+                    <div class="kpi-trend trend-up" style="color: var(--color-secondary-blue);">
+                        <span data-editable="true" contenteditable="true" data-slot="kpi.profit.trend">▲ +15.2%</span> <span>同比</span>
+                    </div>
+                </div>
+                <!-- KPI Card 3 -->
+                <div class="kpi-card" data-chart-type="kpi_card" style="border-top: 3px solid #D1A153;">
+                    <div class="kpi-label" data-editable="true" contenteditable="true" data-slot="kpi.efficiency.label">运营费用率</div>
+                    <div class="kpi-value" data-editable="true" contenteditable="true" data-slot="kpi.efficiency.value">8.5%</div>
+                    <div class="kpi-trend trend-up" style="color: #D1A153;">
+                        <span data-editable="true" contenteditable="true" data-slot="kpi.efficiency.trend">▼ -1.2pp</span> <span>优化</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================
+         Section: Core Finding 1
+         ========================================= -->
+    <section class="report-section" data-section="core_finding_1" id="core-finding-1">
+        <div class="section-header-block">
+            <h2 class="section-title" data-editable="true" contenteditable="true" data-slot="text.finding_1_title" data-key="text.finding_1_title">
+                核心发现 1：运营效率与成本结构优化
+            </h2>
+            <div class="analysis-text" data-editable="true" contenteditable="true" data-slot="text.finding_1_analysis" data-key="text.finding_1_analysis">
+                通过数字化转型举措，核心生产环节的人均产出率在下半年实现了 8% 的环比增长。成本结构方面，固定成本占比进一步压缩，但原材料价格波动导致可变成本在 Q4 有所回升，需持续关注采购策略的优化。
+            </div>
+        </div>
+
+        <div class="chart-grid-row" id="section-finding-1-charts">
+            <!-- Chart 1.1 -->
+            <div class="chart-module col-span-8" data-chart-type="mixed_chart">
+                <div class="chart-header">
+                    <h3 class="chart-title">季度营收与毛利率趋势</h3>
+                </div>
+                <div class="chart-container-wrapper">
+                    <canvas id="chart-finding-1-trend"></canvas>
+                </div>
+            </div>
+            <!-- Chart 1.2 -->
+            <div class="chart-module col-span-4" data-chart-type="waterfall_chart">
+                <div class="chart-header">
+                    <h3 class="chart-title">年度净利润变动因素分解</h3>
+                </div>
+                <div class="chart-container-wrapper">
+                    <canvas id="chart-finding-1-waterfall"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================
+         Section: Core Finding 2 (3-Chart Layout)
+         ========================================= -->
+    <section class="report-section" data-section="core_finding_2" id="core-finding-2">
+        <div class="section-header-block">
+            <h2 class="section-title" data-editable="true" contenteditable="true" data-slot="text.finding_2_title" data-key="text.finding_2_title">
+                核心发现 2：市场份额与主要增长来源
+            </h2>
+            <div class="analysis-text" data-editable="true" contenteditable="true" data-slot="text.finding_2_analysis" data-key="text.finding_2_analysis">
+                我们在华东区域的市场份额首次突破 35%，确立了区域领先地位。从收入构成来看，A 类核心产品依然是营收基石，贡献了近 60% 的份额；B 类创新业务增速最快，同比增长超过 45%，是未来的核心增长引擎。
+            </div>
+        </div>
+
+        <!-- 3 Equal Width Columns Grid for Core Finding 2 -->
+        <div class="chart-grid-row" id="section-finding-2-charts">
+            <!-- Chart 2.1: Donut -->
+            <div class="chart-module col-span-4" data-chart-type="donut_chart">
+                <div class="chart-header">
+                    <h3 class="chart-title">各产品线营收贡献占比</h3>
+                    <!-- Inlined decorative business SVG Icon -->
+                    <div class="chart-icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-pie-chart"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                    </div>
+                </div>
+                <div class="chart-container-wrapper donut-container">
+                    <canvas id="chart-finding-2-donut"></canvas>
+                    <div class="donut-center-text">
+                        <span class="donut-center-value" data-editable="true" contenteditable="true" data-slot="donut.center.val">¥12.8亿</span>
+                        <span class="donut-center-label" data-editable="true" contenteditable="true" data-slot="donut.center.lbl">总营收</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 2.2: Vertical Bar Chart (Top 5) -->
+            <div class="chart-module col-span-4" data-chart-type="bar_chart_vertical">
+                <div class="chart-header">
+                    <h3 class="chart-title">各大区市场份额排名 Top 5</h3>
+                    <div class="chart-icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-globe"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    </div>
+                </div>
+                <div class="chart-container-wrapper">
+                    <canvas id="chart-finding-2-rank"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2.3: Area Trend -->
+            <div class="chart-module col-span-4" data-chart-type="area_chart">
+                <div class="chart-header">
+                    <h3 class="chart-title">各类产品营收增长趋势 (Class A vs B)</h3>
+                    <div class="chart-icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trending-up"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                    </div>
+                </div>
+                <div class="chart-container-wrapper">
+                    <canvas id="chart-finding-2-growth"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================
+         Section: Core Finding 3
+         ========================================= -->
+    <section class="report-section" data-section="core_finding_3" id="core-finding-3">
+        <div class="section-header-block">
+            <h2 class="section-title" data-editable="true" contenteditable="true" data-slot="text.finding_3_title" data-key="text.finding_3_title">
+                核心发现 3：综合能力评估与风险预警
+            </h2>
+            <div class="analysis-text" data-editable="true" contenteditable="true" data-slot="text.finding_3_analysis" data-key="text.finding_3_analysis">
+                基于多维能力评估模型，我们在「产品研发」和「客户服务」维度表现优异，但在「渠道掌控力」方面略显薄弱，低于行业平均水平。右侧气泡图显示，区域D虽然产出高但投入也极大，ROI 较低；区域C则属于低投入低产出的潜力待挖掘区。
+            </div>
+        </div>
+
+        <div class="chart-grid-row" id="section-finding-3-charts">
+            <!-- Chart 3.1 -->
+            <div class="chart-module col-span-6" data-chart-type="radar_chart">
+                <div class="chart-header">
+                    <h3 class="chart-title">企业核心竞争力多维评估</h3>
+                </div>
+                <div class="chart-container-wrapper">
+                    <canvas id="chart-finding-3-radar"></canvas>
+                </div>
+            </div>
+            <!-- Chart 3.2 -->
+            <div class="chart-module col-span-6" data-chart-type="scatter_chart">
+                <div class="chart-header">
+                    <h3 class="chart-title">区域投入产出效率矩阵</h3>
+                </div>
+                <div class="chart-container-wrapper">
+                    <canvas id="chart-finding-3-scatter"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Emerson Styled Footer -->
+    <footer class="report-footer">
+        <span>2024 EMERSON SUSTAINABILITY REPORT</span>
+        <span>28</span>
+    </footer>
+</div>
+
+<!-- ==================================================================================
+     JavaScript & Chart Init with Precise Emerson Color Schemes
+     ================================================================================== -->
+<script>
+    // 激活 Chartjs Datalabels Plugin Globally
+    Chart.register(ChartDataLabels);
+
+    // Global Font & Canvas Tuning
+    Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    Chart.defaults.color = '#4B5563';
+    Chart.defaults.scale.grid.color = '#F3F4F6';
+    Chart.defaults.plugins.tooltip.backgroundColor = '#FFFFFF';
+    Chart.defaults.plugins.tooltip.titleColor = '#1F2937';
+    Chart.defaults.plugins.tooltip.bodyColor = '#4B5563';
+    Chart.defaults.plugins.tooltip.borderColor = '#E5E7EB';
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+    Chart.defaults.plugins.tooltip.padding = 12;
+    Chart.defaults.plugins.tooltip.cornerRadius = 4;
+
+    // Design-Standard Color Definitions
+    const emersonPalette = {
+        teal: '#00A99D',
+        blue: '#1B365D',
+        lightTeal: '#66CBC4',
+        lightBlue: '#76869E',
+        yellow: '#F2C94C',
+        orange: '#F2994A',
+        grey: '#D1D5DB',
+        lightGrey: '#F3F4F6'
+    };
+
+    // --- Navigation Interactivity & Smooth Scrolling Handler ---
+    document.querySelectorAll('[data-target]').forEach(elem => {
+        elem.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('data-target');
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) {
+                // 平滑滚动至目标
+                targetSection.scrollIntoView({ behavior: 'smooth' });
+
+                // 更新被点击分类导航的主菜单/子菜单 active 激活项
+                const parentRow = this.parentElement;
+                parentRow.querySelectorAll('[data-target]').forEach(item => item.classList.remove('active'));
+                this.classList.add('active');
+            }
+        });
+    });
+
+    // --- Dynamic ScrollSpy (根据滚动进度自动点亮子菜单项) ---
+    const scrollSections = document.querySelectorAll('.report-section');
+    const subNavSpans = document.querySelectorAll('.nav-sub-menu [data-target]');
+    
+    window.addEventListener('scroll', () => {
+        let currentSectionId = "key-takeaway";
+        const scrollOffset = window.scrollY + 180; // 考虑偏置项和 sticky 头部高度
+
+        scrollSections.forEach(section => {
+            if (window.scrollY >= section.offsetTop - 180) {
+                currentSectionId = section.getAttribute('id');
+            }
+        });
+
+        subNavSpans.forEach(span => {
+            if (span.getAttribute('data-target') === currentSectionId) {
+                span.classList.add('active');
+            } else {
+                span.classList.remove('active');
+            }
+        });
+    });
+
+    // --- Chart 1.1: Mixed Trend Chart ---
+    new Chart(document.getElementById('chart-finding-1-trend'), {
+        data: {
+            labels: ["Q1", "Q2", "Q3", "Q4"],
+            datasets: [
+                {
+                    type: 'bar',
+                    label: '季度营收 (亿)',
+                    data: [2.8, 3.1, 3.6, 3.3],
+                    backgroundColor: emersonPalette.teal,
+                    barPercentage: 0.45,
+                    order: 2,
+                    datalabels: { display: false }
+                },
+                {
+                    type: 'line',
+                    label: '毛利率 (%)',
+                    data: [28, 29, 31, 30],
+                    borderColor: emersonPalette.blue,
+                    backgroundColor: emersonPalette.blue,
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    yAxisID: 'y1',
+                    order: 1,
+                    datalabels: {
+                        align: 'top',
+                        color: emersonPalette.blue,
+                        formatter: (val) => val + '%'
+                    }
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12 } }
+            },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: '营收 (亿)', font: { size: 11 } } },
+                y1: { beginAtZero: false, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '毛利率 (%)', font: { size: 11 } } }
+            }
+        }
+    });
+
+    // --- Chart 1.2: Waterfall Chart ---
+    new Chart(document.getElementById('chart-finding-1-waterfall'), {
+        type: 'bar',
+        data: {
+            labels: ["2023", "收入+", "成本+", "汇损-", "研发-", "2024"],
+            datasets: [{
+                data: [
+                    [0, 2.78],
+                    [2.78, 3.43],
+                    [3.43, 3.75],
+                    [3.60, 3.75],
+                    [3.20, 3.60],
+                    [0, 3.20]
+                ],
+                backgroundColor: [
+                    emersonPalette.blue,
+                    emersonPalette.teal,
+                    emersonPalette.teal,
+                    emersonPalette.orange,
+                    emersonPalette.orange,
+                    emersonPalette.blue
+                ],
+                barPercentage: 0.55
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: (value, ctx) => {
+                        const val = value[1] - value[0];
+                        if (ctx.dataIndex === 0 || ctx.dataIndex === 5) return value[1].toFixed(2);
+                        return (val > 0 ? '+' : '') + val.toFixed(2);
+                    },
+                    font: { weight: 'bold', size: 10 }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { drawTicks: false } }
+            }
+        }
+    });
+
+    // --- Chart 2.1: Donut Chart ---
+    new Chart(document.getElementById('chart-finding-2-donut'), {
+        type: 'doughnut',
+        data: {
+            labels: ["A类核心", "B类创新", "C类基础", "其他"],
+            datasets: [{
+                data: [58, 22, 15, 5],
+                backgroundColor: [
+                    emersonPalette.blue,
+                    emersonPalette.teal,
+                    emersonPalette.yellow,
+                    emersonPalette.grey
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '72%',
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 10,
+                        padding: 10,
+                        font: { size: 11 }
+                    }
+                },
+                datalabels: { display: false }
+            }
+        }
+    });
+
+    // --- Chart 2.2: Vertical Bar Chart ---
+    new Chart(document.getElementById('chart-finding-2-rank'), {
+        type: 'bar',
+        data: {
+            labels: ["华东", "华南", "华北", "西部", "海外"],
+            datasets: [{
+                data: [35.2, 28.5, 18.3, 12.0, 6.0],
+                backgroundColor: [
+                    emersonPalette.blue,
+                    emersonPalette.teal,
+                    emersonPalette.lightTeal,
+                    emersonPalette.lightBlue,
+                    emersonPalette.grey
+                ],
+                barPercentage: 0.45
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: (val) => val + '%',
+                    font: { size: 10, weight: '600' }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, max: 45, title: { display: true, text: '份额 (%)', font: { size: 10 } } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // --- Chart 2.3: Area Trend Chart ---
+    new Chart(document.getElementById('chart-finding-2-growth'), {
+        type: 'line',
+        data: {
+            labels: ["2021", "2022", "2023", "2024"],
+            datasets: [
+                {
+                    label: "A类核心产品",
+                    data: [100, 115, 120, 160],
+                    borderColor: emersonPalette.blue,
+                    backgroundColor: 'rgba(27, 54, 93, 0.15)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    datalabels: { display: false }
+                },
+                {
+                    label: "B类创新业务",
+                    data: [20, 45, 90, 165],
+                    borderColor: emersonPalette.teal,
+                    backgroundColor: 'rgba(0, 169, 157, 0.15)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    datalabels: { display: false }
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12 } }
+            },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: '营收额指数', font: { size: 10 } } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // --- Chart 3.1: Radar Chart ---
+    new Chart(document.getElementById('chart-finding-3-radar'), {
+        type: 'radar',
+        data: {
+            labels: ["产品研发力", "品牌影响力", "渠道掌控力", "客户服务力", "供应链韧性"],
+            datasets: [
+                {
+                    label: "我司当前水平",
+                    data: [85, 75, 60, 80, 70],
+                    borderColor: emersonPalette.teal,
+                    backgroundColor: 'rgba(0, 169, 157, 0.12)',
+                    pointBackgroundColor: emersonPalette.teal,
+                    borderWidth: 1.5
+                },
+                {
+                    label: "行业标杆水平",
+                    data: [90, 85, 85, 75, 80],
+                    borderColor: emersonPalette.grey,
+                    backgroundColor: 'transparent',
+                    borderDash: [4, 4],
+                    borderWidth: 1.5,
+                    pointRadius: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    angleLines: { color: '#E5E7EB' },
+                    grid: { color: '#E5E7EB' },
+                    pointLabels: { font: { size: 11 }, color: '#4B5563' },
+                    suggestedMin: 0,
+                    suggestedMax: 100
+                }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12 } },
+                datalabels: { display: false }
+            }
+        }
+    });
+
+    // --- Chart 3.2: Bubble Chart ---
+    new Chart(document.getElementById('chart-finding-3-scatter'), {
+        type: 'bubble',
+        data: {
+            datasets: [{
+                label: '区域投入产出',
+                data: [
+                    { x: 120, y: 450, r: 12, label: "区域A" },
+                    { x: 180, y: 320, r: 10, label: "区域B" },
+                    { x: 90,  y: 280, r: 8,  label: "区域C" },
+                    { x: 250, y: 580, r: 15, label: "区域D" },
+                    { x: 150, y: 210, r: 6,  label: "区域E" }
+                ],
+                backgroundColor: [
+                    emersonPalette.teal,
+                    emersonPalette.blue,
+                    emersonPalette.teal,
+                    emersonPalette.orange,
+                    emersonPalette.orange
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    align: 'top',
+                    offset: 4,
+                    color: '#4B5563',
+                    formatter: (value) => value.label,
+                    font: { size: 10, weight: '500' }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: '市场投入费用 (万元)', font: { size: 11 } } },
+                y: { title: { display: true, text: '区域销售产出 (万元)', font: { size: 11 } } }
+            }
+        }
+    });
+</script>
+</body>
+</html>

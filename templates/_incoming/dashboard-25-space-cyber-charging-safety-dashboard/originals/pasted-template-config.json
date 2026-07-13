@@ -1,0 +1,85 @@
+{
+  "id": "electric-bike-charging-safety-dashboard",
+  "name": "电动自行车充电站AI智慧安全监管平台",
+  "version": "1.0.0",
+  "pageTypes": [
+    "realtime-dashboard",
+    "safety-supervision",
+    "smart-city-grid"
+  ],
+  "styleTags": [
+    "cyberpunk",
+    "neon-cyan",
+    "dark-blue",
+    "enterprise-level"
+  ],
+  "supportedSections": [
+    {
+      "id": "key-takeaway",
+      "name": "Key Takeaway (平台全局底座与运行综述)",
+      "dataSection": "key-takeaway",
+      "required": true
+    },
+    {
+      "id": "core-finding-1",
+      "name": "Core Finding 1 (核心设备状态与能源流量分析)",
+      "dataSection": "core-finding-1",
+      "required": true
+    },
+    {
+      "id": "core-finding-2",
+      "name": "Core Finding 2 (实时事故报警与视频流网格治理)",
+      "dataSection": "core-finding-2",
+      "required": true
+    },
+    {
+      "id": "core-finding-3",
+      "name": "Core Finding 3 (多维效能研判与故障流转研判)",
+      "dataSection": "core-finding-3",
+      "required": false
+    }
+  ],
+  "supportedChartTypes": [
+    "KPI",
+    "smooth-line-area",
+    "column-bar",
+    "horizontal-bar",
+    "stacked-bar",
+    "ring-pie",
+    "funnel",
+    "radar",
+    "heatmap",
+    "scatter",
+    "waterfall",
+    "rank-list"
+  ],
+  "chartModules": [
+    { "id": "chart-port-status-ring", "type": "ring-pie", "title": "智能充电端口使用率分布", "dataSlot": "chart.portStatus" },
+    { "id": "chart-daily-power-bar", "type": "column-bar", "title": "每日充电量趋势柱状图", "dataSlot": "chart.dailyPower" },
+    { "id": "chart-vehicle-trend-area", "type": "smooth-line-area", "title": "累计新增注册车辆数", "dataSlot": "chart.vehicleTrend" },
+    { "id": "chart-fault-funnel", "type": "funnel", "title": "安全隐患治理流转漏斗", "dataSlot": "chart.faultFunnel" },
+    { "id": "chart-station-radar", "type": "radar", "title": "充电站综合效能雷达图", "dataSlot": "chart.stationRadar" },
+    { "id": "chart-peak-heatmap", "type": "heatmap", "title": "充电时段热力分布图", "dataSlot": "chart.peakHeatmap" },
+    { "id": "chart-duration-scatter", "type": "scatter", "title": "单次充电时长与充电量分布", "dataSlot": "chart.durationScatter" },
+    { "id": "chart-energy-waterfall", "type": "waterfall", "title": "月度能耗损耗分摊瀑布图", "dataSlot": "chart.energyWaterfall" }
+  ],
+  "editableCapabilities": {
+    "textEditable": true,
+    "chartReplaceable": true,
+    "sectionDraggable": true,
+    "canHideOptionalSections": true
+  },
+  "sampleData": {
+    "text": {
+      "platformTitle": "电动自行车充电站AI智慧安全监管平台",
+      "totalStations": "19380",
+      "totalPorts": "839000",
+      "totalVehicles": "3920300",
+      "totalUsage": "39490094",
+      "takeawaySummary": "今日系统运行整体处于【安全】评级。智能充电端口平均使用率稳定在 72%。系统已接入 19,380 个小区微站点。AI 边缘端实时过滤 99.8% 的轻微预警，确保火情告警等核心指标极速响应。",
+      "alarmStation": "城市花园站",
+      "alarmLocation": "广州市番禺区大龙商业便民服务中心停车场 A区广场",
+      "alarmTime": "2026-07-13 12:03:02"
+    }
+  }
+}

@@ -1,0 +1,248 @@
+{
+  "id": "dashboard-25-space-cyber-charging-safety-dashboard",
+  "sourceConfigId": "electric-bike-charging-safety-dashboard",
+  "name": "Space Cyber Charging Safety Dashboard 深空赛博充电安全监管看板",
+  "templateName": "SpaceCyberChargingSafetyDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向电动自行车充电站 AI 智慧安全监管、物联网实时监控、社区网格治理和设备运维分析的深空蓝霓虹科技风数据大屏。",
+  "pageTypes": [
+    "dashboard",
+    "realtime-dashboard",
+    "safety-supervision",
+    "smart-city-grid",
+    "iot-dashboard"
+  ],
+  "styleTags": [
+    "space-cyber-blue",
+    "neon-cyan",
+    "dark-blue",
+    "iot",
+    "safety",
+    "echarts"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "电动自行车充电安全监管",
+    "物联网实时监控",
+    "社区网格治理",
+    "智能硬件运维",
+    "企业安全资产看板"
+  ],
+  "requiredRuntime": [
+    "Tailwind CDN",
+    "ECharts CDN",
+    "FontAwesome CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#020617",
+      "panel": "#07142b",
+      "primary": "#06b6d4",
+      "success": "#10b981",
+      "warning": "#f59e0b",
+      "critical": "#ef4444",
+      "textMain": "#f1f5f9",
+      "textSub": "#94a3b8"
+    },
+    "fonts": {
+      "body": "Consolas, Menlo, SF Pro Display, PingFang SC, Microsoft YaHei, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeOverride": false
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "平台标题、四大底座指标和今日安全综述",
+      "required": true,
+      "hideable": false
+    },
+    "core-finding-1": {
+      "desc": "智能充电端口分布、每日充电能耗趋势和注册车辆增长曲线",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-2": {
+      "desc": "实时火灾安全预警、告警站点、视频源、时间戳、位置和监控网格",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-3": {
+      "desc": "隐患流转、综合效能、时段热力、充电分布和能耗损耗分析",
+      "required": false,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "ring-pie",
+    "column-bar",
+    "smooth-line-area",
+    "funnel",
+    "radar",
+    "heatmap",
+    "scatter",
+    "waterfall"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-editable、contenteditable、data-slot 和 data-key"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "8 个 ECharts 图表容器"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "4 个核心数据区"
+    },
+    "textSlots": [
+      "text.platformTitle",
+      "text.totalStations",
+      "text.totalPorts",
+      "text.totalVehicles",
+      "text.totalUsage",
+      "text.takeawaySummary",
+      "text.finding1Title",
+      "text.finding2Title",
+      "text.alarmStation",
+      "text.alarmTime",
+      "text.alarmLocation"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-port-status-ring", "type": "ring-pie", "section": "core-finding-1", "description": "智能充电端口使用率分布" },
+    { "id": "chart-daily-power-bar", "type": "column-bar", "section": "core-finding-1", "description": "每日充电量趋势柱状图" },
+    { "id": "chart-vehicle-trend-area", "type": "smooth-line-area", "section": "core-finding-1", "description": "累计新增注册车辆趋势面积图" },
+    { "id": "chart-fault-funnel", "type": "funnel", "section": "core-finding-3", "description": "安全隐患治理流转漏斗" },
+    { "id": "chart-station-radar", "type": "radar", "section": "core-finding-3", "description": "充电站综合效能雷达图" },
+    { "id": "chart-peak-heatmap", "type": "heatmap", "section": "core-finding-3", "description": "充电时段热力分布图" },
+    { "id": "chart-duration-scatter", "type": "scatter", "section": "core-finding-3", "description": "单次充电时长与充电量分布" },
+    { "id": "chart-energy-waterfall", "type": "waterfall", "section": "core-finding-3", "description": "月度能耗损耗分摊瀑布图" }
+  ],
+  "sampleData": {
+    "text": {
+      "text.platformTitle": "电动自行车充电站AI智慧安全监管平台",
+      "text.totalStations": "19380",
+      "text.totalPorts": "839000",
+      "text.totalVehicles": "3920300",
+      "text.totalUsage": "39490094",
+      "text.takeawaySummary": "今日全国各联网电站运行评定为【卓越】。全国峰值负荷控制策略响应极佳，未见大规模异常，AI 边缘监测共防御阻断不规范充电行为及隐患共 1,289 起。",
+      "text.finding1Title": "智能充电端口分布",
+      "text.finding2Title": "实时火灾安全预警 (FIRE ALARM)",
+      "text.alarmStation": "城市花园站",
+      "text.alarmTime": "2026-07-13 12:03:02",
+      "text.alarmLocation": "广州市番禺区大龙商业便民服务中心停车场 A区广场"
+    }
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container",
+    "missingVideoStream": "show-offline-placeholder"
+  },
+  "slotLimits": {
+    "platform-title": 24,
+    "kpi-value": 16,
+    "takeaway-summary": 100,
+    "section-title": 32,
+    "alarm-station": 24,
+    "alarm-time": 24,
+    "alarm-location": 64
+  },
+  "llmInjectionRules": [
+    "替换文本时优先通过 data-key 或 data-slot 精确匹配，只注入纯文本。",
+    "替换图表数据时优先修改 window.CHART_DATA 中的 portStatus、dailyPower 和 vehicleTrend。",
+    "底部高级图表数据写在 ECharts 配置内，注入时只替换数据字段，不改布局样式。",
+    "Tooltip、分割线、霓虹高亮和火警红色状态应保留。",
+    "缺少必要 KPI 数据时显示为 -，不要删除 Key Takeaway。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "templateConfigArchived": true,
+    "templateConfigFile": "originals/pasted-template-config.json",
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "editableCount": 11,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 4,
+    "chartCount": 8,
+    "usesECharts": true,
+    "standardReview": [
+      "HTML 是完整单页 Dashboard，可直接浏览器打开，包含 data-section、data-slot、contenteditable 和 chart-* 容器。",
+      "视觉风格符合深空蓝、霓虹青、安全绿、警示橙和火警红的大屏规范。",
+      "折线图使用 smooth 和面积填充，柱状图使用圆角，主要图表分割线采用低透明虚线。",
+      "Tooltip 在前三个主要图表中符合深色半透明与青色边框规范；底部部分图表仍使用 ECharts 默认 Tooltip，已在注入规则中提示保留/补齐。",
+      "原始槽位说明提到 text.finding2Title、text.alarmTime，但原始 HTML 未标记，入库版已补齐。",
+      "原始槽位说明提到 text.portUsageRate 和 video-stream-0 到 video-stream-3，但实际 HTML 未提供对应 data-slot，入库版未强行添加不存在的数据槽。",
+      "原始 HTML 将 FontAwesome CSS 写成 script 标签，入库版已改为 link 标签，并去掉重复 FontAwesome CDN 引入。",
+      "项目要求预览图，但本轮低性能模式未生成 preview.png。"
+    ],
+    "sourceCleanup": [
+      "按模板 25 命名为 dashboard-25-space-cyber-charging-safety-dashboard。",
+      "保留 Gemini 原始 HTML 到 originals/source-template.html 和 originals/pasted-text.html。",
+      "补齐 README.md、design-standard.md、template-slots.md、template.json、preview-metadata.md 和模板注册。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#06b6d4",
+    "presets": [
+      "#020617",
+      "#07142b",
+      "#06b6d4",
+      "#10b981",
+      "#f59e0b",
+      "#ef4444",
+      "#f1f5f9",
+      "#94a3b8"
+    ],
+    "targets": {
+      "tailwindColors": {
+        "cyberDark": "大屏背景底色",
+        "cyberPanel": "卡片面板色",
+        "cyberCyan": "科技青主色",
+        "cyberGreen": "安全在线状态",
+        "cyberAmber": "警示状态",
+        "cyberRed": "严重告警状态"
+      },
+      "colorSelectors": [
+        ".text-cyberCyan",
+        ".text-cyberGreen",
+        ".text-cyberAmber",
+        ".text-cyberRed",
+        ".text-neon-glow",
+        ".text-neon-red-glow"
+      ],
+      "backgroundSelectors": [
+        ".bg-cyberDark",
+        ".bg-cyberPanel",
+        ".cyber-panel-corner",
+        "#alarm-box"
+      ],
+      "chartPalette": [
+        "cyberCyan",
+        "cyberGreen",
+        "cyberAmber",
+        "cyberRed",
+        "cyberDark",
+        "cyberPanel"
+      ]
+    }
+  }
+}

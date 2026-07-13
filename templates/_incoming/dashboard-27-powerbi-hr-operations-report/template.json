@@ -1,0 +1,278 @@
+{
+  "id": "dashboard-27-powerbi-hr-operations-report",
+  "sourceConfigId": "power-bi-hr-analysis-template",
+  "name": "PowerBI HR Operations Report 人力资源经营分析复盘看板",
+  "templateName": "PowerBIHROperationsReportDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向集团人力资源年度经营复盘、员工结构、招聘转化、薪酬分布、留存流失和组织效能诊断的高密度商务分析 Dashboard。",
+  "pageTypes": [
+    "dashboard",
+    "hr-dashboard",
+    "executive-report",
+    "operational-analysis",
+    "workforce-analytics"
+  ],
+  "styleTags": [
+    "powerbi-style",
+    "high-density",
+    "minimalist-corporate",
+    "static-report",
+    "hr-analytics",
+    "echarts"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "人力资源年度经营复盘",
+    "员工结构与多样性分析",
+    "招聘转化和岗位能力分析",
+    "薪酬公平性诊断",
+    "留存流失趋势复盘",
+    "Excel 数据报告可视化"
+  ],
+  "requiredRuntime": [
+    "Tailwind CDN",
+    "Google Fonts",
+    "ECharts CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#EBF1F6",
+      "panel": "#2C3E50",
+      "panelDark": "#1E2D3B",
+      "surface": "#FFFFFF",
+      "border": "#DDE3EA",
+      "primary": "#2C3E50",
+      "slate": "#475569",
+      "gold": "#D97706",
+      "yellow": "#EAB308",
+      "orange": "#E67E22",
+      "danger": "#C0392B",
+      "success": "#27AE60",
+      "textMain": "#1E293B",
+      "textSub": "#64748B"
+    },
+    "fonts": {
+      "body": "Inter, PingFang SC, Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "tabSwitch": true,
+    "chartToggle": true,
+    "showHideSections": true,
+    "themeOverride": false
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "页面顶部的核心管理发现与建议",
+      "required": true,
+      "hideable": false
+    },
+    "workforce-demographics": {
+      "desc": "员工性别比例、族裔、国家和年龄分布",
+      "required": true,
+      "hideable": true
+    },
+    "hiring-and-skills": {
+      "desc": "招聘漏斗、核心能力雷达和部门人数环比",
+      "required": true,
+      "hideable": true
+    },
+    "salary-distribution": {
+      "desc": "职级薪酬区间分布散点分析",
+      "required": true,
+      "hideable": true
+    },
+    "retention-kpis": {
+      "desc": "留存率、流失率和离职人数 KPI 及 Sparkline",
+      "required": true,
+      "hideable": true
+    },
+    "retention-correlation": {
+      "desc": "留存率与薪酬相关性，支持 Chart/Table 切换",
+      "required": true,
+      "hideable": true
+    },
+    "retention-trends": {
+      "desc": "历史留存趋势，支持 Chart/Table 切换",
+      "required": true,
+      "hideable": true
+    },
+    "retention-deep-dive": {
+      "desc": "离职原因、编制变动和流失风险热力图",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "kpi",
+    "doughnut",
+    "waffle",
+    "bar",
+    "scatter",
+    "sparkline",
+    "combo-line-bar",
+    "funnel",
+    "radar",
+    "waterfall",
+    "heatmap",
+    "horizontal-bar",
+    "grid-table"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-editable、contenteditable、data-slot 和 data-key"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[data-chart-type], [id^=\"chart-\"], [id^=\"sparkline-\"]",
+      "desc": "12 个 chart-* 主图表容器，另有 3 个 sparkline-* 迷你趋势图容器"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "8 个核心数据区"
+    },
+    "textSlots": [
+      "text.report_title",
+      "text.filter_info",
+      "text.summary_content",
+      "text.f1_title",
+      "text.new_sec_title",
+      "text.f2_title",
+      "text.f3_title"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-ethnicity-dist", "type": "bar-waffle", "section": "workforce-demographics", "description": "族裔分布，支持 Headcount 与 Proportion 切换" },
+    { "id": "chart-country-dist", "type": "bar-waffle", "section": "workforce-demographics", "description": "国家区域分布，支持 Headcount 与 Proportion 切换" },
+    { "id": "chart-age-dist", "type": "bar-waffle", "section": "workforce-demographics", "description": "年龄层分布，支持 Headcount 与 Proportion 切换" },
+    { "id": "chart-recruitment-funnel", "type": "funnel", "section": "hiring-and-skills", "description": "招聘转化漏斗" },
+    { "id": "chart-competency-radar", "type": "radar", "section": "hiring-and-skills", "description": "核心能力雷达" },
+    { "id": "chart-dept-doughnut", "type": "doughnut", "section": "hiring-and-skills", "description": "部门人数占比" },
+    { "id": "chart-salary-scatter", "type": "scatter", "section": "salary-distribution", "description": "职级薪酬区间分布散点图" },
+    { "id": "sparkline-retention", "type": "sparkline", "section": "retention-kpis", "description": "留存率迷你趋势图" },
+    { "id": "sparkline-turnover", "type": "sparkline", "section": "retention-kpis", "description": "流失率迷你趋势图" },
+    { "id": "sparkline-left", "type": "sparkline", "section": "retention-kpis", "description": "离职人数迷你趋势图" },
+    { "id": "chart-retention-scatter", "type": "scatter", "section": "retention-correlation", "description": "薪酬与留存相关性散点图" },
+    { "id": "chart-retention-trend", "type": "combo-line-bar", "section": "retention-trends", "description": "历史留存趋势双轴图" },
+    { "id": "chart-turnover-causes", "type": "horizontal-bar", "section": "retention-deep-dive", "description": "离职原因排名横向柱状图" },
+    { "id": "chart-headcount-waterfall", "type": "waterfall", "section": "retention-deep-dive", "description": "年度编制变化瀑布图" },
+    { "id": "chart-risk-heatmap", "type": "heatmap", "section": "retention-deep-dive", "description": "流失风险梯度热力矩阵" }
+  ],
+  "sampleData": {
+    "text": {
+      "text.report_title": "📊 人力资源年度经营分析与复盘数据报告",
+      "text.filter_info": "发布单位：集团人力资源部管理中心 | 报告周期：2024财年经营盘点",
+      "text.summary_content": "1. 核心流失回归显著：本年度员工流失主要集中在技术岗位，中级经理（Manager）及高年资的核心系统架构师流失率逼近10.21%，且流失率与年薪呈高相关性，表明中层激励机制亟需升级。\n2. 多元化布局深化：女性员工比例实现平稳增长（占比52.35%），平均及中位数年薪基本与男性齐平，拉美及亚太外派办事处在2024财年完成了既定编制的快速扩充。",
+      "text.f1_title": "核心观察 1: 员工多样性与关键部门分布",
+      "text.new_sec_title": "核心观察 2: 招聘漏斗效率、部门编制及核心岗位技能雷达",
+      "text.f2_title": "核心观察 3: 薪酬分布与职级关联度多维对比",
+      "text.f3_title": "核心观察 4: 留存流失与效能趋势深度对比分析"
+    },
+    "charts": {
+      "retention_sparkline": [89.12, 89.45, 89.2, 89.85, 89.79],
+      "turnover_sparkline": [10.88, 10.55, 10.8, 10.15, 10.21],
+      "employees_left_sparkline": [74, 71, 75, 68, 69]
+    }
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container",
+    "invalidMetric": "hide-trend-badge"
+  },
+  "slotLimits": {
+    "report-title": 25,
+    "filter-info": 35,
+    "summary-content": 250,
+    "finding-title": 24,
+    "kpi-value": 16
+  },
+  "llmInjectionRules": [
+    "文本替换优先匹配 data-key 或 data-slot，只注入纯文本或保留原有段落结构。",
+    "图表数据注入时只替换 ECharts option 内的 data、labels、series 字段，不改布局样式。",
+    "Workforce 的 Headcount 模式注入绝对数值，Proportion 模式注入百分比并保持 10x10 Waffle 网格。",
+    "页签切换和 Chart/Table 切换后保留 resize() 调用，避免隐藏容器图表渲染为 0 宽度。",
+    "缺少图表数据时隐藏对应容器或保留默认示例数据，不删除 Key Takeaway。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "templateConfigArchived": true,
+    "templateConfigFile": "originals/pasted-template-config.json",
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "editableCount": 7,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 8,
+    "chartCount": 12,
+    "sparklineCount": 3,
+    "dataChartTypeCount": 15,
+    "usesECharts": true,
+    "usesChartJs": false,
+    "standardReview": [
+      "HTML 是完整单页 Dashboard，可直接浏览器打开，包含 data-section、data-slot、data-key、contenteditable 和 chart-* 容器。",
+      "原始 HTML 与粘贴附件完全一致。",
+      "用户槽位说明写“5 个主要内容区”，但实际列出并交付 8 个 data-section；入库版按实际 8 个登记。",
+      "实际可编辑文字槽位为 7 个，均带 data-editable=\"true\"、contenteditable=\"true\"、data-slot 和 data-key。",
+      "实际主图表容器为 12 个 chart-*，另有 3 个 sparkline-* 迷你趋势图容器。",
+      "原始 HTML 使用 ECharts，且页签切换、Chart/Table 切换后已调用 resize()，符合交互性能要求。",
+      "原始视觉基本符合淡蓝灰背景、深海军蓝控制面板、白卡片、细边框、轻阴影和 4px 卡片圆角规范。",
+      "项目要求预览图，但本轮低性能模式未生成 preview.png。"
+    ],
+    "sourceCleanup": [
+      "按模板 27 命名为 dashboard-27-powerbi-hr-operations-report。",
+      "模板命名为 PowerBI HR Operations Report 人力资源经营分析复盘看板。",
+      "保留 Gemini 原始 HTML 到 originals/source-template.html 和 originals/pasted-text.html。",
+      "补齐 README.md、design-standard.md、template-slots.md、template.json、preview-metadata.md 和模板注册。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#2C3E50",
+    "presets": [
+      "#EBF1F6",
+      "#FFFFFF",
+      "#DDE3EA",
+      "#2C3E50",
+      "#1E2D3B",
+      "#475569",
+      "#D97706",
+      "#EAB308",
+      "#E67E22",
+      "#C0392B",
+      "#27AE60",
+      "#7F8C8D"
+    ],
+    "targets": {
+      "tailwindColors": {
+        "pbi.bg": "页面淡蓝灰背景",
+        "pbi.panel": "顶部深海军蓝控制面板",
+        "pbi.cardBorder": "卡片极细边框",
+        "pbi.navy": "主色和男士指标",
+        "pbi.yellow": "Retention 高亮",
+        "pbi.red": "风险和女士指标",
+        "pbi.green": "正向状态"
+      },
+      "chartColors": {
+        "primary": "深蓝主图表色",
+        "gold": "关键点和留存高亮",
+        "orange": "辅助分类",
+        "danger": "流失和风险",
+        "success": "增加和安全状态"
+      }
+    }
+  }
+}

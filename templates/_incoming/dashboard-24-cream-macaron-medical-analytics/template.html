@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奶油马卡龙医疗分析看板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        app: {
+                            bg: '#FAF3E0', // 奶油底色
+                            text: '#1C1C1C', // 极深灰文字
+                            subtext: '#828282', // 暖灰次要文字
+                        },
+                        card: {
+                            yellow: '#FCE79C',
+                            pink: '#F8C8DC',
+                            blue: '#BFE0F7',
+                            green: '#C1EBD6',
+                            purple: '#EDE9FE',
+                            white: '#FFFFFF'
+                        }
+                    },
+                    borderRadius: {
+                        '3xl': '1.5rem',
+                        '4xl': '2rem',
+                        '5xl': '2.5rem',
+                    },
+                    fontFamily: {
+                        sans: ['"SF Pro Display"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        
+        body { background-color: #FAF3E0; color: #1C1C1C; overflow-y: auto; font-family: 'SF Pro Display', sans-serif; letter-spacing: -0.01em; }
+        
+        /* 可编辑高亮提示 */
+        [contenteditable="true"] { outline: none; transition: all 0.2s; border-radius: 6px; }
+        [contenteditable="true"]:hover { background-color: rgba(255,255,255,0.4); cursor: text; box-shadow: 0 0 0 4px rgba(255,255,255,0.4); }
+        [contenteditable="true"]:focus { background-color: #fff; box-shadow: 0 0 0 4px #fff; }
+        
+        .echart-container { width: 100%; height: 100%; min-height: 240px; }
+        .hover-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .hover-card:hover { transform: translateY(-3px); box-shadow: 0 15px 30px -5px rgba(0,0,0,0.04); }
+    </style>
+</head>
+<body class="p-4 md:p-8 lg:p-12 antialiased">
+
+    <!-- 铺满全屏的主内容区 -->
+    <main class="max-w-7xl mx-auto space-y-12 pb-24">
+        
+        <!-- 页面大标题 -->
+        <div class="space-y-2">
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight text-app-text pt-4" data-editable="true" contenteditable="true" data-slot="text.header.title" data-key="text.header.title">
+                Good morning, Dr. Olivia
+            </h1>
+            <p class="text-app-subtext text-xl max-w-4xl" data-editable="true" contenteditable="true" data-slot="text.header.desc" data-key="text.header.desc">
+                Intelly wishes you a good and productive day. 45 patients waiting for your treatment today. You also have one live event in your calendar today.
+            </p>
+        </div>
+
+        <!-- Section 1: 执行摘要与核心概览 (Key Takeaway) -->
+        <section data-section="key-takeaway" class="space-y-6">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-8 bg-app-text rounded-full"></span>
+                <h2 class="text-2xl font-black text-app-text">Key Takeaway - 核心业务效率看板</h2>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- 左侧：账单环形图卡片 -->
+                <div class="col-span-1 lg:col-span-4 bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center relative hover-card shadow-sm border border-gray-100">
+                    <h3 class="text-xl font-bold w-full text-left mb-6" data-editable="true" contenteditable="true" data-slot="text.kpi.main.title" data-key="text.kpi.main.title">Your patients billing & invoices</h3>
+                    
+                    <div class="relative w-full aspect-square max-w-[260px]">
+                        <div id="chart-main-pie" class="echart-container absolute inset-0" data-chart-type="doughnut"></div>
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span class="text-5xl font-black text-app-text tracking-tighter" data-editable="true" contenteditable="true" data-slot="text.kpi.main.value" data-key="text.kpi.main.value">23,4k</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧：马卡龙核心指标区 -->
+                <div class="col-span-1 lg:col-span-8 flex flex-col gap-6">
+                    <div class="flex justify-between items-end">
+                        <h3 class="text-2xl font-bold" data-editable="true" contenteditable="true" data-slot="text.overview.title" data-key="text.overview.title">Visits summary:</h3>
+                        <span class="text-app-subtext font-medium cursor-pointer hover:text-app-text">Show all ...</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+                        <!-- 黄色柱状图卡片 -->
+                        <div class="bg-card-yellow rounded-[2.5rem] p-6 flex flex-col hover-card relative overflow-hidden">
+                            <h4 class="text-2xl font-bold text-yellow-900 mb-2">Patients:</h4>
+                            <div class="flex gap-4 text-sm font-bold text-yellow-800 mb-4">
+                                <div>14 pers<br><span class="opacity-60 text-xs">22-32 Y.O</span></div>
+                                <div>5 pers<br><span class="opacity-60 text-xs">32-45 Y.O</span></div>
+                                <div>2 pers<br><span class="opacity-60 text-xs">45+ Y.O</span></div>
+                            </div>
+                            <div id="chart-user-stats" class="echart-container flex-1 min-h-[140px]" data-chart-type="bar"></div>
+                        </div>
+
+                        <!-- 粉色面积图卡片 -->
+                        <div class="bg-card-pink rounded-[2.5rem] p-6 flex flex-col hover-card relative overflow-hidden">
+                            <h4 class="text-2xl font-bold text-pink-900 mb-2">Wait time:</h4>
+                            <div class="flex gap-6 text-sm font-bold text-pink-800 mb-4 z-10">
+                                <div>24 min<br><span class="opacity-60 text-xs">AVERAGE</span></div>
+                                <div>15 min<br><span class="opacity-60 text-xs">MINIMUM</span></div>
+                                <div>01:30 h<br><span class="opacity-60 text-xs">MAXIMUM</span></div>
+                            </div>
+                            <svg class="absolute right-[-20px] top-[-20px] w-48 h-48 text-pink-400 opacity-20 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                            <div id="chart-wait-time" class="echart-container flex-1 min-h-[140px] z-10" data-chart-type="area"></div>
+                        </div>
+                    </div>
+
+                    <!-- 下排小色块 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-card-green rounded-[2rem] p-6 flex flex-col justify-center hover-card">
+                            <h4 class="text-xl font-bold text-teal-900 mb-2">By condition:</h4>
+                            <div class="flex gap-6 text-base font-bold text-teal-800">
+                                <div>14 pers<br><span class="opacity-60 text-xs tracking-widest">STABLE</span></div>
+                                <div>5 pers<br><span class="opacity-60 text-xs tracking-widest">FAIR</span></div>
+                                <div>1 pers<br><span class="opacity-60 text-xs tracking-widest">CRITICAL</span></div>
+                            </div>
+                        </div>
+                        <div class="bg-card-blue rounded-[2rem] p-6 flex flex-col justify-center hover-card">
+                            <h4 class="text-xl font-bold text-blue-900 mb-2">Sessions:</h4>
+                            <div class="flex gap-6 text-base font-bold text-blue-800">
+                                <div>03:45 h<br><span class="opacity-60 text-xs tracking-widest">IN CLINIC</span></div>
+                                <div>02:00 min<br><span class="opacity-60 text-xs tracking-widest">VIDEO CALLS</span></div>
+                                <div>00:24 min<br><span class="opacity-60 text-xs tracking-widest">IN CHAT</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: 患者卡片与综合人体体征评估雷达/转化漏斗 (Core Finding 1) -->
+        <section data-section="core-finding-1" class="space-y-6 pt-6">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-8 bg-app-text rounded-full"></span>
+                <h2 class="text-2xl font-black text-app-text" data-editable="true" contenteditable="true" data-slot="text.section2.title" data-key="text.section2.title">Core Finding 1 - 综合体征评测与就诊流程漏斗</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- 患者档案详情 (B端样式) -->
+                <div class="col-span-1 lg:col-span-4 bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100 flex flex-col gap-4">
+                    <div class="flex justify-between items-center mb-2 px-2">
+                        <h3 class="text-xl font-bold">Patient's profile</h3>
+                        <div class="bg-app-text text-white px-4 py-2 rounded-full text-sm font-bold">Today</div>
+                    </div>
+                    <!-- Wilkinson 激活卡片 -->
+                    <div class="bg-card-pink bg-opacity-30 rounded-3xl p-4 flex items-center justify-between border border-pink-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-card-pink text-pink-700 rounded-full flex items-center justify-center font-bold text-xl">TW</div>
+                            <div>
+                                <div class="font-bold text-base">Taigo Wilkinson</div>
+                                <div class="text-xs text-app-subtext">Male · 38Y 5M</div>
+                            </div>
+                        </div>
+                        <div class="bg-card-pink text-pink-900 font-bold px-3 py-1 rounded-full text-xs">Emergency</div>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-3xl space-y-3 text-sm">
+                        <p class="font-bold">Observation:</p>
+                        <p class="text-app-subtext">High fever and cough at normal hemoglobin levels.</p>
+                        <p class="font-bold">Prescription:</p>
+                        <p class="text-app-subtext">Paracetamol · 2 times a day</p>
+                    </div>
+                </div>
+
+                <!-- 雷达多系统健康评测卡片 (白色背景) -->
+                <div class="col-span-1 lg:col-span-4 bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col hover-card">
+                    <h3 class="text-xl font-bold mb-4" data-editable="true" contenteditable="true" data-slot="text.radar.title" data-key="text.radar.title">Health systems overview (Radar)</h3>
+                    <div class="flex-1 min-h-[220px] relative">
+                        <div id="chart-clinical-radar" class="echart-container absolute inset-0" data-chart-type="radar"></div>
+                    </div>
+                </div>
+
+                <!-- 转化漏斗卡片 (蓝色底背景) -->
+                <div class="col-span-1 lg:col-span-4 bg-card-blue rounded-[2.5rem] p-8 flex flex-col hover-card border border-blue-200">
+                    <h3 class="text-xl font-bold text-blue-950 mb-4" data-editable="true" contenteditable="true" data-slot="text.funnel.title" data-key="text.funnel.title">Treatment Flow Funnel (Funnel)</h3>
+                    <div class="flex-1 min-h-[220px] relative">
+                        <div id="chart-diagnostic-funnel" class="echart-container absolute inset-0" data-chart-type="funnel"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: 空间时间热力图与患者消费行为散点分布 (Core Finding 2) -->
+        <section data-section="core-finding-2" class="space-y-6 pt-6">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-8 bg-app-text rounded-full"></span>
+                <h2 class="text-2xl font-black text-app-text" data-editable="true" contenteditable="true" data-slot="text.section3.title" data-key="text.section3.title">Core Finding 2 - 患者门诊时段热力与诊疗资费分布</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- 周度时段热力图 (白色背景) -->
+                <div class="col-span-1 lg:col-span-7 bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col hover-card">
+                    <h3 class="text-xl font-bold mb-4" data-editable="true" contenteditable="true" data-slot="text.heatmap.title" data-key="text.heatmap.title">Hourly patient influx (Heatmap)</h3>
+                    <div class="flex-1 min-h-[260px] relative">
+                        <div id="chart-temporal-heatmap" class="echart-container absolute inset-0" data-chart-type="heatmap"></div>
+                    </div>
+                </div>
+
+                <!-- 年龄/资费散点图 (薄荷绿背景) -->
+                <div class="col-span-1 lg:col-span-5 bg-card-green rounded-[2.5rem] p-8 flex flex-col hover-card border border-green-200">
+                    <h3 class="text-xl font-bold text-teal-950 mb-4" data-editable="true" contenteditable="true" data-slot="text.scatter.title" data-key="text.scatter.title">Age vs Treatment costs (Scatter)</h3>
+                    <div class="flex-1 min-h-[260px] relative">
+                        <div id="chart-cost-scatter" class="echart-container absolute inset-0" data-chart-type="scatter"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: 科室竞争力排行榜与预算变动瀑布分析 (Core Finding 3) -->
+        <section data-section="core-finding-3" class="space-y-6 pt-6">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-8 bg-app-text rounded-full"></span>
+                <h2 class="text-2xl font-black text-app-text" data-editable="true" contenteditable="true" data-slot="text.section4.title" data-key="text.section4.title">Core Finding 3 - 科室综合创收排名与盈余拆解</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- 横向条形图 - 优势科室业绩排行 (白色背景) -->
+                <div class="col-span-1 lg:col-span-6 bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col hover-card">
+                    <h3 class="text-xl font-bold mb-4" data-editable="true" contenteditable="true" data-slot="text.ranking.title" data-key="text.ranking.title">Dominant departments performance (Horizontal Bar)</h3>
+                    <div class="flex-1 min-h-[260px] relative">
+                        <div id="chart-dept-ranking" class="echart-container absolute inset-0" data-chart-type="horizontal-bar"></div>
+                    </div>
+                </div>
+
+                <!-- 变动瀑布图 - 年度财务增量剖析 (柠檬黄背景) -->
+                <div class="col-span-1 lg:col-span-6 bg-card-yellow rounded-[2.5rem] p-8 flex flex-col hover-card border border-yellow-200">
+                    <h3 class="text-xl font-bold text-yellow-950 mb-4" data-editable="true" contenteditable="true" data-slot="text.waterfall.title" data-key="text.waterfall.title">Operational surplus analysis (Waterfall)</h3>
+                    <div class="flex-1 min-h-[260px] relative">
+                        <div id="chart-operational-waterfall" class="echart-container absolute inset-0" data-chart-type="waterfall"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 图表定制渲染代码 -->
+    <script>
+        const chartInstances = [];
+
+        // 统一文字样式
+        const labelStyle = { color: '#828282', fontFamily: 'SF Pro Display, sans-serif', fontWeight: 'bold' };
+        const darkLabelStyle = { color: '#1C1C1C', fontFamily: 'SF Pro Display, sans-serif', fontWeight: 'bold' };
+
+        // 统一高品质 Hover 弹出窗视觉配置模板 (奶油马卡龙主题配套)
+        const commonTooltipStyle = {
+            show: true,
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            borderColor: '#EFEFEF',
+            borderWidth: 1,
+            borderRadius: 12,
+            shadowColor: 'rgba(0,0,0,0.06)',
+            shadowBlur: 8,
+            shadowOffsetY: 4,
+            padding: [10, 14],
+            textStyle: { color: '#1C1C1C', fontFamily: 'SF Pro Display', fontSize: 12, fontWeight: 'bold' }
+        };
+
+        // 1. Doughnut (账单占比图) - 启用外侧线引导标注与 Hover 高亮效果
+        function initMainPieChart() {
+            const chart = echarts.init(document.getElementById('chart-main-pie'));
+            chartInstances.push(chart);
+            chart.setOption({
+                color: ['#F1C40F', '#F5C6DF', '#B4D4FF'],
+                tooltip: {
+                    ...commonTooltipStyle,
+                    trigger: 'item',
+                    formatter: '{b}: <span style="color:#1C1C1C;font-weight:900;">{c}k</span> ({d}%)'
+                },
+                legend: { show: false },
+                series: [
+                    {
+                        name: 'Invoices',
+                        type: 'pie',
+                        radius: ['52%', '75%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: { borderRadius: 16, borderColor: '#fff', borderWidth: 5 },
+                        label: { 
+                            show: true, 
+                            position: 'outside',
+                            formatter: '{b}\n{d}%',
+                            color: '#1C1C1C',
+                            fontWeight: 'bold',
+                            fontSize: 10
+                        },
+                        labelLine: {
+                            show: true,
+                            length: 8,
+                            length2: 10,
+                            lineStyle: { color: '#828282' }
+                        },
+                        emphasis: {
+                            scale: true,
+                            scaleSize: 8,
+                            itemStyle: {
+                                shadowBlur: 15,
+                                shadowColor: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        data: [
+                            { value: 45, name: 'Received' },
+                            { value: 30, name: 'Requested' },
+                            { value: 25, name: 'Non-insurance' }
+                        ]
+                    }
+                ]
+            });
+        }
+
+        // 2. Bar (年龄统计图) - 启用顶部数字与 Hover 聚焦变透明效果
+        function initUserBarChart() {
+            const chart = echarts.init(document.getElementById('chart-user-stats'));
+            chartInstances.push(chart);
+            chart.setOption({
+                tooltip: {
+                    ...commonTooltipStyle,
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    formatter: '预约时段 {b}<br/><span style="color:#B7950B">●</span> 候诊人数: <b>{c} 人</b>'
+                },
+                grid: { top: 25, left: 10, right: 10, bottom: 20, containLabel: true },
+                xAxis: { 
+                    type: 'category', 
+                    data: ['07:30', '08:30', '09:30', '10:30', '11:30', '12:00'],
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: { color: '#B7950B', fontSize: 10, fontWeight: 'bold' }
+                },
+                yAxis: { show: false },
+                series: [
+                    {
+                        type: 'bar',
+                        data: [8, 15, 6, 20, 10, 24],
+                        barWidth: '35%',
+                        label: {
+                            show: true,
+                            position: 'top',
+                            color: '#1C1C1C',
+                            fontWeight: 'bold',
+                            fontSize: 10,
+                            formatter: '{c}人'
+                        },
+                        emphasis: {
+                            focus: 'series',
+                            itemStyle: {
+                                color: '#111111'
+                            }
+                        },
+                        itemStyle: { color: '#1C1C1C', borderRadius: [10, 10, 10, 10] }
+                    }
+                ]
+            });
+        }
+
+        // 3. Area (候诊等待波动) - 启用拐点高对比数值及 Hover 十字瞄准星
+        function initWaitTimeAreaChart() {
+            const chart = echarts.init(document.getElementById('chart-wait-time'));
+            chartInstances.push(chart);
+            chart.setOption({
+                tooltip: {
+                    ...commonTooltipStyle,
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'line',
+                        lineStyle: { color: '#E83E8C', type: 'dashed', width: 1.5 }
+                    },
+                    formatter: '时段 {b}<br/><span style="color:#E83E8C">●</span> 平均等待延迟: <b>{c} 分钟</b>'
+                },
+                grid: { top: 25, left: 10, right: 10, bottom: 20, containLabel: true },
+                xAxis: { 
+                    type: 'category', 
+                    data: ['10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30'],
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: { color: '#C2185B', fontSize: 10, fontWeight: 'bold' }
+                },
+                yAxis: { show: false },
+                series: [
+                    {
+                        type: 'line', smooth: true, symbolSize: 6,
+                        label: {
+                            show: true,
+                            position: 'top',
+                            color: '#E83E8C',
+                            fontWeight: 'bold',
+                            fontSize: 10,
+                            formatter: '{c}m'
+                        },
+                        lineStyle: { color: '#E83E8C', width: 3 },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(232, 62, 140, 0.4)' },
+                                { offset: 1, color: 'rgba(232, 62, 140, 0.0)' }
+                            ])
+                        },
+                        emphasis: {
+                            focus: 'series',
+                            itemStyle: {
+                                color: '#C2185B',
+                                borderWidth: 3,
+                                borderColor: '#fff'
+                            }
+                        },
+                        data: [15, 30, 22, 45, 10, 20, 18]
+                    }
+                ]
+            });
+        }
+
+        // 4. Radar (多系统器官机能指标) - 启用多轴 Hover 提示与高亮区域填充
+        function initClinicalRadar() {
+            const chart = echarts.init(document.getElementById('chart-clinical-radar'));
+            chartInstances.push(chart);
+            chart.setOption({
+                color: ['#3498DB'],
+                tooltip: {
+                    ...commonTooltipStyle,
+                    trigger: 'item',
+                    formatter: function (params) {
+                        const indicator = ['Endocrine', 'Skeletal', 'Immune', 'Digestive', 'Cardio'];
+                        let res = params.name + ':<br/>';
+                        for (let i = 0; i < indicator.length; i++) {
+                            res += `<span style="color:#3498DB">●</span> ${indicator[i]}: <b>${params.value[i]} / 10 分</b><br/>`;
+                        }
+                        return res;
+                    }
+                },
+                radar: {
+                    indicator: [
+                        { name: 'Endocrine', max: 10 },
+                        { name: 'Skeletal', max: 10 },
+                        { name: 'Immune', max: 10 },
+                        { name: 'Digestive', max: 10 },
+                        { name: 'Cardio', max: 10 }
+                    ],
+                    radius: '55%',
+                    center: ['50%', '50%'],
+                    axisName: labelStyle,
+                    splitArea: { show: false },
+                    splitLine: { lineStyle: { color: '#EFEFEF' } },
+                    axisLine: { lineStyle: { color: '#EFEFEF' } }
+                },
+                series: [{
+                    type: 'radar',
+                    data: [
+                        {
+                            value: [8.3, 4.7, 7.5, 7.8, 8.7],
+                            name: 'General Baseline',
+                            label: {
+                                show: true,
+                                formatter: '{c}',
+                                color: '#1C1C1C',
+                                fontWeight: 'bold',
+                                fontSize: 10
+                            },
+                            areaStyle: { color: 'rgba(191, 224, 247, 0.6)' },
+                            lineStyle: { color: '#2980B9', width: 2 },
+                            symbolSize: 6
+                        }
+                    ],
+                    emphasis: {
+                        lineStyle: { width: 3 },
+                        areaStyle: { color: 'rgba(191, 224, 247, 0.85)' }
+                    }
+                }]
+            });
+        }
+
+        // 5. Funnel (就医漏斗) - 极致去阴影、优化文字、悬停放大凸出
+        function initDiagnosticFunnel() {
+            const chart = echarts.init(document.getElementById('chart-diagnostic-funnel'));
+            chartInstances.push(chart);
+            chart.setOption({
+                tooltip: {
+                    ...commonTooltipStyle,
+                    trigger: 'item',
+                    formatter: '就医流程阶段 - {b}<br/><span style="color:#2E86C1">●</span> 漏斗转化留存率: <b>{c}%</b>'
+                },
+                series: [
+                    {
+                        name: 'Treatment Funnel',
+                        type: 'funnel',
+                        left: '5%', right: '5%', top: '5%', bottom: '5%',
+                        min: 0, max: 100, minSize: '15%', maxSize: '100%',
+                        sort: 'descending', gap: 5,
+                        label: {
+                            show: true, position: 'inside',
+                            formatter: '{b} ({c}%)',
+                            color: '#1C1C1C',
+                            fontFamily: 'SF Pro Display',
+                            fontWeight: 'bold',
+                            textBorderColor: 'transparent',
+                            textShadowColor: 'transparent'
+                        },
+                        itemStyle: {
+                            borderColor: '#BFE0F7',
+                            borderWidth: 1,
+                            borderRadius: 10
+                        },
+                        color: ['#1A5276', '#2471A3', '#2E86C1', '#5DADE2', '#85C1E9'],
+                        emphasis: {
+                            label: {
+                                fontSize: 13,
+                                color: '#000000'
+                            },
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowColor: 'rgba(0,0,0,0.15)'
+                            }
+                        },
+                        data: [
+                            { value: 100, name: 'First Visit' },
+                            { value: 75, name: 'Check-Up' },
+                            { value: 50, name: 'Diagnosis' },
+                            { value: 25, name: 'Prescription' },
+                            { value: 10, name: 'Surgery' }
+                        ]
+                    }
+                ]
+            });
+        }
+
+        // 6. Heatmap (门诊时段热力分布) - 启用动态网格悬浮高亮、显示格子数字
+        function initTemporalHeatmap() {
+            const chart = echarts.init(document.getElementById('chart-temporal-heatmap'));
+            chartInstances.push(chart);
+            const hours = ['8a', '10a', '12p', '2p', '4p', '6p', '8p'];
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+            const data = [
+                [0,0,2],[0,1,5],[0,2,8],[0,3,3],[0,4,1],[0,5,6],[0,6,1],
+                [1,0,3],[1,1,6],[1,2,9],[1,3,2],[1,4,4],[1,5,5],[1,6,2],
+                [2,0,1],[2,1,4],[2,2,7],[2,3,8],[2,4,3],[2,5,3],[2,6,1],
+                [3,0,5],[3,1,9],[3,2,6],[3,3,4],[3,4,8],[3,5,6],[3,6,3],
+                [4,0,2],[4,1,3],[4,2,5],[4,3,9],[4,4,5],[4,5,7],[4,6,4]
+            ];
+            chart.setOption({
+                tooltip: {
+                    ...commonTooltipStyle,
+                    position: 'top',
+                    formatter: function (p) {
+                        return `${days[p.value[1]]} @ ${hours[p.value[0]]}<br/><span style="color:#F1C40F">●</span> 患者活跃指数: <b>${p.value[2]}</b>`;
+                    }
+                },
+                grid: { top: '5%', left: '5%', right: '5%', bottom: '25%', containLabel: true },
+                xAxis: { type: 'category', data: hours, axisLine: {show:false}, axisTick:{show:false}, axisLabel: labelStyle },
+                yAxis: { type: 'category', data: days, axisLine: {show:false}, axisTick:{show:false}, axisLabel: labelStyle },
+                visualMap: {
+                    min: 0, max: 10, calculable: true, orient: 'horizontal',
+                    left: 'center', bottom: '0%', text: ['High', 'Low'],
+                    inRange: { color: ['#FAF3E0', '#F1C40F'] },
+                    textStyle: labelStyle
+                },
+                series: [{
+                    name: 'Flow Density', type: 'heatmap', data: data,
+                    label: { 
+                        show: true,
+                        formatter: function(p) {
+                            return p.value[2] > 4 ? p.value[2] : ''; // 仅突出显示高活跃时段数值
+                        },
+                        color: '#1C1C1C',
+                        fontWeight: 'bold',
+                        fontSize: 10
+                    },
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowColor: 'rgba(0, 0, 0, 0.15)',
+                            borderColor: '#333',
+                            borderWidth: 1.5
+                        }
+                    },
+                    itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 }
+                }]
+            });
+        }
+
+        // 7. Scatter (年龄与费用分布) - 启用圆点悬浮放大
+        function initCostScatter() {
+            const chart = echarts.init(document.getElementById('chart-cost-scatter'));
+            chartInstances.push(chart);
+            chart.setOption({
+                tooltip: {
+                    ...commonTooltipStyle,
+                    trigger: 'item',
+                    formatter: function (p) {
+                        return `患者档案分布:<br/>年龄: <b>${p.value[0]} 岁</b><br/>诊疗开销: <b>${p.value[1]}k RMB</b>`;
+                    }
+                },
+                grid: { top: '10%', left: '5%', right: '5%', bottom: '15%', containLabel: true },
+                xAxis: { name: 'Age', splitLine: { show: false }, axisLine: {show:false}, axisLabel: darkLabelStyle },
+                yAxis: { name: 'Cost (k)', splitLine: { show: false }, axisLine: {show:false}, axisLabel: darkLabelStyle },
+                series: [{
+                    type: 'scatter',
+                    symbolSize: 14,
+                    itemStyle: {
+                        color: 'rgba(28, 28, 28, 0.8)',
+                        borderColor: '#1C1C1C', borderWidth: 1
+                    },
+                    emphasis: {
+                        scale: true,
+                        itemStyle: {
+                            color: '#1C1C1C',
+                            shadowBlur: 12,
+                            shadowColor: 'rgba(0,0,0,0.2)'
+                        }
+                    },
+                    data: [
+                        [22, 1.2], [28, 2.5], [35, 1.8], [42, 4.2], [50, 3.5], [58, 6.1], [65, 5.2],
+                        [31, 2.1], [47, 5.0], [53, 3.9], [62, 7.5], [26, 1.6], [38, 3.2], [45, 4.8]
+                    ]
+                }]
+            });
+        }
+
+        // 8. Horizontal Bar (科室排行榜) - 启用 Hover 条形变色突出与非选中系列灰色淡化
+        function initDeptRanking() {
+            const chart = echarts.init(document.getElementById('chart-dept-ranking'));
+            chartInstances.push(chart);
+            chart.setOption({
+                tooltip: {
+                    ...commonTooltipStyle,
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    formatter: '{b} 科室<br/><span style="color:#BFE0F7">●</span> 季度运营收入: <b>{c}k RMB</b>'
+                },
+                grid: { top: '5%', left: '5%', right: '12%', bottom: '5%', containLabel: true },
+                xAxis: { type: 'value', splitLine: { show: false }, axisLine: {show:false}, axisLabel: labelStyle },
+                yAxis: { 
+                    type: 'category', 
+                    data: ['Dental', 'Surgical', 'Pediatric', 'Cardio', 'OB-GYN'],
+                    axisLine: {show:false}, axisTick:{show:false}, axisLabel: labelStyle
+                },
+                series: [{
+                    type: 'bar',
+                    data: [320, 480, 510, 680, 890],
+                    barWidth: '45%',
+                    label: {
+                        show: true,
+                        position: 'right',
+                        formatter: '{c}k',
+                        color: '#1C1C1C',
+                        fontWeight: 'bold',
+                        fontSize: 11
+                    },
+                    emphasis: {
+                        focus: 'series',
+                        itemStyle: {
+                            color: '#2980B9' // Hover 时切换为更深、对比度更高的宝蓝色
+                        }
+                    },
+                    itemStyle: {
+                        color: '#BFE0F7',
+                        borderRadius: [0, 10, 10, 0]
+                    }
+                }]
+            });
+        }
+
+        // 9. Waterfall (预算变动分析瀑布图) - 启用绝对值与正负增量 Hover 格式化展现
+        function initOperationalWaterfall() {
+            const chart = echarts.init(document.getElementById('chart-operational-waterfall'));
+            chartInstances.push(chart);
+            chart.setOption({
+                tooltip: {
+                    ...commonTooltipStyle,
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    formatter: function (params) {
+                        const targetSeries = params[1]; // 仅提取实际渲染柱系列数据，屏蔽隐藏的辅助占位柱
+                        const signLabels = ['100k (期初基准)', '+50k (政府补贴盈余)', '-30k (研发费用消耗)', '-30k (设备采购开支)', '90k (期末实际盈余)'];
+                        return `变动周期: <b>${targetSeries.name}</b><br/>财务动态: <span style="color:#E74C3C">●</span> <b>${signLabels[targetSeries.dataIndex]}</b>`;
+                    }
+                },
+                grid: { top: '15%', left: '5%', right: '5%', bottom: '5%', containLabel: true },
+                xAxis: { 
+                    type: 'category', 
+                    data: ['Q1 Start', 'Subsidy', 'R&D Cost', 'Procurement', 'Q2 End'],
+                    axisLine: {show:false}, axisTick:{show:false}, axisLabel: darkLabelStyle
+                },
+                yAxis: { show: false },
+                series: [
+                    {
+                        type: 'bar', stack: 'Total',
+                        itemStyle: { borderColor: 'transparent', color: 'transparent' },
+                        emphasis: {
+                            itemStyle: { borderColor: 'transparent', color: 'transparent' }
+                        },
+                        data: [0, 100, 120, 90, 0] // 辅助支撑柱 (不显示)
+                    },
+                    {
+                        type: 'bar', stack: 'Total',
+                        label: {
+                            show: true,
+                            position: 'top',
+                            formatter: function(params) {
+                                const signLabels = ['100k', '+50k', '-30k', '-30k', '90k'];
+                                return signLabels[params.dataIndex];
+                            },
+                            color: '#1C1C1C',
+                            fontWeight: 'bold',
+                            fontSize: 11
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 8,
+                                shadowColor: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        itemStyle: {
+                            color: function(params) {
+                                const changeColors = ['#1C1C1C', '#2ECC71', '#E74C3C', '#E74C3C', '#1C1C1C'];
+                                return changeColors[params.dataIndex];
+                            },
+                            borderRadius: 6
+                        },
+                        data: [100, 50, 30, 30, 90] // 实际渲染柱
+                    }
+                ]
+            });
+        }
+
+        function initAllCharts() {
+            initMainPieChart();
+            initUserBarChart();
+            initWaitTimeAreaChart();
+            initClinicalRadar();
+            initDiagnosticFunnel();
+            initTemporalHeatmap();
+            initCostScatter();
+            initDeptRanking();
+            initOperationalWaterfall();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initAllCharts();
+            
+            // 全屏自适应监听
+            const resizeObserver = new ResizeObserver(() => {
+                chartInstances.forEach(chart => chart.resize());
+            });
+            resizeObserver.observe(document.querySelector('main'));
+        });
+    </script>
+</body>
+</html>

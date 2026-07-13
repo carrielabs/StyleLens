@@ -31,7 +31,7 @@
 - **作用**：根据数据文件生成 Dashboard HTML。
 - **输入**：`multipart/form-data`，包含 `file` 和可选 `templateId`。
 - **文件类型**：支持 `.csv` / `.json` / `.xlsx`。
-- **限制**：文件上限 2MB；模板只能使用当前 15 个 Dashboard 模板。
+- **限制**：文件上限 2MB；模板只能使用当前 28 个 Dashboard 模板。
 - **运行时限制**：`maxDuration = 60`。
 
 ## `GET /api/template-preview/[templateId]`

@@ -1,0 +1,50 @@
+{
+  "id": "premium-macos-dashboard-template",
+  "name": "macOS Premium Data Dashboard Template",
+  "pageTypes": [
+    "enterprise-report",
+    "operations-analysis",
+    "financial-review",
+    "digital-settlement-screen"
+  ],
+  "styleTags": [
+    "Glassmorphism",
+    "Premium",
+    "Interactive",
+    "macOS-Style",
+    "Auto-Responsive"
+  ],
+  "supportedSections": [
+    { "id": "key-takeaway", "name": "Key Takeaway (关键决策洞察)", "canHide": false },
+    { "id": "core-finding-1", "name": "Core Finding 1 (流量热力与分布)", "canHide": true },
+    { "id": "core-finding-2", "name": "Core Finding 2 (趋势与收支增长)", "canHide": true },
+    { "id": "core-finding-3", "name": "Core Finding 3 (渠道与商户绩效)", "canHide": true }
+  ],
+  "supportedChartTypes": [
+    "kpi",
+    "funnel",
+    "heatmap",
+    "ring",
+    "radar",
+    "line",
+    "area",
+    "column",
+    "stacked-column",
+    "waterfall",
+    "ranking",
+    "latency"
+  ],
+  "editableCapabilities": {
+    "text": true,
+    "charts": true,
+    "themeToggle": "auto-sync"
+  },
+  "sampleData": {
+    "kpis": {
+      "net_revenue": { "value": "$879,274", "trend": "同比增长 24%", "history": [18, 4, 14, 8, 12, 15, 7, 10] },
+      "transactions": { "value": "367,821", "trend": "环比递增 12.3%", "history": [18, 6, 15, 10, 14, 11, 8, 12] },
+      "promo_revenue": { "value": "$231,489", "trend": "达到本期目标 92%", "history": [18, 8, 16, 12, 14, 9, 13, 11] },
+      "edge_availability": { "value": "99.98%", "trend": "48 边缘节点集群在线", "history": [18, 5, 13, 9, 12, 11, 14, 10] }
+    }
+  }
+}

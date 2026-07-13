@@ -1,0 +1,36 @@
+{
+  "id": "tpl_warm_enterprise_dashboard_002",
+  "name": "暖色柔和风经营分析报告",
+  "version": "2.0.0",
+  "pageTypes": ["Dashboard", "Report", "Data Analysis"],
+  "styleTags": ["Warm Tone", "Soft UI", "Creamy", "Modern", "Approachable"],
+  "supportedSections": [
+    "key-takeaway",
+    "core-finding-1",
+    "core-finding-2",
+    "core-finding-3"
+  ],
+  "supportedChartTypes": [
+    "kpi", "line", "bar", "horizontal-bar", "stacked-bar",
+    "area", "donut", "funnel", "radar", "heatmap",
+    "scatter", "waterfall", "ranking"
+  ],
+  "editableCapabilities": {
+    "textEditing": true,
+    "chartDataInjection": true,
+    "moduleVisibilityToggle": true
+  },
+  "chartModules": [
+    { "id": "chart-kpi-1", "type": "kpi", "titleSlot": "text.kpi_1_title", "styleNote": "Yellow accent" },
+    { "id": "chart-kpi-2", "type": "kpi", "titleSlot": "text.kpi_2_title", "styleNote": "Orange accent" },
+    { "id": "chart-kpi-3", "type": "kpi", "titleSlot": "text.kpi_3_title", "styleNote": "Red accent" },
+    { "id": "chart-kpi-4", "type": "kpi", "titleSlot": "text.kpi_4_title", "styleNote": "Teal accent" },
+    { "id": "chart-trend-area", "type": "area", "titleSlot": "text.chart_title_trend" },
+    { "id": "chart-mix-donut", "type": "donut", "titleSlot": "text.chart_title_mix" },
+    { "id": "chart-rank-bar", "type": "horizontal-bar", "titleSlot": "text.chart_title_rank" },
+    { "id": "chart-funnel", "type": "funnel", "titleSlot": "text.chart_title_funnel" },
+    { "id": "chart-radar", "type": "radar", "titleSlot": "text.chart_title_radar" },
+    { "id": "chart-scatter", "type": "scatter", "titleSlot": "text.chart_title_scatter" },
+    { "id": "chart-stack-bar", "type": "stacked-bar", "titleSlot": "text.chart_title_stack" }
+  ]
+}

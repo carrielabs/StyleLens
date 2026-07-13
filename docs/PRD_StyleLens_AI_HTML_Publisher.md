@@ -37,7 +37,7 @@ StyleLens 2.0 是一个从参考风格到可编辑 HTML 页面的一体化工具
 3. 文本 / `.md` / `.txt` 走官网生成。
 4. `.csv` / `.json` / `.xlsx` 走 Dashboard 生成。
 5. 官网开放现有 8 个 website 模板。
-6. Dashboard 开放现有 15 个 dashboard 模板。
+6. Dashboard 开放现有 28 个 dashboard 模板。
 7. 模板支持全屏预览、选择模板、生成后预览和下载 HTML。
 8. 生成结果内置页面编辑和高级编辑运行时。
 
@@ -103,7 +103,7 @@ PPT、Skill、GitHub 开源是后续阶段，不进入当前版本。
 ↓
 选择“数据看板”
 ↓
-浏览 15 个 Dashboard 模板，必要时全屏预览
+浏览 28 个 Dashboard 模板，必要时全屏预览
 ↓
 点击“立即使用此模板”
 ↓
@@ -153,7 +153,7 @@ StyleLens
 
 生成页面与看板：
 [ 网站官网 ] [ 数据看板 ]
-[ 8 个官网模板 / 15 个 Dashboard 模板 ]
+[ 8 个官网模板 / 28 个 Dashboard 模板 ]
 [ 全屏预览 ]
 [ 立即使用此模板 ]
 [ 右侧抽屉：粘贴文本或上传文件 ]
@@ -228,6 +228,19 @@ Dashboard 开放：
 13. `dashboard-13-corporate-blue-analytics-report`
 14. `dashboard-14-financial-blue-analytics-report`
 15. `dashboard-15-consulting-data-report`
+16. `dashboard-16-executive-muted-dashboard`
+17. `dashboard-17-dark-enterprise-analytics`
+18. `dashboard-18-enterprise-green-analytics-report`
+19. `dashboard-19-warm-soft-enterprise-dashboard`
+20. `dashboard-20-live-commerce-dark-analytics`
+21. `dashboard-21-corporate-operating-analysis-report`
+22. `dashboard-22-glassmorphism-analytics-dashboard`
+23. `dashboard-23-enterprise-teal-report`
+24. `dashboard-24-cream-macaron-medical-analytics`
+25. `dashboard-25-space-cyber-charging-safety-dashboard`
+26. `dashboard-26-emerald-b2b-analytics-dashboard`
+27. `dashboard-27-powerbi-hr-operations-report`
+28. `dashboard-28-macos-glass-transaction-dashboard`
 
 ## 7. 预览与下载
 
@@ -322,7 +335,7 @@ StyleLens/
 7. 上传 `.csv` 可以生成 Dashboard。
 8. 上传 `.json` 可以生成 Dashboard。
 9. 上传 `.xlsx` 可以生成 Dashboard。
-10. 15 个 Dashboard 模板都能生成。
+10. 28 个 Dashboard 模板都能生成。
 11. 生成产物不包含外部 CDN、Google Fonts、`localhost`、`onclick`、`href="#"`。
 12. 生成结果可以在页面中预览。
 13. 生成结果可以下载为 `index.html`。

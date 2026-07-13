@@ -1,0 +1,57 @@
+{
+  "id": "power-bi-hr-analysis-template",
+  "name": "高质感企业级人力资源经营分析看板 (单页报告版)",
+  "pageTypes": [
+    "HR Dashboard",
+    "Executive Report",
+    "Operational Analysis"
+  ],
+  "styleTags": [
+    "PowerBI-Style",
+    "High-Density",
+    "Minimalist-Corporate",
+    "Static-Report"
+  ],
+  "supportedSections": [
+    "key-takeaway",
+    "workforce-demographics",
+    "hiring-and-skills",
+    "salary-distribution",
+    "retention-kpis",
+    "retention-correlation",
+    "retention-trends",
+    "retention-deep-dive"
+  ],
+  "supportedChartTypes": [
+    "KPI",
+    "Doughnut",
+    "Waffle",
+    "Bar",
+    "Scatter",
+    "Sparkline",
+    "Combo-Line-Bar",
+    "Funnel",
+    "Radar",
+    "Waterfall",
+    "Heatmap",
+    "HorizontalBar",
+    "GridTable"
+  ],
+  "editableCapabilities": {
+    "textEdit": true,
+    "tabSwitch": true,
+    "chartToggle": true,
+    "dataInjection": true
+  },
+  "sampleData": {
+    "text": {
+      "report_title": "📊 人力资源年度经营分析与复盘数据报告",
+      "filter_info": "发布单位：集团人力资源部管理中心 | 报告周期：2024财年经营盘点",
+      "summary_content": "1. 核心流失回归显著：本年度员工流失主要集中在技术岗位，中级经理（Manager）及高年资的核心系统架构师流失率逼近10.21%，且流失率与年薪呈高相关性，表明中层激励机制亟需升级。\n2. 多元化布局深化：女性员工比例实现平稳增长（占比52.35%），平均及中位数年薪基本与男性齐平，拉美及亚太外派办事处在2024财年完成了既定编制的快速扩充。",
+      "f1_title": "核心观察 1: 员工多样性与关键部门分布",
+      "new_sec_title": "核心观察 2: 招聘漏斗效率、部门编制及核心岗位技能雷达",
+      "f2_title": "核心观察 3: 薪酬分布与职级关联度多维对比",
+      "f3_title": "核心观察 4: 留存流失与效能趋势深度对比分析"
+    }
+  }
+}

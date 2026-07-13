@@ -1,6 +1,6 @@
 # StyleLens Publisher V1 Implementation Plan
 
-> 历史说明：这是一份 2026-07-08 的旧实施计划，保留用于追溯当时的开发路径。当前需求已经领先于这份计划：Publisher 必须支持 8 个官网模板和 15 个 Dashboard 模板，Dashboard 支持 `.csv` / `.json` / `.xlsx` 数据文件生成。当前开发口径以根目录 `AGENTS.md`、`README.md` 和 `docs/PRD_StyleLens_AI_HTML_Publisher.md` 为准。
+> 历史说明：这是一份 2026-07-08 的旧实施计划，保留用于追溯当时的开发路径。当前需求已经领先于这份计划：Publisher 必须支持 8 个官网模板和 28 个 Dashboard 模板，Dashboard 支持 `.csv` / `.json` / `.xlsx` 数据文件生成。当前开发口径以根目录 `AGENTS.md`、`README.md` 和 `docs/PRD_StyleLens_AI_HTML_Publisher.md` 为准。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

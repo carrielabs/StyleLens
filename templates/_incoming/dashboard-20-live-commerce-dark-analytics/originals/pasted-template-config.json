@@ -1,0 +1,68 @@
+{
+  "id": "tpl_live_stream_dark_v1",
+  "name": "高密度业务复盘数据大屏 (Dark Mode)",
+  "pageTypes": ["Dashboard", "Report", "LiveStream Analysis"],
+  "styleTags": ["Dark", "Enterprise", "High Density", "Professional"],
+  "supportedSections": [
+    "key-takeaway",
+    "core-finding-1",
+    "core-finding-2",
+    "core-finding-3"
+  ],
+  "supportedChartTypes": [
+    "kpi_grid",
+    "line",
+    "area",
+    "bar",
+    "bar_horizontal",
+    "bar_stacked",
+    "donut",
+    "funnel",
+    "radar",
+    "scatter",
+    "heatmap",
+    "waterfall",
+    "ranking"
+  ],
+  "editableCapabilities": {
+    "text": true,
+    "chartConfig": true,
+    "moduleVisibility": true
+  },
+  "chartModules": [
+    { "id": "chart-traffic-source", "type": "donut", "section": "core-finding-1" },
+    { "id": "chart-traffic-trend", "type": "line", "section": "core-finding-1" },
+    { "id": "chart-conversion-funnel", "type": "funnel", "section": "core-finding-2" },
+    { "id": "chart-interaction-scatter", "type": "scatter", "section": "core-finding-2" },
+    { "id": "chart-click-distribution", "type": "bar_horizontal", "section": "core-finding-2" },
+    { "id": "chart-user-demographics", "type": "bar_stacked", "section": "core-finding-3" },
+    { "id": "chart-user-persona", "type": "radar", "section": "core-finding-3" }
+  ],
+  "schema": {
+    "textSlots": {
+      "text.key_takeaway.title": { "type": "string", "maxLength": 30 },
+      "text.key_takeaway.summary": { "type": "text", "maxLength": 300 }
+    },
+    "kpiSlots": {
+      "kpi_collection": {
+        "type": "array",
+        "items": {
+          "label": "string",
+          "value": "number",
+          "unit": "string",
+          "subLabel": "string"
+        }
+      }
+    }
+  },
+  "sampleData": {
+    "metadata": {
+      "report_name": "业务增长核心数据分析报告"
+    },
+    "kpis": [
+      { "id": "kpi1", "name": "累计观看人次", "value": "16,840", "sub": "同比上涨 12%" },
+      { "id": "kpi2", "name": "最高在线人数", "value": "530", "sub": "历史峰值 580" },
+      { "id": "kpi3", "name": "人均观看时长", "value": "45秒", "sub": "较均值提升 5秒" }
+    ]
+  }
+}

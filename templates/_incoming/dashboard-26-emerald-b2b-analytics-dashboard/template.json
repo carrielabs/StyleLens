@@ -1,0 +1,270 @@
+{
+  "id": "dashboard-26-emerald-b2b-analytics-dashboard",
+  "sourceConfigId": "premium-b2b-analytics-dashboard",
+  "name": "Emerald B2B Analytics Dashboard 企业级翠绿经营分析复盘看板",
+  "templateName": "EmeraldB2BAnalyticsDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向企业高管经营复盘、客户行为洞察、交易频次分析和品类贡献诊断的国际化 B 端数据分析 Dashboard。",
+  "pageTypes": [
+    "dashboard",
+    "executive-report",
+    "business-review",
+    "customer-insights"
+  ],
+  "styleTags": [
+    "emerald-theme",
+    "clean-layout",
+    "b2b-analytics",
+    "high-information-density",
+    "interactive-hover",
+    "chartjs"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "企业级高管决策看板",
+    "客户行为洞察报告",
+    "季度经营复盘",
+    "产品与业务诊断报告",
+    "Excel 数据报告可视化"
+  ],
+  "requiredRuntime": [
+    "Tailwind CDN",
+    "Chart.js CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "background": "#F3F4F6",
+      "surface": "#FFFFFF",
+      "primary": "#10B981",
+      "primaryDark": "#059669",
+      "warning": "#F59E0B",
+      "danger": "#EF4444",
+      "textMain": "#111827",
+      "textBody": "#374151",
+      "textSub": "#6B7280"
+    },
+    "fonts": {
+      "body": "Inter, Noto Sans SC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Microsoft YaHei, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeOverride": false
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "核心业务洞察与高管摘要，包含 3 条结构化结论",
+      "required": true,
+      "hideable": false
+    },
+    "core-finding-1": {
+      "desc": "客户增长大盘、KPI 指标、客户趋势和购买频次",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-2": {
+      "desc": "年龄结构和品类偏好分析",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-3": {
+      "desc": "转化漏斗、CLV 散点、客群雷达和 Top 排名",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "kpi",
+    "area",
+    "column",
+    "donut",
+    "bar",
+    "funnel",
+    "scatter",
+    "radar",
+    "table"
+  ],
+  "sourceSupportedChartTypes": [
+    "kpi",
+    "area",
+    "column",
+    "donut",
+    "bar",
+    "funnel",
+    "radar",
+    "heatmap",
+    "waterfall",
+    "scatter",
+    "table"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-editable、contenteditable、data-slot 和 data-key"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[data-chart-type], [id^=\"chart-\"]",
+      "desc": "12 个图表/数据模块，其中 7 个为 Chart.js 或静态可视化图表，4 个为 KPI 卡，1 个为排行表"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "4 个核心数据区"
+    },
+    "textSlots": [
+      "text.header_title",
+      "text.header_subtitle",
+      "text.takeaway_title",
+      "text.takeaway_item_1",
+      "text.takeaway_item_2",
+      "text.takeaway_item_3",
+      "text.finding_1_title",
+      "text.finding_1_desc",
+      "text.finding_2_title",
+      "text.finding_2_desc",
+      "text.finding_3_title",
+      "text.finding_3_desc"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-kpi-total-customer", "type": "kpi", "section": "core-finding-1", "description": "总客户数指标卡" },
+    { "id": "chart-kpi-new-customer", "type": "kpi", "section": "core-finding-1", "description": "新增客户数指标卡" },
+    { "id": "chart-kpi-avg-rating", "type": "kpi", "section": "core-finding-1", "description": "平均评分指标卡" },
+    { "id": "chart-kpi-repeat-rate", "type": "kpi", "section": "core-finding-1", "description": "复购率指标卡" },
+    { "id": "chart-customer-growth", "type": "area", "section": "core-finding-1", "description": "客户增长趋势面积折线图" },
+    { "id": "chart-purchase-frequency", "type": "column", "section": "core-finding-1", "description": "购买频次柱状图" },
+    { "id": "chart-age-distribution", "type": "donut", "section": "core-finding-2", "description": "年龄分布环形图" },
+    { "id": "chart-category-preference", "type": "bar", "section": "core-finding-2", "description": "品类偏好横向进度条" },
+    { "id": "chart-conversion-funnel", "type": "funnel", "section": "core-finding-3", "description": "转化路径漏斗" },
+    { "id": "chart-clv-scatter", "type": "scatter", "section": "core-finding-3", "description": "CLV 客群散点图" },
+    { "id": "chart-segment-radar", "type": "radar", "section": "core-finding-3", "description": "客群属性雷达图" },
+    { "id": "chart-top-ranking", "type": "table", "section": "core-finding-3", "description": "爆款单品与商户排行表" }
+  ],
+  "sampleData": {
+    "text": {
+      "text.header_title": "2026年第二季度客户行为洞察与经营分析报告",
+      "text.header_subtitle": "基于 FreshCart 全渠道 24,000+ 笔交易数据及用户轨迹深度挖掘与复盘",
+      "text.takeaway_title": "核心业务洞察与高管摘要",
+      "text.takeaway_item_1": "【新客获取超预期，转化链路亟待深耕】Q2 新增客户数达到 542 人，环比大增 24%，但核心流失点仍集中在‘购物车-结算’环节，流失率高达 22.4%，主要阻碍为配送费门槛。",
+      "text.takeaway_item_2": "【高频主力客群稳定，高价值客群画像分明】周频与双周频的黏性客群贡献了高达 68.2% 的营业额。客群画像中，25-34岁高净值白领客户占据半壁江山（占比 34.6%），客单偏好集中在有机乳制品及预制生鲜。",
+      "text.takeaway_item_3": "【利润品类增长强劲，品类联动效应凸显】生鲜果蔬仍为第一流量入口，但肉禽海鲜本季度利润率提升 8.2%，成为整体客单价拉升的引擎。建议在 Q3 强推‘肉禽 + 调味半成品’组合包策略。",
+      "text.finding_1_title": "客户增长大盘与价值段分布",
+      "text.finding_1_desc": "大盘数据显示新注册客群呈现爆发式增长。核心价值段分层中，高生命周期价值（CLV）的客群主要集中在 25-45 岁区间，具有极强的粘性和复购意愿。",
+      "text.finding_2_title": "交易频次与留存转化路径",
+      "text.finding_2_desc": "分析交易频度分布可看出，周频复购率最高。通过对加购至支付的转化漏斗进行拆解，流失主要发生在配送优惠选择与支付网关切换节点。",
+      "text.finding_3_title": "品类偏好与核心单品贡献度",
+      "text.finding_3_desc": "生鲜果蔬在销售总量中占据霸主地位，高附加值的肉禽类商品紧随其后。通过散点关联模型，高客单价用户常伴随乳制品的捆绑购买行为。"
+    },
+    "charts": {
+      "kpi_total_customer": { "value": 8234, "change_percent": 15, "is_positive": true, "subtitle": "较上月同期" },
+      "kpi_new_customer": { "value": 542, "change_percent": 24, "is_positive": true, "subtitle": "较上月同期" },
+      "kpi_avg_rating": { "value": 4.7, "change_percent": 0.3, "is_positive": true, "subtitle": "核心商户平均评分" },
+      "kpi_repeat_rate": { "value": 67.2, "change_percent": 8.2, "is_positive": true, "subtitle": "30天内二次购买占比" },
+      "customer_growth_trends": {
+        "labels": ["一月", "二月", "三月", "四月", "五月", "六月", "七月"],
+        "series": [
+          { "name": "总客户数趋势", "data": [5500, 4800, 5200, 8000, 7800, 5000, 8234] },
+          { "name": "活跃买家数", "data": [3200, 3100, 4500, 5000, 3800, 6200, 6500] }
+        ]
+      },
+      "purchase_frequency": {
+        "labels": ["日频 (Daily)", "周频 (Weekly)", "双周频 (Bi-weekly)", "月频 (Monthly)"],
+        "data": [900, 2700, 1800, 900]
+      },
+      "age_distribution": {
+        "labels": ["18-24岁", "25-34岁", "35-44岁", "45岁以上"],
+        "data": [1456, 2856, 2134, 1247]
+      },
+      "category_preferences": {
+        "labels": ["生鲜果蔬 (Fruits & Vegetables)", "乳制品 (Dairy Products)", "肉禽海鲜 (Meat & Seafood)"],
+        "percentages": [32, 24, 18]
+      }
+    }
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container",
+    "invalidMetric": "hide-trend-badge"
+  },
+  "slotLimits": {
+    "header-title": 24,
+    "header-subtitle": 80,
+    "takeaway-title": 24,
+    "takeaway-item": 140,
+    "finding-title": 32,
+    "finding-desc": 120,
+    "kpi-value": 16
+  },
+  "llmInjectionRules": [
+    "文本替换优先匹配 data-key 或 data-slot，入库 HTML 使用 text.header_title 这类下划线路径。",
+    "图表数据优先替换 reportData.charts 内对应字段，不改布局样式。",
+    "Chart.js 图表保留浅色网格线、Emerald 主色和白底 Tooltip 风格。",
+    "缺少图表数据时隐藏对应 data-chart-type 容器。",
+    "不要重新引入大面积渐变背景或更大的圆角。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "templateConfigArchived": true,
+    "templateConfigFile": "originals/pasted-template-config.json",
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "dataEditableHasContenteditable": true,
+    "editableCount": 12,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 4,
+    "chartModuleCount": 12,
+    "usesChartJs": true,
+    "usesECharts": false,
+    "standardReview": [
+      "HTML 是完整单页 Dashboard，可直接浏览器打开，包含 data-section、data-slot、data-key、contenteditable 和 chart-* 容器。",
+      "原始配置声称支持 11 种图表类型，但实际 HTML 未交付 heatmap 和 waterfall；入库版按实际支持记录为 9 种图表类型。",
+      "原始槽位规范使用 text.header.title 形式，但 HTML 和 JS 实际使用 text.header_title 形式；入库版保留 HTML 现状，并在配置中按实际槽位登记。",
+      "原始 HTML 使用 Chart.js，而非 ECharts；入库版 requiredRuntime 已按 Chart.js 记录。",
+      "原始 HTML 存在 $16,00.72 数字格式错误，已改为 8,234。",
+      "原始 HTML 的 bar、funnel、table 静态模块缺少 chart-* id，入库版已补齐 chart-category-preference、chart-conversion-funnel、chart-top-ranking。",
+      "原始 HTML 使用轻微渐变背景、半透明卡片和 rounded-3xl，和设计规范有偏差；入库版已调整为冷灰背景、白色卡片、细边框、轻阴影和 rounded-2xl。",
+      "项目要求预览图，但本轮低性能模式未生成 preview.png。"
+    ],
+    "sourceCleanup": [
+      "按模板 26 命名为 dashboard-26-emerald-b2b-analytics-dashboard。",
+      "保留 Gemini 原始 HTML 到 originals/source-template.html 和 originals/pasted-text.html。",
+      "补齐 README.md、design-standard.md、template-slots.md、template.json、preview-metadata.md 和模板注册。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#10B981",
+    "presets": [
+      "#F3F4F6",
+      "#F9FAFB",
+      "#FFFFFF",
+      "#10B981",
+      "#059669",
+      "#F59E0B",
+      "#EF4444",
+      "#111827",
+      "#6B7280"
+    ],
+    "targets": {
+      "tailwindColors": {
+        "emerald": "增长与正向指标",
+        "amber": "警告指标",
+        "red": "风险与流失指标",
+        "slate": "背景、边框和辅助文本"
+      }
+    }
+  }
+}

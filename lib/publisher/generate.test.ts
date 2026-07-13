@@ -32,6 +32,19 @@ const DASHBOARD_TEMPLATES = [
   'dashboard-13-corporate-blue-analytics-report',
   'dashboard-14-financial-blue-analytics-report',
   'dashboard-15-consulting-data-report',
+  'dashboard-16-executive-muted-dashboard',
+  'dashboard-17-dark-enterprise-analytics',
+  'dashboard-18-enterprise-green-analytics-report',
+  'dashboard-19-warm-soft-enterprise-dashboard',
+  'dashboard-20-live-commerce-dark-analytics',
+  'dashboard-21-corporate-operating-analysis-report',
+  'dashboard-22-glassmorphism-analytics-dashboard',
+  'dashboard-23-enterprise-teal-report',
+  'dashboard-24-cream-macaron-medical-analytics',
+  'dashboard-25-space-cyber-charging-safety-dashboard',
+  'dashboard-26-emerald-b2b-analytics-dashboard',
+  'dashboard-27-powerbi-hr-operations-report',
+  'dashboard-28-macos-glass-transaction-dashboard',
 ]
 
 const sourceText = [

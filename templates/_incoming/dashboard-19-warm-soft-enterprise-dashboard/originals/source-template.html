@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>暖色柔和风企业经营数据报告</title>
+    <!-- 使用 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        /* 自定义暖色系和柔和阴影 */
+        :root {
+            --bg-cream: #F9F8F4;
+            --text-warm-dark: #4A4238;
+            --text-warm-gray: #8C8272;
+            --card-shadow: 0 8px 20px -4px rgba(245, 158, 11, 0.08), 0 4px 12px -2px rgba(245, 158, 11, 0.04); /* 带有淡淡暖橙色的柔和阴影 */
+            --card-hover-shadow: 0 12px 24px -4px rgba(245, 158, 11, 0.12), 0 8px 16px -4px rgba(245, 158, 11, 0.06);
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            color: var(--text-warm-dark);
+        }
+
+        /* 滚动条美化 (暖色调) */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D6D3C0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #C2BEA8; }
+        
+        /* 卡片基础样式 - 大圆角、柔和背景、暖阴影 */
+        .chart-card {
+            background-color: #FFFFFF;
+            border-radius: 20px; /* 参考图的大圆角 */
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(255, 247, 237, 0.8); /* 极淡的暖色边框 */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .chart-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--card-hover-shadow);
+            border-color: rgba(251, 191, 36, 0.2); /* hover时边框变暖黄 */
+        }
+
+        /* 文本颜色覆盖 Tailwind 默认的冷灰 */
+        .text-slate-900 { color: var(--text-warm-dark) !important; }
+        .text-slate-800 { color: var(--text-warm-dark) !important; }
+        .text-slate-600, .text-slate-500 { color: var(--text-warm-gray) !important; }
+        .border-slate-200 { border-color: #E7E5E4 !important; } /* 暖灰色边框 */
+
+        /* 可编辑区域焦点样式 (暖黄) */
+        [contenteditable="true"]:focus {
+            outline: 2px solid #FBBF24;
+            outline-offset: 2px;
+            border-radius: 8px;
+            background-color: #FFFBEB;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased pb-20">
+
+    <main class="max-w-[1360px] mx-auto px-6 sm:px-8 lg:px-10 py-10 space-y-12">
+
+        <!-- Key Takeaway 模块 -->
+        <section data-section="key-takeaway" class="space-y-8">
+            <!-- 报告抬头 -->
+            <header class="border-b border-slate-200 pb-6 flex justify-between items-end">
+                <div>
+                    <h1 class="text-4xl font-extrabold tracking-tight" data-editable="true" contenteditable="true" data-slot="text.report_title" data-key="text.report_title">
+                        第三季度核心业务经营复盘报告
+                    </h1>
+                    <p class="mt-3 text-base text-slate-500">报告生成时间：<span id="current-date">2026-07-13</span> | 数据更新周期：每日</p>
+                </div>
+            </header>
+
+            <!-- 核心结论摘要 -->
+            <div class="bg-gradient-to-r from-[#FFFBEB] to-[#FFFFFF] rounded-[24px] p-8 shadow-sm border border-orange-100 chart-card">
+                <h2 class="text-xl font-bold mb-4 flex items-center text-orange-800">
+                    <span class="w-2 h-6 bg-orange-500 rounded-full mr-4"></span>
+                    管理层核心摘要 (Key Takeaway)
+                </h2>
+                <p class="text-slate-600 leading-loose text-lg" data-editable="true" contenteditable="true" data-slot="text.takeaway_desc" data-key="text.takeaway_desc">
+                    本季度整体业务在暖冬策略下保持稳健增长。核心收入突破预期目标，会员活跃度显著提升，各渠道转化率存在结构性差异。重点关注新产品线B的高端客群转化瓶颈，以及区域市场的资源重新分配。建议下阶段加大中腰部客户的暖心服务投入。
+                </p>
+            </div>
+
+            <!-- KPI 指标矩阵 (4个图表模块) - 参考图风格 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <!-- KPI 1: 暖黄主题 -->
+                <div data-chart-type="kpi" class="chart-card p-6 flex flex-col justify-between h-40 relative overflow-hidden">
+                    <!-- 装饰性暖色光晕背景 -->
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-yellow-100 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
+                    <div class="relative z-10">
+                        <h3 class="text-base font-medium text-slate-500" data-editable="true" contenteditable="true" data-slot="text.kpi_1_title" data-key="text.kpi_1_title">总营收表现</h3>
+                        <div class="mt-4 flex items-baseline space-x-2">
+                            <span class="text-4xl font-extrabold text-slate-900" data-editable="true" contenteditable="true" data-slot="text.kpi_1_value" data-key="text.kpi_1_value">¥ 84.5M</span>
+                        </div>
+                    </div>
+                    <div class="relative z-10 flex items-center text-sm font-bold text-yellow-600 bg-yellow-50 w-fit px-3 py-1 rounded-full mt-2">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi_1_trend" data-key="text.kpi_1_trend">+ 12.4% 同比</span>
+                    </div>
+                    <!-- 底部强调色条 -->
+                    <div class="absolute bottom-0 left-6 right-6 h-1.5 bg-yellow-400 rounded-t-full opacity-80"></div>
+                </div>
+
+                <!-- KPI 2: 暖橙主题 -->
+                <div data-chart-type="kpi" class="chart-card p-6 flex flex-col justify-between h-40 relative overflow-hidden">
+                     <div class="absolute -top-10 -right-10 w-32 h-32 bg-orange-100 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
+                    <div class="relative z-10">
+                        <h3 class="text-base font-medium text-slate-500" data-editable="true" contenteditable="true" data-slot="text.kpi_2_title" data-key="text.kpi_2_title">活跃客户规模</h3>
+                        <div class="mt-4 flex items-baseline space-x-2">
+                            <span class="text-4xl font-extrabold text-slate-900" data-editable="true" contenteditable="true" data-slot="text.kpi_2_value" data-key="text.kpi_2_value">12,845</span>
+                        </div>
+                    </div>
+                    <div class="relative z-10 flex items-center text-sm font-bold text-orange-600 bg-orange-50 w-fit px-3 py-1 rounded-full mt-2">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi_2_trend" data-key="text.kpi_2_trend">+ 5.2% 环比</span>
+                    </div>
+                     <div class="absolute bottom-0 left-6 right-6 h-1.5 bg-orange-400 rounded-t-full opacity-80"></div>
+                </div>
+
+                <!-- KPI 3: 柔和红主题 -->
+                <div data-chart-type="kpi" class="chart-card p-6 flex flex-col justify-between h-40 relative overflow-hidden">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-100 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
+                    <div class="relative z-10">
+                        <h3 class="text-base font-medium text-slate-500" data-editable="true" contenteditable="true" data-slot="text.kpi_3_title" data-key="text.kpi_3_title">核心转化率</h3>
+                        <div class="mt-4 flex items-baseline space-x-2">
+                            <span class="text-4xl font-extrabold text-slate-900" data-editable="true" contenteditable="true" data-slot="text.kpi_3_value" data-key="text.kpi_3_value">14.2%</span>
+                        </div>
+                    </div>
+                    <div class="relative z-10 flex items-center text-sm font-bold text-red-500 bg-red-50 w-fit px-3 py-1 rounded-full mt-2">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"></path></svg>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi_3_trend" data-key="text.kpi_3_trend">- 1.5% 环比</span>
+                    </div>
+                     <div class="absolute bottom-0 left-6 right-6 h-1.5 bg-red-400 rounded-t-full opacity-80"></div>
+                </div>
+
+                <!-- KPI 4: 暖青主题 -->
+                <div data-chart-type="kpi" class="chart-card p-6 flex flex-col justify-between h-40 relative overflow-hidden">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-teal-100 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
+                    <div class="relative z-10">
+                        <h3 class="text-base font-medium text-slate-500" data-editable="true" contenteditable="true" data-slot="text.kpi_4_title" data-key="text.kpi_4_title">平均获客成本 (CPA)</h3>
+                        <div class="mt-4 flex items-baseline space-x-2">
+                            <span class="text-4xl font-extrabold text-slate-900" data-editable="true" contenteditable="true" data-slot="text.kpi_4_value" data-key="text.kpi_4_value">¥ 320</span>
+                        </div>
+                    </div>
+                    <!-- 成本下降，用暖青色表示正面 -->
+                    <div class="relative z-10 flex items-center text-sm font-bold text-teal-600 bg-teal-50 w-fit px-3 py-1 rounded-full mt-2">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"></path></svg>
+                        <span data-editable="true" contenteditable="true" data-slot="text.kpi_4_trend" data-key="text.kpi_4_trend">- 8.4% 环比</span>
+                    </div>
+                     <div class="absolute bottom-0 left-6 right-6 h-1.5 bg-teal-400 rounded-t-full opacity-80"></div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Core Finding 1 模块 -->
+        <section data-section="core-finding-1" class="space-y-6">
+            <div class="mb-6 px-2">
+                <h2 class="text-2xl font-bold text-slate-900" data-editable="true" contenteditable="true" data-slot="text.finding_1_title" data-key="text.finding_1_title">
+                    发现一：核心规模增长趋势与结构特征
+                </h2>
+                <p class="text-slate-600 text-base mt-2 max-w-3xl" data-editable="true" contenteditable="true" data-slot="text.finding_1_desc" data-key="text.finding_1_desc">
+                    整体流量规模在8月份达到峰值。从结构来看，自然搜索与老客户留存是收入增长的主要驱动力，呈现出健康的内生增长态势。
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 图表 5：面积折线图 -->
+                <div class="chart-card p-6 lg:col-span-2">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6" data-editable="true" contenteditable="true" data-slot="text.chart_title_trend" data-key="text.chart_title_trend">近六个月主营业务增长趋势 (暖色系)</h3>
+                    <div data-chart-type="area" id="chart-trend-area" class="w-full h-[340px]"></div>
+                </div>
+                <!-- 图表 6：环形图 -->
+                <div class="chart-card p-6 lg:col-span-1">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6" data-editable="true" contenteditable="true" data-slot="text.chart_title_mix" data-key="text.chart_title_mix">各获客渠道营收占比</h3>
+                    <div data-chart-type="donut" id="chart-mix-donut" class="w-full h-[340px]"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Core Finding 2 模块 -->
+        <section data-section="core-finding-2" class="space-y-6">
+            <div class="mb-6 mt-12 px-2">
+                <h2 class="text-2xl font-bold text-slate-900" data-editable="true" contenteditable="true" data-slot="text.finding_2_title" data-key="text.finding_2_title">
+                    发现二：核心链路转化效率与地区差异
+                </h2>
+                <p class="text-slate-600 text-base mt-2 max-w-3xl" data-editable="true" contenteditable="true" data-slot="text.finding_2_desc" data-key="text.finding_2_desc">
+                    营销漏斗在‘留资到转化’环节流失最为严重。华东大区业务表现强势，而西南大区则面临增长压力，需差异化运营。
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 图表 7：横向条形图 (排名) -->
+                <div class="chart-card p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6" data-editable="true" contenteditable="true" data-slot="text.chart_title_rank" data-key="text.chart_title_rank">各经营大区业绩达标排名 (Top 5)</h3>
+                    <div data-chart-type="horizontal-bar" id="chart-rank-bar" class="w-full h-[360px]"></div>
+                </div>
+                <!-- 图表 8：漏斗图 -->
+                <div class="chart-card p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6" data-editable="true" contenteditable="true" data-slot="text.chart_title_funnel" data-key="text.chart_title_funnel">核心用户生命周期转化漏斗</h3>
+                    <div data-chart-type="funnel" id="chart-funnel" class="w-full h-[360px]"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Core Finding 3 模块 -->
+        <section data-section="core-finding-3" class="space-y-6">
+            <div class="mb-6 mt-12 px-2">
+                <h2 class="text-2xl font-bold text-slate-900" data-editable="true" contenteditable="true" data-slot="text.finding_3_title" data-key="text.finding_3_title">
+                    发现三：多维投入产出与业务健康度
+                </h2>
+                <p class="text-slate-600 text-base mt-2 max-w-3xl" data-editable="true" contenteditable="true" data-slot="text.finding_3_desc" data-key="text.finding_3_desc">
+                    各业务线在资源消耗与利润贡献上存在结构性错位。高频互动用户的长期价值显著优于低频用户，应重点维护。
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- 图表 9：雷达图 -->
+                <div class="chart-card p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6" data-editable="true" contenteditable="true" data-slot="text.chart_title_radar" data-key="text.chart_title_radar">各产品线健康度多维诊断</h3>
+                    <div data-chart-type="radar" id="chart-radar" class="w-full h-[300px]"></div>
+                </div>
+                <!-- 图表 10：散点图 -->
+                <div class="chart-card p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6" data-editable="true" contenteditable="true" data-slot="text.chart_title_scatter" data-key="text.chart_title_scatter">客单价与购买频次分布矩阵</h3>
+                    <div data-chart-type="scatter" id="chart-scatter" class="w-full h-[300px]"></div>
+                </div>
+                <!-- 图表 11：堆叠柱状图 -->
+                <div class="chart-card p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6" data-editable="true" contenteditable="true" data-slot="text.chart_title_stack" data-key="text.chart_title_stack">产品系列营收结构演变</h3>
+                    <div data-chart-type="stacked-bar" id="chart-stack-bar" class="w-full h-[300px]"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 图表初始化逻辑 (已更新为暖色调色板) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置当前日期
+            document.getElementById('current-date').innerText = new Date().toISOString().split('T')[0];
+
+            // --- 核心修改：全新的暖色调色板 ---
+            // 灵感来源于参考图：暖黄、柔和橙、珊瑚红、暖青、大地棕、暖紫
+            const warmColors = ['#F59E0B', '#F97316', '#EF4444', '#14B8A6', '#854D0E', '#A855F7', '#EC4899'];
+            
+            // 暖色系坐标轴和网格线颜色
+            const axisLabelColor = '#8C8272'; // 暖灰
+            const splitLineColor = '#E7E5E4'; // 极淡的暖米色
+
+            // 通用图表配置基础
+            const commonOptions = {
+                color: warmColors,
+                textStyle: { fontFamily: 'sans-serif', color: axisLabelColor },
+                tooltip: { 
+                    trigger: 'axis', 
+                    backgroundColor: 'rgba(255, 251, 235, 0.95)', // 暖奶油色背景
+                    borderColor: '#FDE68A', // 暖黄边框
+                    textStyle: { color: '#4A4238' }, // 深暖色文本
+                    extraCssText: 'box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1); border-radius: 8px;' // 柔和暖阴影
+                },
+                grid: { top: 30, right: 20, bottom: 20, left: 50, containLabel: true }
+            };
+
+            // 图表 5：面积折线图配置 (使用暖色渐变)
+            const chartTrend = echarts.init(document.getElementById('chart-trend-area'));
+            chartTrend.setOption({
+                ...commonOptions,
+                xAxis: { type: 'category', boundaryGap: false, data: ['5月', '6月', '7月', '8月', '9月', '10月'], axisLine: { lineStyle: { color: '#D6D3C0' } }, axisLabel: { color: axisLabelColor } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { color: splitLineColor, type: 'dashed' } }, axisLine: { show: false }, axisLabel: { color: axisLabelColor } },
+                series: [
+                    { 
+                        name: '业务A (主力)', type: 'line', smooth: true, showSymbol: false,
+                        data: [120, 132, 180, 240, 210, 250], 
+                        lineStyle: { width: 4, color: warmColors[0] }, // 暖黄
+                        areaStyle: { 
+                            opacity: 0.4,
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#FCD34D' }, { offset: 1, color: 'rgba(252, 211, 77, 0.01)' }]) 
+                        }
+                    },
+                    { 
+                        name: '业务B (增长)', type: 'line', smooth: true, showSymbol: false,
+                        data: [80, 100, 110, 130, 145, 160], 
+                        lineStyle: { width: 4, color: warmColors[1] }, // 暖橙
+                        areaStyle: { 
+                            opacity: 0.3,
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#FB923C' }, { offset: 1, color: 'rgba(251, 146, 60, 0.01)' }]) 
+                        }
+                    }
+                ]
+            });
+
+            // 图表 6：环形图配置 (暖色系组合)
+            const chartDonut = echarts.init(document.getElementById('chart-mix-donut'));
+            chartDonut.setOption({
+                color: warmColors,
+                tooltip: { 
+                    trigger: 'item',
+                    backgroundColor: 'rgba(255, 251, 235, 0.95)', borderColor: '#FDE68A', textStyle: { color: '#4A4238' }
+                },
+                legend: { bottom: '0', icon: 'circle', itemWidth: 10, itemHeight: 10, textStyle: { color: axisLabelColor, fontSize: 12 } },
+                series: [{
+                    name: '营收占比', type: 'pie', radius: ['45%', '70%'], center: ['50%', '45%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 8, borderColor: '#FFFFFF', borderWidth: 3 }, // 更大的圆角边框
+                    label: { show: false },
+                    emphasis: { label: { show: true, fontSize: '16', fontWeight: 'bold', color: warmColors[0] } },
+                    data: [
+                        { value: 1048, name: '自然搜索 (黄)' },
+                        { value: 735, name: '付费投放 (橙)' },
+                        { value: 580, name: '社群裂变 (红)' },
+                        { value: 300, name: '线下引流 (青)' },
+                        { value: 150, name: '其他 (棕)' }
+                    ]
+                }]
+            });
+
+            // 图表 7：横向条形图配置 (暖橙渐变)
+            const chartRank = echarts.init(document.getElementById('chart-rank-bar'));
+            chartRank.setOption({
+                ...commonOptions,
+                grid: { top: 10, right: 40, bottom: 10, left: 10, containLabel: true },
+                xAxis: { type: 'value', splitLine: { show: false }, axisLabel: { show: false } },
+                yAxis: { type: 'category', data: ['华中区', '西南区', '华北区', '华南区', '华东区'], axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: axisLabelColor, fontWeight: 600, fontSize: 13 } },
+                series: [{
+                    name: '业绩达成率', type: 'bar',
+                    data: [78, 85, 92, 105, 118],
+                    barWidth: '55%',
+                    itemStyle: { 
+                        borderRadius: [0, 8, 8, 0], // 更圆润
+                        // 暖橙色渐变
+                        color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [{ offset: 0, color: '#F97316' }, { offset: 1, color: '#FBBF24' }]) 
+                    },
+                    label: { show: true, position: 'right', formatter: '{c}%', color: warmColors[1], fontWeight: 'bold', offset: [5, 0] }
+                }]
+            });
+
+            // 图表 8：漏斗图配置 (暖色阶梯)
+            const chartFunnel = echarts.init(document.getElementById('chart-funnel'));
+            chartFunnel.setOption({
+                color: warmColors, // 使用暖色序列
+                tooltip: { trigger: 'item', formatter: '{a} <br/>{b} : {c}', backgroundColor: 'rgba(255, 251, 235, 0.95)', borderColor: '#FDE68A', textStyle: { color: '#4A4238' } },
+                series: [{
+                    name: '转化漏斗', type: 'funnel', left: '10%', top: 20, bottom: 20, width: '80%',
+                    min: 0, max: 10000, minSize: '0%', maxSize: '100%',
+                    sort: 'descending', gap: 4, // 更大的间距
+                    label: { show: true, position: 'inside', formatter: '{b}\n{c}', color: '#fff', textBorderColor: 'transparent', fontWeight: 500 },
+                    itemStyle: { borderColor: '#fff', borderWidth: 0, borderRadius: 12, shadowBlur: 10, shadowOffsetX: 0, shadowOffsetY: 5, shadowColor: 'rgba(245, 158, 11, 0.2)' }, // 增加柔和阴影和圆角
+                    data: [
+                        { value: 10000, name: '曝光浏览' },
+                        { value: 6000, name: '访问落地页' },
+                        { value: 3000, name: '提交线索' },
+                        { value: 800, name: '深度沟通' },
+                        { value: 200, name: '成单转化' }
+                    ]
+                }]
+            });
+
+            // 图表 9：雷达图配置 (暖色填充)
+            const chartRadar = echarts.init(document.getElementById('chart-radar'));
+            chartRadar.setOption({
+                color: warmColors,
+                tooltip: { backgroundColor: 'rgba(255, 251, 235, 0.95)', borderColor: '#FDE68A', textStyle: { color: '#4A4238' } },
+                radar: {
+                    indicator: [
+                        { name: '获客能力', max: 100 }, { name: '留存指标', max: 100 },
+                        { name: '单客毛利', max: 100 }, { name: '履约成本', max: 100 }, { name: '投诉率', max: 100 }
+                    ],
+                    radius: '65%', center: ['50%', '50%'],
+                    axisName: { color: axisLabelColor, fontSize: 12, fontWeight: 500 },
+                    splitArea: { areaStyle: { color: ['#FFFBEB', '#F9F8F4'] } }, // 暖色分隔区域
+                    splitLine: { lineStyle: { color: '#E7E5E4' } },
+                    axisLine: { lineStyle: { color: '#D6D3C0' } }
+                },
+                series: [{
+                    name: '诊断维度', type: 'radar', symbolSize: 8,
+                    data: [
+                        { 
+                            value: [85, 90, 75, 80, 40], name: '主打产品A (暖黄)', 
+                            itemStyle: { color: warmColors[0] },
+                            areaStyle: { color: warmColors[0], opacity: 0.3 } 
+                        },
+                        { 
+                            value: [60, 50, 95, 60, 20], name: '长尾产品B (暖橙)',
+                            itemStyle: { color: warmColors[1] },
+                            areaStyle: { color: warmColors[1], opacity: 0.2 } 
+                        }
+                    ]
+                }]
+            });
+
+            // 图表 10：散点图配置 (暖色气泡)
+            const chartScatter = echarts.init(document.getElementById('chart-scatter'));
+            chartScatter.setOption({
+                color: warmColors,
+                tooltip: { 
+                    backgroundColor: 'rgba(255, 251, 235, 0.95)', borderColor: '#FDE68A', textStyle: { color: '#4A4238' },
+                    formatter: function (obj) { return '客单价: ¥' + obj.value[0] + '<br>月频次: ' + obj.value[1] + '次'; } 
+                },
+                grid: { top: 20, right: 20, bottom: 20, left: 40, containLabel: true },
+                xAxis: { type: 'value', name: '客单价(¥)', splitLine: { lineStyle: { color: splitLineColor, type: 'dashed' } }, axisLabel: { color: axisLabelColor }, axisLine: { lineStyle: { color: '#D6D3C0' } } },
+                yAxis: { type: 'value', name: '频次(次)', splitLine: { lineStyle: { color: splitLineColor, type: 'dashed' } }, axisLabel: { color: axisLabelColor }, axisLine: { lineStyle: { color: '#D6D3C0' } } },
+                series: [{
+                    symbolSize: 16, // 更大的气泡
+                    data: [
+                        [120, 2.1], [150, 1.8], [320, 4.5], [200, 3.2], [410, 5.1], [110, 1.2],
+                        [80, 2.5], [260, 3.8], [280, 2.9], [190, 1.9], [340, 4.1], [400, 4.8]
+                    ], type: 'scatter', 
+                    itemStyle: { 
+                        opacity: 0.7,
+                        borderColor: '#fff', borderWidth: 1,
+                        shadowBlur: 10, shadowColor: 'rgba(245, 158, 11, 0.3)' // 暖色光晕
+                    }
+                }]
+            });
+
+            // 图表 11：堆叠柱状图配置 (暖色堆叠)
+            const chartStack = echarts.init(document.getElementById('chart-stack-bar'));
+            chartStack.setOption({
+                ...commonOptions,
+                legend: { bottom: '0', icon: 'roundRect', itemWidth: 14, itemHeight: 14, textStyle: { fontSize: 12, color: axisLabelColor } },
+                grid: { top: 10, right: 10, bottom: 40, left: 30, containLabel: true },
+                xAxis: { type: 'category', data: ['Q1', 'Q2', 'Q3', 'Q4(预)'], axisLine: { lineStyle: { color: '#D6D3C0' } }, axisLabel: { color: axisLabelColor } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { color: splitLineColor, type: 'dashed' } }, axisLabel: { formatter: '{value} M', color: axisLabelColor }, axisLine: { show: false } },
+                series: [
+                    { name: '系列Alpha (黄)', type: 'bar', stack: 'total', barWidth: '45%', data: [12, 15, 18, 22], itemStyle: { color: warmColors[0] } },
+                    { name: '系列Beta (橙)', type: 'bar', stack: 'total', barWidth: '45%', data: [8, 11, 14, 16], itemStyle: { color: warmColors[1] } },
+                    { name: '系列Gamma (红)', type: 'bar', stack: 'total', barWidth: '45%', data: [4, 5, 8, 12], itemStyle: { borderRadius: [12, 12, 0, 0], color: warmColors[2] } } // 顶部大圆角
+                ]
+            });
+
+            // 监听窗口缩放
+            window.addEventListener('resize', function() {
+                [chartTrend, chartDonut, chartRank, chartFunnel, chartRadar, chartScatter, chartStack].forEach(c => c.resize());
+            });
+        });
+    </script>
+</body>
+</html>

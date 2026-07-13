@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业业务效能洞察 Dashboard</title>
+    
+    <!-- 引入 Tailwind CSS 用于快速、标准化排版 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0A0A0A',
+                        card: '#161616',
+                        accent: '#E6D3C0',
+                        muted: '#888888',
+                        positive: '#34D399',
+                        negative: '#F87171',
+                        info: '#60A5FA',
+                        border: '#2A2A2A'
+                    },
+                    fontFamily: {
+                        sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- 引入 ECharts 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    
+    <style>
+        body { background-color: #0A0A0A; color: #E5E7EB; }
+        
+        /* 隐藏滚动条但允许滚动 */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        
+        /* 可编辑文本 Hover 交互 */
+        [data-editable="true"] { transition: background-color 0.2s, outline 0.2s; outline: 1px solid transparent; border-radius: 4px; }
+        [data-editable="true"]:hover { background-color: rgba(255,255,255,0.05); outline: 1px dashed rgba(255,255,255,0.2); cursor: text; }
+        [data-editable="true"]:focus { outline: 1px solid #60A5FA; background-color: rgba(255,255,255,0.1); }
+        
+        /* 统一卡片基础样式 */
+        .analytics-card { background-color: #161616; border-radius: 12px; padding: 24px; transition: transform 0.3s ease; }
+        
+        /* 避免 Echarts 容器被意外编辑 */
+        .chart-container { pointer-events: auto; user-select: none; }
+    </style>
+</head>
+<body class="min-h-screen py-12 px-4 sm:px-8 lg:px-16 antialiased font-sans">
+
+    <div class="max-w-[1400px] mx-auto space-y-16">
+
+        <!-- ================= Key Takeaway (核心概览) ================= -->
+        <section data-section="key-takeaway" class="space-y-10">
+            <!-- 头部标题 -->
+            <div class="text-center space-y-4 pt-8 pb-4">
+                <div class="flex items-center justify-center space-x-2 text-muted text-xs font-semibold tracking-[0.2em] uppercase">
+                    <span class="w-1 h-1 bg-accent rounded-full"></span>
+                    <span>Executive Summary</span>
+                    <span class="w-1 h-1 bg-accent rounded-full"></span>
+                </div>
+                <h1 data-editable="true" contenteditable="true" data-slot="text.report_title" data-key="text.report_title" class="text-5xl font-bold tracking-tight text-white">
+                    核心业务效能洞察
+                </h1>
+                <p data-editable="true" contenteditable="true" data-slot="text.report_subtitle" data-key="text.report_subtitle" class="text-muted text-sm max-w-2xl mx-auto">
+                    基于 2025 财年多维经营数据的自动化复盘与风险排查分析
+                </p>
+            </div>
+
+            <!-- KPI 指标组 (4个) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- KPI 1 -->
+                <div data-chart-type="kpi" id="kpi-main-revenue" class="analytics-card flex flex-col items-center text-center justify-center space-y-2">
+                    <span data-editable="true" contenteditable="true" data-slot="text.kpi_1_label" data-key="text.kpi_1_label" class="text-muted text-xs">年度总营收 (CNY)</span>
+                    <div data-editable="true" contenteditable="true" data-slot="text.kpi_1_value" data-key="text.kpi_1_value" class="text-accent text-4xl font-bold font-mono tracking-tighter">18,450,290</div>
+                    <div class="flex items-center space-x-1 text-xs">
+                        <span class="text-positive">同比提升 24.5%</span>
+                    </div>
+                </div>
+                <!-- KPI 2 -->
+                <div data-chart-type="kpi" id="kpi-main-users" class="analytics-card flex flex-col items-center text-center justify-center space-y-2">
+                    <span data-editable="true" contenteditable="true" data-slot="text.kpi_2_label" data-key="text.kpi_2_label" class="text-muted text-xs">活跃客户总数</span>
+                    <div data-editable="true" contenteditable="true" data-slot="text.kpi_2_value" data-key="text.kpi_2_value" class="text-accent text-4xl font-bold font-mono tracking-tighter">3,592</div>
+                    <div class="flex items-center space-x-1 text-xs">
+                        <span class="text-positive">环比增长 12.1%</span>
+                    </div>
+                </div>
+                <!-- KPI 3 -->
+                <div data-chart-type="kpi" id="kpi-main-cost" class="analytics-card flex flex-col items-center text-center justify-center space-y-2">
+                    <span data-editable="true" contenteditable="true" data-slot="text.kpi_3_label" data-key="text.kpi_3_label" class="text-muted text-xs">单客获取成本</span>
+                    <div data-editable="true" contenteditable="true" data-slot="text.kpi_3_value" data-key="text.kpi_3_value" class="text-accent text-4xl font-bold font-mono tracking-tighter">¥412.5</div>
+                    <div class="flex items-center space-x-1 text-xs">
+                        <span class="text-negative">高于基线要求</span>
+                    </div>
+                </div>
+                <!-- KPI 4 -->
+                <div data-chart-type="kpi" id="kpi-main-efficiency" class="analytics-card flex flex-col items-center text-center justify-center space-y-2">
+                    <span data-editable="true" contenteditable="true" data-slot="text.kpi_4_label" data-key="text.kpi_4_label" class="text-muted text-xs">系统运转时长 (H)</span>
+                    <div data-editable="true" contenteditable="true" data-slot="text.kpi_4_value" data-key="text.kpi_4_value" class="text-accent text-4xl font-bold font-mono tracking-tighter">8,760</div>
+                    <div class="flex items-center space-x-1 text-xs">
+                        <span class="text-info">全年无故障运行</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= Core Finding 1: 趋势与波动 ================= -->
+        <section data-section="finding-1" class="space-y-6 pt-8 border-t border-white/5">
+            <div class="space-y-1">
+                <h4 class="text-[10px] tracking-widest text-muted uppercase font-bold">Performance Trends</h4>
+                <h2 data-editable="true" contenteditable="true" data-slot="text.finding_1_title" data-key="text.finding_1_title" class="text-2xl font-bold">增长趋势与波动率分析</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 左侧：主要趋势图 -->
+                <div class="lg:col-span-2 analytics-card space-y-4">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.chart_1_title" data-key="text.chart_1_title" class="text-sm font-medium">近 12 个月关键指标波动折线图</h3>
+                    <div id="chart-revenue-trend" data-chart-type="area" class="chart-container w-full h-[320px]"></div>
+                </div>
+                <!-- 右侧：结构化指标 -->
+                <div class="analytics-card space-y-4 flex flex-col justify-between">
+                    <div>
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.chart_2_title" data-key="text.chart_2_title" class="text-sm font-medium">区域市场贡献度排行</h3>
+                        <p data-editable="true" contenteditable="true" data-slot="text.chart_2_desc" data-key="text.chart_2_desc" class="text-xs text-muted mt-1">华东区市场表现强劲，占据近半数份额。</p>
+                    </div>
+                    <div id="chart-region-bar" data-chart-type="horizontal-bar" class="chart-container w-full h-[250px]"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= Core Finding 2: 结构与转化 ================= -->
+        <section data-section="finding-2" class="space-y-6 pt-8 border-t border-white/5">
+            <div class="space-y-1">
+                <h4 class="text-[10px] tracking-widest text-muted uppercase font-bold">Structure & Conversion</h4>
+                <h2 data-editable="true" contenteditable="true" data-slot="text.finding_2_title" data-key="text.finding_2_title" class="text-2xl font-bold">业务结构与漏斗转化</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- 环形图 -->
+                <div class="lg:col-span-1 analytics-card space-y-2">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.chart_3_title" data-key="text.chart_3_title" class="text-sm font-medium">产品线收入占比</h3>
+                    <div id="chart-product-donut" data-chart-type="donut" class="chart-container w-full h-[220px]"></div>
+                </div>
+                
+                <!-- 漏斗图 (Echarts 瀑布流变体形式) -->
+                <div class="lg:col-span-1 analytics-card space-y-2">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.chart_4_title" data-key="text.chart_4_title" class="text-sm font-medium">客户生命周期漏斗</h3>
+                    <div id="chart-conversion-funnel" data-chart-type="funnel" class="chart-container w-full h-[220px]"></div>
+                </div>
+
+                <!-- 堆叠柱状图 -->
+                <div class="lg:col-span-2 analytics-card space-y-2">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.chart_5_title" data-key="text.chart_5_title" class="text-sm font-medium">季度成本结构拆解</h3>
+                    <div id="chart-cost-stacked" data-chart-type="stacked-bar" class="chart-container w-full h-[220px]"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= Core Finding 3: 多维特征与下钻 ================= -->
+        <section data-section="finding-3" class="space-y-6 pt-8 border-t border-white/5">
+            <div class="space-y-1">
+                <h4 class="text-[10px] tracking-widest text-muted uppercase font-bold">Multi-dimensional Attributes</h4>
+                <h2 data-editable="true" contenteditable="true" data-slot="text.finding_3_title" data-key="text.finding_3_title" class="text-2xl font-bold">多维特征与细分分析</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 雷达图 -->
+                <div class="analytics-card space-y-4">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.chart_6_title" data-key="text.chart_6_title" class="text-sm font-medium">核心客群画像特征</h3>
+                    <div id="chart-user-radar" data-chart-type="radar" class="chart-container w-full h-[260px]"></div>
+                </div>
+
+                <!-- 散点图 -->
+                <div class="analytics-card space-y-4">
+                    <h3 data-editable="true" contenteditable="true" data-slot="text.chart_7_title" data-key="text.chart_7_title" class="text-sm font-medium">客单价 vs 活跃度分布</h3>
+                    <div id="chart-value-scatter" data-chart-type="scatter" class="chart-container w-full h-[260px]"></div>
+                </div>
+
+                <!-- HTML 数据列表排版 (Data Ranking List) -->
+                <div class="analytics-card space-y-4" data-chart-type="ranking" id="ranking-list-module">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 data-editable="true" contenteditable="true" data-slot="text.chart_8_title" data-key="text.chart_8_title" class="text-sm font-medium">异常指标风险预警 (TOP 5)</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex justify-between items-center py-1 border-b border-white/5">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-negative font-mono">01</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.rank_1_name" data-key="text.rank_1_name">华南区渠道成本率</span>
+                            </div>
+                            <span data-editable="true" contenteditable="true" data-slot="text.rank_1_val" data-key="text.rank_1_val" class="font-mono">42.3%</span>
+                        </li>
+                        <li class="flex justify-between items-center py-1 border-b border-white/5">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-negative font-mono">02</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.rank_2_name" data-key="text.rank_2_name">企业版客户流失率</span>
+                            </div>
+                            <span data-editable="true" contenteditable="true" data-slot="text.rank_2_val" data-key="text.rank_2_val" class="font-mono">8.7%</span>
+                        </li>
+                        <li class="flex justify-between items-center py-1 border-b border-white/5">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-accent font-mono">03</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.rank_3_name" data-key="text.rank_3_name">API 接口延迟</span>
+                            </div>
+                            <span data-editable="true" contenteditable="true" data-slot="text.rank_3_val" data-key="text.rank_3_val" class="font-mono">1.2s</span>
+                        </li>
+                        <li class="flex justify-between items-center py-1 border-b border-white/5">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-muted font-mono">04</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.rank_4_name" data-key="text.rank_4_name">售后客诉响应时间</span>
+                            </div>
+                            <span data-editable="true" contenteditable="true" data-slot="text.rank_4_val" data-key="text.rank_4_val" class="font-mono">14h</span>
+                        </li>
+                        <li class="flex justify-between items-center py-1">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-muted font-mono">05</span>
+                                <span data-editable="true" contenteditable="true" data-slot="text.rank_5_name" data-key="text.rank_5_name">云服务器空置率</span>
+                            </div>
+                            <span data-editable="true" contenteditable="true" data-slot="text.rank_5_val" data-key="text.rank_5_val" class="font-mono">11%</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="py-8 text-center text-xs text-muted">
+            <p>Generated by Enterprise Analytics AI Engine. Data mapped for demonstration.</p>
+        </footer>
+
+    </div>
+
+    <!-- ECharts 初始化脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Echarts 统一主题色彩配置
+            const themeColors = {
+                bg: 'transparent',
+                accent: '#E6D3C0',
+                axisLine: '#333333',
+                axisText: '#666666',
+                gridLine: '#1a1a1a',
+                tooltipBg: '#222222',
+                palette: ['#E6D3C0', '#60A5FA', '#34D399', '#888888', '#6366f1', '#f59e0b']
+            };
+
+            const commonOptions = {
+                color: themeColors.palette,
+                backgroundColor: themeColors.bg,
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: themeColors.tooltipBg,
+                    borderColor: 'transparent',
+                    textStyle: { color: '#eee' },
+                    axisPointer: { type: 'line', lineStyle: { color: '#444' } }
+                }
+            };
+
+            const charts = [];
+
+            // 1. Area Chart (趋势图)
+            const chartRevenue = echarts.init(document.getElementById('chart-revenue-trend'));
+            chartRevenue.setOption({
+                ...commonOptions,
+                grid: { left: '2%', right: '2%', bottom: '5%', top: '15%', containLabel: true },
+                xAxis: { 
+                    type: 'category', 
+                    data: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    axisLine: { lineStyle: { color: themeColors.axisLine } },
+                    axisLabel: { color: themeColors.axisText },
+                    axisTick: { show: false }
+                },
+                yAxis: { 
+                    type: 'value',
+                    splitLine: { lineStyle: { color: themeColors.gridLine } },
+                    axisLabel: { color: themeColors.axisText, formatter: '{value}' }
+                },
+                series: [
+                    {
+                        name: '业绩指标',
+                        data: [120, 132, 101, 134, 90, 230, 210, 280, 260, 310, 290, 350],
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 2, color: themeColors.accent },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(230, 211, 192, 0.4)' },
+                                { offset: 1, color: 'rgba(230, 211, 192, 0)' }
+                            ])
+                        }
+                    }
+                ]
+            });
+            charts.push(chartRevenue);
+
+            // 2. Horizontal Bar (条形图)
+            const chartRegion = echarts.init(document.getElementById('chart-region-bar'));
+            chartRegion.setOption({
+                ...commonOptions,
+                tooltip: { ...commonOptions.tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '0%', right: '5%', bottom: '0%', top: '5%', containLabel: true },
+                xAxis: { type: 'value', show: false },
+                yAxis: { 
+                    type: 'category', 
+                    data: ['华东', '华南', '华北', '西南', '海外'],
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: { color: '#bbb' }
+                },
+                series: [{
+                    type: 'bar',
+                    data: [850, 620, 430, 310, 150],
+                    barWidth: 12,
+                    itemStyle: { borderRadius: [0, 4, 4, 0], color: themeColors.accent },
+                    label: { show: true, position: 'right', color: '#888' }
+                }]
+            });
+            charts.push(chartRegion);
+
+            // 3. Donut Chart (环形图)
+            const chartProduct = echarts.init(document.getElementById('chart-product-donut'));
+            chartProduct.setOption({
+                ...commonOptions,
+                tooltip: { ...commonOptions.tooltip, trigger: 'item' },
+                legend: { show: false },
+                series: [{
+                    name: '业务类型',
+                    type: 'pie',
+                    radius: ['55%', '80%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderColor: themeColors.bg, borderWidth: 2 },
+                    label: { show: false },
+                    data: [
+                        { value: 1048, name: 'SaaS 订阅' },
+                        { value: 735, name: '私有化部署' },
+                        { value: 580, name: '实施服务' },
+                        { value: 484, name: '技术支持' }
+                    ]
+                }]
+            });
+            charts.push(chartProduct);
+
+            // 4. Funnel/Bar Variant (漏斗转化使用降维柱图更清晰商务)
+            const chartFunnel = echarts.init(document.getElementById('chart-conversion-funnel'));
+            chartFunnel.setOption({
+                ...commonOptions,
+                tooltip: { ...commonOptions.tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '5%', right: '5%', bottom: '15%', top: '10%', containLabel: true },
+                xAxis: {
+                    type: 'category',
+                    data: ['曝光', '点击', '注册', '付费'],
+                    axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: themeColors.axisText }
+                },
+                yAxis: { show: false },
+                series: [{
+                    type: 'bar',
+                    data: [1000, 600, 300, 80],
+                    barWidth: 20,
+                    itemStyle: {
+                        color: function(params) {
+                            // 逐渐降低透明度模拟漏斗
+                            const opacities = [1, 0.7, 0.5, 0.3];
+                            return `rgba(230, 211, 192, ${opacities[params.dataIndex]})`;
+                        },
+                        borderRadius: [4, 4, 0, 0]
+                    },
+                    label: { show: true, position: 'top', color: '#ccc', formatter: '{c}' }
+                }]
+            });
+            charts.push(chartFunnel);
+
+            // 5. Stacked Bar (堆叠柱状图)
+            const chartCost = echarts.init(document.getElementById('chart-cost-stacked'));
+            chartCost.setOption({
+                ...commonOptions,
+                tooltip: { ...commonOptions.tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
+                legend: { data: ['研发', '销售', '管理'], top: 0, right: 0, textStyle: { color: '#888', fontSize: 10 }, icon: 'circle', itemWidth: 8 },
+                grid: { left: '2%', right: '2%', bottom: '5%', top: '20%', containLabel: true },
+                xAxis: { 
+                    type: 'category', data: ['Q1', 'Q2', 'Q3', 'Q4'],
+                    axisLine: { lineStyle: { color: themeColors.axisLine } }, axisTick: { show: false }, axisLabel: { color: themeColors.axisText }
+                },
+                yAxis: { 
+                    type: 'value', splitLine: { lineStyle: { color: themeColors.gridLine } }, axisLabel: { color: themeColors.axisText }
+                },
+                series: [
+                    { name: '研发', type: 'bar', stack: 'total', barWidth: 16, data: [320, 302, 301, 334] },
+                    { name: '销售', type: 'bar', stack: 'total', barWidth: 16, data: [120, 132, 101, 134] },
+                    { name: '管理', type: 'bar', stack: 'total', barWidth: 16, data: [220, 182, 191, 234], itemStyle: { borderRadius: [4, 4, 0, 0] } }
+                ]
+            });
+            charts.push(chartCost);
+
+            // 6. Radar Chart (雷达图)
+            const chartRadar = echarts.init(document.getElementById('chart-user-radar'));
+            chartRadar.setOption({
+                ...commonOptions,
+                tooltip: { ...commonOptions.tooltip, trigger: 'item' },
+                radar: {
+                    indicator: [
+                        { name: '活跃度', max: 100 }, { name: '客单价', max: 100 },
+                        { name: '留存率', max: 100 }, { name: '裂变力', max: 100 },
+                        { name: '满意度', max: 100 }
+                    ],
+                    radius: '65%',
+                    splitNumber: 4,
+                    axisName: { color: '#888' },
+                    splitLine: { lineStyle: { color: themeColors.gridLine } },
+                    splitArea: { show: false },
+                    axisLine: { lineStyle: { color: themeColors.gridLine } }
+                },
+                series: [{
+                    type: 'radar',
+                    data: [
+                        {
+                            value: [85, 90, 75, 60, 95],
+                            name: '核心客群特征',
+                            areaStyle: { color: 'rgba(230, 211, 192, 0.2)' },
+                            lineStyle: { color: themeColors.accent }
+                        }
+                    ]
+                }]
+            });
+            charts.push(chartRadar);
+
+            // 7. Scatter Plot (散点图)
+            const chartScatter = echarts.init(document.getElementById('chart-value-scatter'));
+            chartScatter.setOption({
+                ...commonOptions,
+                grid: { left: '5%', right: '5%', bottom: '10%', top: '10%', containLabel: true },
+                xAxis: { 
+                    type: 'value', name: '登录频次', nameTextStyle: { color: '#555' },
+                    splitLine: { show: false }, axisLabel: { color: themeColors.axisText }
+                },
+                yAxis: { 
+                    type: 'value', name: 'LTV(万)', nameTextStyle: { color: '#555' },
+                    splitLine: { lineStyle: { color: themeColors.gridLine } }, axisLabel: { color: themeColors.axisText }
+                },
+                series: [{
+                    type: 'scatter',
+                    symbolSize: function (data) { return Math.max(data[2] / 5, 8); },
+                    data: [
+                        [10, 8.04, 50], [8, 6.95, 30], [13, 7.58, 40], [9, 8.81, 60],
+                        [11, 8.33, 45], [14, 9.96, 70], [6, 7.24, 25], [4, 4.26, 15],
+                        [12, 10.84, 80], [7, 4.82, 20], [5, 5.68, 20]
+                    ],
+                    itemStyle: { color: 'rgba(96, 165, 250, 0.7)' } // Info blue
+                }]
+            });
+            charts.push(chartScatter);
+
+            // 响应式 Resize
+            window.addEventListener('resize', () => {
+                charts.forEach(chart => chart.resize());
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+{
+  "id": "tpl-dark-enterprise-analytics-001",
+  "name": "高管业务效能洞察 Dashboard (Dark)",
+  "pageTypes": ["dashboard", "data-report", "executive-summary"],
+  "styleTags": ["dark", "minimalist", "professional", "high-density", "no-gradient"],
+  "supportedSections": [
+    "key-takeaway",
+    "finding-1",
+    "finding-2",
+    "finding-3"
+  ],
+  "supportedChartTypes": [
+    "kpi",
+    "line",
+    "bar",
+    "horizontal-bar",
+    "stacked-bar",
+    "area",
+    "donut",
+    "funnel",
+    "radar",
+    "heatmap",
+    "scatter",
+    "waterfall",
+    "ranking"
+  ],
+  "chartModules": 13,
+  "editableCapabilities": {
+    "textEditing": true,
+    "themeColorCustomization": false,
+    "moduleVisibilityToggle": true
+  },
+  "schema": {
+    "sections": {
+      "key-takeaway": {
+        "optional": false,
+        "slots": ["text.report_title", "text.report_subtitle", "kpi.main_1", "kpi.main_2", "kpi.main_3", "kpi.main_4"]
+      }
+    }
+  },
+  "sampleData": {
+    "text": {
+      "report_title": "业务效能深度洞察报告",
+      "report_subtitle": "基于 2025 年度核心指标的全维度经营数据复盘"
+    },
+    "charts": {
+      "chart-revenue-trend": { "type": "area", "description": "年度营收增长趋势" },
+      "chart-user-distribution": { "type": "donut", "description": "核心用户结构占比" }
+    }
+  }
+}

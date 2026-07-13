@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreshCart 客户行为洞察与经营分析报告</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js 用于无缝交互式图表渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #F3F4F6;
+            letter-spacing: -0.011em;
+        }
+
+        /* 极致 macOS 聚焦编辑态 */
+        [contenteditable="true"]:focus {
+            outline: none;
+            background-color: rgba(16, 185, 129, 0.05);
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+            border-radius: 6px;
+            padding: 2px 6px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* 斜向条纹背景 pattern 还原参考图 Category Preferences */
+        .hatch-pattern {
+            background-image: repeating-linear-gradient(
+                -45deg,
+                #6EE7B7,
+                #6EE7B7 8px,
+                #34D399 8px,
+                #34D399 16px
+            );
+        }
+
+        /* 自定义微型阴影和模糊 */
+        .mac-card {
+            background: #FFFFFF;
+            border: 1px solid #F1F5F9;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.02);
+        }
+
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen py-10 px-6 md:px-12">
+
+    <!-- ==================== macOS 主内容自适应容器 ==================== -->
+    <div class="max-w-7xl mx-auto space-y-8 relative">
+
+        <!-- macOS 顶部轻薄、无背景的通透标题栏 (100% 融入背景色) -->
+        <header class="flex items-center justify-between pb-2 z-30">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight"
+                    data-editable="true" contenteditable="true" data-slot="text.header_title" data-key="text.header_title">
+                    Customer Insights
+                </h1>
+                <p class="text-[12px] text-slate-400 font-medium mt-1"
+                   data-editable="true" contenteditable="true" data-slot="text.header_subtitle" data-key="text.header_subtitle">
+                    Analyze customer behavior, feedback, and demographics.
+                </p>
+            </div>
+        </header>
+
+        <!-- ==================== CONTENT SECTION: KEY TAKEAWAY ==================== -->
+        <!-- Key Takeaway 核心总结模块 (通透卡片设计) -->
+        <section data-section="key-takeaway" class="mac-card rounded-2xl p-6 relative overflow-hidden">
+            <div class="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-emerald-500/5 blur-3xl pointer-events-none"></div>
+            <div class="flex items-center gap-2.5 mb-5">
+                <div class="w-1.5 h-5 bg-[#10B981] rounded-full"></div>
+                <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider"
+                    data-editable="true" contenteditable="true" data-slot="text.takeaway_title" data-key="text.takeaway_title">
+                    Key Takeaways
+                </h2>
+                <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full">高管速递</span>
+            </div>
+
+            <!-- 结构化观点卡片 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <!-- 观点 1 -->
+                <div class="bg-white/40 border border-white/60 rounded-xl p-5 relative group hover:bg-white/80 transition-all duration-300 shadow-sm">
+                    <span class="text-[10px] font-extrabold text-[#10B981] tracking-wider uppercase">01 / GROWTH ACCELERATOR</span>
+                    <p class="text-xs text-slate-600 leading-relaxed font-medium mt-2"
+                       data-editable="true" contenteditable="true" data-slot="text.takeaway_item_1" data-key="text.takeaway_item_1">
+                        【新客获取超预期，转化链路亟待深耕】Q2 新增客户数达到 542 人，环比大增 24%，但核心流失点仍集中在‘购物车-结算’环节，流失率高达 22.4%，主要阻碍为配送费门槛。
+                    </p>
+                </div>
+                <!-- 观点 2 -->
+                <div class="bg-white/40 border border-white/60 rounded-xl p-5 relative group hover:bg-white/80 transition-all duration-300 shadow-sm">
+                    <span class="text-[10px] font-extrabold text-[#10B981] tracking-wider uppercase">02 / RETENTION & VALUE</span>
+                    <p class="text-xs text-slate-600 leading-relaxed font-medium mt-2"
+                       data-editable="true" contenteditable="true" data-slot="text.takeaway_item_2" data-key="text.takeaway_item_2">
+                        【高频主力客群稳定，高价值客群画像分明】周频与双周频的黏性客群贡献了高达 68.2% 的营业额。客群画像中，25-34岁高净值白领客户占据半壁江山（占比 34.6%），客单偏好集中在有机乳制品及预制生鲜。
+                    </p>
+                </div>
+                <!-- 观点 3 -->
+                <div class="bg-white/40 border border-white/60 rounded-xl p-5 relative group hover:bg-white/80 transition-all duration-300 shadow-sm">
+                    <span class="text-[10px] font-extrabold text-[#10B981] tracking-wider uppercase">03 / PRODUCT LINKAGE</span>
+                    <p class="text-xs text-slate-600 leading-relaxed font-medium mt-2"
+                       data-editable="true" contenteditable="true" data-slot="text.takeaway_item_3" data-key="text.takeaway_item_3">
+                        【利润品类增长强劲，品类联动效应凸显】生鲜果蔬仍为第一流量入口，但肉禽海鲜本季度利润率提升 8.2%，成为整体客单价拉升的引擎。建议在 Q3 强推‘肉禽 + 调味半成品’组合包策略。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== CONTENT SECTION: CORE FINDING 1 ==================== -->
+        <!-- Core Finding 1: 客户大盘 (高通透指标卡 & 双面积趋势图) -->
+        <section data-section="core-finding-1" class="space-y-6">
+            <!-- 章节头 -->
+            <div class="flex items-center justify-between border-b border-slate-200/50 pb-3">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-[#10B981] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">1</span>
+                        <h3 class="text-sm font-extrabold text-slate-900 tracking-tight"
+                            data-editable="true" contenteditable="true" data-slot="text.finding_1_title" data-key="text.finding_1_title">
+                            客户增长大盘与价值段分布
+                        </h3>
+                    </div>
+                    <p class="text-[11px] text-slate-400 font-medium"
+                       data-editable="true" contenteditable="true" data-slot="text.finding_1_desc" data-key="text.finding_1_desc">
+                        大盘数据显示新注册客群呈现爆发式增长。核心价值段分层中，高生命周期价值（CLV）的客群主要集中在 25-45 岁区间。
+                    </p>
+                </div>
+            </div>
+
+            <!-- 四个极通透指标卡 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+                <!-- 卡片 1 -->
+                <div data-chart-type="kpi" id="chart-kpi-total-customer" class="mac-card rounded-2xl p-5 relative group hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between h-36">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold text-slate-400">Total Customer</span>
+                        <div class="w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center text-[#10B981]">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-extrabold text-slate-900 tracking-tight" id="kpi-val-total">8,234</span>
+                            <span class="text-[10px] font-bold text-[#10B981] bg-[#10B981]/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5" id="kpi-pct-total">
+                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                                15%
+                            </span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-semibold mt-1" id="kpi-sub-total">Total customer last month</p>
+                    </div>
+                    <button class="absolute bottom-4 right-4 w-6 h-6 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-[#10B981] group-hover:text-white group-hover:border-[#10B981] transition-all duration-300">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+
+                <!-- 卡片 2 -->
+                <div data-chart-type="kpi" id="chart-kpi-new-customer" class="mac-card rounded-2xl p-5 relative group hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between h-36">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold text-slate-400">New Customer</span>
+                        <div class="w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center text-[#10B981]">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-extrabold text-slate-900 tracking-tight" id="kpi-val-new">542</span>
+                            <span class="text-[10px] font-bold text-[#10B981] bg-[#10B981]/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5" id="kpi-pct-new">
+                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                                24%
+                            </span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-semibold mt-1" id="kpi-sub-new">New customer last month</p>
+                    </div>
+                    <button class="absolute bottom-4 right-4 w-6 h-6 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-[#10B981] group-hover:text-white group-hover:border-[#10B981] transition-all duration-300">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+
+                <!-- 卡片 3 -->
+                <div data-chart-type="kpi" id="chart-kpi-avg-rating" class="mac-card rounded-2xl p-5 relative group hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between h-36">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold text-slate-400">Avg. Rating</span>
+                        <div class="w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center text-amber-500">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path></svg>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-extrabold text-slate-900 tracking-tight" id="kpi-val-rating">4.7</span>
+                            <span class="text-[10px] font-bold text-[#10B981] bg-[#10B981]/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5" id="kpi-pct-rating">
+                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                                0.3%
+                            </span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-semibold mt-1" id="kpi-sub-rating">Avg. Rating last month</p>
+                    </div>
+                    <button class="absolute bottom-4 right-4 w-6 h-6 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-[#10B981] group-hover:text-white group-hover:border-[#10B981] transition-all duration-300">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+
+                <!-- 卡片 4 -->
+                <div data-chart-type="kpi" id="chart-kpi-repeat-rate" class="mac-card rounded-2xl p-5 relative group hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between h-36">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold text-slate-400">Repeat Customers</span>
+                        <div class="w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center text-purple-500">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17"></path></svg>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-extrabold text-slate-900 tracking-tight" id="kpi-val-repeat">67%</span>
+                            <span class="text-[10px] font-bold text-[#10B981] bg-[#10B981]/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5" id="kpi-pct-repeat">
+                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                                8.2%
+                            </span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-semibold mt-1" id="kpi-sub-repeat">Repeat customers last month</p>
+                    </div>
+                    <button class="absolute bottom-4 right-4 w-6 h-6 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-[#10B981] group-hover:text-white group-hover:border-[#10B981] transition-all duration-300">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 趋势 + 频次 (双列布局) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- 趋势双折线图 (占 8 列) -->
+                <div data-chart-type="area" class="mac-card p-6 rounded-2xl lg:col-span-8 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-900 tracking-tight">Customer Growth Trends</h4>
+                            <div class="flex items-baseline gap-2 mt-1">
+                                <span class="text-xl font-extrabold text-slate-900">8,234</span>
+                                <span class="text-[10px] font-bold text-[#10B981] flex items-center">
+                                    <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                                    6.20%
+                                </span>
+                            </div>
+                        </div>
+                        <!-- 选项下拉 -->
+                        <div class="relative">
+                            <select class="appearance-none bg-slate-50 border border-slate-200/50 rounded-xl px-3 py-1.5 text-[10px] font-bold text-slate-500 pr-8 focus:outline-none focus:ring-1 focus:ring-[#10B981]">
+                                <option>Monthly</option>
+                                <option>Weekly</option>
+                            </select>
+                            <span class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="chart-customer-growth"></canvas>
+                    </div>
+                </div>
+
+                <!-- 柱状图: 购买频度 (占 4 列) -->
+                <div data-chart-type="column" class="mac-card p-6 rounded-2xl lg:col-span-4 flex flex-col justify-between">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-900 tracking-tight">Purchase Frequency</h4>
+                        </div>
+                        <button class="text-slate-400 hover:text-slate-900">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path></svg>
+                        </button>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="chart-purchase-frequency"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== CONTENT SECTION: CORE FINDING 2 ==================== -->
+        <!-- Core Finding 2: 年龄结构与品类偏好 -->
+        <section data-section="core-finding-2" class="space-y-6">
+            <!-- 章节头 -->
+            <div class="flex items-center justify-between border-b border-slate-200/50 pb-3">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-[#10B981] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">2</span>
+                        <h3 class="text-sm font-extrabold text-slate-900 tracking-tight"
+                            data-editable="true" contenteditable="true" data-slot="text.finding_2_title" data-key="text.finding_2_title">
+                            交易频次与留存转化路径
+                        </h3>
+                    </div>
+                    <p class="text-[11px] text-slate-400 font-medium"
+                       data-editable="true" contenteditable="true" data-slot="text.finding_2_desc" data-key="text.finding_2_desc">
+                        分析交易频度分布可看出，周频复购率最高。通过对加购至支付的转化漏斗进行拆解。
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- 年龄 Donut (占 5 列 - 带参考图的圆心和引导数字) -->
+                <div data-chart-type="donut" class="mac-card p-6 rounded-2xl lg:col-span-5 flex flex-col justify-between">
+                    <div class="flex justify-between items-start mb-4">
+                        <h4 class="text-xs font-bold text-slate-900 tracking-tight">Age Distribution</h4>
+                        <button class="text-slate-400 hover:text-slate-900">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- 带引导虚线的布局容器 -->
+                    <div class="relative flex items-center justify-center h-64">
+                        <!-- 虚线标记引导 -->
+                        <div class="absolute left-6 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10">
+                            <span class="text-[10px] font-bold text-slate-500">2134</span>
+                            <span class="w-8 border-t border-dashed border-slate-300"></span>
+                        </div>
+                        <div class="absolute right-6 top-1/3 flex items-center gap-1 z-10">
+                            <span class="w-8 border-t border-dashed border-slate-300"></span>
+                            <span class="text-[10px] font-bold text-slate-500">2856</span>
+                        </div>
+                        <div class="absolute left-10 bottom-12 flex items-center gap-1 z-10">
+                            <span class="text-[10px] font-bold text-slate-500">1456</span>
+                            <span class="w-6 border-t border-dashed border-slate-300"></span>
+                        </div>
+                        <div class="absolute right-12 bottom-12 flex items-center gap-1 z-10">
+                            <span class="w-6 border-t border-dashed border-slate-300"></span>
+                            <span class="text-[10px] font-bold text-slate-500">541</span>
+                        </div>
+
+                        <div class="w-44 h-44 relative">
+                            <canvas id="chart-age-distribution"></canvas>
+                            <!-- Donut 环内大数字 -->
+                            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Total customer</span>
+                                <span class="text-xl font-extrabold text-slate-900 tracking-tight" id="donut-total-val">8,234</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center text-[10px] text-slate-400 font-bold tracking-tight">
+                        Total Customer
+                    </div>
+                </div>
+
+                <!-- 斑马纹品类进度条 (占 7 列) -->
+                <div data-chart-type="bar" id="chart-category-preference" class="mac-card p-6 rounded-2xl lg:col-span-7 flex flex-col justify-between">
+                    <div class="flex justify-between items-start mb-6">
+                        <h4 class="text-xs font-bold text-slate-900 tracking-tight">Category Preferences</h4>
+                        <button class="text-slate-400 hover:text-slate-900">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- 条纹品类进程表 -->
+                    <div class="space-y-6 my-auto">
+                        <!-- 类目 1 -->
+                        <div class="flex items-center justify-between gap-6">
+                            <div class="flex-1">
+                                <div class="w-full h-8 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="h-full hatch-pattern rounded-full transition-all duration-1000" style="width: 32%"></div>
+                                </div>
+                            </div>
+                            <div class="w-36 flex justify-between items-center text-xs font-bold shrink-0">
+                                <span class="text-slate-800">32%</span>
+                                <span class="text-slate-400">Fruits & Vegetables</span>
+                            </div>
+                        </div>
+
+                        <!-- 类目 2 -->
+                        <div class="flex items-center justify-between gap-6">
+                            <div class="flex-1">
+                                <div class="w-full h-8 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="h-full hatch-pattern rounded-full transition-all duration-1000" style="width: 24%"></div>
+                                </div>
+                            </div>
+                            <div class="w-36 flex justify-between items-center text-xs font-bold shrink-0">
+                                <span class="text-slate-800">24%</span>
+                                <span class="text-slate-400">Dairy Products</span>
+                            </div>
+                        </div>
+
+                        <!-- 类目 3 -->
+                        <div class="flex items-center justify-between gap-6">
+                            <div class="flex-1">
+                                <div class="w-full h-8 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="h-full hatch-pattern rounded-full transition-all duration-1000" style="width: 18%"></div>
+                                </div>
+                            </div>
+                            <div class="w-36 flex justify-between items-center text-xs font-bold shrink-0">
+                                <span class="text-slate-800">18%</span>
+                                <span class="text-slate-400">Meat & Seafood</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-[10px] text-slate-400 font-bold tracking-tight text-right mt-4">
+                        三大基础大类合计占据主要流通权
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== CONTENT SECTION: CORE FINDING 3 ==================== -->
+        <!-- Core Finding 3: 雷达、漏斗与散点 -->
+        <section data-section="core-finding-3" class="space-y-6">
+            <!-- 章节头 -->
+            <div class="flex items-center justify-between border-b border-slate-200/50 pb-3">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-[#10B981] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
+                        <h3 class="text-sm font-extrabold text-slate-900 tracking-tight"
+                            data-editable="true" contenteditable="true" data-slot="text.finding_3_title" data-key="text.finding_3_title">
+                            品类偏好与核心单品贡献度
+                        </h3>
+                    </div>
+                    <p class="text-[11px] text-slate-400 font-medium"
+                       data-editable="true" contenteditable="true" data-slot="text.finding_3_desc" data-key="text.finding_3_desc">
+                        生鲜果蔬在销售总量中占据霸主地位，高附加值的肉禽类商品紧随其后。通过散点关联模型。
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- 漏斗表现 (占 4 列) -->
+                <div data-chart-type="funnel" id="chart-conversion-funnel" class="mac-card p-6 rounded-2xl lg:col-span-4 flex flex-col justify-between">
+                    <h4 class="text-xs font-bold text-slate-900 tracking-tight mb-4">Conversion Funnel</h4>
+                    <div class="space-y-4 my-auto">
+                        <!-- Funnel Item -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px] font-bold text-slate-500">
+                                <span>浏览 (View)</span>
+                                <span>100% (24,800)</span>
+                            </div>
+                            <div class="w-full h-6 bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
+                                <div class="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 w-full rounded-r-lg"></div>
+                            </div>
+                        </div>
+                        <!-- Funnel Item -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px] font-bold text-slate-500">
+                                <span>加购 (Add to Cart)</span>
+                                <span class="text-emerald-500">65.2% (16,170)</span>
+                            </div>
+                            <div class="w-full h-6 bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
+                                <div class="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 w-[65.2%] rounded-r-lg"></div>
+                            </div>
+                        </div>
+                        <!-- Funnel Item -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px] font-bold text-slate-500">
+                                <span>结算 (Checkout)</span>
+                                <span class="text-amber-500">42.8% (10,614)</span>
+                            </div>
+                            <div class="w-full h-6 bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
+                                <div class="h-full bg-gradient-to-r from-emerald-300 to-emerald-400 w-[42.8%] rounded-r-lg"></div>
+                            </div>
+                        </div>
+                        <!-- Funnel Item -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px] font-bold text-slate-500">
+                                <span>完成支付 (Purchase)</span>
+                                <span class="text-rose-500">18.4% (4,563)</span>
+                            </div>
+                            <div class="w-full h-6 bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
+                                <div class="h-full bg-gradient-to-r from-emerald-200 to-emerald-300 w-[18.4%] rounded-r-lg"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CLV 散点分布 (占 5 列) -->
+                <div data-chart-type="scatter" class="mac-card p-6 rounded-2xl lg:col-span-5 flex flex-col justify-between">
+                    <h4 class="text-xs font-bold text-slate-900 tracking-tight mb-4">CLV Segment Analysis</h4>
+                    <div class="h-60 relative">
+                        <canvas id="chart-clv-scatter"></canvas>
+                    </div>
+                </div>
+
+                <!-- 属性得分雷达 (占 3 列) -->
+                <div data-chart-type="radar" class="mac-card p-6 rounded-2xl lg:col-span-3 flex flex-col justify-between">
+                    <h4 class="text-xs font-bold text-slate-900 tracking-tight mb-4">Cohort Attributes</h4>
+                    <div class="h-60 relative flex items-center justify-center">
+                        <canvas id="chart-segment-radar"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据排行表 -->
+            <div data-chart-type="table" id="chart-top-ranking" class="mac-card p-6 rounded-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h4 class="text-xs font-extrabold text-slate-900 tracking-tight">Q2 爆款单品与明星商户排行 Top 5</h4>
+                        <p class="text-[10px] text-slate-400 font-bold">根据销量、毛利率及复购综合加权</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-slate-400 font-extrabold">
+                                <th class="py-3 px-4">Rank</th>
+                                <th class="py-3 px-4">Item Name</th>
+                                <th class="py-3 px-4">Category</th>
+                                <th class="py-3 px-4">Sales Vol.</th>
+                                <th class="py-3 px-4">Margin</th>
+                                <th class="py-3 px-4 text-right">Index</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100/50 text-slate-600 font-bold">
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-3.5 px-4 text-[#10B981]">01</td>
+                                <td class="py-3.5 px-4 text-slate-900">特选有机高钙鲜牛奶</td>
+                                <td class="py-3.5 px-4 text-slate-400">精选乳制品</td>
+                                <td class="py-3.5 px-4">18,240</td>
+                                <td class="py-3.5 px-4 text-emerald-500">32.4% ↑</td>
+                                <td class="py-3.5 px-4 text-right text-slate-900">98.5</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-3.5 px-4 text-[#10B981]">02</td>
+                                <td class="py-3.5 px-4 text-slate-900">澳洲M5谷饲安格斯眼肉</td>
+                                <td class="py-3.5 px-4 text-slate-400">肉禽海鲜</td>
+                                <td class="py-3.5 px-4">8,450</td>
+                                <td class="py-3.5 px-4 text-emerald-500">41.8% ↑</td>
+                                <td class="py-3.5 px-4 text-right text-slate-900">94.2</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-3.5 px-4 text-[#10B981]">03</td>
+                                <td class="py-3.5 px-4 text-slate-900">无籽极光甜白蜜瓜</td>
+                                <td class="py-3.5 px-4 text-slate-400">生鲜果蔬</td>
+                                <td class="py-3.5 px-4">12,600</td>
+                                <td class="py-3.5 px-4 text-slate-400">18.5% →</td>
+                                <td class="py-3.5 px-4 text-right text-slate-900">89.1</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ==================== macOS 风格悬浮式控制中心 (Dynamic Island Panel) ==================== -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <!-- 最小化的 Dynamic Island 微标 -->
+        <button onclick="togglePanel()" id="island-trigger" class="flex items-center gap-2 px-4 py-2.5 bg-slate-950/90 hover:bg-slate-950 text-white text-xs font-bold rounded-full shadow-2xl transition-all duration-300 border border-slate-800">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>AI 控制中心</span>
+        </button>
+    </div>
+
+    <!-- 数据编辑抽屉 -->
+    <div id="debug-drawer" class="fixed right-0 top-0 h-full w-96 bg-slate-900 text-white z-50 shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col justify-between">
+        <div class="p-6 overflow-y-auto h-full flex flex-col">
+            <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+                <div>
+                    <h3 class="font-extrabold text-sm text-emerald-400">📊 实时 JSON 数据模型</h3>
+                    <p class="text-[10px] text-slate-400 mt-1">AI 引擎和 Excel/CSV 自动化映射的底层总枢纽</p>
+                </div>
+                <button onclick="togglePanel()" class="text-slate-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <!-- 代码块 -->
+            <pre class="mt-4 bg-slate-950 p-4 rounded-xl text-xs overflow-x-auto text-emerald-300 flex-1 font-mono leading-relaxed" id="json-preview"></pre>
+        </div>
+        <div class="p-4 bg-slate-950 border-t border-slate-800 flex gap-2">
+            <button onclick="triggerSimulation('random')" class="flex-1 py-2.5 text-xs font-bold bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 rounded-xl transition-colors">
+                🎲 随机生成 AI 新数据
+            </button>
+            <button onclick="copyJSONToClipboard()" class="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white transition-colors">
+                📋 复制模型 JSON
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md text-white text-xs px-5 py-3.5 rounded-full shadow-2xl z-50 flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 border border-slate-800">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span id="toast-msg" class="font-bold">提示信息</span>
+    </div>
+
+    <!-- ==================== JS 渲染与动画控制内核 ==================== -->
+    <script>
+        let chartInstances = {};
+
+        // 核心初始绑定数据（完全同步 template.json 架构）
+        const reportData = {
+            text: {
+                header_title: "Customer Insights",
+                header_subtitle: "Analyze customer behavior, feedback, and demographics.",
+                takeaway_title: "Key Takeaways",
+                takeaway_item_1: "【新客获取超预期，转化链路亟待深耕】Q2 新增客户数达到 542 人，环比大增 24%，但核心流失点仍集中在‘购物车-结算’环节，流失率高达 22.4%，主要阻碍为配送费门槛。",
+                takeaway_item_2: "【高频主力客群稳定，高价值客群画像分明】周频与双周频的黏性客群贡献了高达 68.2% 的营业额。客群画像中，25-34岁高净值白领客户占据半壁江山（占比 34.6%），客单偏好集中在有机乳制品及预制生鲜。",
+                takeaway_item_3: "【利润品类增长强劲，品类联动效应凸显】生鲜果蔬仍为第一流量入口，但肉禽海鲜本季度利润率提升 8.2%，成为整体客单价拉升的引擎。建议在 Q3 强推‘肉禽 + 调味半成品’组合包策略。",
+                finding_1_title: "客户增长大盘与价值段分布",
+                finding_1_desc: "大盘数据显示新注册客群呈现爆发式增长。核心价值段分层中，高生命周期价值（CLV）的客群主要集中在 25-45 岁区间。",
+                finding_2_title: "交易频次与留存转化路径",
+                finding_2_desc: "分析交易频度分布可看出，周频复购率最高。通过对加购至支付的转化漏斗进行拆解。",
+                finding_3_title: "品类偏好与核心单品贡献度",
+                finding_3_desc: "生鲜果蔬在销售总量中占据霸主地位，高附加值的肉禽类商品紧随其后。通过散点关联模型。"
+            },
+            charts: {
+                kpi_total_customer: { value: 8234, change: "15%", sub: "Total customer last month" },
+                kpi_new_customer: { value: 542, change: "24%", sub: "New customer last month" },
+                kpi_avg_rating: { value: 4.7, change: "0.3%", sub: "Avg. Rating last month" },
+                kpi_repeat_rate: { value: "67%", change: "8.2%", sub: "Repeat customers last month" },
+                customer_growth_trends: {
+                    labels: ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL"],
+                    total: [5500, 4800, 5200, 8000, 7800, 5000, 8234],
+                    active: [3200, 3100, 4500, 5000, 3800, 6200, 6500]
+                },
+                purchase_frequency: {
+                    labels: ["Daily", "Weekly", "Bi-weekly", "Monthly"],
+                    data: [900, 2700, 1800, 900]
+                },
+                age_distribution: {
+                    labels: ["18-24岁", "25-34岁", "35-44岁", "45岁以上"],
+                    data: [1456, 2856, 2134, 541]
+                },
+                clv_scatter: {
+                    datasets: [
+                        { label: '新客群', data: [{x: 45, y: 12, r: 6}, {x: 55, y: 15, r: 8}, {x: 65, y: 18, r: 7}] },
+                        { label: '高价值客群', data: [{x: 120, y: 22, r: 12}, {x: 140, y: 26, r: 14}, {x: 160, y: 24, r: 15}] },
+                        { label: '温和复购客群', data: [{x: 35, y: 5, r: 4}, {x: 50, y: 8, r: 5}, {x: 60, y: 6, r: 4}] }
+                    ]
+                }
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initTextBindings();
+            renderAllCharts();
+            updateJSONDrawerContent();
+        });
+
+        function initTextBindings() {
+            document.querySelectorAll('[data-editable="true"]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (key) {
+                    const path = key.split('.');
+                    if (path[0] === 'text' && reportData.text[path[1]]) {
+                        el.innerText = reportData.text[path[1]];
+                    }
+
+                    el.addEventListener('blur', () => {
+                        reportData.text[path[1]] = el.innerText.trim();
+                        updateJSONDrawerContent();
+                        showToast("数据节点实时缓存成功");
+                    });
+                }
+            });
+        }
+
+        function renderAllCharts() {
+            // (1) 面积图: Customer Growth Trends
+            const ctxGrowth = document.getElementById('chart-customer-growth').getContext('2d');
+            const gradientTotal = ctxGrowth.createLinearGradient(0, 0, 0, 240);
+            gradientTotal.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+            gradientTotal.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+            chartInstances.growth = new Chart(ctxGrowth, {
+                type: 'line',
+                data: {
+                    labels: reportData.charts.customer_growth_trends.labels,
+                    datasets: [
+                        {
+                            label: 'Total Customer',
+                            data: reportData.charts.customer_growth_trends.total,
+                            borderColor: '#10B981',
+                            borderWidth: 3,
+                            fill: true,
+                            backgroundColor: gradientTotal,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#10B981',
+                            pointHoverRadius: 8
+                        },
+                        {
+                            label: 'Active Users',
+                            data: reportData.charts.customer_growth_trends.active,
+                            borderColor: '#34D399',
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#94A3B8', font: { size: 10, weight: 'bold' } } },
+                        y: { grid: { color: 'rgba(226, 232, 240, 0.4)' }, ticks: { color: '#94A3B8', font: { size: 10 } } }
+                    }
+                }
+            });
+
+            // (2) 柱形图: Purchase Frequency
+            const ctxFreq = document.getElementById('chart-purchase-frequency').getContext('2d');
+            const gradPillar = ctxFreq.createLinearGradient(0, 0, 0, 250);
+            gradPillar.addColorStop(0, '#10B981');
+            gradPillar.addColorStop(1, '#6EE7B7');
+
+            chartInstances.frequency = new Chart(ctxFreq, {
+                type: 'bar',
+                data: {
+                    labels: reportData.charts.purchase_frequency.labels,
+                    datasets: [{
+                        data: reportData.charts.purchase_frequency.data,
+                        backgroundColor: gradPillar,
+                        borderRadius: 12,
+                        barThickness: 24
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#94A3B8', font: { size: 10, weight: 'bold' } } },
+                        y: { grid: { display: false }, ticks: { color: '#94A3B8', font: { size: 10 } } }
+                    }
+                }
+            });
+
+            // (3) 环状图: Age Distribution
+            const ctxAge = document.getElementById('chart-age-distribution').getContext('2d');
+            chartInstances.age = new Chart(ctxAge, {
+                type: 'doughnut',
+                data: {
+                    labels: reportData.charts.age_distribution.labels,
+                    datasets: [{
+                        data: reportData.charts.age_distribution.data,
+                        backgroundColor: ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0'],
+                        borderWidth: 4,
+                        borderColor: '#ffffff',
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // (4) 散点图: CLV
+            const ctxScatter = document.getElementById('chart-clv-scatter').getContext('2d');
+            chartInstances.scatter = new Chart(ctxScatter, {
+                type: 'bubble',
+                data: {
+                    datasets: reportData.charts.clv_scatter.datasets.map((item, idx) => ({
+                        ...item,
+                        backgroundColor: ['rgba(16, 185, 129, 0.7)', 'rgba(5, 150, 105, 0.85)', 'rgba(110, 231, 183, 0.7)'][idx],
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(226, 232, 240, 0.4)' }, ticks: { color: '#94A3B8', font: { size: 9 } } },
+                        y: { grid: { color: 'rgba(226, 232, 240, 0.4)' }, ticks: { color: '#94A3B8', font: { size: 9 } } }
+                    }
+                }
+            });
+
+            // (5) 雷达图: Cohort Attributes
+            const ctxRadar = document.getElementById('chart-segment-radar').getContext('2d');
+            chartInstances.radar = new Chart(ctxRadar, {
+                type: 'radar',
+                data: {
+                    labels: ['客单', '留存', '频次', '满意', '扩散'],
+                    datasets: [{
+                        data: [85, 90, 72, 88, 60],
+                        borderColor: '#10B981',
+                        borderWidth: 2,
+                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        r: {
+                            ticks: { display: false },
+                            grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                            angleLines: { color: 'rgba(226, 232, 240, 0.6)' },
+                            pointLabels: { font: { size: 9, weight: 'bold' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 模拟 AI 数据注入
+        function triggerSimulation(type) {
+            if (type === 'random') {
+                showToast("AI 数据源深度重组中...");
+                
+                // 1. KPI 动态渐变更新
+                const oldVal = reportData.charts.kpi_total_customer.value;
+                const newVal = Math.floor(oldVal * (1 + (Math.random() * 0.1 - 0.04)));
+                reportData.charts.kpi_total_customer.value = newVal;
+                document.getElementById('kpi-val-total').innerText = newVal.toLocaleString();
+                document.getElementById('donut-total-val').innerText = newVal.toLocaleString();
+
+                const oldNew = reportData.charts.kpi_new_customer.value;
+                const newNew = Math.floor(oldNew * (1 + (Math.random() * 0.15 - 0.05)));
+                reportData.charts.kpi_new_customer.value = newNew;
+                document.getElementById('kpi-val-new').innerText = newNew.toLocaleString();
+
+                // 2. 曲线图重绘动画
+                reportData.charts.customer_growth_trends.total = reportData.charts.customer_growth_trends.total.map(v => Math.floor(v * (1 + (Math.random() * 0.08 - 0.04))));
+                chartInstances.growth.data.datasets[0].data = reportData.charts.customer_growth_trends.total;
+                chartInstances.growth.update('active');
+
+                // 3. 购买频次重绘
+                reportData.charts.purchase_frequency.data = reportData.charts.purchase_frequency.data.map(v => Math.floor(v * (1 + (Math.random() * 0.1 - 0.05))));
+                chartInstances.frequency.data.datasets[0].data = reportData.charts.purchase_frequency.data;
+                chartInstances.frequency.update();
+
+                updateJSONDrawerContent();
+            }
+        }
+
+        function togglePanel() {
+            const drawer = document.getElementById('debug-drawer');
+            drawer.classList.toggle('translate-x-full');
+        }
+
+        function updateJSONDrawerContent() {
+            document.getElementById('json-preview').innerText = JSON.stringify(reportData, null, 2);
+        }
+
+        function copyJSONToClipboard() {
+            const text = JSON.stringify(reportData, null, 2);
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+            showToast("JSON 成功复制到剪贴板！");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

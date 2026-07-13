@@ -1,0 +1,61 @@
+{
+  "id": "tpl_executive_muted_dashboard_v1",
+  "name": "企业级数据分析看板 (Executive Muted)",
+  "pageTypes": ["dashboard", "report", "presentation"],
+  "styleTags": ["professional", "muted", "high-density", "corporate"],
+  "supportedSections": [
+    "key-takeaway",
+    "core-finding-1",
+    "core-finding-2",
+    "core-finding-3"
+  ],
+  "supportedChartTypes": [
+    "kpi-sparkline",
+    "line",
+    "bar",
+    "bar-horizontal",
+    "bar-stacked",
+    "bar-stacked-horizontal",
+    "area",
+    "donut",
+    "funnel",
+    "radar",
+    "heatmap",
+    "scatter",
+    "waterfall",
+    "ranking-list"
+  ],
+  "editableCapabilities": {
+    "text": true,
+    "chartData": true,
+    "chartTypeSwitch": false,
+    "moduleVisibility": true
+  },
+  "schema": {
+    "textSlots": [
+      "text.dashboard.title",
+      "text.dashboard.subtitle",
+      "text.takeaway.title",
+      "text.takeaway.content",
+      "text.finding1.title",
+      "text.finding2.title",
+      "text.finding3.title"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-kpi-1", "type": "kpi-sparkline", "sampleData": true },
+    { "id": "chart-kpi-2", "type": "kpi-sparkline", "sampleData": true },
+    { "id": "chart-kpi-3", "type": "kpi-sparkline", "sampleData": true },
+    { "id": "chart-main-trend", "type": "area", "sampleData": true },
+    { "id": "chart-bar-account", "type": "bar-horizontal", "sampleData": true },
+    { "id": "chart-bar-region", "type": "bar-horizontal", "sampleData": true },
+    { "id": "chart-bar-product", "type": "bar-stacked-horizontal", "sampleData": true },
+    { "id": "chart-donut-distribution", "type": "donut", "sampleData": true },
+    { "id": "chart-radar-performance", "type": "radar", "sampleData": true },
+    { "id": "chart-scatter-correlation", "type": "scatter", "sampleData": true }
+  ],
+  "hiddenBehaviors": {
+    "emptyChart": "hide-module",
+    "emptyText": "collapse"
+  }
+}

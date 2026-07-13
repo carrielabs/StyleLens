@@ -1,0 +1,269 @@
+{
+  "id": "dashboard-19-warm-soft-enterprise-dashboard",
+  "name": "Warm Soft Enterprise Dashboard 暖色柔和经营分析报告看板",
+  "templateName": "WarmSoftEnterpriseDashboardTemplate",
+  "version": "1.0.0",
+  "description": "面向团队周报、月度经营分析、产品运营复盘和管理层汇报的暖色柔和数据分析 Dashboard，采用奶油背景、白色大圆角卡片、暖黄橙红强调色和 ECharts 多图表组合。",
+  "pageTypes": [
+    "dashboard",
+    "data-report",
+    "analytics",
+    "business-review",
+    "executive-summary"
+  ],
+  "styleTags": [
+    "warm-soft",
+    "creamy-dashboard",
+    "soft-ui",
+    "approachable-analytics",
+    "echarts"
+  ],
+  "deliveryType": "single-page-dashboard",
+  "interactionMode": "editable-dashboard",
+  "contentCapacity": "high",
+  "bestFor": [
+    "团队周报",
+    "月度经营分析",
+    "产品运营复盘",
+    "管理层看板",
+    "Excel 数据报告可视化"
+  ],
+  "requiredRuntime": [
+    "Tailwind CSS CDN",
+    "ECharts CDN",
+    "Vanilla JavaScript"
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#F59E0B",
+      "background": "#F9F8F4",
+      "surface": "#FFFFFF",
+      "textMain": "#4A4238",
+      "textSub": "#8C8272",
+      "border": "#E7E5E4",
+      "orange": "#F97316",
+      "red": "#EF4444",
+      "teal": "#14B8A6",
+      "purple": "#A855F7",
+      "brown": "#854D0E"
+    },
+    "fonts": {
+      "body": "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif"
+    }
+  },
+  "editableCapabilities": {
+    "textEdit": true,
+    "inlineContentEditable": true,
+    "chartDataInjection": true,
+    "excelSlotMapping": true,
+    "showHideSections": true,
+    "themeOverride": false
+  },
+  "supportedSections": {
+    "key-takeaway": {
+      "desc": "核心摘要和 4 个 KPI 卡片",
+      "required": true,
+      "hideable": false
+    },
+    "core-finding-1": {
+      "desc": "规模增长趋势与结构特征",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-2": {
+      "desc": "转化效率与地区差异",
+      "required": true,
+      "hideable": true
+    },
+    "core-finding-3": {
+      "desc": "投入产出与业务健康度",
+      "required": true,
+      "hideable": true
+    }
+  },
+  "supportedChartTypes": [
+    "kpi",
+    "line",
+    "bar",
+    "horizontal-bar",
+    "stacked-bar",
+    "area",
+    "donut",
+    "funnel",
+    "radar",
+    "heatmap",
+    "scatter",
+    "waterfall",
+    "ranking"
+  ],
+  "schema": {
+    "editableText": {
+      "type": "array",
+      "selector": "[data-editable=\"true\"]",
+      "desc": "所有可编辑文字均带 data-slot 和 contenteditable"
+    },
+    "kpiCards": {
+      "type": "array",
+      "selector": "[data-chart-type=\"kpi\"]",
+      "desc": "KPI 卡片通过 data-slot 替换 title、value、trend"
+    },
+    "charts": {
+      "type": "array",
+      "selector": "[id^=\"chart-\"]",
+      "desc": "ECharts 图表容器和 KPI 容器；图表数据位于底部 setOption 配置"
+    },
+    "sections": {
+      "type": "array",
+      "selector": "[data-section]",
+      "desc": "核心 Dashboard 模块"
+    },
+    "textSlots": [
+      "text.report_title",
+      "text.takeaway_desc",
+      "text.finding_1_title",
+      "text.finding_1_desc",
+      "text.finding_2_title",
+      "text.finding_2_desc",
+      "text.finding_3_title",
+      "text.finding_3_desc",
+      "text.chart_title_trend",
+      "text.chart_title_mix",
+      "text.chart_title_rank",
+      "text.chart_title_funnel",
+      "text.chart_title_radar",
+      "text.chart_title_scatter",
+      "text.chart_title_stack"
+    ],
+    "kpiSlots": [
+      "text.kpi_1_title",
+      "text.kpi_1_value",
+      "text.kpi_1_trend",
+      "text.kpi_2_title",
+      "text.kpi_2_value",
+      "text.kpi_2_trend",
+      "text.kpi_3_title",
+      "text.kpi_3_value",
+      "text.kpi_3_trend",
+      "text.kpi_4_title",
+      "text.kpi_4_value",
+      "text.kpi_4_trend"
+    ]
+  },
+  "chartModules": [
+    { "id": "chart-kpi-1", "type": "kpi", "section": "key-takeaway", "titleSlot": "text.kpi_1_title", "styleNote": "Yellow accent" },
+    { "id": "chart-kpi-2", "type": "kpi", "section": "key-takeaway", "titleSlot": "text.kpi_2_title", "styleNote": "Orange accent" },
+    { "id": "chart-kpi-3", "type": "kpi", "section": "key-takeaway", "titleSlot": "text.kpi_3_title", "styleNote": "Red accent" },
+    { "id": "chart-kpi-4", "type": "kpi", "section": "key-takeaway", "titleSlot": "text.kpi_4_title", "styleNote": "Teal accent" },
+    { "id": "chart-trend-area", "type": "area", "section": "core-finding-1", "titleSlot": "text.chart_title_trend" },
+    { "id": "chart-mix-donut", "type": "donut", "section": "core-finding-1", "titleSlot": "text.chart_title_mix" },
+    { "id": "chart-rank-bar", "type": "horizontal-bar", "section": "core-finding-2", "titleSlot": "text.chart_title_rank" },
+    { "id": "chart-funnel", "type": "funnel", "section": "core-finding-2", "titleSlot": "text.chart_title_funnel" },
+    { "id": "chart-radar", "type": "radar", "section": "core-finding-3", "titleSlot": "text.chart_title_radar" },
+    { "id": "chart-scatter", "type": "scatter", "section": "core-finding-3", "titleSlot": "text.chart_title_scatter" },
+    { "id": "chart-stack-bar", "type": "stacked-bar", "section": "core-finding-3", "titleSlot": "text.chart_title_stack" }
+  ],
+  "sampleData": {
+    "texts": {
+      "text.report_title": "第三季度核心业务经营复盘报告",
+      "text.takeaway_desc": "本季度整体业务在暖冬策略下保持稳健增长。核心收入突破预期目标，会员活跃度显著提升。重点关注新产品线的转化瓶颈，建议下阶段加大暖心服务投入。",
+      "text.finding_1_title": "发现一：核心规模增长趋势与结构特征",
+      "text.finding_1_desc": "整体流量规模在8月份达到峰值。从结构来看，自然搜索与老客户留存是收入增长的主要驱动力。",
+      "text.finding_2_title": "发现二：核心链路转化效率与地区差异",
+      "text.finding_2_desc": "营销漏斗在留资到转化环节流失最为严重。华东大区业务表现强势，而西南大区则面临增长压力。",
+      "text.finding_3_title": "发现三：多维投入产出与业务健康度",
+      "text.finding_3_desc": "各业务线在资源消耗与利润贡献上存在结构性错位。高频互动用户的长期价值显著优于低频用户。"
+    },
+    "kpis": [
+      { "title": "总营收表现", "value": "¥ 84.5M", "trend": "+12.4% 同比", "status": "up", "accent": "yellow" },
+      { "title": "活跃客户规模", "value": "12,845", "trend": "+5.2% 环比", "status": "up", "accent": "orange" },
+      { "title": "核心转化率", "value": "14.2%", "trend": "-1.5% 环比", "status": "down", "accent": "red" },
+      { "title": "平均获客成本", "value": "¥ 320", "trend": "-8.4% 环比", "status": "good_down", "accent": "teal" }
+    ]
+  },
+  "hiddenBehaviors": {
+    "emptySection": "hide-section",
+    "emptyChart": "hide-chart-container"
+  },
+  "slotLimits": {
+    "report-title": 40,
+    "section-title": 40,
+    "summary-text": 240,
+    "analysis-text": 180,
+    "chart-title": 36,
+    "kpi-title": 20,
+    "kpi-value": 18,
+    "kpi-trend": 14
+  },
+  "llmInjectionRules": [
+    "所有新增可编辑文字必须同时包含 data-editable=\"true\"、contenteditable=\"true\" 和 data-slot。",
+    "图表容器 ID 必须保持 chart-* 格式。",
+    "KPI 卡片只替换 title、value、trend 文案。",
+    "替换图表数据时优先修改 ECharts setOption 中的数据配置，不触碰布局和样式代码。",
+    "保持奶油背景、白色大圆角卡片、暖色强调色和柔和图表配色，不添加冷色大面积背景。"
+  ],
+  "audit": {
+    "sourceFileArchived": true,
+    "sourceFile": "originals/source-template.html",
+    "pastedTextArchived": true,
+    "sourceAndPastedTextIdentical": true,
+    "designStandardArchived": true,
+    "slotsDefinitionArchived": true,
+    "templateConfigArchived": true,
+    "dataEditableHasContenteditable": true,
+    "dataSlotsAdded": true,
+    "editableCount": 27,
+    "duplicateSlotCount": 0,
+    "dataSectionCount": 4,
+    "chartCount": 7,
+    "kpiCount": 4,
+    "chartModuleCount": 11,
+    "usesECharts": true,
+    "sourceCleanup": [
+      "按模板 19 命名规范归档到 dashboard-19-warm-soft-enterprise-dashboard。",
+      "保留 Gemini 原始 HTML、视觉方向和 ECharts 配置。",
+      "将用户提供的配置结构规范化为仓库 template.json 格式。",
+      "为 4 个 KPI 容器补齐 chart-kpi-* ID。"
+    ],
+    "standardReview": [
+      "HTML 基本符合仓库入库标准：模块、图表 ID、data-chart-type、data-slot 和 contenteditable 齐全。",
+      "设计规范可用，和 HTML 的暖色柔和视觉方向一致。",
+      "槽位说明可用，但原始 HTML 的 KPI 容器缺少配置中声明的 ID，入库版已修正。",
+      "原始配置 ID 未按仓库编号命名，入库版已规范化。"
+    ],
+    "previewGenerated": false,
+    "previewNote": "低性能模式下未生成 preview.png，未打开浏览器、未截图、未启动 dev server。"
+  },
+  "editorTheme": {
+    "defaultColor": "#f59e0b",
+    "presets": [
+      "#f59e0b",
+      "#f97316",
+      "#ef4444",
+      "#14b8a6",
+      "#a855f7",
+      "#854d0e",
+      "#4a4238",
+      "#8c8272"
+    ],
+    "targets": {
+      "colorSelectors": [
+        "[class*=\"text-yellow\"]",
+        "[class*=\"text-orange\"]",
+        "[class*=\"text-red\"]",
+        "[class*=\"text-teal\"]",
+        "[class*=\"text-slate\"]"
+      ],
+      "backgroundSelectors": [
+        "[class*=\"bg-yellow\"]",
+        "[class*=\"bg-orange\"]",
+        "[class*=\"bg-red\"]",
+        "[class*=\"bg-teal\"]",
+        "[class*=\"bg-[#FFFBEB]\"]"
+      ],
+      "borderSelectors": [
+        "[class*=\"border-orange\"]",
+        "[class*=\"border-slate\"]"
+      ]
+    }
+  }
+}
