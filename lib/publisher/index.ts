@@ -16,5 +16,6 @@ export async function generateProductWebsiteHtml(
     sourceText: options.sourceText,
     templateId: options.templateId || (options.pageType === 'dashboard' ? 'dashboard-01-blue-business' : 'website-01-fui'),
     pageType: options.pageType || 'product-website',
+    backgroundColor: options.backgroundColor,
   })
 }

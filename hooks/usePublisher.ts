@@ -8,6 +8,7 @@ export interface GeneratedPageResult {
   templateId: string
   sourceFileName?: string
   pageType?: GeneratedPageType
+  backgroundColor?: string
 }
 
 export type GeneratedPageType = 'product-website' | 'dashboard'
@@ -36,7 +37,7 @@ export function usePublisher() {
     return record
   }
 
-  async function generatePage(sourceText: string, templateId: string, pageType: GeneratedPageType = 'product-website') {
+  async function generatePage(sourceText: string, templateId: string, pageType: GeneratedPageType = 'product-website', backgroundColor?: string) {
     setIsGenerating(true)
     setGeneratedPage(null)
 
@@ -48,6 +49,7 @@ export function usePublisher() {
           sourceText,
           templateId,
           pageType,
+          backgroundColor,
         }),
       })
       const data = await res.json()
@@ -58,7 +60,7 @@ export function usePublisher() {
     }
   }
 
-  async function generateDashboardFromFile(file: File, templateId = 'dashboard-15-consulting-data-report') {
+  async function generateDashboardFromFile(file: File, templateId = 'dashboard-15-consulting-data-report', backgroundColor?: string) {
     setIsGenerating(true)
     setGeneratedPage(null)
 
@@ -66,6 +68,7 @@ export function usePublisher() {
       const formData = new FormData()
       formData.set('file', file)
       formData.set('templateId', templateId)
+      if (backgroundColor) formData.set('backgroundColor', backgroundColor)
 
       const res = await fetch('/api/generate-dashboard-data', {
         method: 'POST',

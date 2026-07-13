@@ -11,6 +11,7 @@ export async function POST(req: Request) {
     const sourceText = String(body.sourceText || '')
     const pageType = String(body.pageType || 'product-website')
     const templateId = String(body.templateId || (pageType === 'dashboard' ? 'dashboard-01-blue-business' : 'website-01-fui'))
+    const backgroundColor = normalizeHexColor(body.backgroundColor)
 
     if (!['product-website', 'dashboard'].includes(pageType)) {
       return NextResponse.json(
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
       sourceText,
       templateId,
       pageType: pageType as 'product-website' | 'dashboard',
+      backgroundColor,
     })
 
     return NextResponse.json({ success: true, result })
@@ -47,4 +49,9 @@ export async function POST(req: Request) {
       { status: 500 }
     )
   }
+}
+
+function normalizeHexColor(value: unknown) {
+  const text = String(value || '').trim()
+  return /^#[0-9a-fA-F]{6}$/.test(text) ? text : undefined
 }

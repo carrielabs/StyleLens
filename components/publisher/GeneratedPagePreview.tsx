@@ -7,6 +7,7 @@ interface GeneratedPagePreviewProps {
   html: string
   title: string
   templateId: string
+  backgroundColor?: string
   onBack: () => void
 }
 
@@ -14,9 +15,11 @@ export default function GeneratedPagePreview({
   html,
   title,
   templateId,
+  backgroundColor,
   onBack,
 }: GeneratedPagePreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const previewBackground = backgroundColor || '#FFFFFF'
 
   function downloadHtmlContent(htmlContent: string) {
     const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' })
@@ -58,7 +61,7 @@ export default function GeneratedPagePreview({
   }
 
   return (
-    <div style={{ height: '100%', position: 'relative', background: '#FFFFFF' }}>
+    <div data-testid="generated-page-preview-shell" style={{ height: '100%', position: 'relative', background: previewBackground }}>
       <div style={{
         position: 'absolute',
         top: 24,
@@ -110,9 +113,9 @@ export default function GeneratedPagePreview({
               height: 34,
               padding: '0 18px',
               borderRadius: 999,
-              border: '1px solid #2563EB',
-              background: '#2563EB',
-              color: '#FFFFFF',
+              border: '1px solid #FFFFFF',
+              background: '#FFFFFF',
+              color: '#111111',
               fontSize: 14,
               fontWeight: 800,
               display: 'inline-flex',
@@ -130,7 +133,7 @@ export default function GeneratedPagePreview({
         title="生成页面预览"
         sandbox="allow-scripts allow-same-origin allow-downloads"
         srcDoc={html}
-        style={{ width: '100%', height: '100%', border: 0, background: '#fff' }}
+        style={{ width: '100%', height: '100%', border: 0, background: previewBackground }}
       />
     </div>
   )

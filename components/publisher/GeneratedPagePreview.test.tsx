@@ -14,6 +14,7 @@ describe('GeneratedPagePreview', () => {
         html="<!DOCTYPE html><html><body>Demo</body></html>"
         title="Demo Page"
         templateId="website-01-fui"
+        backgroundColor="#F5F4F1"
         onBack={vi.fn()}
       />
     )
@@ -22,6 +23,8 @@ describe('GeneratedPagePreview', () => {
     expect(screen.getByText('website-01-fui')).toBeTruthy()
     expect(screen.getByText('已生成，可编辑并下载')).toBeTruthy()
     expect(screen.getByTitle('生成页面预览')).toBeTruthy()
+    expect(screen.getByTestId('generated-page-preview-shell').getAttribute('style')).toContain('background: rgb(245, 244, 241)')
+    expect(screen.getByTitle('生成页面预览').getAttribute('style')).toContain('background: rgb(245, 244, 241)')
     expect(screen.getByText('返回画廊')).toBeTruthy()
     expect(screen.getByText('下载 HTML')).toBeTruthy()
   })

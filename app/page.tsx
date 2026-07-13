@@ -22,6 +22,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [reportLang, setReportLang] = useState<'zh' | 'en'>('zh')
   const [activeWorkspace, setActiveWorkspace] = useState<HomeWorkspaceMode>('extract')
+  const [latestExtractedBackground, setLatestExtractedBackground] = useState<string | undefined>(undefined)
 
   // ── Auth state ──
   const [isAuthVisible, setIsAuthVisible] = useState(false)
@@ -126,6 +127,11 @@ export default function Home() {
     clearGeneratedPage,
     openGeneratedPage,
   } = usePublisher()
+
+  useEffect(() => {
+    const nextBackground = resolveReportBackground(report)
+    if (nextBackground) setLatestExtractedBackground(nextBackground)
+  }, [report])
 
   // ── Modal Background Lock ──
   useEffect(() => {
@@ -332,6 +338,7 @@ export default function Home() {
               html={generatedPage.html}
               title={generatedPage.title}
               templateId={generatedPage.templateId}
+              backgroundColor={generatedPage.backgroundColor || latestExtractedBackground}
               onBack={() => {
                 clearGeneratedPage()
                 setActiveWorkspace('publisher')
@@ -345,6 +352,7 @@ export default function Home() {
             generateDashboardFromFile={generateDashboardFromFile}
             error={error}
             setError={setError}
+            styleBackgroundColor={latestExtractedBackground}
           />
         ) : (
           <HomeWorkspace
@@ -414,4 +422,10 @@ export default function Home() {
       </div>
     </>
   )
+}
+
+function resolveReportBackground(report: DisplayStyleReport | null) {
+  return report?.colorSystem?.pageBackground?.hex
+    || report?.pageAnalysis?.semanticColorSystem?.pageBackground?.hex
+    || report?.colors.find(color => color.role === 'background')?.hex
 }

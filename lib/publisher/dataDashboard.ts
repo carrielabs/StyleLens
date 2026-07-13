@@ -24,6 +24,7 @@ export interface DataFileInput {
   fileName: string
   contentType: string
   bytes: Uint8Array
+  backgroundColor?: string
 }
 
 interface DashboardKpi {
@@ -143,6 +144,7 @@ export async function generateDashboardHtmlFromDataFile(
     sourceText: `# ${model.title}\n\n基于 ${options.fileName} 自动生成。`,
     templateId,
     pageType: 'dashboard',
+    backgroundColor: options.backgroundColor,
   })
   const html = adapter(base.html, model, options.fileName, templateId)
 
@@ -151,6 +153,7 @@ export async function generateDashboardHtmlFromDataFile(
     title: model.title,
     templateId,
     sourceFileName: options.fileName,
+    backgroundColor: options.backgroundColor,
   }
 }
 

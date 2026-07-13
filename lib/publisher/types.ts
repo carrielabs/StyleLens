@@ -4,12 +4,14 @@ export interface GenerateProductWebsiteOptions {
   sourceText: string
   templateId: string
   pageType?: PublisherPageType
+  backgroundColor?: string
 }
 
 export interface PublisherResult {
   html: string
   title: string
   templateId: string
+  backgroundColor?: string
 }
 
 export interface PublisherTemplate {

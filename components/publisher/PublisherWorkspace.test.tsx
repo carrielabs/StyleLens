@@ -28,20 +28,21 @@ describe('PublisherWorkspace', () => {
     expect(screen.getAllByTestId(/template-card-/)).toHaveLength(8)
   })
 
-  it('uses real template iframe thumbnails and hides preview text until hover', () => {
+  it('shows visual-only portrait template cards without public titles or subtitles', () => {
     renderPublisher()
 
     const card = screen.getByTestId('template-card-website-01-fui')
     expect(card.getAttribute('data-preview-card')).toBe('true')
+    expect(card.getAttribute('data-portrait-card')).toBe('true')
+    expect(card.getAttribute('style')).toContain('aspect-ratio: 3 / 4')
 
     const thumbnail = within(card).getByTitle('FUI 模板缩略图')
     expect(thumbnail.getAttribute('src')).toBe('/api/template-preview/website-01-fui')
     expect(thumbnail.getAttribute('data-real-template-thumbnail')).toBe('true')
     expect(thumbnail.getAttribute('style')).toContain('position: absolute')
 
-    const previewLabel = within(card).getByText('全屏沉浸预览')
-    expect(previewLabel.getAttribute('data-preview-label')).toBe('true')
-    expect(previewLabel.getAttribute('style')).toContain('opacity: 0')
+    expect(within(card).queryByText('FUI')).toBeNull()
+    expect(within(card).queryByText('极简科技感产品介绍')).toBeNull()
   })
 
   it('switches to dashboard templates without leaving the workspace', () => {
@@ -51,13 +52,13 @@ describe('PublisherWorkspace', () => {
 
     expect(screen.getByRole('button', { name: '数据看板' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getAllByTestId(/template-card-/)).toHaveLength(28)
-    expect(screen.getByText('Consulting Data')).toBeTruthy()
+    expect(screen.getByTestId('template-card-dashboard-15-consulting-data-report')).toBeTruthy()
   })
 
   it('opens fullscreen template preview and then uses the same template', () => {
     renderPublisher()
 
-    fireEvent.click(screen.getByRole('button', { name: '全屏沉浸预览 FUI' }))
+    fireEvent.click(screen.getByRole('button', { name: '全屏预览 FUI' }))
 
     expect(screen.getByRole('dialog', { name: 'FUI 模板预览' })).toBeTruthy()
     expect(screen.getByRole('status', { name: '模板预览加载中' })).toBeTruthy()
@@ -68,8 +69,24 @@ describe('PublisherWorkspace', () => {
     expect(screen.queryByRole('dialog', { name: 'FUI 模板预览' })).toBeNull()
     const drawer = screen.getByRole('dialog', { name: '配置数据源' })
     expect(drawer).toBeTruthy()
-    expect(within(drawer).getByText('正在使用')).toBeTruthy()
-    expect(within(drawer).getByText('FUI')).toBeTruthy()
+    expect(within(drawer).getByTitle('FUI 当前模板预览')).toBeTruthy()
+    expect(within(drawer).queryByText('正在使用')).toBeNull()
+    expect(within(drawer).queryByText('FUI')).toBeNull()
+  })
+
+  it('opens a non-modal drawer that pushes the gallery instead of showing an overlay', () => {
+    renderPublisher()
+
+    fireEvent.click(screen.getByRole('button', { name: '使用 FUI 模板' }))
+
+    const shell = screen.getByTestId('publisher-shell')
+    const gallery = screen.getByTestId('publisher-gallery-pane')
+    const drawer = screen.getByRole('dialog', { name: '配置数据源' })
+
+    expect(shell.getAttribute('style')).toContain('display: flex')
+    expect(gallery.getAttribute('style')).toContain('flex: 1 1 0%')
+    expect(drawer.getAttribute('aria-modal')).toBe('false')
+    expect(screen.queryByLabelText('关闭配置抽屉遮罩')).toBeNull()
   })
 
   it('generates a website from drawer text with the selected template', async () => {
@@ -85,7 +102,7 @@ describe('PublisherWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: '立即生成 HTML' }))
 
     await waitFor(() => {
-      expect(generatePage).toHaveBeenCalledWith('# 产品介绍', 'website-01-fui', 'product-website')
+      expect(generatePage).toHaveBeenCalledWith('# 产品介绍', 'website-01-fui', 'product-website', undefined)
     })
   })
 
@@ -112,7 +129,7 @@ describe('PublisherWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: '立即生成 HTML' }))
 
     await waitFor(() => {
-      expect(generateDashboardFromFile).toHaveBeenCalledWith(file, 'dashboard-01-blue-business')
+      expect(generateDashboardFromFile).toHaveBeenCalledWith(file, 'dashboard-01-blue-business', undefined)
     })
   })
 })

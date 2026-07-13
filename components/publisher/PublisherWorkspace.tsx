@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
-import { ArrowLeft, ArrowRight, FileText, Maximize, UploadCloud, X } from 'lucide-react'
+import { ArrowLeft, FileText, Maximize, PanelRightClose, SlidersHorizontal, UploadCloud, X } from 'lucide-react'
 import type { GeneratedPageResult, GeneratedPageType } from '@/hooks/usePublisher'
 import { isDataUpload, isTextUpload } from '@/lib/publisher/inputIntent'
 import { DASHBOARD_TEMPLATES, WEBSITE_TEMPLATES, type PublisherTemplate } from './templates'
@@ -12,10 +12,11 @@ type QueuedFile = { file: File; kind: 'text' | 'data' }
 
 interface PublisherWorkspaceProps {
   isGenerating: boolean
-  generatePage: (sourceText: string, templateId: string, pageType?: GeneratedPageType) => Promise<GeneratedPageResult>
-  generateDashboardFromFile: (file: File, templateId?: string) => Promise<GeneratedPageResult>
+  generatePage: (sourceText: string, templateId: string, pageType?: GeneratedPageType, backgroundColor?: string) => Promise<GeneratedPageResult>
+  generateDashboardFromFile: (file: File, templateId?: string, backgroundColor?: string) => Promise<GeneratedPageResult>
   error: string | null
   setError: (error: string | null) => void
+  styleBackgroundColor?: string
 }
 
 export default function PublisherWorkspace({
@@ -24,6 +25,7 @@ export default function PublisherWorkspace({
   generateDashboardFromFile,
   error,
   setError,
+  styleBackgroundColor,
 }: PublisherWorkspaceProps) {
   const [category, setCategory] = useState<TemplateCategory>('product-website')
   const [previewTemplate, setPreviewTemplate] = useState<PublisherTemplate | null>(null)
@@ -94,7 +96,7 @@ export default function PublisherWorkspace({
           setError('数据文件只能生成数据看板')
           return
         }
-        await generateDashboardFromFile(queuedFile.file, selectedTemplate.id)
+        await generateDashboardFromFile(queuedFile.file, selectedTemplate.id, styleBackgroundColor)
         closeDrawer()
         return
       }
@@ -104,7 +106,7 @@ export default function PublisherWorkspace({
         setError('请先输入文本或上传文档')
         return
       }
-      await generatePage(text, selectedTemplate.id, category)
+      await generatePage(text, selectedTemplate.id, category, styleBackgroundColor)
       setSourceText('')
       setQueuedFile(null)
       closeDrawer()
@@ -114,7 +116,7 @@ export default function PublisherWorkspace({
   }
 
   return (
-    <main style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden', background: '#FAFAFA' }}>
+    <main data-testid="publisher-shell" style={{ flex: 1, minHeight: 0, display: 'flex', position: 'relative', overflow: 'hidden', background: '#FAFAFA' }}>
       <style>{`
         .publisher-template-card {
           transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 180ms ease, border-color 180ms ease;
@@ -122,29 +124,17 @@ export default function PublisherWorkspace({
         }
         .publisher-template-card:hover,
         .publisher-template-card:focus-within {
-          transform: translateY(-5px) rotate(-0.25deg);
-          border-color: rgba(96, 165, 250, 0.72) !important;
-          box-shadow: 0 18px 46px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(96, 165, 250, 0.32);
+          transform: translateY(-4px);
+          border-color: rgba(0, 0, 0, 0.18) !important;
+          box-shadow: 0 18px 42px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.08);
         }
-        .publisher-template-card:hover .publisher-preview-overlay,
-        .publisher-template-card:focus-within .publisher-preview-overlay {
+        .publisher-template-card:hover .publisher-card-actions,
+        .publisher-template-card:focus-within .publisher-card-actions {
           opacity: 1;
-        }
-        .publisher-template-card:hover .publisher-preview-label,
-        .publisher-template-card:focus-within .publisher-preview-label {
-          opacity: 1 !important;
-          transform: translate(-50%, -50%) scale(1) !important;
-        }
-        .publisher-template-card:hover .publisher-use-button,
-        .publisher-template-card:focus-within .publisher-use-button {
-          background: #0F172A !important;
-          color: #FFFFFF !important;
-          border-color: #0F172A !important;
-          transform: translateX(2px);
         }
       `}</style>
 
-      <div style={{ height: '100%', overflowY: 'auto', padding: '64px 32px 72px' }}>
+      <div data-testid="publisher-gallery-pane" style={{ flex: '1 1 0%', minWidth: 0, height: '100%', overflowY: 'auto', padding: '64px 32px 72px', transition: 'flex 240ms cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
         <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
           {error && !drawerOpen && (
             <div role="alert" style={{ margin: '0 auto 18px', maxWidth: '520px', border: '1px solid rgba(255,59,48,0.18)', background: '#FFF2F1', color: '#B42318', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 600 }}>
@@ -169,7 +159,7 @@ export default function PublisherWorkspace({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '24px' }}>
             {templates.map(template => (
               <TemplateCard
                 key={template.id}
@@ -221,32 +211,24 @@ export default function PublisherWorkspace({
       )}
 
       {drawerOpen && selectedTemplate && (
-        <>
-          <button
-            type="button"
-            aria-label="关闭配置抽屉遮罩"
-            onClick={closeDrawer}
-            style={{ position: 'absolute', inset: 0, zIndex: 20, border: 'none', background: 'rgba(15,23,42,0.32)', backdropFilter: 'blur(4px)', cursor: 'pointer' }}
-          />
           <aside
             role="dialog"
-            aria-modal="true"
+            aria-modal="false"
             aria-label="配置数据源"
-            style={{ position: 'absolute', top: 0, right: 0, width: '400px', maxWidth: '100%', height: '100%', zIndex: 30, background: '#FFFFFF', borderLeft: '1px solid #E5E7EB', display: 'grid', gridTemplateRows: '56px 1fr auto', boxShadow: '-18px 0 48px rgba(15,23,42,0.14)' }}
+            style={{ width: '420px', maxWidth: '44vw', height: '100%', background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(18px)', borderLeft: '1px solid rgba(0,0,0,0.08)', display: 'grid', gridTemplateRows: '56px 1fr auto', boxShadow: '-18px 0 48px rgba(0,0,0,0.08)', flexShrink: 0 }}
           >
             <div style={{ height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid #F1F5F9' }}>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>配置数据源</h3>
               <button type="button" onClick={closeDrawer} aria-label="关闭配置数据源" style={iconButtonStyle}>
-                <X size={16} strokeWidth={2} />
+                <PanelRightClose size={16} strokeWidth={2} />
               </button>
             </div>
             <div style={{ overflowY: 'auto', padding: '22px' }}>
-              <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px', display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '22px' }}>
-                <TemplateMiniPreview template={selectedTemplate} />
-                <div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 800, marginBottom: '4px' }}>正在使用</div>
-                  <div style={{ fontSize: '18px', color: '#0F172A', fontWeight: 800 }}>{selectedTemplate.name}</div>
+              <div style={{ marginBottom: '22px' }}>
+                <div style={{ marginBottom: '10px', color: '#8A8A8E', fontSize: '11px', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                  Selected Template
                 </div>
+                <TemplateDrawerPreview template={selectedTemplate} />
               </div>
 
               <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px', marginBottom: '18px', background: '#F8FAFC' }}>
@@ -284,7 +266,7 @@ export default function PublisherWorkspace({
                 value={sourceText}
                 onChange={event => setSourceText(event.target.value)}
                 placeholder="例如：这是我们的新产品，它具有以下特性..."
-                style={{ width: '100%', height: '250px', resize: 'none', border: '1px solid #CBD5E1', borderRadius: '10px', background: '#F8FAFC', padding: '14px', outline: 'none', color: '#111827', fontSize: '14px', fontFamily: 'var(--font-sans)' }}
+                style={{ width: '100%', height: '210px', resize: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: '10px', background: 'rgba(250,250,250,0.86)', padding: '14px', outline: 'none', color: '#111827', fontSize: '14px', fontFamily: 'var(--font-sans)' }}
               />
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#94A3B8', fontSize: '12px', margin: '22px 0' }}>
@@ -307,7 +289,7 @@ export default function PublisherWorkspace({
                 onClick={() => fileInputRef.current?.click()}
                 onDrop={handleDrop}
                 onDragOver={event => event.preventDefault()}
-                style={{ minHeight: '150px', border: '1.5px dashed #CBD5E1', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', background: queuedFile ? '#F8FAFC' : '#FFFFFF', color: '#475569' }}
+                style={{ minHeight: '140px', border: '1.5px dashed rgba(0,0,0,0.14)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', background: queuedFile ? 'rgba(248,248,248,0.9)' : 'rgba(255,255,255,0.72)', color: '#4A4A4A' }}
               >
                 {queuedFile ? (
                   <>
@@ -334,13 +316,12 @@ export default function PublisherWorkspace({
                 type="button"
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                style={{ width: '100%', height: '46px', border: 'none', borderRadius: '10px', background: '#0F172A', color: '#FFFFFF', fontSize: '15px', fontWeight: 800, cursor: isGenerating ? 'wait' : 'pointer' }}
+                style={{ width: '100%', height: '46px', border: 'none', borderRadius: '10px', background: '#111111', color: '#FFFFFF', fontSize: '15px', fontWeight: 800, cursor: isGenerating ? 'wait' : 'pointer', boxShadow: '0 10px 28px rgba(0,0,0,0.12)' }}
               >
                 {isGenerating ? '正在生成...' : '立即生成 HTML'}
               </button>
             </div>
           </aside>
-        </>
       )}
     </main>
   )
@@ -384,54 +365,53 @@ function TemplateCard({
       className="publisher-template-card"
       data-testid={`template-card-${template.id}`}
       data-preview-card="true"
-      style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', background: '#FFFFFF', boxShadow: '0 2px 8px rgba(15,23,42,0.04)' }}
+      data-portrait-card="true"
+      style={{ position: 'relative', aspectRatio: '3 / 4', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', overflow: 'hidden', background: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
     >
-      <div style={{ height: '210px', background: '#F8FAFC', position: 'relative', overflow: 'hidden' }}>
-        <iframe
-          title={`${template.name} 模板缩略图`}
-          src={`/api/template-preview/${template.id}`}
-          loading="lazy"
-          sandbox="allow-scripts"
-          tabIndex={-1}
-          data-real-template-thumbnail="true"
-          style={{ position: 'absolute', top: 0, left: 0, width: '1280px', height: '760px', border: 0, transform: 'scale(0.285)', transformOrigin: 'top left', pointerEvents: 'none', background: '#FFFFFF' }}
-        />
-        <div className="publisher-preview-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.28)', opacity: 0, transition: 'opacity 180ms ease', pointerEvents: 'none' }} />
-        <button type="button" aria-label={`全屏沉浸预览 ${template.name}`} onClick={onPreview} style={{ position: 'absolute', inset: 0, border: 'none', background: 'transparent', color: '#FFFFFF', cursor: 'pointer' }}>
-          <span
-            className="publisher-preview-label"
-            data-preview-label="true"
-            style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, calc(-50% + 8px)) scale(0.96)', opacity: 0, display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 17px', borderRadius: '999px', background: 'rgba(15,23,42,0.64)', border: '1px solid rgba(255,255,255,0.38)', boxShadow: '0 12px 32px rgba(15,23,42,0.22)', backdropFilter: 'blur(16px)', fontSize: '13px', fontWeight: 800, transition: 'opacity 180ms ease, transform 180ms ease', whiteSpace: 'nowrap' }}
-          >
-            <Maximize size={15} strokeWidth={2} />
-            全屏沉浸预览
-          </span>
+      <TemplatePreviewFrame template={template} title={`${template.name} 模板缩略图`} scale={0.24} frameHeight={1700} />
+      <button type="button" aria-label={`使用 ${template.name} 模板`} onClick={onUse} style={{ position: 'absolute', inset: 0, border: 'none', background: 'transparent', cursor: 'pointer' }} />
+      <div className="publisher-card-actions" style={{ position: 'absolute', right: '12px', top: '12px', display: 'flex', gap: '8px', opacity: 0, transition: 'opacity 160ms ease', zIndex: 2 }}>
+        <button type="button" aria-label={`全屏预览 ${template.name}`} onClick={onPreview} style={glassIconButtonStyle}>
+          <Maximize size={16} strokeWidth={2} />
         </button>
-      </div>
-      <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px' }}>
-        <div>
-          <h3 style={{ margin: '0 0 5px', color: '#111827', fontSize: '18px', lineHeight: 1.2, fontWeight: 800 }}>{template.name}</h3>
-          <p style={{ margin: 0, color: '#64748B', fontSize: '13px', fontWeight: 500 }}>{template.description}</p>
-        </div>
-        <button className="publisher-use-button" type="button" aria-label={`使用 ${template.name} 模板`} onClick={onUse} style={{ width: '42px', height: '42px', borderRadius: '50%', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'background 160ms ease, color 160ms ease, border-color 160ms ease, transform 160ms ease' }}>
-          <ArrowRight size={20} strokeWidth={2} />
+        <button type="button" aria-label={`配置 ${template.name} 模板`} onClick={onUse} style={glassIconButtonStyle}>
+          <SlidersHorizontal size={16} strokeWidth={2} />
         </button>
       </div>
     </article>
   )
 }
 
-function TemplateMiniPreview({ template }: { template: PublisherTemplate }) {
+function TemplatePreviewFrame({
+  template,
+  title,
+  scale,
+  frameHeight,
+}: {
+  template: PublisherTemplate
+  title: string
+  scale: number
+  frameHeight: number
+}) {
   return (
-    <div style={{ width: '58px', height: '58px', borderRadius: '8px', overflow: 'hidden', background: '#F8FAFC', position: 'relative', flexShrink: 0, border: '1px solid #E2E8F0' }}>
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#FFFFFF' }}>
       <iframe
-        title={`${template.name} 当前模板缩略图`}
+        title={title}
         src={`/api/template-preview/${template.id}`}
         loading="lazy"
         sandbox="allow-scripts"
         tabIndex={-1}
-        style={{ position: 'absolute', top: 0, left: 0, width: '1280px', height: '760px', border: 0, transform: 'scale(0.078)', transformOrigin: 'top left', pointerEvents: 'none', background: '#FFFFFF' }}
+        data-real-template-thumbnail="true"
+        style={{ position: 'absolute', top: 0, left: 0, width: '1280px', height: `${frameHeight}px`, border: 0, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none', background: '#FFFFFF' }}
       />
+    </div>
+  )
+}
+
+function TemplateDrawerPreview({ template }: { template: PublisherTemplate }) {
+  return (
+    <div style={{ width: '100%', aspectRatio: '3 / 4', borderRadius: '10px', overflow: 'hidden', background: '#FFFFFF', position: 'relative', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
+      <TemplatePreviewFrame template={template} title={`${template.name} 当前模板预览`} scale={0.3} frameHeight={1700} />
     </div>
   )
 }
@@ -462,4 +442,19 @@ const iconButtonStyle = {
   alignItems: 'center',
   justifyContent: 'center',
   cursor: 'pointer',
+}
+
+const glassIconButtonStyle = {
+  width: '34px',
+  height: '34px',
+  borderRadius: '999px',
+  border: '1px solid rgba(255,255,255,0.58)',
+  background: 'rgba(255,255,255,0.62)',
+  color: '#111111',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  backdropFilter: 'blur(14px)',
+  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
 }

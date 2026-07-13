@@ -47,6 +47,7 @@ type WebsiteEngine = {
     text: string
     type: 'product-website' | 'dashboard'
     template: string
+    backgroundColor?: string
   }): Promise<string>
 }
 
@@ -54,6 +55,7 @@ export async function buildProductWebsiteHtml(options: {
   sourceText: string
   templateId: string
   pageType?: 'product-website' | 'dashboard'
+  backgroundColor?: string
 }): Promise<PublisherResult> {
   const pageType = options.pageType || 'product-website'
   const templateId = options.templateId || (pageType === 'dashboard' ? 'dashboard-01-blue-business' : 'website-01-fui')
@@ -70,12 +72,14 @@ export async function buildProductWebsiteHtml(options: {
     text: options.sourceText,
     type: pageType,
     template: templateId,
+    backgroundColor: options.backgroundColor,
   })
 
   return {
     html,
     title: extractTitle(options.sourceText),
     templateId,
+    backgroundColor: options.backgroundColor,
   }
 }
 

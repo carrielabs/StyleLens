@@ -10,6 +10,7 @@ export async function POST(req: Request) {
     const formData = await req.formData()
     const file = formData.get('file')
     const templateId = String(formData.get('templateId') || 'dashboard-15-consulting-data-report')
+    const backgroundColor = normalizeHexColor(formData.get('backgroundColor'))
 
     if (!(file instanceof File)) {
       return NextResponse.json(
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
       contentType: file.type,
       bytes,
       templateId,
+      backgroundColor,
     })
 
     return NextResponse.json({ success: true, result })
@@ -41,6 +43,11 @@ export async function POST(req: Request) {
       { status: 500 }
     )
   }
+}
+
+function normalizeHexColor(value: FormDataEntryValue | null) {
+  const text = String(value || '').trim()
+  return /^#[0-9a-fA-F]{6}$/.test(text) ? text : undefined
 }
 
 async function readFileBytes(file: File): Promise<Uint8Array> {
