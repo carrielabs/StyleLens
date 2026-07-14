@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
-import { ArrowLeft, FileText, Maximize, PanelRightClose, SlidersHorizontal, UploadCloud, X } from 'lucide-react'
+import { ArrowLeft, FileText, Maximize, PanelRightClose, UploadCloud } from 'lucide-react'
 import type { GeneratedPageResult, GeneratedPageType } from '@/hooks/usePublisher'
 import { isDataUpload, isTextUpload } from '@/lib/publisher/inputIntent'
 import { DASHBOARD_TEMPLATES, WEBSITE_TEMPLATES, type PublisherTemplate } from './templates'
@@ -116,7 +116,7 @@ export default function PublisherWorkspace({
   }
 
   return (
-    <main data-testid="publisher-shell" style={{ flex: 1, minHeight: 0, display: 'flex', position: 'relative', overflow: 'hidden', background: '#FAFAFA' }}>
+    <main data-testid="publisher-shell" style={{ flex: 1, minHeight: 0, display: 'flex', position: 'relative', overflow: 'hidden', background: '#FFFFFF' }}>
       <style>{`
         .publisher-template-card {
           transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 180ms ease, border-color 180ms ease;
@@ -142,14 +142,16 @@ export default function PublisherWorkspace({
             </div>
           )}
 
-          <div style={{ textAlign: 'center', marginBottom: '42px' }}>
-            <h2 style={{ margin: '0 0 12px', fontSize: '32px', lineHeight: 1.15, fontWeight: 800, color: '#111827', letterSpacing: 0 }}>
-              探索模板
-            </h2>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '15px', fontWeight: 500 }}>
-              选择一个起点，然后注入您的数据。
-            </p>
-            <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', borderRadius: '10px', background: '#EEF2F7', marginTop: '26px' }}>
+          <div data-testid="publisher-gallery-toolbar" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '24px', marginBottom: '42px' }}>
+            <div style={{ textAlign: 'left' }}>
+              <h2 style={{ margin: '0 0 12px', fontSize: '32px', lineHeight: 1.15, fontWeight: 800, color: '#111827', letterSpacing: 0 }}>
+                探索模板
+              </h2>
+              <p style={{ margin: 0, color: '#6E6E73', fontSize: '15px', fontWeight: 500 }}>
+                选择一个起点，然后注入您的数据。
+              </p>
+            </div>
+            <div data-testid="publisher-category-switcher" style={{ display: 'inline-flex', gap: '4px', padding: '4px', borderRadius: '10px', background: 'rgba(0,0,0,0.04)', flexShrink: 0 }}>
               <CategoryButton active={category === 'product-website'} onClick={() => setCategory('product-website')}>
                 网站官网
               </CategoryButton>
@@ -186,7 +188,7 @@ export default function PublisherWorkspace({
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
               <span style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 700 }}>{previewTemplate.name}</span>
-              <button type="button" onClick={usePreviewTemplate} style={{ ...fullscreenButtonStyle, background: '#2563EB', borderColor: '#2563EB' }}>
+              <button type="button" onClick={usePreviewTemplate} style={fullscreenPrimaryButtonStyle}>
                 立即使用此模板
               </button>
             </div>
@@ -339,11 +341,11 @@ function CategoryButton({ active, onClick, children }: { active: boolean; onClic
         border: 'none',
         borderRadius: '8px',
         background: active ? '#FFFFFF' : 'transparent',
-        color: active ? '#111827' : '#64748B',
+        color: active ? '#111827' : '#6E6E73',
         fontSize: '14px',
         fontWeight: 800,
         cursor: 'pointer',
-        boxShadow: active ? '0 1px 4px rgba(15,23,42,0.12)' : 'none',
+        boxShadow: active ? '0 1px 4px rgba(0,0,0,0.10)' : 'none',
       }}
     >
       {children}
@@ -369,13 +371,17 @@ function TemplateCard({
       style={{ position: 'relative', aspectRatio: '3 / 4', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', overflow: 'hidden', background: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
     >
       <TemplatePreviewFrame template={template} title={`${template.name} 模板缩略图`} scale={0.24} frameHeight={1700} />
-      <button type="button" aria-label={`使用 ${template.name} 模板`} onClick={onUse} style={{ position: 'absolute', inset: 0, border: 'none', background: 'transparent', cursor: 'pointer' }} />
-      <div className="publisher-card-actions" style={{ position: 'absolute', right: '12px', top: '12px', display: 'flex', gap: '8px', opacity: 0, transition: 'opacity 160ms ease', zIndex: 2 }}>
-        <button type="button" aria-label={`全屏预览 ${template.name}`} onClick={onPreview} style={glassIconButtonStyle}>
-          <Maximize size={16} strokeWidth={2} />
+      <div
+        className="publisher-card-actions"
+        data-testid={`template-card-actions-${template.id}`}
+        style={{ position: 'absolute', left: '12px', right: '12px', bottom: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', opacity: 0, transition: 'opacity 160ms ease', zIndex: 2 }}
+      >
+        <button type="button" aria-label={`预览 ${template.name}`} onClick={onPreview} style={glassTextButtonStyle}>
+          <Maximize size={14} strokeWidth={2} />
+          预览
         </button>
-        <button type="button" aria-label={`配置 ${template.name} 模板`} onClick={onUse} style={glassIconButtonStyle}>
-          <SlidersHorizontal size={16} strokeWidth={2} />
+        <button type="button" aria-label={`使用模板 ${template.name}`} onClick={onUse} style={{ ...glassTextButtonStyle, background: 'rgba(17,17,17,0.88)', color: '#FFFFFF', border: '1px solid rgba(17,17,17,0.88)' }}>
+          使用模板
         </button>
       </div>
     </article>
@@ -393,6 +399,8 @@ function TemplatePreviewFrame({
   scale: number
   frameHeight: number
 }) {
+  const scaledSize = `${100 / scale}%`
+
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#FFFFFF' }}>
       <iframe
@@ -402,7 +410,8 @@ function TemplatePreviewFrame({
         sandbox="allow-scripts"
         tabIndex={-1}
         data-real-template-thumbnail="true"
-        style={{ position: 'absolute', top: 0, left: 0, width: '1280px', height: `${frameHeight}px`, border: 0, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none', background: '#FFFFFF' }}
+        data-preview-fit="cover-width"
+        style={{ position: 'absolute', top: 0, left: 0, width: scaledSize, height: `${frameHeight}px`, minHeight: scaledSize, border: 0, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none', background: '#FFFFFF' }}
       />
     </div>
   )
@@ -431,6 +440,13 @@ const fullscreenButtonStyle = {
   cursor: 'pointer',
 }
 
+const fullscreenPrimaryButtonStyle = {
+  ...fullscreenButtonStyle,
+  background: '#FFFFFF',
+  borderColor: '#FFFFFF',
+  color: '#111111',
+}
+
 const iconButtonStyle = {
   width: '30px',
   height: '30px',
@@ -444,17 +460,19 @@ const iconButtonStyle = {
   cursor: 'pointer',
 }
 
-const glassIconButtonStyle = {
-  width: '34px',
-  height: '34px',
-  borderRadius: '999px',
+const glassTextButtonStyle = {
+  height: '36px',
+  borderRadius: '8px',
   border: '1px solid rgba(255,255,255,0.58)',
-  background: 'rgba(255,255,255,0.62)',
+  background: 'rgba(255,255,255,0.72)',
   color: '#111111',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  gap: '6px',
   cursor: 'pointer',
   backdropFilter: 'blur(14px)',
+  fontSize: '13px',
+  fontWeight: 800,
   boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
 }
