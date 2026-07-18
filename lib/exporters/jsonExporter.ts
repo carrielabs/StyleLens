@@ -13,6 +13,14 @@ type DtcgToken = {
   $value: unknown
   $type: string
   $description?: string
+  $extensions?: {
+    stylelens?: {
+      source?: string
+      confidence?: string
+      evidenceCount?: number
+      context?: string
+    }
+  }
 }
 
 function slugify(value: string): string {
@@ -48,11 +56,34 @@ function typographyToken(token: TypographyToken): DtcgToken {
   }
 }
 
-function dimensionToken(value: string, type: 'borderRadius' | 'boxShadow' | 'spacing', description: string): DtcgToken {
+function tokenTypeForDimension(type: 'borderRadius' | 'boxShadow' | 'spacing') {
+  if (type === 'boxShadow') return 'shadow'
+  return 'dimension'
+}
+
+function dimensionToken(
+  value: string,
+  type: 'borderRadius' | 'boxShadow' | 'spacing',
+  description: string,
+  extensions?: DtcgToken['$extensions']
+): DtcgToken {
   return {
     $value: value,
-    $type: type,
+    $type: tokenTypeForDimension(type),
     $description: description,
+    ...(extensions ? { $extensions: extensions } : {}),
+  }
+}
+
+function evidenceExtension(token: { meta?: { source: string; confidence: string; evidenceCount: number; context?: string } } | undefined): DtcgToken['$extensions'] | undefined {
+  if (!token?.meta) return undefined
+  return {
+    stylelens: {
+      source: token.meta.source,
+      confidence: token.meta.confidence,
+      evidenceCount: token.meta.evidenceCount,
+      ...(token.meta.context ? { context: token.meta.context } : {}),
+    },
   }
 }
 
@@ -203,7 +234,8 @@ export function generateJsonToken(report: StyleReport): string {
           slugify(t.label),
           dimensionToken(
             t.value, 'borderRadius',
-            `Measured from ${t.componentKinds.join(', ') || 'page'} elements · ${t.sampleCount}× · grade ${t.grade}`
+            `Measured from ${t.componentKinds.join(', ') || 'page'} elements · ${t.sampleCount}× · grade ${t.grade}`,
+            evidenceExtension(t)
           )
         ])
       )
@@ -216,7 +248,8 @@ export function generateJsonToken(report: StyleReport): string {
           slugify(t.label),
           dimensionToken(
             t.value, 'boxShadow',
-            `Measured from ${t.componentKinds.join(', ') || 'page'} elements · ${t.sampleCount}× · grade ${t.grade}`
+            `Measured from ${t.componentKinds.join(', ') || 'page'} elements · ${t.sampleCount}× · grade ${t.grade}`,
+            evidenceExtension(t)
           )
         ])
       )
@@ -233,6 +266,7 @@ export function generateJsonToken(report: StyleReport): string {
             $value: t.value,
             $type: 'dimension',
             $description: `High-frequency spacing measurement · found ${t.sampleCount}× in DOM · grade ${t.grade} (not a designed spacing scale)`,
+            $extensions: evidenceExtension(t),
           } as DtcgToken
         ])
       )
@@ -241,6 +275,22 @@ export function generateJsonToken(report: StyleReport): string {
   const tokenDocument = {
     $schema: 'https://tr.designtokens.org/format/',
     stylelens: {
+      $extensions: {
+        stylelens: {
+          evidence: {
+            overallConfidence: analysis?.evidenceSummary?.overallConfidence || 'medium',
+            totalEvidenceCount: analysis?.evidenceSummary?.totalEvidenceCount || 0,
+            coveredAreas: analysis?.coverageSummary?.coveredAreas || [],
+            missingAreas: analysis?.coverageSummary?.missingAreas || [],
+          },
+          taste: {
+            summary: report.summaryEn || report.summary,
+            colorMode: report.designDetails.colorMode,
+            spacingSystem: report.designDetails.spacingSystem,
+            borderRadius: report.designDetails.cssRadius || report.designDetails.borderRadius,
+          },
+        },
+      },
       meta: {
         sourceType: report.sourceType,
         sourceLabel: report.sourceLabel,

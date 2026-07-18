@@ -5,10 +5,18 @@ export type SemanticColorSlot =
   | 'textPrimary'
   | 'primaryAction'
 
+export type BaselineQualitySignal =
+  | 'typography'
+  | 'radius'
+  | 'button'
+  | 'spacing'
+  | 'exports'
+
 export type PageStyleBaseline = {
   id: string
   url: string
   expected: Partial<Record<SemanticColorSlot, string[]>>
+  requiredSignals: BaselineQualitySignal[]
   forbidden?: Partial<Record<SemanticColorSlot, string[]>>
 }
 
@@ -20,6 +28,7 @@ export const PAGE_STYLE_BASELINES: PageStyleBaseline[] = [
       heroBackground: ['#08090A'],
       textPrimary: ['#F7F8F8'],
     },
+    requiredSignals: ['typography', 'radius', 'button', 'spacing', 'exports'],
     forbidden: {
       textPrimary: ['#62666D'],
     },
@@ -32,6 +41,7 @@ export const PAGE_STYLE_BASELINES: PageStyleBaseline[] = [
       textPrimary: ['#425466'],
       primaryAction: ['#635BFF', '#0A2540'],
     },
+    requiredSignals: ['typography', 'radius', 'button', 'spacing', 'exports'],
     forbidden: {
       textPrimary: ['#000EFF', '#635BFF'],
     },
@@ -44,6 +54,7 @@ export const PAGE_STYLE_BASELINES: PageStyleBaseline[] = [
       textPrimary: ['#1D1D1F', '#000000'],
       primaryAction: ['#0071E3', '#0076DF', '#0066CC'],
     },
+    requiredSignals: ['typography', 'radius', 'button', 'spacing', 'exports'],
   },
   {
     id: 'notion',
@@ -52,6 +63,7 @@ export const PAGE_STYLE_BASELINES: PageStyleBaseline[] = [
       pageBackground: ['#FFFFFF', '#DFDCD9', '#F6F5F4'],
       textPrimary: ['#000000'],
     },
+    requiredSignals: ['typography', 'radius', 'button', 'spacing', 'exports'],
     forbidden: {
       pageBackground: ['#FF3B30'],
     },
@@ -63,6 +75,7 @@ export const PAGE_STYLE_BASELINES: PageStyleBaseline[] = [
       heroBackground: ['#FAFAFA'],
       textPrimary: ['#171717'],
     },
+    requiredSignals: ['typography', 'radius', 'button', 'spacing', 'exports'],
   },
   {
     id: 'nodejs',
@@ -72,6 +85,7 @@ export const PAGE_STYLE_BASELINES: PageStyleBaseline[] = [
       textPrimary: ['#B1BCC2', '#000000'],
       primaryAction: ['#417E38'],
     },
+    requiredSignals: ['typography', 'radius', 'button', 'spacing', 'exports'],
   },
   {
     id: 'ruby',
@@ -81,6 +95,7 @@ export const PAGE_STYLE_BASELINES: PageStyleBaseline[] = [
       textPrimary: ['#FAFAF9'],
       primaryAction: ['#D8C28E'],
     },
+    requiredSignals: ['typography', 'radius', 'button', 'spacing', 'exports'],
   },
   {
     id: 'postgresql',
@@ -90,6 +105,7 @@ export const PAGE_STYLE_BASELINES: PageStyleBaseline[] = [
       textPrimary: ['#000000'],
       primaryAction: ['#007BFF'],
     },
+    requiredSignals: ['typography', 'radius', 'button', 'spacing', 'exports'],
   },
   {
     id: 'cloudflare',
@@ -99,6 +115,7 @@ export const PAGE_STYLE_BASELINES: PageStyleBaseline[] = [
       textPrimary: ['#262626'],
       primaryAction: ['#FF5E1F'],
     },
+    requiredSignals: ['typography', 'radius', 'button', 'spacing', 'exports'],
   },
   {
     id: 'mozilla',
@@ -107,5 +124,6 @@ export const PAGE_STYLE_BASELINES: PageStyleBaseline[] = [
       pageBackground: ['#FFFFFF'],
       textPrimary: ['#000000'],
     },
+    requiredSignals: ['typography', 'radius', 'button', 'spacing', 'exports'],
   },
 ]

@@ -257,24 +257,45 @@ Smooth ease-out micro-animations.
 - 语法高亮
 - 复制 CSS / 下载 .css 文件
 
+**2026-07 更新**：CSS 导出优先使用 DOM 实测结果。若页面分析拿到了按钮、输入框、卡片快照，必须输出组件级变量，例如 `--component-button-padding`、`--component-input-padding`、`--component-card-padding`，避免继续出现“凭视觉匹配”的不稳定描述。
+
 ---
 
-**④ Design Token JSON**（Figma / Style Dictionary 用）
+**④ DTCG-shaped Design Token JSON**（Figma / Style Dictionary 用）
 ```json
 {
-  "color": {
-    "bg": { "primary": "#0D1B2A", "secondary": "#1A2B3C" },
-    "accent": "#4FC3F7",
-    "text": { "primary": "#FFFFFF", "secondary": "rgba(255,255,255,0.6)" }
-  },
-  "typography": {
-    "fontFamily": "Inter, -apple-system, sans-serif",
-    "fontSize": { "base": "16px", "heading": "2rem" }
-  },
-  "spacing": { "unit": 8, "radiusMd": 16 }
+  "$schema": "https://tr.designtokens.org/format/",
+  "stylelens": {
+    "color": {
+      "action": {
+        "primary": {
+          "$value": "#4FC3F7",
+          "$type": "color",
+          "$description": "Primary action"
+        }
+      }
+    },
+    "radius": {
+      "control-radius": {
+        "$value": "12px",
+        "$type": "dimension",
+        "$description": "Measured radius token"
+      }
+    },
+    "$extensions": {
+      "stylelens": {
+        "evidence": {
+          "overallConfidence": "high",
+          "totalEvidenceCount": 42
+        }
+      }
+    }
+  }
 }
 ```
 - 复制 JSON
+
+**2026-07 更新**：JSON 导出采用 DTCG 常见结构：`$schema`、`$value`、`$type`、`$description`、`$extensions`。圆角和间距按 `dimension` 输出，证据摘要进入 `$extensions.stylelens.evidence`，方便后续接 Style Dictionary 或做质量审计。
 
 ---
 

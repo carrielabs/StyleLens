@@ -19,6 +19,13 @@
 
 8. `lib/flags.ts` 控制的五项报告增强能力（设计审查、证据/覆盖度/交互摘要、页面审查）已有对应的规格文档（`docs/superpowers/specs/2026-04-09-stylelens-extraction-report-design.md`），但默认关闭，产品文档层面应明确标注"开发中"状态，避免被误认为已上线功能。
 
+## 2026-07 已补齐的提取稳定性事项
+
+1. 真实网站基线不再只要求颜色，也必须声明字体、圆角、按钮、间距、导出质量检查项。
+2. Prompt 导出补充 `Taste DNA` 和 `Evidence Basis`，并禁止继续输出“未提取，靠视觉匹配”的弱占位。
+3. CSS 导出补充组件级实测 token，例如按钮、输入框、卡片 padding。
+4. JSON 导出补齐 DTCG-shaped 结构和 StyleLens 证据扩展，便于未来接 Style Dictionary 或质量审计。
+
 ## 安全与数据
 
 9. **BYOK Key 的存储方式未确认**：用户自带的 Gemini Key 存在哪里、是否加密，是一个涉及用户密钥安全的问题，需要开发者明确说明并写进文档，不应该留白。

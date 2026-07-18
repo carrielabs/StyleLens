@@ -2,6 +2,7 @@ import type { ColorToken, StyleReport } from '@/lib/types'
 
 export function generatePrompt(report: StyleReport, language: 'en' | 'zh' = 'en'): string {
   const { colors, colorSystem, typography, designDetails, gradients } = report
+  const analysis = report.pageAnalysis
 
   // Prefer colorSystem (Codex's precise extraction) with fallback to colors array
   const bg       = colorSystem?.pageBackground   || colorSystem?.heroBackground || colors.find(c => c.role === 'background')
@@ -21,6 +22,14 @@ export function generatePrompt(report: StyleReport, language: 'en' | 'zh' = 'en'
   const shadow   = designDetails.cssShadow || inferShadow(designDetails.shadowStyle)
   const duration = inferDuration(designDetails.animationTendency)
   const easing   = inferEasing(designDetails.animationTendency)
+  const button = analysis?.buttonSnapshot || analysis?.buttonSnapshots?.[0]
+  const input = analysis?.inputSnapshots?.[0]
+  const card = analysis?.cardSnapshots?.[0]
+  const buttonPadding = pairPadding(button?.paddingV, button?.paddingH) || firstSpacing(analysis, '12px 16px')
+  const inputPadding = pairPadding(input?.paddingV, input?.paddingH) || firstSpacing(analysis, '8px 12px')
+  const cardPadding = card?.padding || firstSpacing(analysis, '16px')
+  const evidenceBasis = buildEvidenceBasis(report, language)
+  const tasteDna = buildTasteDna(report, language)
 
   const isDark       = designDetails.colorMode === 'dark'
   const isFlat       = isMinimalShadow(designDetails.shadowStyle)
@@ -43,6 +52,7 @@ export function generatePrompt(report: StyleReport, language: 'en' | 'zh' = 'en'
 Source: ${report.sourceLabel}
 Color Mode: ${designDetails.colorMode.toUpperCase()}
 Style DNA: ${report.summaryEn || report.summary}
+Taste DNA: ${tasteDna}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## 1. COLOR CONTRACT
@@ -108,7 +118,7 @@ background: ${hex(primary) || 'var(--color-primary)'}
 color: ${btnTextColor}
 border: none
 border-radius: ${radius}
-padding: [match source visually — not extracted]
+padding: ${buttonPadding}
 font-weight: ${typography.headingWeight}
 transition: background ${duration} ${easing}
 hover: ${hoverHint} on background
@@ -118,24 +128,29 @@ background: transparent
 color: ${hex(primary) || 'var(--color-primary)'}
 border: 1px solid ${hex(border) || 'var(--color-border)'}
 border-radius: ${radius}
-padding: [match source visually — not extracted]
+padding: ${buttonPadding}
 
 ### Card / Panel (Card / Panel)
 background: ${hex(surface) || hex(bg) || 'var(--color-surface)'}
 border: 1px solid ${hex(border) || 'var(--color-border)'}
 border-radius: ${radius}
 box-shadow: ${shadow}
-padding: [match source visually — not extracted]
+padding: ${cardPadding}
 
 ### Input / Form Field (Input / Form Field)
 background: ${hex(surface) || hex(bg) || 'var(--color-surface)'}
 border: 1px solid ${hex(border) || 'var(--color-border)'}
 border-radius: ${radius}
 color: ${hex(textMain) || 'var(--color-text)'}
+padding: ${inputPadding}
 focus outline: 2px solid ${hex(primary) || 'var(--color-primary)'}, offset 0
 placeholder color: ${textMain ? textMain.hex + '66' : 'var(--color-text) at 40% opacity'}
 
-## 6. PROHIBITIONS — NON-NEGOTIABLE
+## 6. Evidence Basis
+
+${evidenceBasis}
+
+## 7. PROHIBITIONS — NON-NEGOTIABLE
 
 ✗ DO NOT use any color outside the palette defined in Section 1
 ✗ DO NOT use font-weight values outside ${typography.bodyWeight}–${typography.headingWeight}
@@ -157,6 +172,7 @@ ${isFlat  ? '✗ DO NOT add drop shadows or elevation layers — this design is 
 来源: ${report.sourceLabel}
 颜色模式: ${designDetails.colorMode === 'dark' ? '深色' : designDetails.colorMode === 'light' ? '浅色' : '系统'}
 风格基因: ${report.summaryZh || report.summary}
+Taste DNA: ${tasteDna}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## 1. 色彩契约
@@ -222,7 +238,7 @@ background: ${hex(primary) || 'var(--color-primary)'}
 color: ${btnTextColor}
 border: none
 border-radius: ${radius}
-padding: [对照原设计视觉匹配，未提取]
+padding: ${buttonPadding}
 font-weight: ${typography.headingWeight}
 transition: background ${duration} ${easing}
 hover: 背景${isDark ? '亮度提升 8–10%' : '亮度降低 8–10%'}，色相不变
@@ -232,24 +248,29 @@ background: transparent
 color: ${hex(primary) || 'var(--color-primary)'}
 border: 1px solid ${hex(border) || 'var(--color-border)'}
 border-radius: ${radius}
-padding: [对照原设计视觉匹配，未提取]
+padding: ${buttonPadding}
 
 ### 卡片/面板（Card / Panel）
 background: ${hex(surface) || hex(bg) || 'var(--color-surface)'}
 border: 1px solid ${hex(border) || 'var(--color-border)'}
 border-radius: ${radius}
 box-shadow: ${shadow}
-padding: [对照原设计视觉匹配，未提取]
+padding: ${cardPadding}
 
 ### 输入框/表单（Input / Form Field）
 background: ${hex(surface) || hex(bg) || 'var(--color-surface)'}
 border: 1px solid ${hex(border) || 'var(--color-border)'}
 border-radius: ${radius}
 color: ${hex(textMain) || 'var(--color-text)'}
+padding: ${inputPadding}
 焦点样式: 2px solid ${hex(primary) || 'var(--color-primary)'}，offset 0
 placeholder: ${textMain ? textMain.hex + '66' : 'var(--color-text) 40% 不透明度'}
 
-## 6. 禁止事项 — 不得违反
+## 6. 证据依据
+
+${evidenceBasis}
+
+## 7. 禁止事项 — 不得违反
 
 ✗ 禁止使用第 1 节色板以外的任何颜色
 ✗ 禁止使用 ${typography.bodyWeight}–${typography.headingWeight} 范围外的字重
@@ -296,6 +317,57 @@ function inferEasing(description: string): string {
   if (d.includes('ease-in')) return 'ease-in'
   if (d.includes('linear')) return 'linear'
   return 'ease-out'
+}
+
+function pairPadding(vertical?: string, horizontal?: string): string | null {
+  if (!vertical || !horizontal) return null
+  if (vertical === horizontal) return vertical
+  return `${vertical} ${horizontal}`
+}
+
+function firstSpacing(reportAnalysis: StyleReport['pageAnalysis'], fallback: string): string {
+  return reportAnalysis?.spacingTokens?.[0]?.value || reportAnalysis?.spacingCandidates?.[0] || fallback
+}
+
+function buildEvidenceBasis(report: StyleReport, language: 'en' | 'zh'): string {
+  const summary = report.pageAnalysis?.evidenceSummary
+  const coverage = report.pageAnalysis?.coverageSummary
+  const tokens = [
+    report.pageAnalysis?.typographyTokens?.[0] ? 'typography' : null,
+    report.pageAnalysis?.radiusTokens?.[0] ? 'radius' : null,
+    report.pageAnalysis?.spacingTokens?.[0] ? 'spacing' : null,
+    report.pageAnalysis?.buttonSnapshots?.[0] || report.pageAnalysis?.buttonSnapshot ? 'button' : null,
+    report.pageAnalysis?.cardSnapshots?.[0] ? 'card' : null,
+    report.pageAnalysis?.inputSnapshots?.[0] ? 'input' : null,
+  ].filter(Boolean).join(', ') || 'color'
+
+  if (language === 'zh') {
+    return [
+      `- 证据来源: dom-computed 为主，截图只作辅助。`,
+      `- 整体可信度: ${summary?.overallConfidence || 'medium'}，证据数量: ${summary?.totalEvidenceCount ?? 'n/a'}。`,
+      `- 已覆盖: ${coverage?.coveredAreas?.join(', ') || tokens}。`,
+      `- 关键测量项: ${tokens}。`,
+    ].join('\n')
+  }
+
+  return [
+    `- Evidence source: dom-computed first; screenshots are supporting context only.`,
+    `- Overall confidence: ${summary?.overallConfidence || 'medium'}; evidence count: ${summary?.totalEvidenceCount ?? 'n/a'}.`,
+    `- Covered areas: ${coverage?.coveredAreas?.join(', ') || tokens}.`,
+    `- Key measured signals: ${tokens}.`,
+  ].join('\n')
+}
+
+function buildTasteDna(report: StyleReport, language: 'en' | 'zh'): string {
+  const colorMode = report.designDetails.colorMode
+  const radius = report.designDetails.cssRadius || report.designDetails.borderRadius
+  const spacing = report.designDetails.spacingSystem
+
+  if (language === 'zh') {
+    return `${colorMode === 'dark' ? '深色高对比' : '浅色清晰'}、${radius} 圆角、${spacing} 间距共同形成风格识别点；复用时保留这些比例，不要用额外装饰替代。`
+  }
+
+  return `${colorMode === 'dark' ? 'Dark high-contrast' : 'Light clear'} surfaces, ${radius} radius, and ${spacing} spacing create the recognizable taste; preserve these ratios instead of adding decoration.`
 }
 
 function isMinimalShadow(description: string): boolean {

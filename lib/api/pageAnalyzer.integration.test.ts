@@ -276,6 +276,13 @@ describe('pageAnalyzer baseline quality gate', () => {
         || baseline.expected.pageBackground
       ).toBeDefined()
       expect(baseline.expected.textPrimary).toBeDefined()
+      expect(baseline.requiredSignals).toEqual([
+        'typography',
+        'radius',
+        'button',
+        'spacing',
+        'exports',
+      ])
     }
   })
 })
@@ -323,7 +330,7 @@ describe('pageAnalyzer baseline quality gate', () => {
           expectSlotToAvoidForbidden(analysis, slot, forbiddenHexes)
         }
       },
-      60_000
+      90_000
     )
   }
 })
