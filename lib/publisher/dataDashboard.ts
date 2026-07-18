@@ -6,12 +6,18 @@ import type { PublisherResult } from './types'
 import { buildProductWebsiteHtml } from './generate'
 
 type FieldType = 'date' | 'number' | 'category' | 'text'
+type FieldRole = 'date' | 'dimension' | 'currency' | 'count' | 'ratio' | 'metric' | 'text'
+type DashboardModuleKind = 'key-takeaways' | 'kpi' | 'trend' | 'ranking' | 'share' | 'detail-table' | 'summary'
 type DataValue = string | number | null
 type DataRow = Record<string, DataValue>
 
 export interface DataField {
   name: string
   type: FieldType
+}
+
+export interface DashboardField extends DataField {
+  role: FieldRole
 }
 
 export interface ParsedDataset {
@@ -40,6 +46,7 @@ interface DashboardPoint {
 
 export interface DashboardDataModel {
   title: string
+  fields: DashboardField[]
   primaryMetric: {
     name: string
     total: number
@@ -47,6 +54,23 @@ export interface DashboardDataModel {
   kpis: DashboardKpi[]
   trend: DashboardPoint[]
   categoryBreakdown: DashboardPoint[]
+  modules: DashboardModule[]
+  sections: DashboardSection[]
+}
+
+export interface DashboardModule {
+  id: string
+  kind: DashboardModuleKind
+  title: string
+  visible: boolean
+  description?: string
+  chartType?: 'cards' | 'line' | 'bar' | 'pie' | 'table' | 'text'
+}
+
+export interface DashboardSection {
+  id: string
+  title: string
+  moduleIds: string[]
 }
 
 const DATA_DASHBOARD_TEMPLATE_IDS = [
@@ -106,7 +130,8 @@ export async function parseDataFile(input: DataFileInput): Promise<ParsedDataset
 export function buildDashboardDataModel(dataset: ParsedDataset): DashboardDataModel {
   if (!dataset.rows.length) throw new Error('数据文件没有可用记录')
 
-  const numberFields = dataset.fields.filter(field => field.type === 'number')
+  const fields = dataset.fields.map(field => ({ ...field, role: inferFieldRole(field) }))
+  const numberFields = fields.filter(field => field.type === 'number')
   const dateField = dataset.fields.find(field => field.type === 'date')
   const categoryField = dataset.fields.find(field => field.type === 'category')
   const primary = numberFields[0]
@@ -122,6 +147,7 @@ export function buildDashboardDataModel(dataset: ParsedDataset): DashboardDataMo
 
   return {
     title: `${dataset.name} 数据看板`,
+    fields,
     primaryMetric: {
       name: primary.name,
       total,
@@ -129,6 +155,8 @@ export function buildDashboardDataModel(dataset: ParsedDataset): DashboardDataMo
     kpis,
     trend: buildTrend(dataset.rows, primary.name, dateField?.name),
     categoryBreakdown: buildCategoryBreakdown(dataset.rows, primary.name, categoryField?.name),
+    modules: buildAnalysisModules(primary.name, Boolean(categoryField), Boolean(dateField)),
+    sections: buildAnalysisSections(primary.name),
   }
 }
 
@@ -248,6 +276,98 @@ function inferFieldType(rows: DataRow[], name: string): FieldType {
   return unique <= Math.max(20, values.length * 0.5) ? 'category' : 'text'
 }
 
+function inferFieldRole(field: DataField): FieldRole {
+  const name = field.name.toLowerCase()
+  if (field.type === 'date') return 'date'
+  if (field.type === 'category') return 'dimension'
+  if (field.type === 'text') return 'text'
+  if (/rate|ratio|percent|percentage|占比|比例|转化|率/.test(name)) return 'ratio'
+  if (/revenue|sales|amount|price|cost|profit|gmv|收入|销售额|金额|价格|成本|利润/.test(name)) return 'currency'
+  if (/order|count|qty|quantity|number|volume|uv|pv|订单|数量|人数|次数|件数/.test(name)) return 'count'
+  return 'metric'
+}
+
+function buildAnalysisModules(metricName: string, hasCategory: boolean, hasDate: boolean): DashboardModule[] {
+  return [
+    {
+      id: 'module-key-takeaways',
+      kind: 'key-takeaways',
+      title: 'Key Takeaways',
+      visible: true,
+      description: `自动提炼 ${metricName} 的关键结论`,
+      chartType: 'text',
+    },
+    {
+      id: 'module-kpi',
+      kind: 'kpi',
+      title: 'KPI 指标卡',
+      visible: true,
+      description: `展示 ${metricName} 合计、平均和字段规模`,
+      chartType: 'cards',
+    },
+    {
+      id: 'module-trend',
+      kind: 'trend',
+      title: hasDate ? '趋势图' : '记录趋势图',
+      visible: true,
+      description: `按时间或记录顺序观察 ${metricName}`,
+      chartType: 'line',
+    },
+    {
+      id: 'module-ranking',
+      kind: 'ranking',
+      title: hasCategory ? '排行图' : 'Top 记录',
+      visible: true,
+      description: `按分类汇总 ${metricName} 并排序`,
+      chartType: 'bar',
+    },
+    {
+      id: 'module-share',
+      kind: 'share',
+      title: hasCategory ? '占比图' : '分布图',
+      visible: true,
+      description: `查看 ${metricName} 的分类占比`,
+      chartType: 'pie',
+    },
+    {
+      id: 'module-detail-table',
+      kind: 'detail-table',
+      title: '明细表',
+      visible: true,
+      description: '保留原始数据明细入口',
+      chartType: 'table',
+    },
+    {
+      id: 'module-summary',
+      kind: 'summary',
+      title: '总结',
+      visible: true,
+      description: '输出规则生成的分析摘要',
+      chartType: 'text',
+    },
+  ]
+}
+
+function buildAnalysisSections(metricName: string): DashboardSection[] {
+  return [
+    {
+      id: 'section-key-takeaways',
+      title: 'Key Takeaways',
+      moduleIds: ['module-key-takeaways', 'module-kpi'],
+    },
+    {
+      id: 'section-revenue',
+      title: `${metricName} 分析`,
+      moduleIds: ['module-trend', 'module-ranking', 'module-share'],
+    },
+    {
+      id: 'section-detail',
+      title: '数据明细与总结',
+      moduleIds: ['module-detail-table', 'module-summary'],
+    },
+  ]
+}
+
 function buildTrend(rows: DataRow[], metricName: string, dateName?: string): DashboardPoint[] {
   if (!dateName) {
     return rows.slice(0, 12).map((row, index) => ({
@@ -300,6 +420,7 @@ function injectDataDashboard(html: string, model: DashboardDataModel, fileName: 
   setSlot($, 'text.trend.02', `${model.primaryMetric.name} 趋势来自上传文件的真实记录`)
   setSlot($, 'text.segment.02', '分类占比按上传文件中的分类字段自动汇总')
   bindDashboardDataNodes($, model)
+  markDashboardModules($, model)
 
   const nextChartData = buildChartDataLiteral(model)
   $('script:not([src])').each((_, element) => {
@@ -319,15 +440,29 @@ function injectDataDashboard(html: string, model: DashboardDataModel, fileName: 
     templateId,
     fileName,
     title: model.title,
+    fields: model.fields,
     primaryMetric: model.primaryMetric,
     kpis: model.kpis,
     trend: model.trend,
     categoryBreakdown: model.categoryBreakdown,
+    modules: model.modules,
+    sections: model.sections,
   })
   $('body').append(`<script data-ahp-dashboard-data="true">window.AHP_DASHBOARD_DATA = ${dashboardPayload};</script>`)
   if (runtimeScripts) $('body').append(runtimeScripts)
 
   return $.html()
+}
+
+function markDashboardModules($: cheerio.CheerioAPI, model: DashboardDataModel) {
+  const sections = $('[data-section]').toArray()
+  model.modules.forEach((module, index) => {
+    const section = sections[index]
+    if (!section) return
+    $(section)
+      .attr('data-ahp-dashboard-module-id', module.id)
+      .attr('data-ahp-dashboard-module-kind', module.kind)
+  })
 }
 
 function injectGenericDashboardText($: cheerio.CheerioAPI, model: DashboardDataModel, fileName: string) {

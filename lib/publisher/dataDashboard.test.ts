@@ -135,6 +135,38 @@ describe('data dashboard files', () => {
       { label: '2026-01-02', value: 1800 },
       { label: '2026-01-03', value: 3000 },
     ])
+    expect(model.fields).toEqual([
+      { name: 'date', type: 'date', role: 'date' },
+      { name: 'channel', type: 'category', role: 'dimension' },
+      { name: 'revenue', type: 'number', role: 'currency' },
+      { name: 'orders', type: 'number', role: 'count' },
+    ])
+    expect(model.modules.map(module => module.kind)).toEqual([
+      'key-takeaways',
+      'kpi',
+      'trend',
+      'ranking',
+      'share',
+      'detail-table',
+      'summary',
+    ])
+    expect(model.sections).toEqual([
+      {
+        id: 'section-key-takeaways',
+        title: 'Key Takeaways',
+        moduleIds: ['module-key-takeaways', 'module-kpi'],
+      },
+      {
+        id: 'section-revenue',
+        title: 'revenue 分析',
+        moduleIds: ['module-trend', 'module-ranking', 'module-share'],
+      },
+      {
+        id: 'section-detail',
+        title: '数据明细与总结',
+        moduleIds: ['module-detail-table', 'module-summary'],
+      },
+    ])
   })
 
   it('injects real data into the dashboard html', async () => {
@@ -156,6 +188,9 @@ describe('data dashboard files', () => {
     expect(result.html.indexOf('data-ahp-dashboard-data')).toBeLessThan(result.html.indexOf('<script data-ahp-runtime'))
     expect(result.html).toContain('data-ahp-dashboard-bind="kpi.0.value"')
     expect(result.html).toContain('data-ahp-dashboard-editor')
+    expect(result.html).toContain('"modules":[{"id":"module-key-takeaways"')
+    expect(result.html).toContain('"sections":[{"id":"section-key-takeaways"')
+    expect(result.html).toContain('data-ahp-dashboard-module-id="module-trend"')
   })
 
   it.each(TEMPLATE_FILE_CASES)('generates real data dashboard html for $templateId from $fileName', async ({ templateId, fileName, contentType, bytes, expectedTotal }) => {
