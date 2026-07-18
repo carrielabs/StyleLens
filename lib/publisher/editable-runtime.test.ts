@@ -80,4 +80,44 @@ describe('editable runtime export', () => {
     expect(document.querySelector('[data-ahp-dashboard-module-id="module-trend"]')?.getAttribute('data-ahp-hidden')).toBe('true')
     expect((window as typeof window & { AHP_DASHBOARD_DATA?: { modules: Array<{ id: string; visible: boolean }> } }).AHP_DASHBOARD_DATA?.modules[1].visible).toBe(false)
   })
+
+  it('undoes and redoes inline text edits', () => {
+    const script = runtimeScript([], 'ahp-runtime-history-test', 'website-01-fui', '#2563EB')
+    document.body.innerHTML = '<main><h1 data-editable="true" data-edit-id="edit-1">Original</h1></main>'
+
+    new Function(script)()
+    document.querySelector<HTMLButtonElement>('[data-action="openToolbar"]')!.click()
+
+    const title = document.querySelector<HTMLElement>('[data-edit-id="edit-1"]')!
+    title.innerHTML = 'First edit'
+    title.dispatchEvent(new Event('blur'))
+    title.innerHTML = 'Second edit'
+    title.dispatchEvent(new Event('blur'))
+
+    document.querySelector<HTMLButtonElement>('[data-action="undo"]')!.click()
+    expect(document.querySelector('[data-edit-id="edit-1"]')?.textContent).toBe('First edit')
+
+    document.querySelector<HTMLButtonElement>('[data-action="redo"]')!.click()
+    expect(document.querySelector('[data-edit-id="edit-1"]')?.textContent).toBe('Second edit')
+  })
+
+  it('undoes advanced module visibility edits', () => {
+    const script = runtimeScript([], 'ahp-runtime-module-history-test', 'website-01-fui', '#2563EB')
+    document.body.innerHTML = [
+      '<main>',
+      '<section data-section="hero"><h1 data-editable="true" data-edit-id="edit-1">Hero</h1></section>',
+      '<section data-section="features"><h2 data-editable="true" data-edit-id="edit-2">Features</h2></section>',
+      '</main>',
+    ].join('')
+
+    new Function(script)()
+    document.querySelector<HTMLButtonElement>('[data-action="openToolbar"]')!.click()
+    document.querySelector<HTMLElement>('[data-edit-id="edit-2"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-style="moduleToggle"]')!.click()
+
+    expect(document.querySelector('[data-section="features"]')?.getAttribute('data-ahp-hidden')).toBe('true')
+
+    document.querySelector<HTMLButtonElement>('[data-action="undo"]')!.click()
+    expect(document.querySelector('[data-section="features"]')?.getAttribute('data-ahp-hidden')).not.toBe('true')
+  })
 })
