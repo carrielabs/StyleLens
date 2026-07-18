@@ -20,6 +20,7 @@ export default function GeneratedPagePreview({
 }: GeneratedPagePreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const previewBackground = backgroundColor || '#FFFFFF'
+  const previewHtml = applyPreviewBackground(html, backgroundColor)
 
   function downloadHtmlContent(htmlContent: string) {
     const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' })
@@ -35,12 +36,12 @@ export default function GeneratedPagePreview({
 
   async function requestCurrentHtml() {
     const frameWindow = iframeRef.current?.contentWindow
-    if (!frameWindow) return html
+    if (!frameWindow) return previewHtml
 
     return new Promise<string>((resolve) => {
       const timeout = window.setTimeout(() => {
         window.removeEventListener('message', handleMessage)
-        resolve(html)
+        resolve(previewHtml)
       }, 800)
 
       function handleMessage(event: MessageEvent) {
@@ -48,7 +49,7 @@ export default function GeneratedPagePreview({
         if (event.data?.type !== 'AHP_EXPORT_HTML') return
         window.clearTimeout(timeout)
         window.removeEventListener('message', handleMessage)
-        resolve(typeof event.data.html === 'string' && event.data.html.trim() ? event.data.html : html)
+        resolve(typeof event.data.html === 'string' && event.data.html.trim() ? event.data.html : previewHtml)
       }
 
       window.addEventListener('message', handleMessage)
@@ -73,8 +74,8 @@ export default function GeneratedPagePreview({
         gap: 8,
         padding: '7px 8px',
         borderRadius: '999px',
-        background: 'rgba(15,23,42,0.96)',
-        boxShadow: '0 18px 48px rgba(15,23,42,0.24)',
+        background: 'rgba(17,17,17,0.92)',
+        boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
         border: '1px solid rgba(255,255,255,0.12)',
       }}>
           <button
@@ -99,10 +100,10 @@ export default function GeneratedPagePreview({
             返回画廊
           </button>
           <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.18)' }} />
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 13px', color: '#CBD5E1', fontSize: 14, fontWeight: 750 }}>
-            <CheckCircle2 size={15} strokeWidth={2} color="#22C55E" />
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 13px', color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 750 }}>
+            <CheckCircle2 size={15} strokeWidth={2} color="#FFFFFF" />
             <span>{title}</span>
-            <span style={{ fontSize: 12, color: '#94A3B8' }}>{templateId}</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.56)' }}>{templateId}</span>
             <span style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>已生成，可编辑并下载</span>
           </div>
           <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.18)' }} />
@@ -132,9 +133,18 @@ export default function GeneratedPagePreview({
         ref={iframeRef}
         title="生成页面预览"
         sandbox="allow-scripts allow-same-origin allow-downloads"
-        srcDoc={html}
+        srcDoc={previewHtml}
         style={{ width: '100%', height: '100%', border: 0, background: previewBackground }}
       />
     </div>
   )
+}
+
+function applyPreviewBackground(html: string, backgroundColor?: string) {
+  if (!backgroundColor) return html
+  const style = `<style data-ahp-preview-background="true">html,body{background:${backgroundColor}!important;}body>main{background:${backgroundColor}!important;}</style>`
+  if (/<\/head>/i.test(html)) {
+    return html.replace(/<\/head>/i, `${style}</head>`)
+  }
+  return `${style}${html}`
 }

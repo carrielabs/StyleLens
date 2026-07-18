@@ -107,6 +107,19 @@ describe('generateProductWebsiteHtml', () => {
     expect(result.html).not.toMatch(/cdn\.tailwindcss|fonts\.googleapis|localhost|127\.0\.0\.1|onclick=|document\.write|href="#"/i)
   })
 
+  it('applies the extracted background color inside generated HTML', async () => {
+    const result = await generateProductWebsiteHtml({
+      sourceText,
+      templateId: 'website-01-fui',
+      backgroundColor: '#F5F4F1',
+    })
+
+    expect(result.backgroundColor).toBe('#F5F4F1')
+    expect(result.html).toContain('data-ahp-source-background="true"')
+    expect(result.html).toContain('html, body { background: #f5f4f1 !important; }')
+    expect(result.html).toMatch(/body\s*(?:>|&gt;)\s*main \{ background: #f5f4f1 !important; \}/)
+  })
+
   it('can read templates from GitHub raw when remote mode is enabled', async () => {
     process.env.AHP_TEMPLATE_RAW_BASE_URL = 'https://raw.githubusercontent.com/carrielabs/StyleLens/main'
     process.env.AHP_TEMPLATE_FORCE_REMOTE = 'true'

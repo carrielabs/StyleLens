@@ -48,8 +48,9 @@ describe('PublisherWorkspace', () => {
     const thumbnail = within(card).getByTitle('FUI 模板缩略图')
     expect(thumbnail.getAttribute('src')).toBe('/api/template-preview/website-01-fui')
     expect(thumbnail.getAttribute('data-real-template-thumbnail')).toBe('true')
-    expect(thumbnail.getAttribute('data-preview-fit')).toBe('cover-width')
-    expect(thumbnail.getAttribute('style')).toContain('width: 416.666')
+    expect(thumbnail.getAttribute('data-preview-fit')).toBe('desktop-width')
+    expect(thumbnail.getAttribute('data-preview-width')).toBe('1440')
+    expect(thumbnail.getAttribute('style')).toContain('width: 1440px')
 
     expect(within(card).queryByText('FUI')).toBeNull()
     expect(within(card).queryByText('极简科技感产品介绍')).toBeNull()

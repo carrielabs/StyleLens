@@ -25,6 +25,8 @@ describe('GeneratedPagePreview', () => {
     expect(screen.getByTitle('生成页面预览')).toBeTruthy()
     expect(screen.getByTestId('generated-page-preview-shell').getAttribute('style')).toContain('background: rgb(245, 244, 241)')
     expect(screen.getByTitle('生成页面预览').getAttribute('style')).toContain('background: rgb(245, 244, 241)')
+    expect(screen.getByTitle('生成页面预览').getAttribute('srcdoc')).toContain('data-ahp-preview-background')
+    expect(screen.getByTitle('生成页面预览').getAttribute('srcdoc')).toContain('body>main')
     expect(screen.getByText('返回画廊')).toBeTruthy()
     expect(screen.getByText('下载 HTML')).toBeTruthy()
   })

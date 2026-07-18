@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
 import { ArrowLeft, FileText, Maximize, PanelRightClose, UploadCloud } from 'lucide-react'
 import type { GeneratedPageResult, GeneratedPageType } from '@/hooks/usePublisher'
@@ -219,7 +219,7 @@ export default function PublisherWorkspace({
             aria-label="配置数据源"
             style={{ width: '420px', maxWidth: '44vw', height: '100%', background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(18px)', borderLeft: '1px solid rgba(0,0,0,0.08)', display: 'grid', gridTemplateRows: '56px 1fr auto', boxShadow: '-18px 0 48px rgba(0,0,0,0.08)', flexShrink: 0 }}
           >
-            <div style={{ height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid #F1F5F9' }}>
+            <div style={{ height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>配置数据源</h3>
               <button type="button" onClick={closeDrawer} aria-label="关闭配置数据源" style={iconButtonStyle}>
                 <PanelRightClose size={16} strokeWidth={2} />
@@ -228,15 +228,15 @@ export default function PublisherWorkspace({
             <div style={{ overflowY: 'auto', padding: '22px' }}>
               <div style={{ marginBottom: '22px' }}>
                 <div style={{ marginBottom: '10px', color: '#8A8A8E', fontSize: '11px', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                  Selected Template
+                  Template Preview
                 </div>
                 <TemplateDrawerPreview template={selectedTemplate} />
               </div>
 
-              <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px', marginBottom: '18px', background: '#F8FAFC' }}>
+              <div style={{ border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '12px 14px', marginBottom: '18px', background: 'rgba(255,255,255,0.72)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 800 }}>目标进度</span>
-                  <span style={{ fontSize: '12px', color: '#0F172A', fontWeight: 800 }}>第 {drawerProgressStep}/3 步</span>
+                  <span style={{ fontSize: '12px', color: '#6E6E73', fontWeight: 800 }}>目标进度</span>
+                  <span style={{ fontSize: '12px', color: '#1D1D1F', fontWeight: 800 }}>第 {drawerProgressStep}/3 步</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
                   {[1, 2, 3].map(step => (
@@ -245,7 +245,7 @@ export default function PublisherWorkspace({
                       style={{
                         height: '5px',
                         borderRadius: '999px',
-                        background: step <= drawerProgressStep ? '#0F172A' : '#E2E8F0',
+                        background: step <= drawerProgressStep ? '#1D1D1F' : 'rgba(0,0,0,0.10)',
                         transition: 'background 140ms ease',
                       }}
                     />
@@ -261,7 +261,7 @@ export default function PublisherWorkspace({
 
               <label htmlFor="publisher-source-text" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '14px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>
                 输入文本内容
-                <span style={{ fontSize: '12px', color: '#94A3B8', background: '#F1F5F9', borderRadius: '6px', padding: '2px 7px' }}>支持 Markdown</span>
+                <span style={{ fontSize: '12px', color: '#6E6E73', background: 'rgba(0,0,0,0.04)', borderRadius: '6px', padding: '2px 7px' }}>支持 Markdown</span>
               </label>
               <textarea
                 id="publisher-source-text"
@@ -271,10 +271,10 @@ export default function PublisherWorkspace({
                 style={{ width: '100%', height: '210px', resize: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: '10px', background: 'rgba(250,250,250,0.86)', padding: '14px', outline: 'none', color: '#111827', fontSize: '14px', fontFamily: 'var(--font-sans)' }}
               />
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#94A3B8', fontSize: '12px', margin: '22px 0' }}>
-                <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#8A8A8E', fontSize: '12px', margin: '22px 0' }}>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(0,0,0,0.08)' }} />
                 或
-                <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
+                <div style={{ flex: 1, height: '1px', background: 'rgba(0,0,0,0.08)' }} />
               </div>
 
               <input
@@ -297,18 +297,18 @@ export default function PublisherWorkspace({
                   <>
                     <FileText size={28} strokeWidth={1.8} />
                     <strong style={{ fontSize: '14px' }}>{queuedFile.file.name}</strong>
-                    <span style={{ fontSize: '12px', color: '#94A3B8' }}>{queuedFile.kind === 'data' ? '数据文件' : '文本文件'}</span>
+                    <span style={{ fontSize: '12px', color: '#8A8A8E' }}>{queuedFile.kind === 'data' ? '数据文件' : '文本文件'}</span>
                   </>
                 ) : (
                   <>
                     <UploadCloud size={30} strokeWidth={1.8} />
                     <strong style={{ fontSize: '14px' }}>点击上传文档文件</strong>
-                    <span style={{ fontSize: '12px', color: '#94A3B8' }}>支持 .md, .txt, .csv, .json, .xlsx</span>
+                    <span style={{ fontSize: '12px', color: '#8A8A8E' }}>支持 .md, .txt, .csv, .json, .xlsx</span>
                   </>
                 )}
               </div>
             </div>
-            <div style={{ padding: '18px 22px', borderTop: '1px solid #F1F5F9' }}>
+            <div style={{ padding: '18px 22px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
               {drawerError && (
                 <div role="alert" style={{ marginBottom: '10px', border: '1px solid rgba(220,38,38,0.18)', background: '#FEF2F2', color: '#B91C1C', borderRadius: '10px', padding: '9px 11px', fontSize: '13px', fontWeight: 700 }}>
                   {drawerError}
@@ -370,7 +370,7 @@ function TemplateCard({
       data-portrait-card="true"
       style={{ position: 'relative', aspectRatio: '3 / 4', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', overflow: 'hidden', background: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
     >
-      <TemplatePreviewFrame template={template} title={`${template.name} 模板缩略图`} scale={0.24} frameHeight={1700} />
+      <TemplatePreviewFrame template={template} title={`${template.name} 模板缩略图`} />
       <div
         className="publisher-card-actions"
         data-testid={`template-card-actions-${template.id}`}
@@ -391,18 +391,32 @@ function TemplateCard({
 function TemplatePreviewFrame({
   template,
   title,
-  scale,
-  frameHeight,
 }: {
   template: PublisherTemplate
   title: string
-  scale: number
-  frameHeight: number
 }) {
-  const scaledSize = `${100 / scale}%`
+  const frameRef = useRef<HTMLDivElement | null>(null)
+  const [scale, setScale] = useState(220 / TEMPLATE_PREVIEW_WIDTH)
+
+  useEffect(() => {
+    const element = frameRef.current
+    if (!element) return
+
+    const updateScale = () => {
+      const width = element.getBoundingClientRect().width
+      if (width > 0) setScale(width / TEMPLATE_PREVIEW_WIDTH)
+    }
+
+    updateScale()
+    if (typeof ResizeObserver === 'undefined') return
+
+    const observer = new ResizeObserver(updateScale)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
 
   return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#FFFFFF' }}>
+    <div ref={frameRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#FFFFFF' }}>
       <iframe
         title={title}
         src={`/api/template-preview/${template.id}`}
@@ -410,8 +424,9 @@ function TemplatePreviewFrame({
         sandbox="allow-scripts"
         tabIndex={-1}
         data-real-template-thumbnail="true"
-        data-preview-fit="cover-width"
-        style={{ position: 'absolute', top: 0, left: 0, width: scaledSize, height: `${frameHeight}px`, minHeight: scaledSize, border: 0, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none', background: '#FFFFFF' }}
+        data-preview-fit="desktop-width"
+        data-preview-width={TEMPLATE_PREVIEW_WIDTH}
+        style={{ position: 'absolute', top: 0, left: 0, width: `${TEMPLATE_PREVIEW_WIDTH}px`, height: `${TEMPLATE_PREVIEW_HEIGHT}px`, border: 0, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none', background: '#FFFFFF' }}
       />
     </div>
   )
@@ -420,10 +435,13 @@ function TemplatePreviewFrame({
 function TemplateDrawerPreview({ template }: { template: PublisherTemplate }) {
   return (
     <div style={{ width: '100%', aspectRatio: '3 / 4', borderRadius: '10px', overflow: 'hidden', background: '#FFFFFF', position: 'relative', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
-      <TemplatePreviewFrame template={template} title={`${template.name} 当前模板预览`} scale={0.3} frameHeight={1700} />
+      <TemplatePreviewFrame template={template} title={`${template.name} 当前模板预览`} />
     </div>
   )
 }
+
+const TEMPLATE_PREVIEW_WIDTH = 1440
+const TEMPLATE_PREVIEW_HEIGHT = 1920
 
 const fullscreenButtonStyle = {
   height: '38px',
@@ -453,7 +471,7 @@ const iconButtonStyle = {
   borderRadius: '8px',
   border: 'none',
   background: 'transparent',
-  color: '#64748B',
+  color: '#6E6E73',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

@@ -476,7 +476,7 @@ function PublisherHistoryItem({
         width: '100%',
         padding: '9px 10px',
         borderRadius: '8px',
-        backgroundColor: isActive ? 'rgba(37,99,235,0.08)' : 'transparent',
+        backgroundColor: isActive ? 'rgba(0,0,0,0.06)' : 'transparent',
         border: 'none',
         cursor: 'pointer',
         textAlign: 'left',
