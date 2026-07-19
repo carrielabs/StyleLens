@@ -128,6 +128,23 @@ export default function PublisherWorkspace({
           border-color: rgba(0, 0, 0, 0.18) !important;
           box-shadow: 0 18px 42px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.08);
         }
+        .publisher-template-card::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 34%;
+          background: linear-gradient(to top, rgba(0,0,0,0.18), rgba(0,0,0,0));
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 160ms ease;
+          z-index: 1;
+        }
+        .publisher-template-card:hover::after,
+        .publisher-template-card:focus-within::after {
+          opacity: 1;
+        }
         .publisher-template-card:hover .publisher-card-actions,
         .publisher-template-card:focus-within .publisher-card-actions {
           opacity: 1;
@@ -195,7 +212,6 @@ export default function PublisherWorkspace({
               返回画廊
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <span style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 700 }}>{previewTemplate.name}</span>
               <button type="button" onClick={usePreviewTemplate} style={fullscreenPrimaryButtonStyle}>
                 立即使用此模板
               </button>
@@ -382,13 +398,13 @@ function TemplateCard({
       <div
         className="publisher-card-actions"
         data-testid={`template-card-actions-${template.id}`}
-        style={{ position: 'absolute', left: '12px', right: '12px', bottom: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', zIndex: 2 }}
+        style={templateCardActionsStyle}
       >
-        <button type="button" aria-label={`预览 ${template.name}`} onClick={onPreview} style={glassTextButtonStyle}>
+        <button type="button" aria-label={`预览 ${template.name}`} onClick={onPreview} style={secondaryActionButtonStyle}>
           <Maximize size={14} strokeWidth={2} />
           预览
         </button>
-        <button type="button" aria-label={`使用模板 ${template.name}`} onClick={onUse} style={{ ...glassTextButtonStyle, background: 'rgba(17,17,17,0.88)', color: '#FFFFFF', border: '1px solid rgba(17,17,17,0.88)' }}>
+        <button type="button" aria-label={`使用模板 ${template.name}`} onClick={onUse} style={primaryActionButtonStyle}>
           使用模板
         </button>
       </div>
@@ -494,19 +510,44 @@ const iconButtonStyle = {
   cursor: 'pointer',
 }
 
-const glassTextButtonStyle = {
-  height: '36px',
+const templateCardActionsStyle = {
+  position: 'absolute',
+  left: '12px',
+  right: '12px',
+  bottom: '12px',
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: '6px',
+  padding: '6px',
+  borderRadius: '12px',
+  border: '1px solid rgba(255,255,255,0.42)',
+  background: 'rgba(255,255,255,0.64)',
+  backdropFilter: 'blur(18px) saturate(1.2)',
+  WebkitBackdropFilter: 'blur(18px) saturate(1.2)',
+  boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
+  zIndex: 2,
+} as const
+
+const secondaryActionButtonStyle = {
+  height: '34px',
   borderRadius: '8px',
-  border: '1px solid rgba(255,255,255,0.58)',
-  background: 'rgba(255,255,255,0.72)',
+  border: '1px solid rgba(0,0,0,0.06)',
+  background: 'rgba(255,255,255,0.56)',
   color: '#111111',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   gap: '6px',
   cursor: 'pointer',
-  backdropFilter: 'blur(14px)',
   fontSize: '13px',
   fontWeight: 800,
-  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-}
+  boxShadow: '0 1px 0 rgba(255,255,255,0.42) inset',
+} as const
+
+const primaryActionButtonStyle = {
+  ...secondaryActionButtonStyle,
+  border: '1px solid rgba(17,17,17,0.72)',
+  background: 'rgba(17,17,17,0.82)',
+  color: '#FFFFFF',
+  boxShadow: '0 8px 18px rgba(0,0,0,0.20)',
+} as const

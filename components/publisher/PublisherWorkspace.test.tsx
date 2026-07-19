@@ -45,6 +45,9 @@ describe('PublisherWorkspace', () => {
     expect(card.getAttribute('style')).toContain('aspect-ratio: 3 / 4')
     expect(actionBar.getAttribute('style')).toContain('bottom: 12px')
     expect(actionBar.getAttribute('style')).not.toContain('opacity: 0')
+    expect(actionBar.getAttribute('style')).toContain('padding: 6px')
+    expect(actionBar.getAttribute('style')).toContain('border: 1px solid rgba(255, 255, 255, 0.42)')
+    expect(actionBar.getAttribute('style')).toContain('rgba(255, 255, 255, 0.64)')
 
     const thumbnail = within(card).getByTitle('FUI 模板缩略图')
     expect(thumbnail.getAttribute('src')).toBe('/api/template-preview/website-01-fui')
@@ -88,6 +91,7 @@ describe('PublisherWorkspace', () => {
     expect(screen.getByRole('dialog', { name: 'FUI 模板预览' })).toBeTruthy()
     expect(screen.getByRole('status', { name: '模板预览加载中' })).toBeTruthy()
     expect(screen.getByTitle('FUI 全屏模板预览').getAttribute('src')).toBe('/api/template-preview/website-01-fui')
+    expect(within(screen.getByRole('dialog', { name: 'FUI 模板预览' })).queryByText('FUI')).toBeNull()
     expect(screen.getByRole('button', { name: '立即使用此模板' }).getAttribute('style')).not.toContain('37, 99, 235')
 
     fireEvent.click(screen.getByRole('button', { name: '立即使用此模板' }))
