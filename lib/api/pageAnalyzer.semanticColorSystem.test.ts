@@ -4,9 +4,101 @@
 
 import { describe, expect, it } from 'vitest'
 import type { PageColorCandidate } from '@/lib/types'
-import { buildSemanticColorSystem } from '@/lib/api/pageAnalyzer'
+import { buildSemanticColorSystem, createEmptyPageAnalysis, sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
 
 describe('buildSemanticColorSystem', () => {
+  it('filters third-party cookie consent colors before semantic slot selection', () => {
+    const analysis = createEmptyPageAnalysis()
+    analysis.colorCandidates = [
+      {
+        hex: '#C2D0E0',
+        property: 'css-variable',
+        selectorHint: ':root(--cc-btn-primary-bg)',
+        count: 20,
+        roleHints: ['primary'],
+        layerHints: ['global'],
+        componentKinds: ['button'],
+        evidenceScore: 260,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 20,
+          context: 'cookie consent primary action',
+        },
+      },
+      {
+        hex: '#98A7B6',
+        property: 'css-variable',
+        selectorHint: '.cc--darkmode',
+        count: 18,
+        roleHints: ['secondary'],
+        layerHints: ['global'],
+        componentKinds: ['button'],
+        evidenceScore: 230,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 18,
+          context: 'cookie consent secondary action',
+        },
+      },
+      {
+        hex: '#8ED462',
+        property: 'cta-background',
+        selectorHint: 'a.c-button.button-green',
+        count: 8,
+        roleHints: ['primary', 'cta', 'background'],
+        layerHints: ['hero'],
+        componentKinds: ['button', 'hero'],
+        evidenceScore: 150,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 8,
+          context: 'primary action',
+        },
+      },
+      {
+        hex: '#F5F1E4',
+        property: 'background-color',
+        selectorHint: '[anchor:body]',
+        count: 12,
+        roleHints: ['background'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 180,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 12,
+        },
+      },
+      {
+        hex: '#2C2E2A',
+        property: 'color',
+        selectorHint: '[anchor:body-text]',
+        count: 24,
+        roleHints: ['text'],
+        layerHints: ['global'],
+        componentKinds: ['text'],
+        evidenceScore: 190,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 24,
+        },
+      },
+    ]
+    analysis.semanticColorSystem = buildSemanticColorSystem(analysis.colorCandidates)
+
+    const sanitized = sanitizePageAnalysis(analysis)
+
+    expect(sanitized?.colorCandidates.map(candidate => candidate.hex)).not.toContain('#C2D0E0')
+    expect(sanitized?.colorCandidates.map(candidate => candidate.hex)).not.toContain('#98A7B6')
+    expect(sanitized?.semanticColorSystem?.primaryAction?.hex).toBe('#8ED462')
+    expect(sanitized?.semanticColorSystem?.textPrimary?.hex).toBe('#2C2E2A')
+  })
+
   it('does not build semantic slots from css-only inferred colors', () => {
     const candidates: PageColorCandidate[] = [
       {

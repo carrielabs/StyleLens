@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateJsonToken } from '@/lib/exporters/jsonExporter'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
+import { generateTailwindConfig } from '@/lib/exporters/tailwindExporter'
 import type { ColorToken, StyleReport } from '@/lib/types'
 
 function color(hex: string, role: ColorToken['role'], name: string): ColorToken {
@@ -222,5 +223,35 @@ describe('export quality gates', () => {
     expect(tokenDocument.stylelens.radius['control-radius'].$type).toBe('dimension')
     expect(tokenDocument.stylelens.spacing['measured-16px'].$type).toBe('dimension')
     expect(tokenDocument.stylelens.$extensions.stylelens.evidence.overallConfidence).toBe('high')
+  })
+
+  it('does not export pipe-joined radius or shadow variants as single CSS/Tailwind values', () => {
+    const report = createReport()
+    report.pageAnalysis = undefined
+    report.designDetails.cssRadius = '100% | 50px | 1rem | 5em | 4px'
+    report.designDetails.cssShadow = '0 .625em 1.875em #0000024d | 0 1px 2px #1820035c'
+
+    const css = generateCssVariables(report)
+    const tailwind = generateTailwindConfig(report)
+
+    expect(css).not.toContain('--radius-base: 100% | 50px')
+    expect(css).not.toContain('--shadow-base: 0 .625em 1.875em #0000024d | 0 1px')
+    expect(css).toContain('--radius-base: 100%;')
+    expect(css).toContain('--radius-2: 50px;')
+    expect(css).toContain('--shadow-base: 0 .625em 1.875em #0000024d;')
+    expect(css).toContain('--shadow-2: 0 1px 2px #1820035c;')
+    expect(tailwind).not.toContain("brand: '100% | 50px")
+    expect(tailwind).toContain("base: '100%',")
+    expect(tailwind).toContain("'2': '50px',")
+  })
+
+  it('does not add a no-radius prohibition when mixed radius variants include rounded values', () => {
+    const report = createReport()
+    report.designDetails.borderRadius = '100% | 50px | 1rem | 0px'
+    report.designDetails.cssRadius = '100% | 50px | 1rem | 0px'
+
+    const prompt = generatePrompt(report, 'zh')
+
+    expect(prompt).not.toContain('禁止圆角——此设计使用直角')
   })
 })

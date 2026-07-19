@@ -260,6 +260,58 @@ function isAuthArtifactText(value: string): boolean {
   return /\blog in with\b|\bsign in with\b|\bcontinue with\b|\blog in to your\b|\buse an organization email\b|\bforgot password\b|\bpasskey\b|\bsso\b|\boauth\b|\bpassword-reset\b|\breset password\b|\bcreate account\b|\bmagic link\b|\bverification code\b/.test(normalized)
 }
 
+function isThirdPartyStyleArtifactText(value: string): boolean {
+  const normalized = value.toLowerCase()
+  return /(?:^|[\s.#:_\-[(/])(?:cc-main|cc--|cm__|pm__|cookie|cookies|cookiebot|consent|onetrust|ot-sdk|didomi|iubenda|gdpr|privacy-preferences|intercom|crisp|drift|zendesk|hubspot|chat-widget|recaptcha|grecaptcha|captcha)(?:$|[\s.#:_\-\])>/])/.test(normalized)
+    || /(?:^|[\s.(])--cc-[a-z0-9-]+/.test(normalized)
+}
+
+function stripThirdPartyStyleArtifacts(analysis: PageStyleAnalysis): PageStyleAnalysis {
+  const colorCandidates = analysis.colorCandidates.filter(candidate =>
+    !isThirdPartyStyleArtifactText(`${candidate.selectorHint || ''} ${candidate.property} ${candidate.meta?.context || ''}`)
+  )
+
+  const typographyCandidates = analysis.typographyCandidates.filter(candidate =>
+    !isThirdPartyStyleArtifactText(`${candidate.sampleText || ''} ${candidate.fontFamily || ''} ${candidate.meta?.context || ''}`)
+  )
+
+  const typographyTokens = analysis.typographyTokens.filter(token =>
+    !isThirdPartyStyleArtifactText(`${token.sampleText || ''} ${token.fontFamily || ''} ${token.meta?.context || ''}`)
+  )
+
+  const layoutEvidence = analysis.layoutEvidence.filter(item =>
+    !isThirdPartyStyleArtifactText(`${item.label} ${item.kind} ${(item.componentKinds || []).join(' ')} ${item.meta?.context || ''}`)
+  )
+
+  const layoutHints = analysis.layoutHints.filter(hint => !isThirdPartyStyleArtifactText(hint))
+
+  const stateEntries = Object.entries(analysis.stateTokens || {}) as Array<[keyof ComponentStateTokens, StateTokenValue[] | undefined]>
+  const stateTokens = Object.fromEntries(
+    stateEntries.map(([component, values]) => [
+      component,
+      (values || []).filter((token: StateTokenValue) =>
+        !isThirdPartyStyleArtifactText(`${component} ${token.meta?.context || ''} ${token.value}`)
+      ),
+    ]).filter(([, values]) => (values as StateTokenValue[]).length > 0)
+  ) as ComponentStateTokens
+
+  const isThirdPartySnapshot = (text?: string) =>
+    Boolean(text && /\b(cookie|cookies|consent|privacy preferences|cookie preferences|accept all|reject all|manage preferences)\b/i.test(text))
+
+  return {
+    ...analysis,
+    colorCandidates,
+    semanticColorSystem: buildSemanticColorSystem(colorCandidates),
+    typographyCandidates,
+    typographyTokens,
+    layoutHints,
+    layoutEvidence,
+    stateTokens,
+    buttonSnapshot: isThirdPartySnapshot(analysis.buttonSnapshot?.text) ? undefined : analysis.buttonSnapshot,
+    buttonSnapshots: (analysis.buttonSnapshots || []).filter(snapshot => !isThirdPartySnapshot(snapshot.text)),
+  }
+}
+
 function stripAuthArtifacts(analysis: PageStyleAnalysis): PageStyleAnalysis {
   const typographyCandidates = analysis.typographyCandidates.filter(candidate =>
     !isAuthArtifactText(`${candidate.sampleText || ''} ${candidate.fontFamily || ''}`)
@@ -301,9 +353,10 @@ export function sanitizePageAnalysis(
   analysis: PageStyleAnalysis | undefined
 ): PageStyleAnalysis | undefined {
   if (!analysis) return analysis
-  if (!isLikelyAuthAnalysis(analysis)) return analysis
+  const withoutThirdParty = stripThirdPartyStyleArtifacts(analysis)
+  if (!isLikelyAuthAnalysis(withoutThirdParty)) return withoutThirdParty
 
-  const stripped = stripAuthArtifacts(analysis)
+  const stripped = stripAuthArtifacts(withoutThirdParty)
   const retainedSignals = hasRetainedMeasuredSignals(stripped)
 
   if (!retainedSignals) {
@@ -1395,6 +1448,7 @@ async function collectInteractiveStateSignals(page: Page): Promise<ComponentStat
       }, component).catch(() => null) as InteractiveTargetCandidate | null
 
       if (!candidate) continue
+      if (isThirdPartyStyleArtifactText(`${candidate.className} ${candidate.text} ${candidate.ariaLabel} ${candidate.title}`)) continue
 
       const score = scoreInteractiveTargetCandidate(candidate)
       if (score <= 0) continue
@@ -2041,6 +2095,7 @@ function extractCssSignals(cssText: string): {
 
   while ((match = declarationRegex.exec(cssText)) !== null) {
     const selectorHint = match[1]?.trim() || ''
+    if (isThirdPartyStyleArtifactText(selectorHint)) continue
     const block = match[2]
     const componentKinds = classifyComponent(selectorHint)
     const layerHints = layerHintsFromSelector(selectorHint)
@@ -2337,6 +2392,20 @@ async function extractDomSignalsFromPage(
       const isTransparent = (value: string) =>
         !value || value === 'transparent' || value === 'rgba(0, 0, 0, 0)' || value === 'rgba(255, 255, 255, 0)'
 
+      const isThirdPartyStyleArtifactText = (value: string) => {
+        const normalized = value.toLowerCase()
+        return /(?:^|[\s.#:_\-[(/])(?:cc-main|cc--|cm__|pm__|cookie|cookies|cookiebot|consent|onetrust|ot-sdk|didomi|iubenda|gdpr|privacy-preferences|intercom|crisp|drift|zendesk|hubspot|chat-widget|recaptcha|grecaptcha|captcha)(?:$|[\s.#:_\-\])>/])/.test(normalized)
+          || /(?:^|[\s.(])--cc-[a-z0-9-]+/.test(normalized)
+      }
+
+      const isThirdPartyStyleArtifactNode = (el: Element | null) => {
+        if (!el) return false
+        const selector = '#cc-main, [id*="cookie" i], [class*="cookie" i], [id*="consent" i], [class*="consent" i], [class*="cc--" i], [class*="cm__" i], [class*="pm__" i], [id*="onetrust" i], [class*="onetrust" i], [id*="ot-sdk" i], [class*="ot-sdk" i], [id*="intercom" i], [class*="intercom" i], [id*="crisp" i], [class*="crisp" i], [id*="drift" i], [class*="drift" i], [id*="zendesk" i], [class*="zendesk" i], [id*="hubspot" i], [class*="hubspot" i], [id*="captcha" i], [class*="captcha" i]'
+        if (el.matches?.(selector) || el.closest?.(selector)) return true
+        const hint = `${(el as HTMLElement).id || ''} ${(el as HTMLElement).className || ''} ${el.getAttribute?.('aria-label') || ''}`
+        return isThirdPartyStyleArtifactText(hint)
+      }
+
       const selectorHintFor = (el: Element) => {
         const tag = el.tagName.toLowerCase()
         const className = typeof (el as HTMLElement).className === 'string'
@@ -2497,6 +2566,7 @@ async function extractDomSignalsFromPage(
 
             const value = style.getPropertyValue(prop).trim()
             if (!value) continue
+            if (isThirdPartyStyleArtifactText(`${prop} ${value}`)) continue
 
             const roleHints: string[] = []
             if (/(?:^|[-_])(background|page)(?:[-_]|$)/.test(lower)) roleHints.push('background')
@@ -2601,6 +2671,7 @@ async function extractDomSignalsFromPage(
       const extractCtaEvidence = () => {
         const targets = Array.from(document.querySelectorAll<HTMLElement>('button, [role="button"], a[href], input[type="submit"], input[type="button"]'))
         for (const el of targets) {
+          if (isThirdPartyStyleArtifactNode(el)) continue
           const style = window.getComputedStyle(el)
           const rect = el.getBoundingClientRect()
           if (
@@ -2684,6 +2755,7 @@ async function extractDomSignalsFromPage(
 
       const visibleElements = Array.from(document.querySelectorAll<HTMLElement>('body *'))
         .filter(el => {
+          if (isThirdPartyStyleArtifactNode(el)) return false
           const style = window.getComputedStyle(el)
           const rect = el.getBoundingClientRect()
           if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false
@@ -2707,6 +2779,7 @@ async function extractDomSignalsFromPage(
 
             const parent = node.parentElement as HTMLElement | null
             if (!parent) return NodeFilter.FILTER_REJECT
+            if (isThirdPartyStyleArtifactNode(parent)) return NodeFilter.FILTER_REJECT
 
             const tag = parent.tagName.toLowerCase()
             if (['script', 'style', 'noscript', 'img', 'svg', 'video', 'canvas', 'picture'].includes(tag)) {
@@ -2963,6 +3036,7 @@ async function extractDomSignalsFromPage(
         return `${width} ${borderStyle}${color ? ` ${color}` : ''}`
       }
       const isVisibleSnapshotCandidate = (el: HTMLElement, minWidth: number, minHeight: number) => {
+        if (isThirdPartyStyleArtifactNode(el)) return false
         const style = window.getComputedStyle(el)
         const rect = el.getBoundingClientRect()
         if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false

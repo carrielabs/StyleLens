@@ -377,6 +377,10 @@ function isMinimalShadow(description: string): boolean {
 
 function isSharpRadius(description: string): boolean {
   const d = description.toLowerCase()
+  const variants = d.split('|').map(item => item.trim()).filter(Boolean)
+  if (variants.length > 1) {
+    return variants.every(value => value === '0' || value === '0px' || value.includes('sharp') || value.includes('no radius'))
+  }
   return d.includes('sharp') || d.includes('0px') || d.includes('no radius')
 }
 

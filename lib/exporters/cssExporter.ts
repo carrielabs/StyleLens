@@ -94,7 +94,9 @@ export function generateCssVariables(report: StyleReport): string {
     })
   } else {
     css += `\n  /* ⚠️ No DOM-measured radius — AI inferred */`
-    css += `\n  --radius-base: ${radius};`
+    splitCssVariants(radius).forEach((value, i) => {
+      css += `\n  --radius-${i === 0 ? 'base' : i + 1}: ${value};`
+    })
   }
 
   css += `\n\n  /* ── Geometry (shadow) ───────────────────────── */`
@@ -107,7 +109,9 @@ export function generateCssVariables(report: StyleReport): string {
     })
   } else {
     css += `\n  /* ⚠️ No DOM-measured shadow — AI inferred */`
-    css += `\n  --shadow-base: ${shadow};`
+    splitCssVariants(shadow).forEach((value, i) => {
+      css += `\n  --shadow-${i === 0 ? 'base' : i + 1}: ${value};`
+    })
   }
 
   css += `\n  --border-style: ${designDetails.borderStyle};`
@@ -169,4 +173,12 @@ function pairPadding(vertical?: string, horizontal?: string): string | null {
   if (!vertical || !horizontal) return null
   if (vertical === horizontal) return vertical
   return `${vertical} ${horizontal}`
+}
+
+function splitCssVariants(value: string): string[] {
+  const variants = value
+    .split('|')
+    .map(item => item.trim())
+    .filter(Boolean)
+  return variants.length ? variants : [value]
 }

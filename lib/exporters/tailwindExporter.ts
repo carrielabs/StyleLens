@@ -31,6 +31,8 @@ export function generateTailwindConfig(report: StyleReport): string {
 
   const radiusValue = designDetails.cssRadius || inferRadius(designDetails.borderRadius)
   const shadowValue = designDetails.cssShadow || inferShadow(designDetails.shadowStyle)
+  const radiusVariants = splitCssVariants(radiusValue)
+  const shadowVariants = splitCssVariants(shadowValue)
 
   // fontWeight: use numeric keys so Tailwind utilities work (font-[700] or extend scale)
   const headingW = String(typography.headingWeight)
@@ -64,12 +66,10 @@ ${colorLines.join('\n')}
         brand: '${typography.letterSpacing}',
       },
       borderRadius: {
-        // Usage: rounded-brand
-        brand: '${radiusValue}',
+${formatVariantLines(radiusVariants, 'rounded')}
       },
       boxShadow: {
-        // Usage: shadow-brand
-        brand: '${shadowValue}',
+${formatVariantLines(shadowVariants, 'shadow')}
       },
     },
   },
@@ -93,4 +93,23 @@ function inferShadow(description: string): string {
   if (d.includes('heavy') || d.includes('strong') || d.includes('dramatic')) return '0 20px 60px rgba(0,0,0,0.3)'
   if (d.includes('subtle') || d.includes('minimal') || d.includes('soft')) return '0 1px 4px rgba(0,0,0,0.08)'
   return '0 4px 16px rgba(0,0,0,0.12)'
+}
+
+function splitCssVariants(value: string): string[] {
+  const variants = value
+    .split('|')
+    .map(item => item.trim())
+    .filter(Boolean)
+  return variants.length ? variants : [value]
+}
+
+function formatVariantLines(values: string[], utilityPrefix: string): string {
+  if (values.length === 1) {
+    return `        // Usage: ${utilityPrefix}-brand
+        brand: '${values[0]}',`
+  }
+
+  return values
+    .map((value, index) => `        ${index === 0 ? 'base' : `'${index + 1}'`}: '${value}',`)
+    .join('\n')
 }
