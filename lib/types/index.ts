@@ -46,6 +46,40 @@ export interface SemanticColorSystem {
 
 export type LayeredColorSystem = SemanticColorSystem
 
+export type AnalysisQualityStatus = 'pass' | 'warn' | 'fail'
+
+export interface ColorEvidenceSlot {
+  hex: string
+  source: EvidenceSource
+  confidence: EvidenceConfidence
+  evidenceCount: number
+  property?: string
+  selectorHint?: string
+  context?: string
+  layerHints: Array<'global' | 'hero' | 'content'>
+  componentKinds: ComponentKind[]
+}
+
+export interface ColorEvidenceAttribution {
+  slots: Partial<Record<keyof SemanticColorSystem, ColorEvidenceSlot>>
+  rejectedThirdPartyHexes: string[]
+}
+
+export interface AnalysisQualityCheck {
+  id: string
+  label: string
+  status: AnalysisQualityStatus
+  score: number
+  details: string
+  blocking?: boolean
+}
+
+export interface AnalysisQualityGate {
+  score: number
+  status: AnalysisQualityStatus
+  checks: AnalysisQualityCheck[]
+}
+
 export type ComponentKind =
   | 'hero'
   | 'nav'
@@ -393,6 +427,8 @@ export interface PageStyleAnalysis {
   cssTextExcerpt?: string
   evidenceSummary?: EvidenceSummary
   coverageSummary?: AnalysisCoverageSummary
+  colorEvidenceAttribution?: ColorEvidenceAttribution
+  qualityGate?: AnalysisQualityGate
   interactionSummary?: InteractionSummary
   auditSummary?: PageAuditSummary
   sourceCount: {

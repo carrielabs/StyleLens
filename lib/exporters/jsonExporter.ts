@@ -7,6 +7,7 @@ import type {
   StyleReport,
   TypographyToken,
 } from '@/lib/types'
+import { buildAnalysisQualityGate, buildColorEvidenceAttribution } from '@/lib/api/analysisQuality'
 import { gradeTokens, exportableRadius, exportableShadow, exportableSpacing } from '@/lib/design-details/gradeTokens'
 
 type DtcgToken = {
@@ -211,6 +212,8 @@ function buildSectionSummary(report: StyleReport) {
 
 export function generateJsonToken(report: StyleReport): string {
   const analysis = report.pageAnalysis
+  const qualityGate = analysis ? analysis.qualityGate || buildAnalysisQualityGate(analysis) : undefined
+  const colorEvidenceAttribution = analysis ? analysis.colorEvidenceAttribution || buildColorEvidenceAttribution(analysis) : undefined
   const typographyTokens = analysis?.typographyTokens || []
   const layoutEvidence = analysis?.layoutEvidence || []
   const layoutHints = analysis?.layoutHints || []
@@ -283,6 +286,12 @@ export function generateJsonToken(report: StyleReport): string {
             coveredAreas: analysis?.coverageSummary?.coveredAreas || [],
             missingAreas: analysis?.coverageSummary?.missingAreas || [],
           },
+          qualityGate: qualityGate
+            ? {
+                score: qualityGate.score,
+                status: qualityGate.status,
+              }
+            : null,
           taste: {
             summary: report.summaryEn || report.summary,
             colorMode: report.designDetails.colorMode,
@@ -322,6 +331,8 @@ export function generateJsonToken(report: StyleReport): string {
       analysis: {
         evidenceSummary: analysis?.evidenceSummary || null,
         coverageSummary: analysis?.coverageSummary || null,
+        colorEvidenceAttribution: colorEvidenceAttribution || null,
+        qualityGate: qualityGate || null,
         interactionSummary: analysis?.interactionSummary || null,
         sections: buildSectionSummary(report),
       },

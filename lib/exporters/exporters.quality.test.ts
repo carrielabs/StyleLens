@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateJsonToken } from '@/lib/exporters/jsonExporter'
+import { generateMarkdown } from '@/lib/exporters/markdownExporter'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateTailwindConfig } from '@/lib/exporters/tailwindExporter'
 import type { ColorToken, StyleReport } from '@/lib/types'
@@ -70,7 +71,13 @@ function createReport(): StyleReport {
     },
     pageAnalysis: {
       colorCandidates: [],
-      semanticColorSystem: undefined,
+      semanticColorSystem: {
+        pageBackground,
+        surface,
+        primaryAction: primary,
+        textPrimary: text,
+        border,
+      },
       typographyCandidates: [],
       typographyTokens: [
         {
@@ -223,6 +230,13 @@ describe('export quality gates', () => {
     expect(tokenDocument.stylelens.radius['control-radius'].$type).toBe('dimension')
     expect(tokenDocument.stylelens.spacing['measured-16px'].$type).toBe('dimension')
     expect(tokenDocument.stylelens.$extensions.stylelens.evidence.overallConfidence).toBe('high')
+    expect(tokenDocument.stylelens.$extensions.stylelens.qualityGate.score).toBeGreaterThanOrEqual(80)
+    expect(tokenDocument.stylelens.analysis.qualityGate.status).toBe('pass')
+    expect(tokenDocument.stylelens.analysis.colorEvidenceAttribution.slots.primaryAction.source).toBe('dom-computed')
+
+    const markdown = generateMarkdown(createReport(), 'zh')
+    expect(markdown).toContain('质量门禁：')
+    expect(markdown).toContain('/100 · pass')
   })
 
   it('does not export pipe-joined radius or shadow variants as single CSS/Tailwind values', () => {

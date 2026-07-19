@@ -1,7 +1,9 @@
 import type { StyleReport } from '@/lib/types'
+import { buildAnalysisQualityGate } from '@/lib/api/analysisQuality'
 
 export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'): string {
   const { colors, colorSystem, typography, designDetails, gradients, pageAnalysis } = report
+  const qualityGate = pageAnalysis ? pageAnalysis.qualityGate || buildAnalysisQualityGate(pageAnalysis) : undefined
   const isEn = lang === 'en'
 
   const summary    = isEn ? (report.summaryEn || report.summary) : (report.summaryZh || report.summary)
@@ -168,6 +170,11 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
           ? `- Missing: ${pageAnalysis.coverageSummary.missingAreas.join(', ')}\n`
           : `- 缺失：${pageAnalysis.coverageSummary.missingAreas.join('、')}\n`
       }
+    }
+    if (qualityGate) {
+      md += isEn
+        ? `- Quality gate: ${qualityGate.score}/100 · ${qualityGate.status}\n`
+        : `- 质量门禁：${qualityGate.score}/100 · ${qualityGate.status}\n`
     }
   }
 

@@ -22,6 +22,7 @@ import type {
   TokenMeta,
   ViewportSlice,
 } from '@/lib/types'
+import { buildAnalysisQualityGate, buildColorEvidenceAttribution, isThirdPartyStyleArtifactHint } from '@/lib/api/analysisQuality'
 import { chromium, type ElementHandle, type Page } from 'playwright'
 
 const MAX_STYLESHEETS = 6
@@ -261,12 +262,13 @@ function isAuthArtifactText(value: string): boolean {
 }
 
 function isThirdPartyStyleArtifactText(value: string): boolean {
-  const normalized = value.toLowerCase()
-  return /(?:^|[\s.#:_\-[(/])(?:cc-main|cc--|cm__|pm__|cookie|cookies|cookiebot|consent|onetrust|ot-sdk|didomi|iubenda|gdpr|privacy-preferences|intercom|crisp|drift|zendesk|hubspot|chat-widget|recaptcha|grecaptcha|captcha)(?:$|[\s.#:_\-\])>/])/.test(normalized)
-    || /(?:^|[\s.(])--cc-[a-z0-9-]+/.test(normalized)
+  return isThirdPartyStyleArtifactHint(value)
 }
 
 function stripThirdPartyStyleArtifacts(analysis: PageStyleAnalysis): PageStyleAnalysis {
+  const thirdPartyColorCandidates = analysis.colorCandidates.filter(candidate =>
+    isThirdPartyStyleArtifactText(`${candidate.selectorHint || ''} ${candidate.property} ${candidate.meta?.context || ''}`)
+  )
   const colorCandidates = analysis.colorCandidates.filter(candidate =>
     !isThirdPartyStyleArtifactText(`${candidate.selectorHint || ''} ${candidate.property} ${candidate.meta?.context || ''}`)
   )
@@ -298,7 +300,7 @@ function stripThirdPartyStyleArtifacts(analysis: PageStyleAnalysis): PageStyleAn
   const isThirdPartySnapshot = (text?: string) =>
     Boolean(text && /\b(cookie|cookies|consent|privacy preferences|cookie preferences|accept all|reject all|manage preferences)\b/i.test(text))
 
-  return {
+  const stripped = {
     ...analysis,
     colorCandidates,
     semanticColorSystem: buildSemanticColorSystem(colorCandidates),
@@ -310,6 +312,17 @@ function stripThirdPartyStyleArtifacts(analysis: PageStyleAnalysis): PageStyleAn
     buttonSnapshot: isThirdPartySnapshot(analysis.buttonSnapshot?.text) ? undefined : analysis.buttonSnapshot,
     buttonSnapshots: (analysis.buttonSnapshots || []).filter(snapshot => !isThirdPartySnapshot(snapshot.text)),
   }
+
+  stripped.colorEvidenceAttribution = {
+    ...buildColorEvidenceAttribution(stripped),
+    rejectedThirdPartyHexes: [...new Set([
+      ...(analysis.colorEvidenceAttribution?.rejectedThirdPartyHexes || []),
+      ...thirdPartyColorCandidates.map(candidate => candidate.hex.toUpperCase()),
+    ])].sort(),
+  }
+  stripped.qualityGate = buildAnalysisQualityGate(stripped)
+
+  return stripped
 }
 
 function stripAuthArtifacts(analysis: PageStyleAnalysis): PageStyleAnalysis {
