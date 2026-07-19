@@ -35,7 +35,7 @@ describe('PublisherWorkspace', () => {
     expect(switcher.getAttribute('style')).not.toContain('238, 242, 247')
   })
 
-  it('shows lightweight portrait template cards with bottom hover actions', () => {
+  it('shows real portrait template thumbnails with bottom hover actions', () => {
     renderPublisher()
 
     const card = screen.getByTestId('template-card-website-01-fui')
@@ -46,8 +46,11 @@ describe('PublisherWorkspace', () => {
     expect(actionBar.getAttribute('style')).toContain('bottom: 12px')
 
     const thumbnail = within(card).getByTitle('FUI 模板缩略图')
-    expect(thumbnail.getAttribute('data-lightweight-template-thumbnail')).toBe('true')
-    expect(card.querySelector('iframe[title="FUI 模板缩略图"]')).toBeNull()
+    expect(thumbnail.getAttribute('src')).toBe('/api/template-preview/website-01-fui')
+    expect(thumbnail.getAttribute('data-real-template-thumbnail')).toBe('true')
+    expect(thumbnail.getAttribute('data-preview-fit')).toBe('desktop-width')
+    expect(thumbnail.getAttribute('data-preview-width')).toBe('1440')
+    expect(thumbnail.getAttribute('style')).toContain('pointer-events: none')
 
     expect(within(card).queryByText('FUI')).toBeNull()
     expect(within(card).queryByText('极简科技感产品介绍')).toBeNull()
@@ -55,15 +58,15 @@ describe('PublisherWorkspace', () => {
     expect(within(actionBar).getByRole('button', { name: '使用模板 FUI' })).toBeTruthy()
   })
 
-  it('does not mount gallery preview iframes when switching template categories', () => {
+  it('mounts real gallery preview iframes when switching template categories', () => {
     renderPublisher()
 
-    expect(document.querySelectorAll('iframe[title$="模板缩略图"]')).toHaveLength(0)
+    expect(document.querySelectorAll('iframe[title$="模板缩略图"]')).toHaveLength(8)
 
     fireEvent.click(screen.getByRole('button', { name: '数据看板' }))
 
     expect(screen.getAllByTestId(/^template-card-dashboard-/)).toHaveLength(28)
-    expect(document.querySelectorAll('iframe[title$="模板缩略图"]')).toHaveLength(0)
+    expect(document.querySelectorAll('iframe[title$="模板缩略图"]')).toHaveLength(28)
   })
 
   it('switches to dashboard templates without leaving the workspace', () => {
@@ -92,7 +95,7 @@ describe('PublisherWorkspace', () => {
     const drawer = screen.getByRole('dialog', { name: '配置数据源' })
     expect(drawer).toBeTruthy()
     expect(within(drawer).getByTitle('FUI 当前模板预览')).toBeTruthy()
-    expect(drawer.querySelector('iframe[title="FUI 当前模板预览"]')).toBeNull()
+    expect(drawer.querySelector('iframe[title="FUI 当前模板预览"]')?.getAttribute('src')).toBe('/api/template-preview/website-01-fui')
     expect(within(drawer).queryByText('正在使用')).toBeNull()
     expect(within(drawer).queryByText('FUI')).toBeNull()
   })
