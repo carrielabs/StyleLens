@@ -8,6 +8,7 @@ interface GeneratedPagePreviewProps {
   title: string
   templateId: string
   backgroundColor?: string
+  isPending?: boolean
   onBack: () => void
 }
 
@@ -16,6 +17,7 @@ export default function GeneratedPagePreview({
   title,
   templateId,
   backgroundColor,
+  isPending = false,
   onBack,
 }: GeneratedPagePreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
@@ -58,6 +60,7 @@ export default function GeneratedPagePreview({
   }
 
   async function downloadHtml() {
+    if (isPending) return
     downloadHtmlContent(await requestCurrentHtml())
   }
 
@@ -104,12 +107,13 @@ export default function GeneratedPagePreview({
             <CheckCircle2 size={15} strokeWidth={2} color="#FFFFFF" />
             <span>{title}</span>
             <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.56)' }}>{templateId}</span>
-            <span style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>已生成，可编辑并下载</span>
+            <span style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>{isPending ? '正在生成，可先预览' : '已生成，可编辑并下载'}</span>
           </div>
           <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.18)' }} />
           <button
             type="button"
             onClick={downloadHtml}
+            disabled={isPending}
             style={{
               height: 34,
               padding: '0 18px',
@@ -122,11 +126,12 @@ export default function GeneratedPagePreview({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              cursor: 'pointer',
+              cursor: isPending ? 'wait' : 'pointer',
+              opacity: isPending ? 0.72 : 1,
             }}
           >
             <Download size={14} strokeWidth={2} />
-            下载 HTML
+            {isPending ? '生成中' : '下载 HTML'}
           </button>
       </div>
       <iframe

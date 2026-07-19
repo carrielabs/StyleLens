@@ -47,6 +47,22 @@ describe('GeneratedPagePreview', () => {
     expect(onBack).toHaveBeenCalledTimes(1)
   })
 
+  it('marks pending generated pages as still generating', () => {
+    render(
+      <GeneratedPagePreview
+        html="<!DOCTYPE html><html><body>Pending</body></html>"
+        title="Demo Page"
+        templateId="website-01-fui"
+        isPending
+        onBack={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('正在生成，可先预览')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '生成中' }).hasAttribute('disabled')).toBe(true)
+  })
+
+
   it('downloads the current edited html returned from the preview frame', async () => {
     Object.defineProperty(URL, 'createObjectURL', {
       value: vi.fn(),

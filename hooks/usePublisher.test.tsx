@@ -30,6 +30,80 @@ describe('usePublisher', () => {
     expect(result.current.isGenerating).toBe(false)
   })
 
+  it('shows a lightweight pending page before the generate response returns', async () => {
+    let resolveFetch: (value: unknown) => void = () => undefined
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => {
+      resolveFetch = resolve
+    })))
+
+    const { result } = renderHook(() => usePublisher())
+
+    let pending: Promise<unknown>
+    await act(async () => {
+      pending = result.current.generatePage('# Demo', 'website-01-fui')
+    })
+
+    expect(result.current.isGenerating).toBe(true)
+    expect(result.current.generatedPage?.title).toBe('Demo')
+    expect(result.current.generatedPage?.templateId).toBe('website-01-fui')
+    expect(result.current.generatedPage?.html).toContain('正在生成页面')
+
+    await act(async () => {
+      resolveFetch({
+        json: async () => ({
+          success: true,
+          result: {
+            html: '<!DOCTYPE html><html><body>Demo</body></html>',
+            title: 'Demo',
+            templateId: 'website-01-fui',
+          },
+        }),
+      })
+      await pending
+    })
+
+    expect(result.current.isGenerating).toBe(false)
+    expect(result.current.generatedPage?.html).toContain('<body>Demo</body>')
+  })
+
+  it('does not reopen a generated page after the pending page is cleared', async () => {
+    let resolveFetch: (value: unknown) => void = () => undefined
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => {
+      resolveFetch = resolve
+    })))
+
+    const { result } = renderHook(() => usePublisher())
+
+    let pending: Promise<unknown>
+    await act(async () => {
+      pending = result.current.generatePage('# Demo', 'website-01-fui')
+    })
+
+    act(() => {
+      result.current.clearGeneratedPage()
+    })
+
+    expect(result.current.generatedPage).toBeNull()
+    expect(result.current.isGenerating).toBe(false)
+
+    await act(async () => {
+      resolveFetch({
+        json: async () => ({
+          success: true,
+          result: {
+            html: '<!DOCTYPE html><html><body>Late Demo</body></html>',
+            title: 'Late Demo',
+            templateId: 'website-01-fui',
+          },
+        }),
+      })
+      await pending
+    })
+
+    expect(result.current.generatedPage).toBeNull()
+    expect(result.current.generatedHistory).toHaveLength(0)
+  })
+
   it('sends dashboard page type when requested', async () => {
     const fetchMock = vi.fn(async () => ({
       json: async () => ({

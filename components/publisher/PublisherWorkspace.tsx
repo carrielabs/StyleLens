@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
 import { ArrowLeft, FileText, Maximize, PanelRightClose, UploadCloud } from 'lucide-react'
 import type { GeneratedPageResult, GeneratedPageType } from '@/hooks/usePublisher'
@@ -395,38 +395,64 @@ function TemplatePreviewFrame({
   template: PublisherTemplate
   title: string
 }) {
-  const frameRef = useRef<HTMLDivElement | null>(null)
-  const [scale, setScale] = useState(220 / TEMPLATE_PREVIEW_WIDTH)
-
-  useEffect(() => {
-    const element = frameRef.current
-    if (!element) return
-
-    const updateScale = () => {
-      const width = element.getBoundingClientRect().width
-      if (width > 0) setScale(width / TEMPLATE_PREVIEW_WIDTH)
-    }
-
-    updateScale()
-    if (typeof ResizeObserver === 'undefined') return
-
-    const observer = new ResizeObserver(updateScale)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
-
   return (
-    <div ref={frameRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#FFFFFF' }}>
-      <iframe
-        title={title}
-        src={`/api/template-preview/${template.id}`}
-        loading="lazy"
-        sandbox="allow-scripts"
-        tabIndex={-1}
-        data-real-template-thumbnail="true"
-        data-preview-fit="desktop-width"
-        data-preview-width={TEMPLATE_PREVIEW_WIDTH}
-        style={{ position: 'absolute', top: 0, left: 0, width: `${TEMPLATE_PREVIEW_WIDTH}px`, height: `${TEMPLATE_PREVIEW_HEIGHT}px`, border: 0, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none', background: '#FFFFFF' }}
+    <div
+      title={title}
+      data-lightweight-template-thumbnail="true"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        overflow: 'hidden',
+        background: `linear-gradient(150deg, ${template.tone} 0%, #FFFFFF 58%, rgba(0,0,0,0.04) 100%)`,
+      }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: '12% 10%',
+          border: '1px solid rgba(255,255,255,0.62)',
+          borderRadius: '10px',
+          background: 'rgba(255,255,255,0.72)',
+          boxShadow: '0 18px 42px rgba(0,0,0,0.10)',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: '17%',
+          right: '22%',
+          top: '24%',
+          height: '7%',
+          borderRadius: '999px',
+          background: 'rgba(17,17,17,0.82)',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: '17%',
+          right: '14%',
+          top: '38%',
+          height: '26%',
+          borderRadius: '8px',
+          background: 'rgba(255,255,255,0.82)',
+          border: '1px solid rgba(0,0,0,0.08)',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: '17%',
+          width: '28%',
+          bottom: '20%',
+          height: '8%',
+          borderRadius: '8px',
+          background: template.tone,
+        }}
       />
     </div>
   )
@@ -439,9 +465,6 @@ function TemplateDrawerPreview({ template }: { template: PublisherTemplate }) {
     </div>
   )
 }
-
-const TEMPLATE_PREVIEW_WIDTH = 1440
-const TEMPLATE_PREVIEW_HEIGHT = 1920
 
 const fullscreenButtonStyle = {
   height: '38px',

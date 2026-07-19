@@ -339,6 +339,7 @@ export default function Home() {
               title={generatedPage.title}
               templateId={generatedPage.templateId}
               backgroundColor={generatedPage.backgroundColor || latestExtractedBackground}
+              isPending={generatedPage.isPending || isGenerating}
               onBack={() => {
                 clearGeneratedPage()
                 setActiveWorkspace('publisher')
