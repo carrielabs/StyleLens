@@ -80,6 +80,25 @@ export interface AnalysisQualityGate {
   checks: AnalysisQualityCheck[]
 }
 
+export type ComponentEvidenceKind = 'button' | 'navigation' | 'card' | 'cta'
+
+export interface ComponentEvidenceExample {
+  selectorHint: string
+  text?: string
+  styleSummary?: string
+  source: EvidenceSource
+  confidence: EvidenceConfidence
+  evidenceCount: number
+}
+
+export interface ComponentEvidenceBucket {
+  count: number
+  confidence: EvidenceConfidence
+  examples: ComponentEvidenceExample[]
+}
+
+export type ComponentEvidenceSummary = Record<ComponentEvidenceKind, ComponentEvidenceBucket>
+
 export type ComponentKind =
   | 'hero'
   | 'nav'
@@ -428,6 +447,7 @@ export interface PageStyleAnalysis {
   evidenceSummary?: EvidenceSummary
   coverageSummary?: AnalysisCoverageSummary
   colorEvidenceAttribution?: ColorEvidenceAttribution
+  componentEvidence?: ComponentEvidenceSummary
   qualityGate?: AnalysisQualityGate
   interactionSummary?: InteractionSummary
   auditSummary?: PageAuditSummary

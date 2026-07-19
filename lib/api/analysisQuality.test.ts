@@ -40,4 +40,20 @@ describe('analysis quality gates', () => {
     })
     expect(attribution.rejectedThirdPartyHexes).toEqual(['#98A7B6', '#C2D0E0'])
   })
+
+  it('requires MindMarket component evidence for button, navigation, card, and CTA', () => {
+    const sanitized = sanitizePageAnalysis(createMindMarketStyleAnalysisFixture())
+    const gate = buildAnalysisQualityGate(sanitized)
+    const componentCheck = gate.checks.find(check => check.id === 'component-evidence')
+    const componentEvidence = sanitized?.componentEvidence
+
+    expect(componentCheck?.status).toBe('pass')
+    expect(componentEvidence?.button.count).toBeGreaterThan(0)
+    expect(componentEvidence?.navigation.count).toBeGreaterThan(0)
+    expect(componentEvidence?.card.count).toBeGreaterThan(0)
+    expect(componentEvidence?.cta.count).toBeGreaterThan(0)
+    expect(componentEvidence?.button.examples[0].selectorHint).toContain('c-button')
+    expect(componentEvidence?.navigation.examples[0].selectorHint).toContain('nav')
+    expect(componentEvidence?.card.examples[0].selectorHint).toContain('card')
+  })
 })

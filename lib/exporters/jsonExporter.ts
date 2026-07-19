@@ -7,7 +7,7 @@ import type {
   StyleReport,
   TypographyToken,
 } from '@/lib/types'
-import { buildAnalysisQualityGate, buildColorEvidenceAttribution } from '@/lib/api/analysisQuality'
+import { buildAnalysisQualityGate, buildColorEvidenceAttribution, buildComponentEvidenceSummary } from '@/lib/api/analysisQuality'
 import { gradeTokens, exportableRadius, exportableShadow, exportableSpacing } from '@/lib/design-details/gradeTokens'
 
 type DtcgToken = {
@@ -214,6 +214,7 @@ export function generateJsonToken(report: StyleReport): string {
   const analysis = report.pageAnalysis
   const qualityGate = analysis ? analysis.qualityGate || buildAnalysisQualityGate(analysis) : undefined
   const colorEvidenceAttribution = analysis ? analysis.colorEvidenceAttribution || buildColorEvidenceAttribution(analysis) : undefined
+  const componentEvidence = analysis ? analysis.componentEvidence || buildComponentEvidenceSummary(analysis) : undefined
   const typographyTokens = analysis?.typographyTokens || []
   const layoutEvidence = analysis?.layoutEvidence || []
   const layoutHints = analysis?.layoutHints || []
@@ -332,6 +333,7 @@ export function generateJsonToken(report: StyleReport): string {
         evidenceSummary: analysis?.evidenceSummary || null,
         coverageSummary: analysis?.coverageSummary || null,
         colorEvidenceAttribution: colorEvidenceAttribution || null,
+        componentEvidence: componentEvidence || null,
         qualityGate: qualityGate || null,
         interactionSummary: analysis?.interactionSummary || null,
         sections: buildSectionSummary(report),

@@ -132,7 +132,20 @@ function createReport(): StyleReport {
         },
       ],
       layoutHints: ['section stack'],
-      layoutEvidence: [],
+      layoutEvidence: [
+        {
+          label: 'Top navigation',
+          kind: 'navigation',
+          sampleCount: 1,
+          componentKinds: ['nav'],
+          evidenceScore: 32,
+          meta: {
+            source: 'dom-computed',
+            confidence: 'high',
+            evidenceCount: 1,
+          },
+        },
+      ],
       stateTokens: {},
       borderTokens: [],
       transitionTokens: [],
@@ -233,10 +246,15 @@ describe('export quality gates', () => {
     expect(tokenDocument.stylelens.$extensions.stylelens.qualityGate.score).toBeGreaterThanOrEqual(80)
     expect(tokenDocument.stylelens.analysis.qualityGate.status).toBe('pass')
     expect(tokenDocument.stylelens.analysis.colorEvidenceAttribution.slots.primaryAction.source).toBe('dom-computed')
+    expect(tokenDocument.stylelens.analysis.componentEvidence.button.count).toBeGreaterThan(0)
+    expect(tokenDocument.stylelens.analysis.componentEvidence.navigation.count).toBeGreaterThan(0)
+    expect(tokenDocument.stylelens.analysis.componentEvidence.card.count).toBeGreaterThan(0)
+    expect(tokenDocument.stylelens.analysis.componentEvidence.cta.count).toBeGreaterThan(0)
 
     const markdown = generateMarkdown(createReport(), 'zh')
     expect(markdown).toContain('质量门禁：')
     expect(markdown).toContain('/100 · pass')
+    expect(markdown).toContain('组件证据：按钮')
   })
 
   it('does not export pipe-joined radius or shadow variants as single CSS/Tailwind values', () => {

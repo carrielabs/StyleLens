@@ -146,6 +146,18 @@ export function createMindMarketStyleAnalysisFixture(): PageStyleAnalysis {
         evidenceCount: 1,
       },
     },
+    {
+      label: 'Top navigation',
+      kind: 'navigation',
+      sampleCount: 1,
+      componentKinds: ['nav'],
+      evidenceScore: 38,
+      meta: {
+        source: 'dom-computed',
+        confidence: 'high',
+        evidenceCount: 1,
+      },
+    },
   ]
   analysis.buttonSnapshots = [
     {
@@ -157,6 +169,17 @@ export function createMindMarketStyleAnalysisFixture(): PageStyleAnalysis {
       fontSize: '16px',
       fontWeight: '700',
       text: 'Start investing',
+    },
+  ]
+  analysis.cardSnapshots = [
+    {
+      backgroundColor: '#F5F1E4',
+      borderRadius: '32px',
+      border: '1px solid #D9D2BA',
+      padding: '32px',
+      headingText: 'Make smarter market decisions',
+      headingFontSize: '32px',
+      headingFontWeight: '700',
     },
   ]
   analysis.evidenceSummary = {

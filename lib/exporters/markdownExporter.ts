@@ -1,9 +1,10 @@
 import type { StyleReport } from '@/lib/types'
-import { buildAnalysisQualityGate } from '@/lib/api/analysisQuality'
+import { buildAnalysisQualityGate, buildComponentEvidenceSummary } from '@/lib/api/analysisQuality'
 
 export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'): string {
   const { colors, colorSystem, typography, designDetails, gradients, pageAnalysis } = report
   const qualityGate = pageAnalysis ? pageAnalysis.qualityGate || buildAnalysisQualityGate(pageAnalysis) : undefined
+  const componentEvidence = pageAnalysis ? pageAnalysis.componentEvidence || buildComponentEvidenceSummary(pageAnalysis) : undefined
   const isEn = lang === 'en'
 
   const summary    = isEn ? (report.summaryEn || report.summary) : (report.summaryZh || report.summary)
@@ -175,6 +176,11 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
       md += isEn
         ? `- Quality gate: ${qualityGate.score}/100 · ${qualityGate.status}\n`
         : `- 质量门禁：${qualityGate.score}/100 · ${qualityGate.status}\n`
+    }
+    if (componentEvidence) {
+      md += isEn
+        ? `- Components: button ${componentEvidence.button.count}, nav ${componentEvidence.navigation.count}, card ${componentEvidence.card.count}, CTA ${componentEvidence.cta.count}\n`
+        : `- 组件证据：按钮 ${componentEvidence.button.count}、导航 ${componentEvidence.navigation.count}、卡片 ${componentEvidence.card.count}、CTA ${componentEvidence.cta.count}\n`
     }
   }
 

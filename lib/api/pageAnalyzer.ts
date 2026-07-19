@@ -22,7 +22,7 @@ import type {
   TokenMeta,
   ViewportSlice,
 } from '@/lib/types'
-import { buildAnalysisQualityGate, buildColorEvidenceAttribution, isThirdPartyStyleArtifactHint } from '@/lib/api/analysisQuality'
+import { buildAnalysisQualityGate, buildColorEvidenceAttribution, buildComponentEvidenceSummary, isThirdPartyStyleArtifactHint } from '@/lib/api/analysisQuality'
 import { chromium, type ElementHandle, type Page } from 'playwright'
 
 const MAX_STYLESHEETS = 6
@@ -320,6 +320,7 @@ function stripThirdPartyStyleArtifacts(analysis: PageStyleAnalysis): PageStyleAn
       ...thirdPartyColorCandidates.map(candidate => candidate.hex.toUpperCase()),
     ])].sort(),
   }
+  stripped.componentEvidence = buildComponentEvidenceSummary(stripped)
   stripped.qualityGate = buildAnalysisQualityGate(stripped)
 
   return stripped
