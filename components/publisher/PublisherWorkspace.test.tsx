@@ -44,6 +44,7 @@ describe('PublisherWorkspace', () => {
     expect(card.getAttribute('data-portrait-card')).toBe('true')
     expect(card.getAttribute('style')).toContain('aspect-ratio: 3 / 4')
     expect(actionBar.getAttribute('style')).toContain('bottom: 12px')
+    expect(actionBar.getAttribute('style')).not.toContain('opacity: 0')
 
     const thumbnail = within(card).getByTitle('FUI 模板缩略图')
     expect(thumbnail.getAttribute('src')).toBe('/api/template-preview/website-01-fui')

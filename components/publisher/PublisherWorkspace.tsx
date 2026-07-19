@@ -131,6 +131,14 @@ export default function PublisherWorkspace({
         .publisher-template-card:hover .publisher-card-actions,
         .publisher-template-card:focus-within .publisher-card-actions {
           opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
+        }
+        .publisher-card-actions {
+          opacity: 0;
+          transform: translateY(8px);
+          pointer-events: none;
+          transition: opacity 160ms ease, transform 160ms ease;
         }
       `}</style>
 
@@ -374,7 +382,7 @@ function TemplateCard({
       <div
         className="publisher-card-actions"
         data-testid={`template-card-actions-${template.id}`}
-        style={{ position: 'absolute', left: '12px', right: '12px', bottom: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', opacity: 0, transition: 'opacity 160ms ease', zIndex: 2 }}
+        style={{ position: 'absolute', left: '12px', right: '12px', bottom: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', zIndex: 2 }}
       >
         <button type="button" aria-label={`预览 ${template.name}`} onClick={onPreview} style={glassTextButtonStyle}>
           <Maximize size={14} strokeWidth={2} />
