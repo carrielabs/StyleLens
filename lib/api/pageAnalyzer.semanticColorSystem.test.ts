@@ -668,4 +668,55 @@ describe('buildSemanticColorSystem', () => {
     expect(semantic?.pageBackground?.hex).toBe('#08090A')
     expect(semantic?.textPrimary?.hex).toBe('#F7F8F8')
   })
+
+  it('does not promote saturated illustration blocks to the surface slot', () => {
+    const candidates: PageColorCandidate[] = [
+      {
+        hex: '#FFFFFF',
+        property: 'background-color',
+        selectorHint: '[anchor:body]',
+        count: 24,
+        roleHints: ['background'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 220,
+      },
+      {
+        hex: '#93CDFE',
+        property: 'background-color',
+        selectorHint: '.homepage-illustration-panel',
+        count: 30,
+        roleHints: ['surface', 'accent'],
+        layerHints: ['content'],
+        componentKinds: ['surface'],
+        evidenceScore: 520,
+      },
+      {
+        hex: '#000000',
+        property: 'color',
+        selectorHint: '[anchor:body-text]',
+        count: 30,
+        roleHints: ['text'],
+        layerHints: ['global'],
+        componentKinds: ['text'],
+        evidenceScore: 220,
+      },
+      {
+        hex: '#0075DE',
+        property: 'cta-background',
+        selectorHint: 'a.primary-button',
+        count: 4,
+        roleHints: ['primary', 'cta', 'background'],
+        layerHints: ['hero', 'global'],
+        componentKinds: ['button'],
+        evidenceScore: 140,
+      },
+    ]
+
+    const semantic = buildSemanticColorSystem(candidates)
+
+    expect(semantic?.pageBackground?.hex).toBe('#FFFFFF')
+    expect(semantic?.surface).toBeUndefined()
+    expect(semantic?.primaryAction?.hex).toBe('#0075DE')
+  })
 })

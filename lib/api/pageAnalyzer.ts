@@ -859,6 +859,47 @@ function isLikelyUtilityNavBackground(candidate: PageColorCandidate) {
   return /downloadbox|download-box|nav|navbar|header|menu|button|btn|cta/.test(selector)
 }
 
+function surfaceSemanticRisk(candidate: PageColorCandidate) {
+  const selector = (candidate.selectorHint || '').toLowerCase()
+  const chroma = getColorChroma(candidate.hex)
+  const hasAccentSemantics =
+    candidate.roleHints.includes('accent') ||
+    candidate.roleHints.includes('primary') ||
+    candidate.roleHints.includes('secondary')
+  const looksLikeIllustrationPaint = /illustration|graphic|media|image|visual|gradient|screenshot|artwork/.test(selector)
+
+  return {
+    chroma,
+    hasAccentSemantics,
+    looksLikeIllustrationPaint,
+    unreliable: (hasAccentSemantics || looksLikeIllustrationPaint) && chroma >= 72,
+  }
+}
+
+function scoreSurfaceSlotCandidate(candidate: PageColorCandidate, pageBackground?: PageColorCandidate) {
+  const risk = surfaceSemanticRisk(candidate)
+  if (risk.unreliable) return Number.NEGATIVE_INFINITY
+
+  const kinds = candidate.componentKinds || []
+  let score = candidate.evidenceScore || candidate.count || 0
+
+  if (kinds.includes('card')) score += 80
+  if (kinds.includes('surface')) score += 40
+  if (candidate.layerHints.includes('content')) score += 56
+  if (candidate.property === 'visual-content' || candidate.property === 'screenshot-content') score += 36
+  if (candidate.property === 'background-color') score += 24
+  if (candidate.property === 'css-variable') score -= 24
+  if (risk.hasAccentSemantics) score -= 80
+  if (risk.looksLikeIllustrationPaint) score -= 100
+
+  if (pageBackground) {
+    const brightnessDistance = Math.abs(getColorBrightness(candidate.hex) - getColorBrightness(pageBackground.hex))
+    score += Math.max(0, 80 - brightnessDistance)
+  }
+
+  return score
+}
+
 function mergeColorCandidates(domGroup: PageColorCandidate[], cssGroup: PageColorCandidate[]): PageColorCandidate[] {
   const merged = new Map<string, ColorAccumulator>()
 
@@ -2059,9 +2100,13 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       isLikelySurfaceCandidate(candidate) &&
       candidate.property !== 'cta-background' &&
       candidate.hex.toUpperCase() !== pageBackground?.hex.toUpperCase() &&
-      !used.has(candidate.hex.toUpperCase())
+      !used.has(candidate.hex.toUpperCase()) &&
+      scoreSurfaceSlotCandidate(candidate, pageBackground) > Number.NEGATIVE_INFINITY
     )
     .sort((a, b) => {
+      const scoreDiff = scoreSurfaceSlotCandidate(b, pageBackground) - scoreSurfaceSlotCandidate(a, pageBackground)
+      if (scoreDiff !== 0) return scoreDiff
+
       const anchorDiff = anchorBoost(b) - anchorBoost(a)
       if (anchorDiff !== 0) return anchorDiff
 
