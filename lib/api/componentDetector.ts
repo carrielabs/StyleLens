@@ -5,6 +5,7 @@ import type {
   ComponentEvidenceExample,
   ComponentEvidenceSummary,
   EvidenceConfidence,
+  NavigationSnapshot,
   PageColorCandidate,
   PageStyleAnalysis,
 } from '@/lib/types'
@@ -38,6 +39,7 @@ function detectButtonExamples(analysis: PageStyleAnalysis | undefined): ScoredEx
   const snapshotExamples = (analysis.buttonSnapshots || [])
     .map(snapshot => scoreButtonSnapshot(snapshot))
     .filter(example => isScoredAtLeast(example, 70))
+    .map(example => ({ ...example, score: example.score + 20 }))
 
   const candidateExamples = (analysis.colorCandidates || [])
     .map(candidate => scoreButtonCandidate(candidate))
@@ -53,6 +55,7 @@ function detectCtaExamples(analysis: PageStyleAnalysis | undefined): ScoredExamp
   const snapshotExamples = (analysis.buttonSnapshots || [])
     .map(snapshot => scoreButtonSnapshot(snapshot, true))
     .filter(example => isScoredAtLeast(example, 78))
+    .map(example => ({ ...example, score: example.score + 20 }))
 
   const candidateExamples = (analysis.colorCandidates || [])
     .map(candidate => scoreCtaCandidate(candidate))
@@ -64,6 +67,10 @@ function detectCtaExamples(analysis: PageStyleAnalysis | undefined): ScoredExamp
 
 function detectNavigationExamples(analysis: PageStyleAnalysis | undefined): ScoredExample[] {
   if (!analysis) return []
+
+  const snapshotExamples = (analysis.navigationSnapshots || [])
+    .map(snapshot => scoreNavigationSnapshot(snapshot))
+    .filter(example => isScoredAtLeast(example, 70))
 
   const layoutExamples = analysis.layoutEvidence
     .filter(item => item.kind === 'navigation' || item.componentKinds.includes('nav'))
@@ -81,7 +88,69 @@ function detectNavigationExamples(analysis: PageStyleAnalysis | undefined): Scor
     .filter(candidate => candidate.componentKinds?.includes('nav') || NAV_SELECTOR_PATTERN.test(candidate.selectorHint || ''))
     .map(candidate => candidateExample(candidate, 'navigation color/layout evidence', 'navigation selector evidence', 76))
 
-  return [...layoutExamples, ...candidateExamples].sort((a, b) => b.score - a.score)
+  return [...snapshotExamples, ...layoutExamples, ...candidateExamples].sort((a, b) => b.score - a.score)
+}
+
+function scoreNavigationSnapshot(snapshot: NavigationSnapshot): ScoredExample | undefined {
+  const selectorHint = snapshot.selectorHint || '[component:navigation]'
+  const selector = selectorHint.toLowerCase()
+  const linkCount = snapshot.linkCount || 0
+  const reasons: string[] = []
+  let score = 0
+
+  if (linkCount < 1) return undefined
+  if (BODY_ANCHOR_PATTERN.test(selectorHint) || isLogoLike(selectorHint)) return undefined
+
+  if (/\b(nav|navbar|navigation|menu|header)\b/.test(selector)) {
+    score += 34
+    reasons.push('navigation selector')
+  }
+  if (linkCount >= 2) {
+    score += 24
+    reasons.push('multiple nav links')
+  } else {
+    score += 14
+    reasons.push('single nav action')
+  }
+  if (snapshot.display === 'flex' || snapshot.display === 'grid') {
+    score += 14
+    reasons.push('navigation layout')
+  }
+  if (snapshot.width && snapshot.height) {
+    score += 10
+    reasons.push('measured top region')
+  }
+  if (snapshot.text) {
+    score += 8
+    reasons.push('visible navigation text')
+  }
+  if (snapshot.source === 'inferred') {
+    if (linkCount >= 2 && /\b(nav|navbar|navigation|menu|header)\b/.test(selector)) {
+      score += 14
+      reasons.push('semantic HTML navigation')
+    }
+    score -= 4
+    reasons.push('static HTML fallback')
+  }
+
+  if (!reasons.includes('navigation selector') && linkCount < 2) return undefined
+
+  return {
+    selectorHint,
+    text: cleanText(snapshot.text).slice(0, 80) || undefined,
+    styleSummary: [
+      snapshot.display ? `display ${snapshot.display}` : undefined,
+      snapshot.position ? `position ${snapshot.position}` : undefined,
+      snapshot.backgroundColor ? `background ${snapshot.backgroundColor}` : undefined,
+      snapshot.color ? `color ${snapshot.color}` : undefined,
+      `${linkCount} links`,
+    ].filter(Boolean).join(' · '),
+    source: snapshot.source || 'dom-computed',
+    confidence: snapshot.confidence || confidenceFromScore(score),
+    evidenceCount: linkCount,
+    reason: reasons.join(', '),
+    score,
+  }
 }
 
 function detectCardExamples(analysis: PageStyleAnalysis | undefined): ScoredExample[] {
@@ -118,6 +187,10 @@ function scoreButtonCandidate(candidate: PageColorCandidate): ScoredExample | un
   if (candidate.property.includes('cta') || candidate.roleHints.includes('cta')) {
     score += 18
     reasons.push('CTA intent')
+  }
+  if (candidate.roleHints.includes('primary') && candidate.roleHints.includes('cta')) {
+    score += 8
+    reasons.push('primary action semantics')
   }
   if (candidate.property.includes('background') || candidate.property.includes('border') || candidate.property.includes('foreground')) {
     score += 12

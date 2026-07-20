@@ -282,6 +282,20 @@ export interface TagSnapshot {
   text?: string
 }
 
+export interface NavigationSnapshot {
+  selectorHint?: string
+  text?: string
+  linkCount: number
+  display?: string
+  position?: string
+  backgroundColor?: string
+  color?: string
+  width?: string
+  height?: string
+  source?: EvidenceSource
+  confidence?: EvidenceConfidence
+}
+
 // ── Page section (one visible section of the page) ────────────────────────────
 export interface PageSection {
   index: number
@@ -452,6 +466,7 @@ export interface PageStyleAnalysis {
   inputSnapshots?: InputSnapshot[]
   cardSnapshots?: CardSnapshot[]
   tagSnapshots?: TagSnapshot[]
+  navigationSnapshots?: NavigationSnapshot[]
   pageSections?: PageSection[]
   viewportSlices?: ViewportSlice[]
   cssTextExcerpt?: string

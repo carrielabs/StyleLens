@@ -120,6 +120,49 @@ describe('componentDetector', () => {
     expect(evidence.cta.count).toBe(0)
   })
 
+  it('keeps direct navigation snapshots as reliable navigation evidence', () => {
+    const evidence = buildReliableComponentEvidence(analysis({
+      navigationSnapshots: [{
+        selectorHint: 'nav.site-nav',
+        text: 'Blog Get Early Access',
+        linkCount: 2,
+        display: 'flex',
+        position: 'relative',
+        color: '#F0EDE6',
+        width: '1296px',
+        height: '86px',
+      }],
+    }))
+
+    expect(evidence.navigation.count).toBe(1)
+    expect(evidence.navigation.confidence).toBe('high')
+    expect(evidence.navigation.examples[0]).toMatchObject({
+      selectorHint: 'nav.site-nav',
+      reason: expect.stringContaining('navigation selector'),
+    })
+  })
+
+  it('keeps semantic static navigation snapshots as medium fallback evidence', () => {
+    const evidence = buildReliableComponentEvidence(analysis({
+      navigationSnapshots: [{
+        selectorHint: 'header.site-header',
+        text: 'Blog Get Early Access',
+        linkCount: 4,
+        source: 'inferred',
+        confidence: 'medium',
+      }],
+    }))
+
+    expect(evidence.navigation.count).toBe(1)
+    expect(evidence.navigation.confidence).toBe('high')
+    expect(evidence.navigation.examples[0]).toMatchObject({
+      selectorHint: 'header.site-header',
+      source: 'inferred',
+      confidence: 'medium',
+      reason: expect.stringContaining('semantic HTML navigation'),
+    })
+  })
+
   it('does not use plain body/content surfaces as card evidence', () => {
     const evidence = buildReliableComponentEvidence(analysis({
       colorCandidates: [

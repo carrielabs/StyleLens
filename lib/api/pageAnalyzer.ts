@@ -8,6 +8,7 @@ import type {
   AnalysisCoverageArea,
   InteractionState,
   LayoutEvidence,
+  NavigationSnapshot,
   PageColorCandidate,
   PageStyleAnalysis,
   PageTypographyCandidate,
@@ -162,6 +163,7 @@ type RawDomSignals = {
   inputSnapshots?: InputSnapshot[]
   cardSnapshots?: CardSnapshot[]
   tagSnapshots?: TagSnapshot[]
+  navigationSnapshots?: NavigationSnapshot[]
   pageSections?: PageSection[]
   viewportSlices?: ViewportSlice[]
 }
@@ -215,6 +217,7 @@ export function createEmptyPageAnalysis(sourceCount?: { inlineStyleBlocks: numbe
     inputSnapshots: [],
     cardSnapshots: [],
     tagSnapshots: [],
+    navigationSnapshots: [],
     viewportSlices: [],
     cssTextExcerpt: '',
     sourceCount: sourceCount || {
@@ -535,6 +538,71 @@ function extractStylesheetHrefs(html: string, baseUrl: string): string[] {
   return [...unique]
 }
 
+function stripHtmlText(value: string): string {
+  return value
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function extractStaticNavigationSnapshots(html: string): NavigationSnapshot[] {
+  if (!html) return []
+
+  const snapshots: NavigationSnapshot[] = []
+  const blockPattern = /<(nav|header)\b([^>]*)>([\s\S]*?)<\/\1>/gi
+
+  for (const match of html.matchAll(blockPattern)) {
+    const tag = match[1].toLowerCase()
+    const attrs = match[2] || ''
+    const body = match[3] || ''
+    const classMatch = attrs.match(/\bclass=["']([^"']+)["']/i)
+    const roleMatch = attrs.match(/\brole=["']([^"']+)["']/i)
+    const className = classMatch?.[1]?.trim() || ''
+    const role = roleMatch?.[1]?.trim().toLowerCase() || ''
+    const selectorHint = className
+      ? `${tag}.${className.split(/\s+/).slice(0, 2).join('.')}`
+      : tag
+    const selectorText = `${selectorHint} ${role}`.toLowerCase()
+    const linkCount = (body.match(/<a\b|<button\b|\brole=["']button["']/gi) || []).length
+
+    if (linkCount < 1) continue
+    if (tag !== 'nav' && role !== 'navigation' && !/\b(nav|navbar|menu|header)\b/.test(selectorText)) continue
+
+    snapshots.push({
+      selectorHint,
+      text: stripHtmlText(body).slice(0, 80) || undefined,
+      linkCount,
+      source: 'inferred',
+      confidence: linkCount >= 2 ? 'medium' : 'low',
+    })
+
+    if (snapshots.length >= 3) break
+  }
+
+  return snapshots
+}
+
+function mergeNavigationSnapshots(...groups: NavigationSnapshot[][]): NavigationSnapshot[] {
+  const merged: NavigationSnapshot[] = []
+  const seen = new Set<string>()
+
+  for (const group of groups) {
+    for (const snapshot of group || []) {
+      const key = `${snapshot.selectorHint || ''}|${snapshot.linkCount}|${snapshot.text || ''}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      merged.push(snapshot)
+      if (merged.length >= 3) return merged
+    }
+  }
+
+  return merged
+}
+
 async function fetchText(url: string): Promise<string> {
   let lastError: unknown
 
@@ -622,6 +690,7 @@ function scoreColor(candidate: ColorAccumulator) {
   if (candidate.property === 'background-color') score += 8
   if (candidate.property === 'color') score += 5
   if (candidate.property === 'border-color') score += 3
+  if (candidate.property.startsWith('cta-')) score += 32
   if (candidate.roleHints.has('background')) score += 8
   if (candidate.roleHints.has('surface')) score += 6
   if (candidate.roleHints.has('text')) score += 5
@@ -1353,6 +1422,7 @@ function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
       inputSnapshots: [],
       cardSnapshots: [],
       tagSnapshots: [],
+      navigationSnapshots: [],
       pageSections: [],
       viewportSlices: [],
     }
@@ -1459,6 +1529,7 @@ function mergeRawDomSignals(...sources: RawDomSignals[]): RawDomSignals {
     inputSnapshots: mergeSnapshotArrays<InputSnapshot>(available.map(s => s.inputSnapshots || []), 3),
     cardSnapshots: mergeSnapshotArrays<CardSnapshot>(available.map(s => s.cardSnapshots || []), 3),
     tagSnapshots: mergeSnapshotArrays<TagSnapshot>(available.map(s => s.tagSnapshots || []), 3),
+    navigationSnapshots: mergeSnapshotArrays<NavigationSnapshot>(available.map(s => s.navigationSnapshots || []), 3),
     pageSections: (() => {
       // Use sections from the snapshot with the most sections found
       const allSections = available.map(s => s.pageSections || [])
@@ -1566,104 +1637,136 @@ async function collectInteractiveStateSignals(page: Page): Promise<ComponentStat
     { selector: '[class*="card"], [class*="panel"], article, [data-card]', component: 'card' as const },
   ]
 
-  for (const { selector, component } of targets) {
-    const handles = await page.locator(selector).elementHandles()
-    const scoredHandles: Array<{ handle: ElementHandle; score: number }> = []
+  await page.evaluate(() => {
+    const state = window as Window & {
+      __styleLensInteractionGuardCleanup?: () => void
+    }
+    if (state.__styleLensInteractionGuardCleanup) return
 
-    for (const handle of handles) {
-      const candidate = await handle.evaluate((node, currentComponent) => {
-        const element = node as HTMLElement
-        const style = window.getComputedStyle(element)
-        const rect = element.getBoundingClientRect()
-
-        if (
-          style.display === 'none' ||
-          style.visibility === 'hidden' ||
-          Number(style.opacity) === 0 ||
-          rect.width < 8 ||
-          rect.height < 8 ||
-          rect.bottom < 0 ||
-          rect.top > window.innerHeight * 1.25
-        ) {
-          return null
-        }
-
-        return {
-          component: currentComponent,
-          tagName: element.tagName.toLowerCase(),
-          role: element.getAttribute('role') || '',
-          text: element.innerText || element.textContent || '',
-          ariaLabel: element.getAttribute('aria-label') || '',
-          placeholder: (element as HTMLInputElement).placeholder || '',
-          title: element.getAttribute('title') || '',
-          href: (element as HTMLAnchorElement).getAttribute('href') || '',
-          className: element.className || '',
-          width: rect.width,
-          height: rect.height,
-          disabled: element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true',
-        }
-      }, component).catch(() => null) as InteractiveTargetCandidate | null
-
-      if (!candidate) continue
-      if (isThirdPartyStyleArtifactText(`${candidate.className} ${candidate.text} ${candidate.ariaLabel} ${candidate.title}`)) continue
-
-      const score = scoreInteractiveTargetCandidate(candidate)
-      if (score <= 0) continue
-      scoredHandles.push({ handle, score })
+    const preventNavigation = (event: Event) => {
+      event.preventDefault()
+      event.stopImmediatePropagation()
     }
 
-    const rankedHandles = scoredHandles
-      .sort((a, b) => b.score - a.score)
-      .slice(0, MAX_INTERACTIVE_STATE_ELEMENTS)
+    document.addEventListener('click', preventNavigation, true)
+    document.addEventListener('auxclick', preventNavigation, true)
+    document.addEventListener('submit', preventNavigation, true)
 
-    for (const { handle } of rankedHandles) {
+    state.__styleLensInteractionGuardCleanup = () => {
+      document.removeEventListener('click', preventNavigation, true)
+      document.removeEventListener('auxclick', preventNavigation, true)
+      document.removeEventListener('submit', preventNavigation, true)
+      delete state.__styleLensInteractionGuardCleanup
+    }
+  }).catch(() => undefined)
 
-      const baseline = await captureInteractiveSnapshot(handle).catch(() => [])
-      const baselineMap = new Map(baseline.map(item => [item.property, item.value.trim()]))
+  try {
+    for (const { selector, component } of targets) {
+      const handles = await page.locator(selector).elementHandles()
+      const scoredHandles: Array<{ handle: ElementHandle; score: number }> = []
 
-      const collectDiff = async (
-        state: StateTokenValue['state'],
-        action: () => Promise<void>,
-        bonus = 0
-      ) => {
-        try {
-          await action()
-          await page.waitForTimeout(60)
-          const snapshot = await captureInteractiveSnapshot(handle)
-          snapshot.forEach(item => {
-            const normalized = normalizeStateValue(item.property, item.value)
-            if (!normalized) return
-            if ((baselineMap.get(item.property) || '') === normalized) return
-            result[component]?.push({
-              value: normalized,
-              property: item.property,
-              state,
-              componentKinds: [component],
-              evidenceScore: 6 + bonus,
-              measured: true,
-            })
-          })
-        } catch {
-          return
-        }
+      for (const handle of handles) {
+        const candidate = await handle.evaluate((node, currentComponent) => {
+          const element = node as HTMLElement
+          const style = window.getComputedStyle(element)
+          const rect = element.getBoundingClientRect()
+
+          if (
+            style.display === 'none' ||
+            style.visibility === 'hidden' ||
+            Number(style.opacity) === 0 ||
+            rect.width < 8 ||
+            rect.height < 8 ||
+            rect.bottom < 0 ||
+            rect.top > window.innerHeight * 1.25
+          ) {
+            return null
+          }
+
+          return {
+            component: currentComponent,
+            tagName: element.tagName.toLowerCase(),
+            role: element.getAttribute('role') || '',
+            text: element.innerText || element.textContent || '',
+            ariaLabel: element.getAttribute('aria-label') || '',
+            placeholder: (element as HTMLInputElement).placeholder || '',
+            title: element.getAttribute('title') || '',
+            href: (element as HTMLAnchorElement).getAttribute('href') || '',
+            className: element.className || '',
+            width: rect.width,
+            height: rect.height,
+            disabled: element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true',
+          }
+        }, component).catch(() => null) as InteractiveTargetCandidate | null
+
+        if (!candidate) continue
+        if (isThirdPartyStyleArtifactText(`${candidate.className} ${candidate.text} ${candidate.ariaLabel} ${candidate.title}`)) continue
+
+        const score = scoreInteractiveTargetCandidate(candidate)
+        if (score <= 0) continue
+        scoredHandles.push({ handle, score })
       }
 
-      await collectDiff('hover', async () => {
-        await handle.hover({ force: true })
-      }, 1)
+      const rankedHandles = scoredHandles
+        .sort((a, b) => b.score - a.score)
+        .slice(0, MAX_INTERACTIVE_STATE_ELEMENTS)
 
-      await collectDiff('focus', async () => {
-        await handle.focus()
-      }, 1)
+      for (const { handle } of rankedHandles) {
 
-      await collectDiff('active', async () => {
-        await handle.hover({ force: true })
-        await page.mouse.down()
-      }, 2)
+        const baseline = await captureInteractiveSnapshot(handle).catch(() => [])
+        const baselineMap = new Map(baseline.map(item => [item.property, item.value.trim()]))
 
-      await page.mouse.up().catch(() => {})
-      await page.locator('body').hover({ force: true }).catch(() => {})
+        const collectDiff = async (
+          state: StateTokenValue['state'],
+          action: () => Promise<void>,
+          bonus = 0
+        ) => {
+          try {
+            await action()
+            await page.waitForTimeout(60)
+            const snapshot = await captureInteractiveSnapshot(handle)
+            snapshot.forEach(item => {
+              const normalized = normalizeStateValue(item.property, item.value)
+              if (!normalized) return
+              if ((baselineMap.get(item.property) || '') === normalized) return
+              result[component]?.push({
+                value: normalized,
+                property: item.property,
+                state,
+                componentKinds: [component],
+                evidenceScore: 6 + bonus,
+                measured: true,
+              })
+            })
+          } catch {
+            return
+          }
+        }
+
+        await collectDiff('hover', async () => {
+          await handle.hover({ force: true })
+        }, 1)
+
+        await collectDiff('focus', async () => {
+          await handle.focus()
+        }, 1)
+
+        await collectDiff('active', async () => {
+          await handle.hover({ force: true })
+          await page.mouse.down()
+        }, 2)
+
+        await page.mouse.up().catch(() => {})
+        await page.locator('body').hover({ force: true }).catch(() => {})
+      }
     }
+  } finally {
+    await page.evaluate(() => {
+      const state = window as Window & {
+        __styleLensInteractionGuardCleanup?: () => void
+      }
+      state.__styleLensInteractionGuardCleanup?.()
+    }).catch(() => undefined)
   }
 
   return mergeComponentStateTokens(result)
@@ -2579,6 +2682,17 @@ async function extractDomSignalsFromPage(
         return !/\b(get|start|try|free|demo|request|sign|book|contact|download)\b/.test(text)
       }
 
+      const normalizeActionText = (value: string) => {
+        const normalized = value.trim().replace(/\s+/g, ' ')
+        if (normalized.length >= 4 && normalized.length % 2 === 0) {
+          const half = normalized.slice(0, normalized.length / 2)
+          if (half && half.toLowerCase() === normalized.slice(normalized.length / 2).toLowerCase()) {
+            return half
+          }
+        }
+        return normalized
+      }
+
       const classifyComponent = (el: HTMLElement, selectorHint: string): ComponentKind[] => {
         const joined = `${el.tagName.toLowerCase()} ${selectorHint} ${el.getAttribute('role') || ''} ${el.getAttribute('aria-label') || ''}`.toLowerCase()
         const kinds = new Set<ComponentKind>()
@@ -2831,6 +2945,28 @@ async function extractDomSignalsFromPage(
         addAnchor(body, 'body-border', 'border-color', ['border'], ['global'], ['surface'])
         addAnchor(main, 'main-border', 'border-color', ['border'], ['content'], ['surface'])
         addAnchor(nav, 'nav-border', 'border-color', ['border'], ['global'], ['nav', 'surface'])
+
+        if (nav) {
+          const rect = nav.getBoundingClientRect()
+          const style = window.getComputedStyle(nav)
+          if (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            Number(style.opacity) !== 0 &&
+            rect.width >= 160 &&
+            rect.height >= 24 &&
+            rect.bottom > 0 &&
+            rect.top < Math.max(140, window.innerHeight * 0.2)
+          ) {
+            const linkCount = nav.querySelectorAll('a[href], button, [role="button"]').length
+            addLayout(
+              'Top navigation',
+              'navigation',
+              ['nav', 'surface'],
+              36 + Math.min(linkCount, 6) * 4
+            )
+          }
+        }
       }
 
       const extractCtaEvidence = () => {
@@ -2839,28 +2975,32 @@ async function extractDomSignalsFromPage(
           if (isThirdPartyStyleArtifactNode(el)) continue
           const style = window.getComputedStyle(el)
           const rect = el.getBoundingClientRect()
+          const text = normalizeActionText(`${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''}`).toLowerCase()
+          const selectorHint = selectorHintFor(el)
+          const selectorIntent = selectorHint.toLowerCase().replace(/^(button|a|input)(?=\.|$)/, '')
+          const href = (el.getAttribute('href') || '').toLowerCase()
+          const likelyTextCta = /\b(get|start|try|free|demo|request|sign|book|contact|download|sales|subscribe|buy|upgrade)\b/.test(text)
+            || /(?:#|\/)(contact|footer|demo|download|signup|sign-up|get-started|start)(?:$|[?#/])/.test(href)
           if (
             style.display === 'none' ||
             style.visibility === 'hidden' ||
             Number(style.opacity) === 0 ||
             rect.width < 24 ||
-            rect.height < 20 ||
+            (rect.height < 20 && !(likelyTextCta && rect.height >= 14)) ||
             rect.bottom < 0 ||
             rect.top > window.innerHeight * 1.2
           ) {
             continue
           }
 
-          const text = `${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''}`.toLowerCase()
-          const selectorHint = selectorHintFor(el)
           if (isLogoActionElement(el, selectorHint)) continue
 
           const isTopRegion = rect.top >= -8 && rect.top < window.innerHeight * 0.55
           const hasPaintedBg = !isTransparent(style.backgroundColor)
-          const selectorIntent = selectorHint.toLowerCase().replace(/^(button|a|input)(?=\.|$)/, '')
           const likelyCta = /\b(get|start|try|free|demo|request|sign|book|contact|download|sales|subscribe|buy|upgrade)\b/.test(text)
             || /\b(cta|primary|get-started|signup|sign-up|demo|contact|quote|download)\b/.test(selectorIntent)
             || /(?:^|[._-])(btn|button)(?:[._-]|$)/.test(selectorIntent)
+            || likelyTextCta
           if (!likelyCta) continue
 
           const roleHints = [
@@ -2873,15 +3013,68 @@ async function extractDomSignalsFromPage(
             + (isTopRegion ? 10 : 0)
             + (hasPaintedBg ? 14 : 0)
 
-          if (hasPaintedBg) {
+          const addCtaPaint = (rawColor: string | null | undefined, sourceHint: string, evidenceBonus: number) => {
+            if (!rawColor || isTransparent(rawColor)) return
             addExplicitColor(
-              style.backgroundColor,
+              rawColor,
               'cta-background',
-              selectorHint,
+              sourceHint,
               ['button'],
               [...roleHints, 'background'],
               layerHints,
-              baseEvidence
+              baseEvidence + evidenceBonus
+            )
+          }
+
+          const addBackgroundPaints = (
+            paintStyle: CSSStyleDeclaration,
+            sourceHint: string,
+            evidenceBonus: number
+          ) => {
+            addCtaPaint(paintStyle.backgroundColor, sourceHint, evidenceBonus)
+
+            if (paintStyle.backgroundImage && paintStyle.backgroundImage !== 'none') {
+              const paintColors = Array.from(paintStyle.backgroundImage.matchAll(/rgba?\(\s*\d{1,3}[\s,]+\d{1,3}[\s,]+\d{1,3}(?:[\s,\/]+[\d.]+)?\s*\)|#[0-9a-fA-F]{3,8}/g))
+                .map(match => match[0])
+              paintColors.forEach(color => addCtaPaint(color, sourceHint, evidenceBonus))
+            }
+          }
+
+          addBackgroundPaints(style, selectorHint, hasPaintedBg ? 14 : 0)
+
+          const parentArea = Math.max(rect.width * rect.height, 1)
+          const childPaintTargets = Array.from(el.querySelectorAll<HTMLElement>('*')).slice(0, 16)
+          for (const child of childPaintTargets) {
+            if (isThirdPartyStyleArtifactNode(child)) continue
+            const childStyle = window.getComputedStyle(child)
+            if (childStyle.display === 'none' || childStyle.visibility === 'hidden' || Number(childStyle.opacity) === 0) continue
+
+            const childRect = child.getBoundingClientRect()
+            const overlapWidth = Math.max(0, Math.min(rect.right, childRect.right) - Math.max(rect.left, childRect.left))
+            const overlapHeight = Math.max(0, Math.min(rect.bottom, childRect.bottom) - Math.max(rect.top, childRect.top))
+            const coverage = (overlapWidth * overlapHeight) / parentArea
+            if (coverage < 0.18) continue
+
+            addBackgroundPaints(
+              childStyle,
+              `${selectorHint} ${selectorHintFor(child)}`,
+              18 + Math.round(Math.min(coverage, 1) * 16)
+            )
+          }
+
+          for (const pseudo of ['::before', '::after'] as const) {
+            const pseudoStyle = window.getComputedStyle(el, pseudo)
+            const content = pseudoStyle.content || ''
+            const hasRenderablePseudo = content !== 'none'
+              && pseudoStyle.display !== 'none'
+              && pseudoStyle.visibility !== 'hidden'
+              && Number(pseudoStyle.opacity) !== 0
+            if (!hasRenderablePseudo) continue
+
+            addBackgroundPaints(
+              pseudoStyle,
+              `${selectorHint}${pseudo}`,
+              22
             )
           }
 
@@ -3256,7 +3449,7 @@ async function extractDomSignalsFromPage(
 
       const getButtonCandidateScore = (el: HTMLElement) => {
         const s = window.getComputedStyle(el)
-        const text = (el.textContent || el.getAttribute('value') || '').trim().replace(/\s+/g, ' ')
+        const text = normalizeActionText(el.textContent || el.getAttribute('value') || '')
         const selector = selectorHintFor(el).toLowerCase()
         const inNav = !!el.closest('nav, header')
         const href = (el.getAttribute('href') || '').toLowerCase()
@@ -3276,12 +3469,13 @@ async function extractDomSignalsFromPage(
       const buttonElements = Array.from(document.querySelectorAll<HTMLElement>(
         'button, input[type="button"], input[type="submit"], [role="button"], ' +
         'a[class*="btn"], a[class*="button"], a[class*="cta"], ' +
-        'a[href*="sign-up"], a[href*="signup"], a[href*="get-started"], a[href*="free"], a[href*="download"], a[href*="start"]'
+        'a[href*="sign-up"], a[href*="signup"], a[href*="get-started"], a[href*="free"], a[href*="download"], a[href*="start"], ' +
+        'a[href*="contact"], a[href*="footer"], a[href^="mailto:"]'
       ))
         .filter(el => isVisibleSnapshotCandidate(el, 60, 24))
         .filter(el => {
           const s = window.getComputedStyle(el)
-          const text = (el.textContent || el.getAttribute('value') || '').trim().replace(/\s+/g, ' ')
+          const text = normalizeActionText(el.textContent || el.getAttribute('value') || '')
           if (!text || text.length > 28) return false
           const tag = el.tagName.toLowerCase()
           const selector = selectorHintFor(el).toLowerCase()
@@ -3320,7 +3514,7 @@ async function extractDomSignalsFromPage(
         .slice(0, 20)
       const buttonSnapshots = collectDistinctSnapshots<ButtonSnapshot>(buttonElements, 3, (el, s, rect) => {
         try {
-          const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30)
+          const text = normalizeActionText(el.textContent || '').slice(0, 30)
           if (!text) return undefined
           const innerEl =
             el.querySelector<HTMLElement>('span:not([aria-hidden="true"]), strong:not([aria-hidden="true"]), em:not([aria-hidden="true"]), b:not([aria-hidden="true"])')
@@ -3468,6 +3662,46 @@ async function extractDomSignalsFromPage(
           text,
         }
       })
+
+      const navigationElements = Array.from(document.querySelectorAll<HTMLElement>(
+        'nav, header, [role="navigation"], [class*="nav" i], [class*="menu" i], [class*="header" i]'
+      ))
+        .filter(el => isVisibleSnapshotCandidate(el, 160, 24))
+        .filter(el => {
+          const rect = el.getBoundingClientRect()
+          if (rect.top > Math.max(160, window.innerHeight * 0.24)) return false
+          const linkCount = el.querySelectorAll('a[href], button, [role="button"]').length
+          if (linkCount < 1) return false
+          const selector = selectorHintFor(el).toLowerCase()
+          const tag = el.tagName.toLowerCase()
+          return tag === 'nav'
+            || tag === 'header'
+            || el.getAttribute('role') === 'navigation'
+            || /\b(nav|navbar|menu|header)\b/.test(selector)
+        })
+        .slice(0, 8)
+      const navigationSnapshots = collectDistinctSnapshots<NavigationSnapshot>(navigationElements, 3, (el, s, rect) => {
+        const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 80)
+        const linkCount = el.querySelectorAll('a[href], button, [role="button"]').length
+        if (linkCount < 1) return undefined
+        return {
+          selectorHint: selectorHintFor(el),
+          text: text || undefined,
+          linkCount,
+          display: s.display,
+          position: s.position,
+          backgroundColor: normalizeColor(s.backgroundColor),
+          color: normalizeColor(s.color),
+          width: `${Math.round(rect.width)}px`,
+          height: `${Math.round(rect.height)}px`,
+        }
+      }, mapped => [
+        mapped.selectorHint || '',
+        mapped.linkCount,
+        mapped.display || '',
+        mapped.width || '',
+        mapped.height || '',
+      ].join('|'))
 
       // ── Page sections (DOM-measured structural layout) ─────────────────────
       const pageSections: Array<{
@@ -3706,6 +3940,7 @@ async function extractDomSignalsFromPage(
         inputSnapshots: inputSnapshots as InputSnapshot[],
         cardSnapshots: cardSnapshots as CardSnapshot[],
         tagSnapshots: tagSnapshots as TagSnapshot[],
+        navigationSnapshots: navigationSnapshots as NavigationSnapshot[],
         pageSections: pageSections as PageSection[],
         viewportSlices,
       }
@@ -3932,6 +4167,7 @@ async function analyzePageStylesCore(
 
   const cssText = [...inlineBlocks, ...stylesheetTexts.filter(Boolean)].join('\n\n')
   const cssSignals = extractCssSignals(cssText)
+  const staticNavigationSnapshots = extractStaticNavigationSnapshots(effectiveHtml)
   let domSignals: RawDomSignals | null = options?.domSignalsOverride ?? null
 
   if (!domSignals) {
@@ -3983,6 +4219,7 @@ async function analyzePageStylesCore(
     inputSnapshots: domSignals?.inputSnapshots || [],
     cardSnapshots: domSignals?.cardSnapshots || [],
     tagSnapshots: domSignals?.tagSnapshots || [],
+    navigationSnapshots: mergeNavigationSnapshots(domSignals?.navigationSnapshots || [], staticNavigationSnapshots),
     pageSections: domSignals?.pageSections || [],
     viewportSlices: domSignals?.viewportSlices || [],
     cssTextExcerpt: cssText.slice(0, MAX_CSS_EXCERPT),
