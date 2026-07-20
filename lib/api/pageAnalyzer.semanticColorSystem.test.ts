@@ -207,6 +207,60 @@ describe('buildSemanticColorSystem', () => {
     expect(semantic?.textPrimary?.hex).toBe('#425466')
   })
 
+  it('does not let logo links become primary action colors', () => {
+    const candidates: PageColorCandidate[] = [
+      {
+        hex: '#FFFFFF',
+        property: 'background-color',
+        selectorHint: '[anchor:body]',
+        count: 20,
+        roleHints: ['background'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 180,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 20,
+        },
+      },
+      {
+        hex: '#F7F8F8',
+        property: 'cta-foreground',
+        selectorHint: 'a.globalNavigation_logoLink',
+        count: 30,
+        roleHints: ['primary', 'cta', 'accent'],
+        layerHints: ['hero', 'global'],
+        componentKinds: ['button', 'link'],
+        evidenceScore: 400,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 30,
+        },
+      },
+      {
+        hex: '#635BFF',
+        property: 'cta-background',
+        selectorHint: 'a.primary-button',
+        count: 6,
+        roleHints: ['primary', 'cta', 'background'],
+        layerHints: ['hero', 'global'],
+        componentKinds: ['button'],
+        evidenceScore: 120,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 6,
+        },
+      },
+    ]
+
+    const semantic = buildSemanticColorSystem(candidates)
+
+    expect(semantic?.primaryAction?.hex).toBe('#635BFF')
+  })
+
   it('prefers repeated neutral text over saturated link text for primary text', () => {
     const candidates: PageColorCandidate[] = [
       {

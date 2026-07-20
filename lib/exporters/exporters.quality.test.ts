@@ -151,6 +151,7 @@ function createReport(): StyleReport {
       transitionTokens: [],
       buttonSnapshots: [
         {
+          selectorHint: 'a.c-button.primary',
           backgroundColor: '#6EE7B7',
           color: '#0B0D10',
           borderRadius: '12px',
@@ -160,6 +161,7 @@ function createReport(): StyleReport {
           fontWeight: '700',
           border: 'none',
           height: '40px',
+          text: 'Get started',
         },
       ],
       inputSnapshots: [
@@ -173,11 +175,13 @@ function createReport(): StyleReport {
       ],
       cardSnapshots: [
         {
+          selectorHint: 'article.feature-card',
           backgroundColor: '#151922',
           borderRadius: '12px',
           border: '1px solid #2A2F3A',
           boxShadow: 'none',
           padding: '24px',
+          headingText: 'Feature card',
         },
       ],
       tagSnapshots: [],

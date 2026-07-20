@@ -2,8 +2,6 @@ import type {
   AnalysisFailureReason,
   AnalysisQualityCheck,
   AnalysisQualityGate,
-  ComponentEvidenceBucket,
-  ComponentEvidenceExample,
   ComponentEvidenceSummary,
   ColorToken,
   ColorEvidenceAttribution,
@@ -11,6 +9,7 @@ import type {
   PageStyleAnalysis,
   SemanticColorSystem,
 } from '@/lib/types'
+import { buildReliableComponentEvidence } from '@/lib/api/componentDetector'
 
 const SEMANTIC_SLOT_LABELS: Partial<Record<keyof SemanticColorSystem, string>> = {
   heroBackground: 'Hero background',
@@ -91,81 +90,7 @@ export function buildAnalysisQualityGate(analysis: PageStyleAnalysis | undefined
 }
 
 export function buildComponentEvidenceSummary(analysis: PageStyleAnalysis | undefined): ComponentEvidenceSummary {
-  const empty = (): ComponentEvidenceBucket => ({ count: 0, confidence: 'low', examples: [] })
-  const summary: ComponentEvidenceSummary = {
-    button: empty(),
-    navigation: empty(),
-    card: empty(),
-    cta: empty(),
-  }
-  if (!analysis) return summary
-
-  const primaryActionCandidate = findPrimaryActionCandidate(analysis.colorCandidates)
-  const navCandidate = analysis.colorCandidates.find(candidate =>
-    candidate.componentKinds?.includes('nav') || (candidate.selectorHint || '').toLowerCase().includes('nav')
-  )
-  const cardLikeCandidates = analysis.colorCandidates
-    .filter(isCardLikeCandidate)
-    .sort((a, b) => (b.evidenceScore || b.count) - (a.evidenceScore || a.count))
-
-  summary.button = buildBucket(
-    Math.max(analysis.buttonSnapshots?.length || 0, primaryActionCandidate ? 1 : 0),
-    (analysis.buttonSnapshots?.length || 0) > 0
-      ? snapshotExamples(
-          analysis.buttonSnapshots || [],
-          primaryActionCandidate?.selectorHint || '[component:button]',
-          'button'
-        )
-      : primaryActionCandidate
-        ? [candidateExample(primaryActionCandidate, 'button-like CTA evidence')]
-        : []
-  )
-  summary.cta = buildBucket(
-    primaryActionCandidate || analysis.semanticColorSystem?.primaryAction
-      ? Math.max(1, primaryActionCandidate?.count || analysis.semanticColorSystem?.primaryAction?.meta?.evidenceCount || 1)
-      : 0,
-    primaryActionCandidate
-      ? [candidateExample(primaryActionCandidate, 'CTA background')]
-      : analysis.semanticColorSystem?.primaryAction
-        ? [{
-            selectorHint: '[semantic:primaryAction]',
-            styleSummary: `CTA color ${analysis.semanticColorSystem.primaryAction.hex.toUpperCase()}`,
-            source: analysis.semanticColorSystem.primaryAction.meta?.source || 'dom-computed',
-            confidence: analysis.semanticColorSystem.primaryAction.meta?.confidence || 'medium',
-            evidenceCount: analysis.semanticColorSystem.primaryAction.meta?.evidenceCount || 1,
-          }]
-      : []
-  )
-  summary.navigation = buildBucket(
-    Math.max(
-      analysis.layoutEvidence.filter(item => item.kind === 'navigation' || item.componentKinds.includes('nav')).length,
-      navCandidate ? 1 : 0
-    ),
-    [
-      {
-        selectorHint: navCandidate?.selectorHint || '[anchor:nav]',
-        styleSummary: 'navigation layout evidence',
-        source: navCandidate?.meta?.source || 'dom-computed',
-        confidence: navCandidate?.meta?.confidence || 'medium',
-        evidenceCount: navCandidate?.meta?.evidenceCount || 1,
-      },
-    ]
-  )
-  summary.card = buildBucket(
-    Math.max(analysis.cardSnapshots?.length || 0, cardLikeCandidates.length),
-    (analysis.cardSnapshots?.length || 0) > 0
-      ? snapshotExamples(analysis.cardSnapshots || [], cardLikeCandidates[0]?.selectorHint || '[component:card]', 'card')
-      : cardLikeCandidates.slice(0, 3).map(candidate => candidateExample(candidate, 'card-like surface evidence'))
-  )
-
-  return summary
-}
-
-function isCardLikeCandidate(candidate: PageColorCandidate): boolean {
-  const hint = `${candidate.selectorHint || ''} ${candidate.property} ${(candidate.componentKinds || []).join(' ')}`.toLowerCase()
-  return Boolean(candidate.componentKinds?.includes('card'))
-    || /\b(card|cards|panel|tile|feature|testimonial|case-study|case|work|project|block|item)\b/.test(hint)
-    || (candidate.roleHints.includes('surface') && candidate.layerHints.includes('content'))
+  return buildReliableComponentEvidence(analysis)
 }
 
 function findBestCandidateForColor(
@@ -201,10 +126,10 @@ function hasSlotHint(candidate: PageColorCandidate, hint: string): boolean {
 
 function scoreSemanticColorEvidence(attribution: ColorEvidenceAttribution): AnalysisQualityCheck {
   const slots = attribution.slots
-  const hasBackground = Boolean(slots.heroBackground || slots.pageBackground)
+  const hasBackground = Boolean(slots.heroBackground || slots.pageBackground || slots.surface)
   const hasText = Boolean(slots.textPrimary)
   const hasAction = Boolean(slots.primaryAction || slots.secondaryAction)
-  const measuredCount = [slots.heroBackground, slots.pageBackground, slots.textPrimary, slots.primaryAction, slots.secondaryAction]
+  const measuredCount = [slots.heroBackground, slots.pageBackground, slots.surface, slots.textPrimary, slots.primaryAction, slots.secondaryAction]
     .filter(slot => slot && slot.source !== 'inferred' && slot.evidenceCount > 0)
     .length
   const status = hasBackground && hasText && measuredCount >= 2 ? 'pass' : 'fail'
@@ -235,15 +160,16 @@ function scoreThirdPartyNoise(analysis: PageStyleAnalysis | undefined): Analysis
 }
 
 function scoreComponentEvidence(componentEvidence: ComponentEvidenceSummary): AnalysisQualityCheck {
-  const missing = (['button', 'navigation', 'card', 'cta'] as const)
+  const missing = (['button', 'navigation', 'cta'] as const)
     .filter(kind => componentEvidence[kind].count <= 0)
+  const cardDetail = componentEvidence.card.count > 0 ? ', card evidence present' : ', no reliable card evidence'
 
   return {
     id: 'component-evidence',
     label: 'Component evidence',
     status: missing.length ? 'fail' : 'pass',
     score: missing.length ? 0 : 15,
-    details: missing.length ? `Missing: ${missing.join(', ')}` : 'Button, navigation, card, and CTA evidence present',
+    details: missing.length ? `Missing: ${missing.join(', ')}` : `Button, navigation, and CTA evidence present${cardDetail}`,
     blocking: missing.length > 0,
   }
 }
@@ -370,79 +296,4 @@ function isInvalidExportTokenValue(value: string): boolean {
   return normalized.includes('|')
     || normalized.includes('\n')
     || /[{};]/.test(normalized)
-}
-
-function findPrimaryActionCandidate(candidates: PageColorCandidate[]): PageColorCandidate | undefined {
-  return candidates
-    .filter(candidate =>
-      candidate.property === 'cta-background'
-      || candidate.roleHints.includes('cta')
-      || candidate.roleHints.includes('primary')
-      || candidate.componentKinds?.includes('button')
-    )
-    .sort((a, b) => (b.evidenceScore || b.count) - (a.evidenceScore || a.count))[0]
-}
-
-function candidateExample(candidate: PageColorCandidate, styleSummary: string): ComponentEvidenceExample {
-  return {
-    selectorHint: candidate.selectorHint || '[component:cta]',
-    styleSummary,
-    source: candidate.meta?.source || 'dom-computed',
-    confidence: candidate.meta?.confidence || 'medium',
-    evidenceCount: candidate.meta?.evidenceCount || candidate.count || 1,
-  }
-}
-
-function snapshotExamples(
-  snapshots: Array<{
-    backgroundColor?: string
-    color?: string
-    borderRadius?: string
-    paddingH?: string
-    paddingV?: string
-    padding?: string
-    text?: string
-    headingText?: string
-  }>,
-  selectorHint: string,
-  kind: 'button' | 'card'
-): ComponentEvidenceExample[] {
-  return snapshots.slice(0, 3).map(snapshot => ({
-    selectorHint,
-    text: snapshot.text || snapshot.headingText,
-    styleSummary: summarizeSnapshotStyle(snapshot, kind),
-    source: 'dom-computed',
-    confidence: 'high',
-    evidenceCount: 1,
-  }))
-}
-
-function summarizeSnapshotStyle(
-  snapshot: {
-    backgroundColor?: string
-    color?: string
-    borderRadius?: string
-    paddingH?: string
-    paddingV?: string
-    padding?: string
-  },
-  kind: 'button' | 'card'
-): string {
-  const parts = [
-    snapshot.backgroundColor ? `background ${snapshot.backgroundColor}` : undefined,
-    snapshot.color ? `color ${snapshot.color}` : undefined,
-    snapshot.borderRadius ? `radius ${snapshot.borderRadius}` : undefined,
-    snapshot.padding ? `padding ${snapshot.padding}` : undefined,
-    snapshot.paddingH || snapshot.paddingV ? `padding ${snapshot.paddingV || '?'} ${snapshot.paddingH || '?'}` : undefined,
-  ].filter(Boolean)
-  return parts.join(' · ') || `${kind} style evidence`
-}
-
-function buildBucket(count: number, examples: ComponentEvidenceExample[]): ComponentEvidenceBucket {
-  const normalizedCount = Math.ceil(count)
-  return {
-    count: normalizedCount,
-    confidence: normalizedCount >= 2 ? 'high' : normalizedCount === 1 ? 'medium' : 'low',
-    examples: normalizedCount > 0 ? examples : [],
-  }
 }

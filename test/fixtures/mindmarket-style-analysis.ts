@@ -161,6 +161,7 @@ export function createMindMarketStyleAnalysisFixture(): PageStyleAnalysis {
   ]
   analysis.buttonSnapshots = [
     {
+      selectorHint: 'a.c-button.button-green',
       backgroundColor: '#8ED462',
       color: '#2C2E2A',
       borderRadius: '50px',
@@ -173,6 +174,7 @@ export function createMindMarketStyleAnalysisFixture(): PageStyleAnalysis {
   ]
   analysis.cardSnapshots = [
     {
+      selectorHint: 'div.c-card-feature',
       backgroundColor: '#F5F1E4',
       borderRadius: '32px',
       border: '1px solid #D9D2BA',

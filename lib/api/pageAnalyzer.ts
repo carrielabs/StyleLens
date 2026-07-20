@@ -689,6 +689,8 @@ function isLikelySurfaceCandidate(candidate: PageColorCandidate) {
 }
 
 function isLikelyActionCandidate(candidate: PageColorCandidate) {
+  if (isLikelyLogoActionCandidate(candidate)) return false
+
   return candidate.roleHints.includes('primary')
     || candidate.roleHints.includes('secondary')
     || candidate.roleHints.includes('accent')
@@ -696,7 +698,17 @@ function isLikelyActionCandidate(candidate: PageColorCandidate) {
     || !!candidate.componentKinds?.includes('link')
 }
 
+function isLikelyLogoActionCandidate(candidate: PageColorCandidate) {
+  const selector = (candidate.selectorHint || '').toLowerCase()
+  if (!/(logo|logolink|wordmark|site-logo|brand-link)/.test(selector)) return false
+  return candidate.property.startsWith('cta-')
+    || candidate.componentKinds?.includes('button')
+    || candidate.componentKinds?.includes('link')
+}
+
 function scoreActionCandidate(candidate: PageColorCandidate) {
+  if (isLikelyLogoActionCandidate(candidate)) return -Infinity
+
   let score = candidate.evidenceScore || candidate.count || 0
   const kinds = candidate.componentKinds || []
   const selector = (candidate.selectorHint || '').toLowerCase()
@@ -2535,6 +2547,13 @@ async function extractDomSignalsFromPage(
         return className ? `${tag}.${className}` : tag
       }
 
+      const isLogoActionElement = (el: HTMLElement, selectorHint: string) => {
+        const hint = `${selectorHint} ${el.id || ''} ${typeof el.className === 'string' ? el.className : ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''}`.toLowerCase()
+        if (!/(logo|logolink|wordmark|site-logo|brand-link)/.test(hint)) return false
+        const text = `${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''}`.toLowerCase()
+        return !/\b(get|start|try|free|demo|request|sign|book|contact|download)\b/.test(text)
+      }
+
       const classifyComponent = (el: HTMLElement, selectorHint: string): ComponentKind[] => {
         const joined = `${el.tagName.toLowerCase()} ${selectorHint} ${el.getAttribute('role') || ''} ${el.getAttribute('aria-label') || ''}`.toLowerCase()
         const kinds = new Set<ComponentKind>()
@@ -2809,13 +2828,18 @@ async function extractDomSignalsFromPage(
 
           const text = `${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''}`.toLowerCase()
           const selectorHint = selectorHintFor(el)
+          if (isLogoActionElement(el, selectorHint)) continue
+
           const isTopRegion = rect.top >= -8 && rect.top < window.innerHeight * 0.55
           const hasPaintedBg = !isTransparent(style.backgroundColor)
-          const likelyCta = /\b(get|start|try|free|demo|request|sign|book|contact|download)\b/.test(text)
-            || /\b(cta|button|btn|primary)\b/.test(selectorHint.toLowerCase())
+          const selectorIntent = selectorHint.toLowerCase().replace(/^(button|a|input)(?=\.|$)/, '')
+          const likelyCta = /\b(get|start|try|free|demo|request|sign|book|contact|download|sales|subscribe|buy|upgrade)\b/.test(text)
+            || /\b(cta|primary|get-started|signup|sign-up|demo|contact|quote|download)\b/.test(selectorIntent)
+            || /(?:^|[._-])(btn|button)(?:[._-]|$)/.test(selectorIntent)
+          if (!likelyCta) continue
 
           const roleHints = [
-            likelyCta ? 'primary' : 'accent',
+            'primary',
             'cta',
           ]
           const layerHints: Array<'global' | 'hero' | 'content'> = isTopRegion ? ['hero'] : ['global']
@@ -3281,6 +3305,7 @@ async function extractDomSignalsFromPage(
           const paddingV = ((parseFloat(s.paddingTop || '0') + parseFloat(s.paddingBottom || '0')) / 2) || 0
           const shorthandBg = s.backgroundImage && s.backgroundImage !== 'none' ? s.backgroundImage : undefined
           return {
+            selectorHint: selectorHintFor(el),
             backgroundColor: normalizeColor(s.backgroundColor) || shorthandBg,
             color: normalizeColor(innerStyle.color),
             borderRadius: s.borderRadius !== '0px' ? s.borderRadius : undefined,
@@ -3342,7 +3367,7 @@ async function extractDomSignalsFromPage(
       })
 
       const cardElements = Array.from(document.querySelectorAll<HTMLElement>(
-        '[class*="card"], [class*="panel"], [class*="surface"], [class*="feature"], [class*="tile"], article, aside, li, [role="article"], [data-card], [data-testid*="card"]'
+        '[class*="card"], [class*="panel"], [class*="surface"], [class*="feature"], [class*="tile"], [class*="testimonial"], [class*="case"], [class*="block"], article, aside, li, [role="article"], [data-card], [data-testid*="card"]'
       ))
         .filter(el => isVisibleSnapshotCandidate(el, 140, 100))
         .filter(el => {
@@ -3363,21 +3388,25 @@ async function extractDomSignalsFromPage(
           const hasHeading = !!el.querySelector('h1, h2, h3, h4, strong, [class*="title"], [class*="heading"]')
           const childCount = Array.from(el.children).length
           const inChrome = !!el.closest('nav, header, footer')
-          const structuredContent = hasHeading && childCount >= 1 && childCount <= 18
-          return (hasCardVisual || structuredContent) && paddingCount >= 2 && textLen >= 12 && hasHeading && notHugeWrapper && childCount <= 18 && !inChrome
+          const selector = selectorHintFor(el).toLowerCase()
+          const explicitCardSelector = /\b(card|panel|surface|feature|tile|testimonial|case|block|pricing|plan)\b/.test(selector)
+          const structuredContent = (hasHeading || explicitCardSelector) && childCount >= 1 && childCount <= 18
+          return (hasCardVisual || structuredContent) && paddingCount >= 2 && textLen >= 12 && (hasHeading || explicitCardSelector) && notHugeWrapper && childCount <= 18 && !inChrome
         })
         .slice(0, 20)
       const cardSnapshots = collectDistinctSnapshots<CardSnapshot>(cardElements, 3, (el, s) => {
         const headingEl = el.querySelector<HTMLElement>('h1, h2, h3, h4, strong, [class*="title"], [class*="heading"]')
         const headingStyle = headingEl ? window.getComputedStyle(headingEl) : undefined
         const paddingCandidates = [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].filter(v => v && v !== '0px')
+        const fallbackHeading = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 60)
         return {
+          selectorHint: selectorHintFor(el),
           backgroundColor: normalizeColor(s.backgroundColor),
           borderRadius: s.borderRadius !== '0px' ? s.borderRadius : undefined,
           border: toBorder(s),
           boxShadow: s.boxShadow !== 'none' ? s.boxShadow : undefined,
           padding: paddingCandidates.length ? `${s.paddingTop} ${s.paddingRight} ${s.paddingBottom} ${s.paddingLeft}` : undefined,
-          headingText: headingEl?.textContent?.trim().replace(/\s+/g, ' ').slice(0, 60),
+          headingText: headingEl?.textContent?.trim().replace(/\s+/g, ' ').slice(0, 60) || fallbackHeading || undefined,
           headingFontSize: headingStyle?.fontSize,
           headingFontWeight: headingStyle?.fontWeight,
         }
@@ -3662,13 +3691,21 @@ async function extractDomSignalsFromPage(
 
   if (snapshotCount >= 2) {
     await page.waitForTimeout(pageAlreadySettled ? 160 : 900)
-    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.evaluate(() => {
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
+      window.scrollTo(0, Math.min(maxScroll, window.innerHeight * 2.4))
+    })
     await page.waitForTimeout(pageAlreadySettled ? 80 : 250)
     snapshots.push(await collectSnapshot())
   }
 
   if (snapshotCount >= 3) {
     await page.waitForTimeout(pageAlreadySettled ? 160 : 900)
+    await page.evaluate(() => {
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
+      window.scrollTo(0, Math.min(maxScroll, window.innerHeight * 4.8))
+    })
+    await page.waitForTimeout(pageAlreadySettled ? 80 : 250)
     snapshots.push(await collectSnapshot())
   }
 
@@ -3832,7 +3869,7 @@ async function extractDomSignals(targetUrl: string): Promise<RawDomSignals> {
 
     return await extractDomSignalsFromPage(page, targetUrl, {
       pageAlreadySettled: true,
-      snapshotCount: 1,
+      snapshotCount: 3,
     })
   } finally {
     await browser.close()

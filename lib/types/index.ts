@@ -97,6 +97,7 @@ export interface ComponentEvidenceExample {
   source: EvidenceSource
   confidence: EvidenceConfidence
   evidenceCount: number
+  reason?: string
 }
 
 export interface ComponentEvidenceBucket {
@@ -227,6 +228,7 @@ export interface Typography {
 
 // ── Button snapshot (DOM-measured exact CSS from real button element) ──────────
 export interface ButtonSnapshot {
+  selectorHint?: string
   backgroundColor?: string   // '#2383E2'
   color?: string             // '#FFFFFF'
   borderRadius?: string      // '8px'
@@ -257,6 +259,7 @@ export interface InputSnapshot {
 }
 
 export interface CardSnapshot {
+  selectorHint?: string
   backgroundColor?: string
   borderRadius?: string
   border?: string
