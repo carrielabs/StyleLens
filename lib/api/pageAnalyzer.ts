@@ -674,6 +674,8 @@ function isLikelyBackgroundCandidate(candidate: PageColorCandidate) {
 }
 
 function isLikelySurfaceCandidate(candidate: PageColorCandidate) {
+  if (isActionPaintCandidate(candidate)) return false
+
   const usesBackgroundPaint =
     candidate.property === 'background-color'
     || candidate.property === 'background-image'
@@ -696,6 +698,28 @@ function isLikelyActionCandidate(candidate: PageColorCandidate) {
     || candidate.roleHints.includes('accent')
     || !!candidate.componentKinds?.includes('button')
     || !!candidate.componentKinds?.includes('link')
+}
+
+function isPageShellBackgroundCandidate(candidate: PageColorCandidate) {
+  const selector = (candidate.selectorHint || '').toLowerCase()
+  return selector === '[anchor:body]' || selector === 'body' || selector.includes('page-shell')
+}
+
+function isActionPaintCandidate(candidate: PageColorCandidate) {
+  const selector = (candidate.selectorHint || '').toLowerCase()
+  return candidate.property.startsWith('cta-')
+    || candidate.roleHints.includes('cta')
+    || !!candidate.componentKinds?.includes('button')
+    || /\b(cta|button|btn|get-started|signup|sign-up|demo|contact|quote|download|submit)\b/.test(selector)
+}
+
+function isExplicitActionBackground(candidate: PageColorCandidate) {
+  return candidate.property === 'cta-background'
+    || (
+      isActionPaintCandidate(candidate) &&
+      (candidate.property === 'background-color' || candidate.property === 'css-variable') &&
+      (candidate.roleHints.includes('background') || candidate.roleHints.includes('primary'))
+    )
 }
 
 function isLikelyLogoActionCandidate(candidate: PageColorCandidate) {
@@ -1778,7 +1802,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
 
   const globalBackgroundCandidates = ranked.filter(candidate =>
     candidate.layerHints.includes('global') &&
-    !candidate.layerHints.includes('content') &&
+    (!candidate.layerHints.includes('content') || isPageShellBackgroundCandidate(candidate)) &&
     isSemanticBackgroundBase(candidate) &&
     isContainerBackgroundCandidate(candidate) &&
     !isLikelyUtilityNavBackground(candidate) &&
@@ -1786,6 +1810,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
     candidate.property !== 'screenshot-content' &&
     candidate.property !== 'visual-content' &&
     candidate.property !== 'cta-background' &&
+    !isActionPaintCandidate(candidate) &&
     !candidate.roleHints.includes('accent')
   )
   const heroBackgroundCandidates = ranked.filter(candidate =>
@@ -2083,7 +2108,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
     isLikelyActionCandidate(candidate) &&
     !used.has(candidate.hex.toUpperCase()) &&
     candidate.property !== 'cta-foreground' &&
-    getColorChroma(candidate.hex) >= 18
+    (getColorChroma(candidate.hex) >= 18 || isExplicitActionBackground(candidate))
   )
 
   const primaryAction = [...actionCandidates]

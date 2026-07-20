@@ -518,4 +518,154 @@ describe('buildSemanticColorSystem', () => {
     expect(semantic?.pageBackground?.hex).toBe('#FFFFFF')
     expect(semantic?.surface?.hex).toBe('#F7F7F7')
   })
+
+  it('does not use action-colored surfaces as page background when the page shell is measured', () => {
+    const candidates: PageColorCandidate[] = [
+      {
+        hex: '#F5F1E4',
+        property: 'background-color',
+        selectorHint: '[anchor:main]',
+        count: 20,
+        roleHints: ['background', 'surface', 'hero'],
+        layerHints: ['hero', 'content', 'global'],
+        componentKinds: ['section', 'surface'],
+        evidenceScore: 220,
+      },
+      {
+        hex: '#FFFFFF',
+        property: 'background-color',
+        selectorHint: '[anchor:body]',
+        count: 16,
+        roleHints: ['background', 'surface'],
+        layerHints: ['global', 'content'],
+        componentKinds: ['surface'],
+        evidenceScore: 180,
+      },
+      {
+        hex: '#8ED462',
+        property: 'background-color',
+        selectorHint: ':root(--button-background-active)',
+        count: 12,
+        roleHints: ['background', 'primary', 'cta'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 260,
+      },
+      {
+        hex: '#2C2E2A',
+        property: 'color',
+        selectorHint: '[anchor:body-text]',
+        count: 24,
+        roleHints: ['text'],
+        layerHints: ['global'],
+        componentKinds: ['text'],
+        evidenceScore: 200,
+      },
+    ]
+
+    const semantic = buildSemanticColorSystem(candidates)
+
+    expect(semantic?.heroBackground?.hex).toBe('#F5F1E4')
+    expect(semantic?.pageBackground?.hex).toBe('#FFFFFF')
+    expect(semantic?.primaryAction?.hex).toBe('#8ED462')
+  })
+
+  it('prefers measured CTA backgrounds over pale accent surface variables for primary action', () => {
+    const candidates: PageColorCandidate[] = [
+      {
+        hex: '#FFFFFF',
+        property: 'background-color',
+        selectorHint: '[anchor:body]',
+        count: 24,
+        roleHints: ['background'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 220,
+      },
+      {
+        hex: '#000000',
+        property: 'color',
+        selectorHint: '[anchor:body-text]',
+        count: 24,
+        roleHints: ['text'],
+        layerHints: ['global'],
+        componentKinds: ['text'],
+        evidenceScore: 220,
+      },
+      {
+        hex: '#191918',
+        property: 'cta-background',
+        selectorHint: 'a.button_buttonVariantPrimary',
+        count: 3,
+        roleHints: ['primary', 'cta', 'background'],
+        layerHints: ['hero', 'global'],
+        componentKinds: ['button'],
+        evidenceScore: 120,
+      },
+      {
+        hex: '#E6F3FE',
+        property: 'css-variable',
+        selectorHint: ':root(--color-background-surface-accent-soft)',
+        count: 18,
+        roleHints: ['background', 'surface', 'accent', 'secondary'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 500,
+      },
+    ]
+
+    const semantic = buildSemanticColorSystem(candidates)
+
+    expect(semantic?.primaryAction?.hex).toBe('#191918')
+  })
+
+  it('uses measured dark body background over light global CSS variables', () => {
+    const candidates: PageColorCandidate[] = [
+      {
+        hex: '#08090A',
+        property: 'background-color',
+        selectorHint: '[anchor:body]',
+        count: 16,
+        roleHints: ['background'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 180,
+      },
+      {
+        hex: '#FFFFFF',
+        property: 'css-variable',
+        selectorHint: ':root(--color-border-translucent)',
+        count: 20,
+        roleHints: ['background', 'border'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 260,
+      },
+      {
+        hex: '#F7F8F8',
+        property: 'color',
+        selectorHint: '[anchor:body-text]',
+        count: 30,
+        roleHints: ['text'],
+        layerHints: ['global', 'hero'],
+        componentKinds: ['text'],
+        evidenceScore: 240,
+      },
+      {
+        hex: '#828FFF',
+        property: 'css-variable',
+        selectorHint: ':root(--color-accent-hover)',
+        count: 10,
+        roleHints: ['primary', 'accent'],
+        layerHints: ['global'],
+        componentKinds: ['section'],
+        evidenceScore: 120,
+      },
+    ]
+
+    const semantic = buildSemanticColorSystem(candidates)
+
+    expect(semantic?.pageBackground?.hex).toBe('#08090A')
+    expect(semantic?.textPrimary?.hex).toBe('#F7F8F8')
+  })
 })
