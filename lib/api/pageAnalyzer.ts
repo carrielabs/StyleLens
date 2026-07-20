@@ -5,6 +5,7 @@ import type {
   InputSnapshot,
   CardSnapshot,
   TagSnapshot,
+  AnalysisCoverageArea,
   InteractionState,
   LayoutEvidence,
   PageColorCandidate,
@@ -21,6 +22,8 @@ import type {
   PageSection,
   TokenMeta,
   ViewportSlice,
+  EvidenceConfidence,
+  EvidenceSource,
 } from '@/lib/types'
 import { buildAnalysisQualityGate, buildColorEvidenceAttribution, buildComponentEvidenceSummary, isThirdPartyStyleArtifactHint } from '@/lib/api/analysisQuality'
 import { chromium, type ElementHandle, type Page } from 'playwright'
@@ -31,6 +34,8 @@ const MAX_CSS_EXCERPT = 3_500
 const MAX_VISIBLE_ELEMENTS = 180
 const MAX_INTERACTIVE_STATE_ELEMENTS = 12
 const PAGE_ANALYSIS_TIMEOUT = 20_000
+const FETCH_TEXT_ATTEMPTS = 3
+const FETCH_TEXT_RETRY_DELAY_MS = 1000
 
 type ColorAccumulator = {
   hex: string
@@ -320,10 +325,96 @@ function stripThirdPartyStyleArtifacts(analysis: PageStyleAnalysis): PageStyleAn
       ...thirdPartyColorCandidates.map(candidate => candidate.hex.toUpperCase()),
     ])].sort(),
   }
-  stripped.componentEvidence = buildComponentEvidenceSummary(stripped)
-  stripped.qualityGate = buildAnalysisQualityGate(stripped)
 
-  return stripped
+  return finalizePageAnalysis(stripped)
+}
+
+function finalizePageAnalysis(analysis: PageStyleAnalysis): PageStyleAnalysis {
+  const enriched: PageStyleAnalysis = {
+    ...analysis,
+  }
+
+  enriched.colorEvidenceAttribution = enriched.colorEvidenceAttribution || buildColorEvidenceAttribution(enriched)
+  enriched.componentEvidence = enriched.componentEvidence || buildComponentEvidenceSummary(enriched)
+  enriched.evidenceSummary = enriched.evidenceSummary || buildEvidenceSummary(enriched)
+  enriched.coverageSummary = enriched.coverageSummary || buildCoverageSummary(enriched)
+  enriched.qualityGate = buildAnalysisQualityGate(enriched)
+
+  return enriched
+}
+
+function buildEvidenceSummary(analysis: PageStyleAnalysis): NonNullable<PageStyleAnalysis['evidenceSummary']> {
+  const sourceBreakdown: Partial<Record<EvidenceSource, number>> = {}
+  const confidenceBreakdown: Partial<Record<EvidenceConfidence, number>> = {}
+  let totalEvidenceCount = 0
+
+  const addMeta = (meta: TokenMeta | undefined, fallbackCount = 0) => {
+    const source = meta?.source || 'inferred'
+    const confidence = meta?.confidence || 'low'
+    const count = Math.max(1, meta?.evidenceCount || fallbackCount || 1)
+    sourceBreakdown[source] = (sourceBreakdown[source] || 0) + count
+    confidenceBreakdown[confidence] = (confidenceBreakdown[confidence] || 0) + count
+    totalEvidenceCount += count
+  }
+
+  analysis.colorCandidates.forEach(candidate => addMeta(candidate.meta, candidate.count))
+  analysis.typographyTokens.forEach(token => addMeta(token.meta, token.sampleCount))
+  analysis.radiusTokens.forEach(token => addMeta(token.meta, token.sampleCount))
+  analysis.shadowTokens.forEach(token => addMeta(token.meta, token.sampleCount))
+  analysis.spacingTokens.forEach(token => addMeta(token.meta, token.sampleCount))
+  analysis.layoutEvidence.forEach(item => addMeta(item.meta, item.sampleCount))
+  analysis.borderTokens?.forEach(token => addMeta(token.meta, token.sampleCount))
+  analysis.transitionTokens?.forEach(token => addMeta(token.meta, token.sampleCount))
+
+  const high = confidenceBreakdown.high || 0
+  const medium = confidenceBreakdown.medium || 0
+  const measured = sourceBreakdown['dom-computed'] || 0
+  const overallConfidence: EvidenceConfidence =
+    measured >= 20 && high >= Math.max(10, totalEvidenceCount * 0.35)
+      ? 'high'
+      : measured + medium >= 10
+        ? 'medium'
+        : 'low'
+
+  return {
+    overallConfidence,
+    totalEvidenceCount,
+    sourceBreakdown,
+    confidenceBreakdown,
+  }
+}
+
+function buildCoverageSummary(analysis: PageStyleAnalysis): NonNullable<PageStyleAnalysis['coverageSummary']> {
+  const coveredAreas: AnalysisCoverageArea[] = []
+  const missingAreas: AnalysisCoverageArea[] = []
+  const componentEvidence = analysis.componentEvidence || buildComponentEvidenceSummary(analysis)
+  const checks: Array<[AnalysisCoverageArea, boolean, number]> = [
+    ['color', analysis.colorCandidates.length > 0 && Boolean(analysis.semanticColorSystem), 0.2],
+    ['typography', analysis.typographyTokens.length > 0 || analysis.typographyCandidates.length > 0, 0.15],
+    ['radius', analysis.radiusTokens.length > 0 || analysis.radiusCandidates.length > 0, 0.1],
+    ['shadow', analysis.shadowTokens.length > 0 || analysis.shadowCandidates.length > 0, 0.05],
+    ['spacing', analysis.spacingTokens.length > 0 || analysis.spacingCandidates.length > 0, 0.1],
+    ['layout', analysis.layoutEvidence.length > 0 || analysis.layoutHints.length > 0, 0.15],
+    ['interaction', Boolean(analysis.stateTokens?.button?.length || analysis.stateTokens?.link?.length || analysis.transitionTokens?.length), 0.05],
+    ['sections', Boolean(analysis.pageSections?.length), 0.05],
+    ['components', componentEvidence.button.count > 0 && componentEvidence.navigation.count > 0 && componentEvidence.cta.count > 0, 0.15],
+  ]
+
+  let overallCoverage = 0
+  for (const [area, covered, weight] of checks) {
+    if (covered) {
+      coveredAreas.push(area)
+      overallCoverage += weight
+    } else {
+      missingAreas.push(area)
+    }
+  }
+
+  return {
+    overallCoverage: Number(Math.min(1, overallCoverage).toFixed(2)),
+    coveredAreas,
+    missingAreas,
+  }
 }
 
 function stripAuthArtifacts(analysis: PageStyleAnalysis): PageStyleAnalysis {
@@ -445,19 +536,35 @@ function extractStylesheetHrefs(html: string, baseUrl: string): string[] {
 }
 
 async function fetchText(url: string): Promise<string> {
-  const response = await fetch(url, {
-    headers: {
-      'user-agent': 'Mozilla/5.0 (compatible; StyleLensBot/1.0; +https://stylelens.local)',
-      accept: 'text/html,text/css,*/*;q=0.1',
-    },
-  })
+  let lastError: unknown
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status}`)
+  for (let attempt = 1; attempt <= FETCH_TEXT_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'user-agent': 'Mozilla/5.0 (compatible; StyleLensBot/1.0; +https://stylelens.local)',
+          accept: 'text/html,text/css,*/*;q=0.1',
+        },
+      })
+
+      if (!response.ok) {
+        const error = new Error(`Failed to fetch ${url}: ${response.status}`)
+        if (response.status !== 429 && response.status < 500) throw error
+        lastError = error
+      } else {
+        const text = await response.text()
+        return text.slice(0, MAX_STYLESHEET_BYTES)
+      }
+    } catch (error) {
+      lastError = error
+    }
+
+    if (attempt < FETCH_TEXT_ATTEMPTS) {
+      await new Promise(resolve => setTimeout(resolve, FETCH_TEXT_RETRY_DELAY_MS * attempt))
+    }
   }
 
-  const text = await response.text()
-  return text.slice(0, MAX_STYLESHEET_BYTES)
+  throw lastError
 }
 
 function classifyComponent(selectorHint = '', property = ''): ComponentKind[] {
@@ -3766,10 +3873,17 @@ async function analyzePageStylesCore(
   let domSignals: RawDomSignals | null = options?.domSignalsOverride ?? null
 
   if (!domSignals) {
-    try {
-      domSignals = await extractDomSignals(targetUrl)
-    } catch (error) {
-      console.warn('[pageAnalyzer] DOM analysis failed, using CSS-only signals:', error)
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        domSignals = await extractDomSignals(targetUrl)
+        break
+      } catch (error) {
+        if (attempt < 2) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          continue
+        }
+        console.warn('[pageAnalyzer] DOM analysis failed, using CSS-only signals:', error)
+      }
     }
   }
 
@@ -3817,14 +3931,14 @@ async function analyzePageStylesCore(
   }
 
   if (options?.preserveMeasuredPageContext) {
-    return analysis
+    return finalizePageAnalysis(analysis)
   }
 
   if (isLikelyAuthAnalysis(analysis)) {
     const stripped = stripAuthArtifacts(analysis)
     if (hasRetainedMeasuredSignals(stripped)) {
       console.warn('[pageAnalyzer] Auth-like measured analysis detected after merge, retaining stripped non-auth signals for:', targetUrl)
-      return stripped
+      return finalizePageAnalysis(stripped)
     }
 
     console.warn('[pageAnalyzer] Auth-like measured analysis detected after merge, discarding pageAnalysis for:', targetUrl)
@@ -3834,7 +3948,7 @@ async function analyzePageStylesCore(
     })
   }
 
-  return analysis
+  return finalizePageAnalysis(analysis)
 }
 
 export async function analyzePageStylesFromPage(

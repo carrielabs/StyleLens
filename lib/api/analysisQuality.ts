@@ -101,16 +101,21 @@ export function buildComponentEvidenceSummary(analysis: PageStyleAnalysis | unde
   const navCandidate = analysis.colorCandidates.find(candidate =>
     candidate.componentKinds?.includes('nav') || (candidate.selectorHint || '').toLowerCase().includes('nav')
   )
+  const cardLikeCandidates = analysis.colorCandidates
+    .filter(isCardLikeCandidate)
+    .sort((a, b) => (b.evidenceScore || b.count) - (a.evidenceScore || a.count))
 
   summary.button = buildBucket(
-    analysis.buttonSnapshots?.length || 0,
-    [
-      ...snapshotExamples(
-        analysis.buttonSnapshots || [],
-        primaryActionCandidate?.selectorHint || '[component:button]',
-        'button'
-      ),
-    ]
+    Math.max(analysis.buttonSnapshots?.length || 0, primaryActionCandidate ? 1 : 0),
+    (analysis.buttonSnapshots?.length || 0) > 0
+      ? snapshotExamples(
+          analysis.buttonSnapshots || [],
+          primaryActionCandidate?.selectorHint || '[component:button]',
+          'button'
+        )
+      : primaryActionCandidate
+        ? [candidateExample(primaryActionCandidate, 'button-like CTA evidence')]
+        : []
   )
   summary.cta = buildBucket(
     primaryActionCandidate || analysis.semanticColorSystem?.primaryAction
@@ -129,7 +134,10 @@ export function buildComponentEvidenceSummary(analysis: PageStyleAnalysis | unde
       : []
   )
   summary.navigation = buildBucket(
-    analysis.layoutEvidence.filter(item => item.kind === 'navigation' || item.componentKinds.includes('nav')).length,
+    Math.max(
+      analysis.layoutEvidence.filter(item => item.kind === 'navigation' || item.componentKinds.includes('nav')).length,
+      navCandidate ? 1 : 0
+    ),
     [
       {
         selectorHint: navCandidate?.selectorHint || '[anchor:nav]',
@@ -141,11 +149,20 @@ export function buildComponentEvidenceSummary(analysis: PageStyleAnalysis | unde
     ]
   )
   summary.card = buildBucket(
-    analysis.cardSnapshots?.length || 0,
-    snapshotExamples(analysis.cardSnapshots || [], '[component:card]', 'card')
+    Math.max(analysis.cardSnapshots?.length || 0, cardLikeCandidates.length),
+    (analysis.cardSnapshots?.length || 0) > 0
+      ? snapshotExamples(analysis.cardSnapshots || [], cardLikeCandidates[0]?.selectorHint || '[component:card]', 'card')
+      : cardLikeCandidates.slice(0, 3).map(candidate => candidateExample(candidate, 'card-like surface evidence'))
   )
 
   return summary
+}
+
+function isCardLikeCandidate(candidate: PageColorCandidate): boolean {
+  const hint = `${candidate.selectorHint || ''} ${candidate.property} ${(candidate.componentKinds || []).join(' ')}`.toLowerCase()
+  return Boolean(candidate.componentKinds?.includes('card'))
+    || /\b(card|cards|panel|tile|feature|testimonial|case-study|case|work|project|block|item)\b/.test(hint)
+    || (candidate.roleHints.includes('surface') && candidate.layerHints.includes('content'))
 }
 
 function findBestCandidateForColor(
@@ -343,9 +360,10 @@ function summarizeSnapshotStyle(
 }
 
 function buildBucket(count: number, examples: ComponentEvidenceExample[]): ComponentEvidenceBucket {
+  const normalizedCount = Math.ceil(count)
   return {
-    count,
-    confidence: count >= 2 ? 'high' : count === 1 ? 'medium' : 'low',
-    examples: count > 0 ? examples : [],
+    count: normalizedCount,
+    confidence: normalizedCount >= 2 ? 'high' : normalizedCount === 1 ? 'medium' : 'low',
+    examples: normalizedCount > 0 ? examples : [],
   }
 }
