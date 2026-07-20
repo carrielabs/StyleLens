@@ -719,4 +719,84 @@ describe('buildSemanticColorSystem', () => {
     expect(semantic?.surface).toBeUndefined()
     expect(semantic?.primaryAction?.hex).toBe('#0075DE')
   })
+
+  it('keeps secondary, hover, and disabled action colors from replacing the primary action', () => {
+    const candidates: PageColorCandidate[] = [
+      {
+        hex: '#FFFFFF',
+        property: 'background-color',
+        selectorHint: '[anchor:body]',
+        count: 24,
+        roleHints: ['background'],
+        layerHints: ['global'],
+        componentKinds: ['surface'],
+        evidenceScore: 220,
+      },
+      {
+        hex: '#111111',
+        property: 'color',
+        selectorHint: '[anchor:body-text]',
+        count: 30,
+        roleHints: ['text'],
+        layerHints: ['global'],
+        componentKinds: ['text'],
+        evidenceScore: 220,
+      },
+      {
+        hex: '#635BFF',
+        property: 'cta-background',
+        selectorHint: 'a.button.button-primary',
+        count: 3,
+        roleHints: ['primary', 'cta', 'background'],
+        layerHints: ['hero', 'global'],
+        componentKinds: ['button'],
+        evidenceScore: 130,
+      },
+      {
+        hex: '#E6F3FE',
+        property: 'css-variable',
+        selectorHint: ':root(--button-secondary-background-hover)',
+        count: 24,
+        roleHints: ['secondary', 'background', 'cta'],
+        layerHints: ['global'],
+        componentKinds: ['button'],
+        evidenceScore: 620,
+      },
+      {
+        hex: '#A0AEC0',
+        property: 'css-variable',
+        selectorHint: ':root(--button-primary-background-disabled)',
+        count: 20,
+        roleHints: ['primary', 'background', 'cta'],
+        layerHints: ['global'],
+        componentKinds: ['button'],
+        evidenceScore: 520,
+      },
+      {
+        hex: '#005BAB',
+        property: 'cta-background',
+        selectorHint: 'a.button.button-secondary',
+        count: 8,
+        roleHints: ['secondary', 'cta', 'background'],
+        layerHints: ['global'],
+        componentKinds: ['button'],
+        evidenceScore: 260,
+      },
+      {
+        hex: '#2563EB',
+        property: 'color',
+        selectorHint: 'nav a.nav-link',
+        count: 40,
+        roleHints: ['primary', 'text'],
+        layerHints: ['global'],
+        componentKinds: ['link', 'text', 'nav'],
+        evidenceScore: 700,
+      },
+    ]
+
+    const semantic = buildSemanticColorSystem(candidates)
+
+    expect(semantic?.primaryAction?.hex).toBe('#635BFF')
+    expect(semantic?.secondaryAction?.hex).toBe('#005BAB')
+  })
 })

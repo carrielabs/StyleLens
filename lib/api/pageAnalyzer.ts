@@ -830,6 +830,71 @@ function scoreActionCandidate(candidate: PageColorCandidate) {
   return score
 }
 
+function actionSemanticProfile(candidate: PageColorCandidate) {
+  const selector = (candidate.selectorHint || '').toLowerCase()
+  const kinds = candidate.componentKinds || []
+  const hasPrimaryIntent = candidate.roleHints.includes('primary') || /\b(primary|brand|solid|filled)\b/.test(selector)
+  const hasSecondaryIntent =
+    candidate.roleHints.includes('secondary') ||
+    /\b(secondary|tertiary|ghost|outline|subtle|muted)\b/.test(selector)
+  const isStateOnly = /\b(hover|focus|disabled|inactive|pressed)\b/.test(selector)
+  const isDisabled = /\b(disabled|inactive)\b/.test(selector)
+  const isNavigationLink =
+    kinds.includes('nav') ||
+    (kinds.includes('link') && (candidate.property === 'color' || /\b(nav|navbar|menu|header)\b/.test(selector)))
+  const isActionBackground =
+    candidate.property === 'cta-background' ||
+    candidate.property === 'background-color' ||
+    candidate.property === 'background-image' ||
+    (candidate.property === 'css-variable' && candidate.roleHints.includes('background'))
+
+  return {
+    hasPrimaryIntent,
+    hasSecondaryIntent,
+    isStateOnly,
+    isDisabled,
+    isNavigationLink,
+    isActionBackground,
+    isDirectCtaBackground: candidate.property === 'cta-background',
+  }
+}
+
+function scorePrimaryActionCandidate(candidate: PageColorCandidate) {
+  const profile = actionSemanticProfile(candidate)
+  if (profile.isDisabled) return Number.NEGATIVE_INFINITY
+
+  let score = scoreActionCandidate(candidate)
+
+  if (profile.isDirectCtaBackground) score += 100
+  if (profile.isActionBackground) score += 40
+  if (profile.hasPrimaryIntent) score += 180
+  if (profile.hasSecondaryIntent) score -= 260
+  if (profile.isStateOnly) score -= 180
+  if (profile.isNavigationLink) score -= 240
+  if (candidate.property === 'color') score -= 180
+  if (candidate.property === 'css-variable') score -= 60
+
+  return score
+}
+
+function scoreSecondaryActionCandidate(candidate: PageColorCandidate) {
+  const profile = actionSemanticProfile(candidate)
+  if (profile.isDisabled) return Number.NEGATIVE_INFINITY
+
+  let score = scoreActionCandidate(candidate)
+
+  if (profile.hasSecondaryIntent) score += 160
+  if (profile.hasPrimaryIntent && !profile.hasSecondaryIntent) score -= 120
+  if (profile.isDirectCtaBackground) score += 80
+  if (profile.isActionBackground) score += 36
+  if (profile.isStateOnly) score -= 360
+  if (profile.isNavigationLink) score -= 220
+  if (candidate.property === 'color') score -= 160
+  if (candidate.property === 'css-variable' && !profile.isDirectCtaBackground) score -= 80
+
+  return score
+}
+
 function quantizeChannel(channel: number): number {
   return Math.max(0, Math.min(255, Math.round(channel / 16) * 16))
 }
@@ -2265,7 +2330,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       const bCtaBoost = b.property === 'cta-background' ? 3 : b.property === 'cta-border' ? 2 : b.property === 'cta-foreground' ? 1 : 0
       if (aCtaBoost !== bCtaBoost) return bCtaBoost - aCtaBoost
 
-      const scoreDiff = scoreActionCandidate(b) - scoreActionCandidate(a)
+      const scoreDiff = scorePrimaryActionCandidate(b) - scorePrimaryActionCandidate(a)
       if (scoreDiff !== 0) return scoreDiff
       return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
     })[0]
@@ -2309,7 +2374,7 @@ export function buildSemanticColorSystem(candidates: PageColorCandidate[]): Sema
       const bSecondaryHint = b.roleHints.includes('secondary') ? 1 : 0
       if (aSecondaryHint !== bSecondaryHint) return bSecondaryHint - aSecondaryHint
 
-      const scoreDiff = scoreActionCandidate(b) - scoreActionCandidate(a)
+      const scoreDiff = scoreSecondaryActionCandidate(b) - scoreSecondaryActionCandidate(a)
       if (scoreDiff !== 0) return scoreDiff
       return (b.evidenceScore || b.count) - (a.evidenceScore || a.count)
     })[0]
