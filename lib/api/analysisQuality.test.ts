@@ -56,4 +56,74 @@ describe('analysis quality gates', () => {
     expect(componentEvidence?.navigation.examples[0].selectorHint).toContain('nav')
     expect(componentEvidence?.card.examples[0].selectorHint).toContain('card')
   })
+
+  it('explains why low-confidence analyses should not be trusted', () => {
+    const weakAnalysis = createMindMarketStyleAnalysisFixture()
+    weakAnalysis.colorCandidates = []
+    weakAnalysis.semanticColorSystem = undefined
+    weakAnalysis.typographyTokens = []
+    weakAnalysis.radiusTokens = []
+    weakAnalysis.spacingTokens = []
+    weakAnalysis.layoutEvidence = []
+    weakAnalysis.buttonSnapshots = []
+    weakAnalysis.cardSnapshots = []
+    weakAnalysis.componentEvidence = undefined
+    weakAnalysis.evidenceSummary = {
+      overallConfidence: 'low',
+      totalEvidenceCount: 0,
+      sourceBreakdown: {},
+      confidenceBreakdown: {},
+    }
+    weakAnalysis.coverageSummary = {
+      overallCoverage: 0.2,
+      coveredAreas: ['color'],
+      missingAreas: ['typography', 'radius', 'spacing', 'layout', 'components'],
+    }
+
+    const gate = buildAnalysisQualityGate(weakAnalysis)
+
+    expect(gate.status).toBe('fail')
+    expect(gate.score).toBeLessThan(80)
+    expect(gate.failureReasons).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        checkId: 'semantic-color-evidence',
+        severity: 'blocking',
+      }),
+      expect.objectContaining({
+        checkId: 'component-evidence',
+        severity: 'blocking',
+      }),
+    ]))
+  })
+
+  it('blocks export readiness when measured token values are invalid for generated CSS or Tailwind', () => {
+    const analysis = createMindMarketStyleAnalysisFixture()
+    analysis.radiusTokens = [{
+      value: '100% | 50px | 1rem',
+      label: 'Merged radius options',
+      sampleCount: 3,
+      componentKinds: ['button'],
+      evidenceScore: 20,
+      meta: {
+        source: 'dom-computed',
+        confidence: 'medium',
+        evidenceCount: 3,
+      },
+    }]
+
+    const gate = buildAnalysisQualityGate(analysis)
+    const exportCheck = gate.checks.find(check => check.id === 'export-readiness')
+
+    expect(exportCheck).toMatchObject({
+      status: 'fail',
+      blocking: true,
+    })
+    expect(exportCheck?.details).toContain('Invalid export token values')
+    expect(gate.failureReasons).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        checkId: 'export-readiness',
+        severity: 'blocking',
+      }),
+    ]))
+  })
 })

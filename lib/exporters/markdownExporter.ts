@@ -176,6 +176,14 @@ export function generateMarkdown(report: StyleReport, lang: 'en' | 'zh' = 'zh'):
       md += isEn
         ? `- Quality gate: ${qualityGate.score}/100 · ${qualityGate.status}\n`
         : `- 质量门禁：${qualityGate.score}/100 · ${qualityGate.status}\n`
+      if (qualityGate.failureReasons?.length) {
+        md += isEn ? `- Failure reasons:\n` : `- 不可信原因：\n`
+        qualityGate.failureReasons.forEach(reason => {
+          md += isEn
+            ? `  - ${reason.label}: ${reason.message}\n`
+            : `  - ${reason.label}：${reason.message}\n`
+        })
+      }
     }
     if (componentEvidence) {
       md += isEn

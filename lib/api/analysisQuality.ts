@@ -1,4 +1,5 @@
 import type {
+  AnalysisFailureReason,
   AnalysisQualityCheck,
   AnalysisQualityGate,
   ComponentEvidenceBucket,
@@ -79,11 +80,13 @@ export function buildAnalysisQualityGate(analysis: PageStyleAnalysis | undefined
       : score >= 80
         ? 'pass'
         : 'warn'
+  const failureReasons = buildFailureReasons(checks, score)
 
   return {
     score,
     status,
     checks,
+    failureReasons,
   }
 }
 
@@ -274,6 +277,18 @@ function scoreEvidenceConfidence(analysis: PageStyleAnalysis | undefined): Analy
 }
 
 function scoreExportReadiness(analysis: PageStyleAnalysis | undefined): AnalysisQualityCheck {
+  const invalidValues = collectInvalidExportValues(analysis)
+  if (invalidValues.length) {
+    return {
+      id: 'export-readiness',
+      label: 'Export readiness',
+      status: 'fail',
+      score: 0,
+      details: `Invalid export token values: ${invalidValues.slice(0, 4).join(', ')}`,
+      blocking: true,
+    }
+  }
+
   const readySignals = [
     (analysis?.typographyTokens.length || 0) > 0,
     (analysis?.radiusTokens.length || 0) > 0,
@@ -291,6 +306,70 @@ function scoreExportReadiness(analysis: PageStyleAnalysis | undefined): Analysis
     details: `${readyCount}/5 export signals ready`,
     blocking: readyCount < 3,
   }
+}
+
+function buildFailureReasons(checks: AnalysisQualityCheck[], score: number): AnalysisFailureReason[] {
+  const reasons = checks
+    .filter(check => check.status !== 'pass')
+    .map(check => ({
+      checkId: check.id,
+      label: check.label,
+      severity: check.blocking || check.status === 'fail' ? 'blocking' : 'warning',
+      message: check.details,
+    } satisfies AnalysisFailureReason))
+
+  if (score < 80 && reasons.length === 0) {
+    reasons.push({
+      checkId: 'quality-score',
+      label: 'Quality score',
+      severity: score < 65 ? 'blocking' : 'warning',
+      message: `Quality score is ${score}/100`,
+    })
+  }
+
+  return reasons
+}
+
+function collectInvalidExportValues(analysis: PageStyleAnalysis | undefined): string[] {
+  if (!analysis) return []
+
+  const invalid: string[] = []
+  const addInvalid = (label: string, value: string | undefined) => {
+    if (!value) return
+    if (isInvalidExportTokenValue(value)) invalid.push(`${label}=${value}`)
+  }
+
+  analysis.radiusTokens.forEach(token => addInvalid('radius', token.value))
+  analysis.shadowTokens.forEach(token => addInvalid('shadow', token.value))
+  analysis.spacingTokens.forEach(token => addInvalid('spacing', token.value))
+  analysis.borderTokens?.forEach(token => {
+    addInvalid('border-width', token.width)
+    addInvalid('border-style', token.style)
+    addInvalid('border-color', token.color)
+  })
+  analysis.transitionTokens?.forEach(token => {
+    addInvalid('transition-duration', token.duration)
+    addInvalid('transition-easing', token.easing)
+  })
+  analysis.buttonSnapshots?.forEach(snapshot => {
+    addInvalid('button-radius', snapshot.borderRadius)
+    addInvalid('button-padding-h', snapshot.paddingH)
+    addInvalid('button-padding-v', snapshot.paddingV)
+  })
+  analysis.cardSnapshots?.forEach(snapshot => {
+    addInvalid('card-radius', snapshot.borderRadius)
+    addInvalid('card-padding', snapshot.padding)
+    addInvalid('card-shadow', snapshot.boxShadow)
+  })
+
+  return invalid
+}
+
+function isInvalidExportTokenValue(value: string): boolean {
+  const normalized = value.trim()
+  return normalized.includes('|')
+    || normalized.includes('\n')
+    || /[{};]/.test(normalized)
 }
 
 function findPrimaryActionCandidate(candidates: PageColorCandidate[]): PageColorCandidate | undefined {

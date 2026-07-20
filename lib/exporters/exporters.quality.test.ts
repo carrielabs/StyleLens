@@ -257,6 +257,29 @@ describe('export quality gates', () => {
     expect(markdown).toContain('组件证据：按钮')
   })
 
+  it('surfaces quality failure reasons in Markdown exports', () => {
+    const report = createReport()
+    report.pageAnalysis!.qualityGate = {
+      score: 48,
+      status: 'fail',
+      checks: [],
+      failureReasons: [
+        {
+          checkId: 'component-evidence',
+          label: 'Component evidence',
+          severity: 'blocking',
+          message: 'Missing: button, navigation',
+        },
+      ],
+    }
+
+    const markdown = generateMarkdown(report, 'zh')
+
+    expect(markdown).toContain('质量门禁：48/100 · fail')
+    expect(markdown).toContain('不可信原因：')
+    expect(markdown).toContain('Component evidence：Missing: button, navigation')
+  })
+
   it('does not export pipe-joined radius or shadow variants as single CSS/Tailwind values', () => {
     const report = createReport()
     report.pageAnalysis = undefined

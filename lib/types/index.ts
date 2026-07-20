@@ -74,10 +74,18 @@ export interface AnalysisQualityCheck {
   blocking?: boolean
 }
 
+export interface AnalysisFailureReason {
+  checkId: string
+  label: string
+  severity: 'blocking' | 'warning'
+  message: string
+}
+
 export interface AnalysisQualityGate {
   score: number
   status: AnalysisQualityStatus
   checks: AnalysisQualityCheck[]
+  failureReasons?: AnalysisFailureReason[]
 }
 
 export type ComponentEvidenceKind = 'button' | 'navigation' | 'card' | 'cta'
