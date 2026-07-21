@@ -239,4 +239,43 @@ describe('useHistory', () => {
     expect(setReport).toHaveBeenCalledWith(expect.objectContaining({ sourceLabel: 'Renamed guest record' }))
     expect(setError).not.toHaveBeenCalledWith('游客历史重命名失败')
   })
+
+  it('opens a pending logged-in history item from local state without querying Supabase by uuid', async () => {
+    const supabase = {
+      from: vi.fn(() => {
+        throw new Error('pending items must not query Supabase')
+      }),
+    }
+    const setReport = vi.fn()
+    const pendingRecord = {
+      id: 'pending_1784604382475',
+      user_id: 'user-1',
+      source_label: 'Pending Topanga',
+      style_data: createReport({ sourceLabel: 'Pending Topanga' }),
+      thumbnail_url: 'thumb.jpg',
+      created_at: '2026-07-21T00:00:00.000Z',
+    }
+
+    const { result } = renderHook(() =>
+      useHistory({
+        user: { id: 'user-1' } as never,
+        supabase: supabase as never,
+        report: null,
+        setReport,
+        setError: vi.fn(),
+        setGuestTrialUsed: vi.fn(),
+        setIsAuthVisible: vi.fn(),
+      })
+    )
+
+    await act(async () => {
+      await result.current.openHistoryItem(pendingRecord)
+    })
+
+    expect(supabase.from).not.toHaveBeenCalled()
+    expect(setReport).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'pending_1784604382475',
+      sourceLabel: 'Pending Topanga',
+    }))
+  })
 })

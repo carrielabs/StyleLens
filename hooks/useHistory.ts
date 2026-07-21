@@ -649,7 +649,7 @@ export function useHistory({
       createdAt: item.created_at || item.style_data?.createdAt || new Date().toISOString(),
     }
 
-    if (!user) {
+    if (!user || item.id.startsWith('pending_')) {
       setReport(fallbackReport)
       return
     }

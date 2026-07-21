@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/storage/supabaseClient'
+import { STYLELENS_BUILD_VERSION } from '@/lib/buildInfo'
 import type { ColorToken, DisplayStyleReport, HomeHistoryRecord, StyleReport } from '@/lib/types'
 import type { GeneratedPageHistoryRecord } from '@/hooks/usePublisher'
 import { getTopColors } from './viewUtils'
@@ -368,6 +369,19 @@ export default function HomeSidebar({
           )}
         </div>
       </div>
+
+      {sidebarOpen && (
+        <div style={{
+          padding: '8px 20px 0',
+          fontSize: '11px',
+          color: '#B0B0B8',
+          fontWeight: 600,
+          fontFamily: 'var(--font-sans)',
+          flexShrink: 0,
+        }}>
+          版本 {STYLELENS_BUILD_VERSION}
+        </div>
+      )}
 
       <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(0,0,0,0.06)', position: 'relative', display: 'flex', gap: '4px', alignItems: 'center' }}>
         {showUserMenu && user && (

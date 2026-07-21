@@ -93,4 +93,10 @@ describe('HomeSidebar', () => {
     expect(screen.getByText('官网 HTML')).toBeTruthy()
     expect(screen.queryByText('登录后查看历史记录')).toBeNull()
   })
+
+  it('shows the current build version in the sidebar', () => {
+    renderSidebar()
+
+    expect(screen.getByText(/版本/)).toBeTruthy()
+  })
 })
