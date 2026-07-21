@@ -110,6 +110,7 @@ function createPageAnalysis(overrides: Partial<PageStyleAnalysis> = {}): PageSty
 afterEach(() => {
   vi.restoreAllMocks()
   vi.resetModules()
+  vi.unstubAllEnvs()
 })
 
 describe('screenshotter viewport aggregation', () => {
@@ -261,6 +262,108 @@ describe('screenshotter viewport aggregation', () => {
     expect(result.pageAnalysis?.pageSections).toHaveLength(1)
     expect(result.pageAnalysis?.viewportSlices).toHaveLength(1)
     expect(result.extractedCss).toContain('.hero')
+  })
+
+  it('keeps same-page DOM analysis when local screenshot fails and remote screenshot succeeds', async () => {
+    const desktopAnalysis = createPageAnalysis({
+      typographyTokens: [
+        {
+          id: 'topanga-heading',
+          label: 'Hero Heading',
+          fontFamily: 'ABC Favorit, sans-serif',
+          fontSize: '72px',
+          fontWeight: '500',
+          lineHeight: '78px',
+          letterSpacing: '-0.04em',
+          usage: 'heading',
+          sampleCount: 6,
+          componentKinds: ['text', 'hero'],
+          evidenceScore: 90,
+        },
+      ],
+      buttonSnapshots: [
+        {
+          selectorHint: 'a[href="/contact"]',
+          text: 'Get in touch',
+          backgroundColor: '#E2F89C',
+          color: '#001010',
+          borderRadius: '100vw',
+          width: '140px',
+          height: '48px',
+        },
+      ],
+      stateTokens: {
+        button: [
+          {
+            value: '#E2F89C',
+            property: 'background-color',
+            state: 'default',
+            componentKinds: ['button'],
+            evidenceScore: 88,
+            measured: true,
+          },
+        ],
+      },
+      cssTextExcerpt: '.cta { background:#E2F89C; }',
+    })
+
+    const analyzePageStylesFromPage = vi.fn().mockResolvedValue(desktopAnalysis)
+    const analyzePageStyles = vi.fn().mockRejectedValue(new Error('fresh browser analysis unavailable'))
+
+    const page = {
+      addInitScript: vi.fn().mockResolvedValue(undefined),
+      addStyleTag: vi.fn().mockResolvedValue(undefined),
+      evaluate: vi.fn().mockResolvedValue(undefined),
+      waitForSelector: vi.fn().mockResolvedValue(undefined),
+      waitForFunction: vi.fn().mockResolvedValue(true),
+      route: vi.fn().mockResolvedValue(undefined),
+      goto: vi.fn().mockResolvedValue(undefined),
+      screenshot: vi.fn().mockRejectedValue(new Error('local screenshot failed')),
+      setViewportSize: vi.fn().mockResolvedValue(undefined),
+      content: vi.fn().mockResolvedValue('<html></html>'),
+    }
+
+    const context = {
+      newPage: vi.fn().mockResolvedValue(page),
+    }
+
+    const browser = {
+      version: () => '136.0.0.0',
+      newContext: vi.fn().mockResolvedValue(context),
+      close: vi.fn().mockResolvedValue(undefined),
+    }
+
+    vi.stubEnv('SCREENSHOT_ONE_API_KEY', 'test-key')
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      arrayBuffer: vi.fn().mockResolvedValue(Buffer.from('remote-screenshot')),
+    }))
+
+    vi.doMock('playwright', () => ({
+      chromium: {
+        launch: vi.fn().mockResolvedValue(browser),
+      },
+    }))
+
+    vi.doMock('@/lib/api/pageAnalyzer', () => ({
+      analyzePageStyles,
+      analyzePageStylesFromPage,
+      sanitizePageAnalysis: vi.fn(value => value),
+    }))
+
+    const { captureScreenshot } = await import('@/lib/api/screenshotter')
+    const result = await captureScreenshot('https://www.notion.com/screenshot-fallback-analysis-test')
+
+    expect(result.success).toBe(true)
+    expect(result.screenshotUrl).toMatch(/^data:image\/jpeg;base64,/)
+    expect(result.pageAnalysis?.typographyTokens.map(token => token.id)).toContain('topanga-heading')
+    expect(result.pageAnalysis?.buttonSnapshots).toHaveLength(1)
+    expect(result.pageAnalysis?.stateTokens?.button).toHaveLength(1)
+    expect(result.extractedCss).toContain('.cta')
+    expect(analyzePageStylesFromPage).toHaveBeenCalled()
+    expect(analyzePageStyles).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalled()
   })
 })
 

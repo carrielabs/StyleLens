@@ -285,7 +285,7 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 })
       await prepareSettledPageForAtomicCapture(page)
 
-      const [screenshotBuffer, desktopAnalysis] = await Promise.all([
+      const [screenshotResult, desktopAnalysisResult] = await Promise.allSettled([
         page.screenshot({
           type: 'jpeg',
           quality: 80,
@@ -297,25 +297,43 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
         }),
       ])
 
+      const screenshotBuffer = screenshotResult.status === 'fulfilled' ? screenshotResult.value : null
+      const desktopAnalysis = desktopAnalysisResult.status === 'fulfilled' ? desktopAnalysisResult.value : null
+
+      if (screenshotResult.status === 'rejected') {
+        console.warn('[Screenshotter] Same-page screenshot failed; preserving DOM analysis for remote screenshot fallback:', screenshotResult.reason)
+      }
+
+      if (desktopAnalysisResult.status === 'rejected') {
+        console.warn('[Screenshotter] Same-page DOM analysis failed during desktop capture:', desktopAnalysisResult.reason)
+      }
+
       try {
-        const viewportAnalyses: PageStyleAnalysis[] = [desktopAnalysis]
-        for (const viewport of ANALYSIS_VIEWPORTS.filter(item => !item.primary)) {
-          await page.setViewportSize({ width: viewport.width, height: viewport.height })
-          await prepareSettledPageForAtomicCapture(page)
-          const viewportAnalysis = await analyzePageStylesFromPage(page, targetUrl, {
-            pageAlreadySettled: true,
-            snapshotCount: 1,
-          })
-          viewportAnalyses.push(viewportAnalysis)
+        if (desktopAnalysis) {
+          const viewportAnalyses: PageStyleAnalysis[] = [desktopAnalysis]
+          for (const viewport of ANALYSIS_VIEWPORTS.filter(item => !item.primary)) {
+            await page.setViewportSize({ width: viewport.width, height: viewport.height })
+            await prepareSettledPageForAtomicCapture(page)
+            const viewportAnalysis = await analyzePageStylesFromPage(page, targetUrl, {
+              pageAlreadySettled: true,
+              snapshotCount: 1,
+            })
+            viewportAnalyses.push(viewportAnalysis)
+          }
+          pageAnalysis = mergePageAnalysisVariants(viewportAnalyses)
         }
-        pageAnalysis = mergePageAnalysisVariants(viewportAnalyses)
       } catch (analysisError) {
         console.warn(
-          '[Screenshotter] Same-page DOM analysis failed; continuing with screenshot-only local capture:',
+          '[Screenshotter] Viewport DOM analysis failed; keeping available desktop analysis:',
           analysisError
         )
-        pageAnalysis = null
+        pageAnalysis = desktopAnalysis ? mergePageAnalysisVariants([desktopAnalysis]) : null
       }
+
+      if (!screenshotBuffer) {
+        throw new Error('Local screenshot failed after DOM analysis')
+      }
+
       const dataUrl = `data:image/jpeg;base64,${screenshotBuffer.toString('base64')}`
 
       if (!shouldBypassCache) {
@@ -338,8 +356,8 @@ export async function captureScreenshot(targetUrl: string): Promise<ScreenshotRe
   }
 
   try {
-    pageAnalysis = await analyzePageStyles(targetUrl)
-    pageAnalysis = sanitizePageAnalysis(pageAnalysis)
+    const fallbackAnalysis = sanitizePageAnalysis(await analyzePageStyles(targetUrl))
+    pageAnalysis = mergePageAnalysisVariants([pageAnalysis, fallbackAnalysis])
   } catch (error) {
     console.warn('[Screenshotter] Page analysis failed, falling back to screenshot-only mode:', error)
   }
