@@ -10,6 +10,7 @@ import { generateJsonToken } from '@/lib/exporters/jsonExporter'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateTailwindConfig } from '@/lib/exporters/tailwindExporter'
 import { buildExportQualityGate } from '@/lib/exporters/exportQualityGate'
+import { buildStyleLensV1AcceptanceResult } from '@/lib/api/stylelensV1Acceptance'
 import type { ColorToken, PageStyleAnalysis, StyleReport } from '@/lib/types'
 import { REAL_WORLD_STYLE_TARGETS } from '@/test/fixtures/real-world-style-targets'
 
@@ -117,6 +118,8 @@ function expectValidExports(report: StyleReport) {
   expect(prompt).not.toMatch(/禁止圆角.*100%|DO NOT add rounded corners[\s\S]*100%/)
   expect(exportGate.status).toBe('pass')
   expect(exportGate.score).toBeGreaterThanOrEqual(80)
+
+  return exportGate
 }
 
 ;(RUN_REAL_WORLD_TARGETS ? describe : describe.skip)('pageAnalyzer seven-site real-world target verification', () => {
@@ -166,7 +169,17 @@ function expectValidExports(report: StyleReport) {
         expect(componentEvidence.button.count).toBeGreaterThan(0)
         expect(componentEvidence.navigation.count).toBeGreaterThan(0)
         expect(componentEvidence.cta.count).toBeGreaterThan(0)
-        expectValidExports(buildReportFromAnalysis(target.id, target.url, analysis))
+        const exportGate = expectValidExports(buildReportFromAnalysis(target.id, target.url, analysis))
+        const acceptance = buildStyleLensV1AcceptanceResult({
+          targetId: target.id,
+          url: target.url,
+          extractionGate: qualityGate,
+          exportGate,
+        })
+
+        expect(acceptance.status).toBe('pass')
+        expect(acceptance.score).toBeGreaterThanOrEqual(80)
+        expect(acceptance.failureReasons).toEqual([])
       },
       120_000
     )

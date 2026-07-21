@@ -1,14 +1,6 @@
-export type RealWorldStyleTarget = {
-  id: string
-  url: string
-}
+import { STYLELENS_V1_REAL_WORLD_TARGETS } from '@/lib/api/stylelensV1Acceptance'
+import type { StyleLensV1AcceptanceTarget } from '@/lib/api/stylelensV1Acceptance'
 
-export const REAL_WORLD_STYLE_TARGETS: RealWorldStyleTarget[] = [
-  { id: 'rig', url: 'https://rig.ai/' },
-  { id: 'mindmarket', url: 'https://mindmarket.com/' },
-  { id: 'topanga', url: 'https://topanga.io/' },
-  { id: 'aneshk-design', url: 'https://aneshk.design/' },
-  { id: 'notion', url: 'https://www.notion.com/' },
-  { id: 'stripe', url: 'https://stripe.com/' },
-  { id: 'linear', url: 'https://linear.app/' },
-]
+export type RealWorldStyleTarget = StyleLensV1AcceptanceTarget
+
+export const REAL_WORLD_STYLE_TARGETS: RealWorldStyleTarget[] = STYLELENS_V1_REAL_WORLD_TARGETS
