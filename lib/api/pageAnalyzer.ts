@@ -3973,6 +3973,29 @@ async function extractDomSignalsFromPage(
         return Math.max(...grouped.map(row => row.count))
       }
 
+      const countRepeatedCardLikeChildren = (root: HTMLElement) => {
+        const cardLikeChildren = Array.from(root.querySelectorAll<HTMLElement>(
+          ':scope > article, :scope > li, :scope > [class*="card"], :scope > [class*="tile"], :scope > [class*="panel"], :scope > [class*="feature"], :scope > [role="article"], :scope > [data-card]'
+        ))
+          .map(child => {
+            const rect = child.getBoundingClientRect()
+            const style = window.getComputedStyle(child)
+            return { child, rect, style }
+          })
+          .filter(({ child, rect, style }) => {
+            if (isThirdPartyStyleArtifactNode(child)) return false
+            if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false
+            if (rect.width < 120 || rect.height < 90) return false
+            const hasText = (child.textContent || '').trim().length >= 12
+            const hasHeading = !!child.querySelector('h1, h2, h3, h4, strong, [class*="title"], [class*="heading"]')
+            const selector = selectorHintFor(child).toLowerCase()
+            const explicitCard = /\b(card|tile|panel|feature|pricing|plan|case|testimonial)\b/.test(selector)
+            return hasText && (hasHeading || explicitCard)
+          })
+
+        return cardLikeChildren.length
+      }
+
       const detectLayoutRoot = (sectionEl: HTMLElement, sectionRect: DOMRect) => {
         const descendants = Array.from(sectionEl.querySelectorAll<HTMLElement>(':scope > *, :scope > * > *, :scope > * > * > *'))
           .filter(el => el !== sectionEl)
@@ -4028,7 +4051,7 @@ async function extractDomSignalsFromPage(
         const headingEl = el.querySelector('h1, h2, h3')
         const headingText = ((headingEl?.textContent) || '').trim().slice(0, 60) || undefined
         const hasCTA = !!el.querySelector('button, [role="button"], a[class*="btn"], a[class*="button"]')
-        const hasImage = !!el.querySelector('img, video, picture, [class*="image"], [class*="img"]')
+        const hasImage = !!el.querySelector('img, svg, video, canvas, picture, [class*="image"], [class*="img"], [class*="media"], [class*="visual"], [class*="preview"]')
         const pageHeight = Math.max(document.documentElement.scrollHeight || 0, document.body?.scrollHeight || 0, 1)
         const yStartRaw = ((el.offsetTop || 0) / pageHeight) * 100
         const yEndRaw = (((el.offsetTop || 0) + (el.offsetHeight || 0)) / pageHeight) * 100
@@ -4051,6 +4074,7 @@ async function extractDomSignalsFromPage(
         const layoutStyle = window.getComputedStyle(layoutRoot)
         const visibleChildren = getVisibleChildren(layoutRoot, layoutRect)
         const maxRowCount = groupRowCounts(visibleChildren)
+        const repeatedCardCount = countRepeatedCardLikeChildren(layoutRoot)
         let columns = 1
         let layout = 'full-width'
         if (layoutStyle.display === 'grid' && layoutStyle.gridTemplateColumns && layoutStyle.gridTemplateColumns !== 'none') {
@@ -4094,6 +4118,33 @@ async function extractDomSignalsFromPage(
           : cls.includes('cta') || cls.includes('call-to-action') ? 'cta'
           : tag === 'footer' ? 'footer'
           : 'section'
+
+        const sectionEvidence = 24
+          + Math.min(24, Math.round((rect.width * rect.height) / Math.max(window.innerWidth * window.innerHeight, 1) * 18))
+          + (headingText ? 6 : 0)
+          + (hasCTA ? 6 : 0)
+          + (hasImage ? 6 : 0)
+          + Math.min(repeatedCardCount, 6) * 4
+
+        if (purpose === 'hero' && columns >= 2 && (layout === '2-column' || layout === 'asymmetric' || layout === 'grid')) {
+          addLayout('Hero split layout', 'hero', ['hero', 'section'], sectionEvidence + 12)
+        } else if (purpose === 'hero' && headingText) {
+          addLayout('Hero centered layout', 'hero', ['hero', 'section'], sectionEvidence)
+        }
+
+        if (
+          repeatedCardCount >= 2
+          && columns >= 2
+          && (layout.includes('grid') || layout === '2-column' || layout === 'asymmetric')
+        ) {
+          const label = purpose === 'pricing'
+            ? 'Pricing card grid'
+            : purpose === 'testimonials'
+              ? 'Testimonial card grid'
+              : 'Feature card grid'
+          addLayout(label, 'grid', ['section', 'card'], sectionEvidence + 10)
+        }
+
         pageSections.push({
           index: si++,
           purpose,
@@ -4110,6 +4161,15 @@ async function extractDomSignalsFromPage(
         })
         accepted.push({ rect, heading: headingText, screenStartPct, screenEndPct: Number(screenEndPct) })
         if (si >= 8) break
+      }
+
+      if (pageSections.length >= 2) {
+        addLayout(
+          'Section stack',
+          'stack',
+          ['section'],
+          22 + Math.min(pageSections.length, 6) * 5
+        )
       }
 
       {
