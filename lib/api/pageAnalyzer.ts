@@ -1232,20 +1232,132 @@ function mergeLayoutAccumulators(...groups: Array<Array<LayoutAccumulator | RawL
   return [...merged.values()].sort((a, b) => b.evidenceScore - a.evidenceScore)
 }
 
-function toTypographyTokens(candidates: PageTypographyCandidate[]): TypographyToken[] {
-  return candidates.slice(0, 8).map((candidate, index) => {
+type TypographySemanticRole = 'display' | 'heading' | 'title' | 'body' | 'navigation' | 'button' | 'caption'
+
+function parseTypographyTokenSize(value?: string) {
+  if (!value) return Number.NaN
+  const normalized = value.trim().toLowerCase()
+  if (!normalized || normalized === 'unknown' || normalized === 'inherit' || normalized.includes('nan')) return Number.NaN
+  const numeric = Number.parseFloat(normalized)
+  if (!Number.isFinite(numeric)) return Number.NaN
+  if (normalized.endsWith('rem') || normalized.endsWith('em')) return numeric * 16
+  return numeric
+}
+
+function inferTypographySemanticRole(candidate: PageTypographyCandidate): TypographySemanticRole {
+  const kinds = candidate.componentKinds || []
+  const size = parseTypographyTokenSize(candidate.fontSize)
+
+  if (kinds.includes('nav')) return 'navigation'
+  if (kinds.includes('button')) return 'button'
+  if (kinds.includes('hero') || (Number.isFinite(size) && size >= 40)) return 'display'
+  if (Number.isFinite(size) && size >= 28) return 'heading'
+  if (Number.isFinite(size) && size >= 20) return 'title'
+  if (Number.isFinite(size) && size >= 14) return 'body'
+  return 'caption'
+}
+
+function typographyRoleScore(candidate: PageTypographyCandidate, role: TypographySemanticRole) {
+  const candidateRole = inferTypographySemanticRole(candidate)
+  const kinds = candidate.componentKinds || []
+  const size = parseTypographyTokenSize(candidate.fontSize)
+  let score = candidate.evidenceScore || candidate.count || 0
+
+  if (candidateRole === role) score += 220
+  if (candidate.sampleText) score += 24
+  if (candidate.fontFamily && candidate.fontFamily !== 'inherit') score += 16
+  if (candidate.lineHeight && candidate.lineHeight !== 'normal') score += 8
+  if (candidate.letterSpacing && candidate.letterSpacing !== 'normal') score += 8
+
+  if (role === 'display') {
+    if (kinds.includes('hero')) score += 120
+    if (Number.isFinite(size)) score += Math.min(size * 4, 260)
+  }
+  if (role === 'heading' && Number.isFinite(size)) {
+    score += size >= 24 && size < 56 ? 120 : -80
+  }
+  if (role === 'body' && Number.isFinite(size)) {
+    score += size >= 14 && size <= 19 ? 140 : -90
+  }
+  if (role === 'navigation') {
+    if (kinds.includes('nav')) score += 180
+    if (kinds.includes('button')) score -= 160
+  }
+  if (role === 'button') {
+    if (kinds.includes('button')) score += 180
+    if (kinds.includes('nav')) score -= 80
+  }
+
+  return score
+}
+
+export function toTypographyTokens(candidates: PageTypographyCandidate[]): TypographyToken[] {
+  const selected: PageTypographyCandidate[] = []
+  const used = new Set<string>()
+  const candidateKey = (candidate: PageTypographyCandidate) => [
+    candidate.fontFamily,
+    candidate.fontSize || '',
+    candidate.fontWeight || '',
+    candidate.lineHeight || '',
+    candidate.letterSpacing || '',
+    (candidate.componentKinds || []).join(','),
+  ].join('|')
+
+  const addBestForRole = (role: TypographySemanticRole) => {
+    const best = candidates
+      .filter(candidate => !used.has(candidateKey(candidate)))
+      .filter(candidate => inferTypographySemanticRole(candidate) === role)
+      .sort((a, b) => typographyRoleScore(b, role) - typographyRoleScore(a, role))[0]
+    if (!best) return
+    used.add(candidateKey(best))
+    selected.push(best)
+  }
+
+  ;(['display', 'heading', 'body', 'navigation', 'button'] as TypographySemanticRole[]).forEach(addBestForRole)
+
+  for (const candidate of candidates) {
+    if (selected.length >= 8) break
+    const key = candidateKey(candidate)
+    if (used.has(key)) continue
+    used.add(key)
+    selected.push(candidate)
+  }
+
+  return selected.slice(0, 8).map((candidate, index) => {
     const size = Number.parseFloat(candidate.fontSize || '')
     const candidateViewport = candidate.meta?.viewport
+    const semanticRole = inferTypographySemanticRole(candidate)
     const usage: TypographyToken['usage'] =
-      Number.isFinite(size) && size >= 40 ? 'display'
-        : Number.isFinite(size) && size >= 28 ? 'heading'
-          : Number.isFinite(size) && size >= 20 ? 'title'
-            : Number.isFinite(size) && size >= 14 ? 'body'
-              : 'caption'
+      semanticRole === 'navigation' || semanticRole === 'button' ? 'label'
+        : semanticRole === 'display' ? 'display'
+          : semanticRole === 'heading' ? 'heading'
+            : semanticRole === 'title' ? 'title'
+              : semanticRole === 'body' ? 'body'
+                : Number.isFinite(size) && size >= 40 ? 'display'
+                  : Number.isFinite(size) && size >= 28 ? 'heading'
+                    : Number.isFinite(size) && size >= 20 ? 'title'
+                      : Number.isFinite(size) && size >= 14 ? 'body'
+                        : 'caption'
+    const label =
+      semanticRole === 'navigation' ? 'Navigation'
+        : semanticRole === 'button' ? 'Button'
+          : usage === 'display' ? 'Display'
+            : usage === 'heading' ? 'Heading'
+              : usage === 'title' ? 'Title'
+                : usage === 'body' ? 'Body'
+                  : 'Caption'
+    const context =
+      semanticRole === 'navigation' ? 'navigation text'
+        : semanticRole === 'button' ? 'button text'
+          : usage === 'display' ? 'hero heading'
+            : usage === 'heading' ? 'section heading'
+              : usage === 'title' ? 'title text'
+                : usage === 'body' ? 'body text'
+                  : 'supporting text'
 
     return {
       id: `typo-${index + 1}`,
-      label: usage === 'display' ? 'Display' : usage === 'heading' ? 'Heading' : usage === 'title' ? 'Title' : usage === 'body' ? 'Body' : 'Caption',
+      label,
       fontFamily: candidate.fontFamily,
       fontSize: candidate.fontSize || 'unknown',
       fontWeight: candidate.fontWeight || '400',
@@ -1256,22 +1368,19 @@ function toTypographyTokens(candidates: PageTypographyCandidate[]): TypographyTo
       sampleCount: candidate.count,
       componentKinds: candidate.componentKinds || [],
       evidenceScore: candidate.evidenceScore || candidate.count,
-      meta: candidate.meta || {
+      meta: candidate.meta
+        ? {
+            ...candidate.meta,
+            context: candidate.meta.context || context,
+          }
+        : {
         source: candidate.sampleText ? 'dom-computed' : 'inferred',
         confidence:
           (candidate.evidenceScore || candidate.count) >= 220 || candidate.count >= 6 ? 'high'
             : (candidate.evidenceScore || candidate.count) >= 100 || candidate.count >= 3 ? 'medium'
               : 'low',
         evidenceCount: candidate.count,
-        context: usage === 'display'
-          ? 'hero heading'
-          : usage === 'heading'
-            ? 'section heading'
-            : usage === 'title'
-              ? 'title text'
-              : usage === 'body'
-                ? 'body text'
-                : 'supporting text',
+        context,
         viewport: candidateViewport,
       },
     }
