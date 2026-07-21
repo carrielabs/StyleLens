@@ -379,9 +379,22 @@ function isSharpRadius(description: string): boolean {
   const d = description.toLowerCase()
   const variants = d.split('|').map(item => item.trim()).filter(Boolean)
   if (variants.length > 1) {
-    return variants.every(value => value === '0' || value === '0px' || value.includes('sharp') || value.includes('no radius'))
+    return variants.every(isZeroRadiusValue)
   }
-  return d.includes('sharp') || d.includes('0px') || d.includes('no radius')
+  return isZeroRadiusValue(d)
+}
+
+function isZeroRadiusValue(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  if (!normalized) return false
+  if (normalized.includes('sharp') || normalized.includes('no radius')) return true
+  if (normalized === '0' || normalized === '0px') return true
+
+  const radiusNumbers = [...normalized.matchAll(/(-?\d*\.?\d+)(px|rem|em|%)?/g)]
+    .map(match => Number.parseFloat(match[1]))
+    .filter(number => Number.isFinite(number))
+
+  return radiusNumbers.length > 0 && radiusNumbers.every(number => number === 0)
 }
 
 function isSubtleMotion(description: string): boolean {

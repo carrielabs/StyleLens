@@ -4,6 +4,7 @@ import { generateJsonToken } from '@/lib/exporters/jsonExporter'
 import { generateMarkdown } from '@/lib/exporters/markdownExporter'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateTailwindConfig } from '@/lib/exporters/tailwindExporter'
+import { buildExportQualityGate } from '@/lib/exporters/exportQualityGate'
 import type { ColorToken, StyleReport } from '@/lib/types'
 
 function color(hex: string, role: ColorToken['role'], name: string): ColorToken {
@@ -261,6 +262,14 @@ describe('export quality gates', () => {
     expect(markdown).toContain('组件证据：按钮')
   })
 
+  it('passes the end-to-end export quality gate for all generated formats', () => {
+    const gate = buildExportQualityGate(createReport())
+
+    expect(gate.status).toBe('pass')
+    expect(gate.score).toBeGreaterThanOrEqual(80)
+    expect(gate.failureReasons).toEqual([])
+  })
+
   it('surfaces quality failure reasons in Markdown exports', () => {
     const report = createReport()
     report.pageAnalysis!.qualityGate = {
@@ -311,6 +320,17 @@ describe('export quality gates', () => {
 
     const prompt = generatePrompt(report, 'zh')
 
+    expect(prompt).not.toContain('禁止圆角——此设计使用直角')
+  })
+
+  it('does not add a no-radius prohibition for asymmetric rounded corners', () => {
+    const report = createReport()
+    report.designDetails.borderRadius = '10px 0px 0px 10px'
+    report.designDetails.cssRadius = '10px 0px 0px 10px'
+
+    const prompt = generatePrompt(report, 'zh')
+
+    expect(prompt).toContain('圆角:      10px 0px 0px 10px')
     expect(prompt).not.toContain('禁止圆角——此设计使用直角')
   })
 })

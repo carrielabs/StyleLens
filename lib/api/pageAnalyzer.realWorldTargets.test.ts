@@ -9,6 +9,7 @@ import { generateCssVariables } from '@/lib/exporters/cssExporter'
 import { generateJsonToken } from '@/lib/exporters/jsonExporter'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateTailwindConfig } from '@/lib/exporters/tailwindExporter'
+import { buildExportQualityGate } from '@/lib/exporters/exportQualityGate'
 import type { ColorToken, PageStyleAnalysis, StyleReport } from '@/lib/types'
 import { REAL_WORLD_STYLE_TARGETS } from '@/test/fixtures/real-world-style-targets'
 
@@ -108,11 +109,14 @@ function expectValidExports(report: StyleReport) {
   const tailwind = generateTailwindConfig(report)
   const json = generateJsonToken(report)
   const prompt = generatePrompt(report, 'en')
+  const exportGate = buildExportQualityGate(report)
 
   expect(css).not.toMatch(/--(?:radius|shadow)-base:\s*[^;]*\|/)
   expect(tailwind).not.toMatch(/brand:\s*['"][^'"]*\|/)
   expect(() => JSON.parse(json)).not.toThrow()
   expect(prompt).not.toMatch(/禁止圆角.*100%|DO NOT add rounded corners[\s\S]*100%/)
+  expect(exportGate.status).toBe('pass')
+  expect(exportGate.score).toBeGreaterThanOrEqual(80)
 }
 
 ;(RUN_REAL_WORLD_TARGETS ? describe : describe.skip)('pageAnalyzer seven-site real-world target verification', () => {
