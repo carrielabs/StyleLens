@@ -45,9 +45,9 @@ describe('PublisherWorkspace', () => {
     expect(card.getAttribute('style')).toContain('aspect-ratio: 3 / 4')
     expect(actionBar.getAttribute('style')).toContain('bottom: 12px')
     expect(actionBar.getAttribute('style')).not.toContain('opacity: 0')
-    expect(actionBar.getAttribute('style')).toContain('padding: 6px')
-    expect(actionBar.getAttribute('style')).toContain('border: 1px solid rgba(255, 255, 255, 0.42)')
-    expect(actionBar.getAttribute('style')).toContain('rgba(255, 255, 255, 0.64)')
+    expect(actionBar.getAttribute('style')).not.toContain('padding')
+    expect(actionBar.getAttribute('style')).not.toContain('background')
+    expect(actionBar.getAttribute('style')).not.toContain('backdrop-filter')
 
     const thumbnail = within(card).getByTitle('FUI 模板缩略图')
     expect(thumbnail.getAttribute('src')).toBe('/api/template-preview/website-01-fui')

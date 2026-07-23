@@ -157,6 +157,17 @@ export default function PublisherWorkspace({
           pointer-events: none;
           transition: opacity 160ms ease, transform 160ms ease;
         }
+        .publisher-card-action-button {
+          transition: transform 140ms ease, opacity 140ms ease, box-shadow 140ms ease, background 140ms ease;
+        }
+        .publisher-card-action-button:hover {
+          transform: translateY(-1px);
+          opacity: 0.94;
+        }
+        .publisher-card-action-button:active {
+          transform: translateY(0);
+          opacity: 0.86;
+        }
       `}</style>
 
       <div data-testid="publisher-gallery-pane" style={{ flex: '1 1 0%', minWidth: 0, height: '100%', overflowY: 'auto', padding: '64px 32px 72px', transition: 'flex 240ms cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
@@ -400,11 +411,11 @@ function TemplateCard({
         data-testid={`template-card-actions-${template.id}`}
         style={templateCardActionsStyle}
       >
-        <button type="button" aria-label={`预览 ${template.name}`} onClick={onPreview} style={secondaryActionButtonStyle}>
+        <button type="button" className="publisher-card-action-button" aria-label={`预览 ${template.name}`} onClick={onPreview} style={secondaryActionButtonStyle}>
           <Maximize size={14} strokeWidth={2} />
           预览
         </button>
-        <button type="button" aria-label={`使用模板 ${template.name}`} onClick={onUse} style={primaryActionButtonStyle}>
+        <button type="button" className="publisher-card-action-button" aria-label={`使用模板 ${template.name}`} onClick={onUse} style={primaryActionButtonStyle}>
           使用模板
         </button>
       </div>
@@ -517,22 +528,15 @@ const templateCardActionsStyle = {
   bottom: '12px',
   display: 'grid',
   gridTemplateColumns: '1fr 1fr',
-  gap: '6px',
-  padding: '6px',
-  borderRadius: '12px',
-  border: '1px solid rgba(255,255,255,0.42)',
-  background: 'rgba(255,255,255,0.64)',
-  backdropFilter: 'blur(18px) saturate(1.2)',
-  WebkitBackdropFilter: 'blur(18px) saturate(1.2)',
-  boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
+  gap: '8px',
   zIndex: 2,
 } as const
 
 const secondaryActionButtonStyle = {
   height: '34px',
   borderRadius: '8px',
-  border: '1px solid rgba(0,0,0,0.06)',
-  background: 'rgba(255,255,255,0.56)',
+  border: '1px solid rgba(255,255,255,0.62)',
+  background: 'rgba(255,255,255,0.82)',
   color: '#111111',
   display: 'flex',
   alignItems: 'center',
@@ -541,13 +545,15 @@ const secondaryActionButtonStyle = {
   cursor: 'pointer',
   fontSize: '13px',
   fontWeight: 800,
-  boxShadow: '0 1px 0 rgba(255,255,255,0.42) inset',
+  backdropFilter: 'blur(12px) saturate(1.1)',
+  WebkitBackdropFilter: 'blur(12px) saturate(1.1)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.20), 0 1px 0 rgba(255,255,255,0.48) inset',
 } as const
 
 const primaryActionButtonStyle = {
   ...secondaryActionButtonStyle,
-  border: '1px solid rgba(17,17,17,0.72)',
-  background: 'rgba(17,17,17,0.82)',
+  border: '1px solid rgba(255,255,255,0.24)',
+  background: 'rgba(17,17,17,0.78)',
   color: '#FFFFFF',
-  boxShadow: '0 8px 18px rgba(0,0,0,0.20)',
+  boxShadow: '0 12px 26px rgba(0,0,0,0.30), 0 0 0 1px rgba(255,255,255,0.10) inset',
 } as const
