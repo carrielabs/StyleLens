@@ -48,6 +48,7 @@ describe('PublisherWorkspace', () => {
     expect(actionBar.getAttribute('style')).not.toContain('padding')
     expect(actionBar.getAttribute('style')).not.toContain('background')
     expect(actionBar.getAttribute('style')).not.toContain('backdrop-filter')
+    expect(actionBar.getAttribute('style')).toContain('display: flex')
 
     const thumbnail = within(card).getByTitle('FUI 模板缩略图')
     expect(thumbnail.getAttribute('src')).toBe('/api/template-preview/website-01-fui')

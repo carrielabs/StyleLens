@@ -128,23 +128,6 @@ export default function PublisherWorkspace({
           border-color: rgba(0, 0, 0, 0.18) !important;
           box-shadow: 0 18px 42px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.08);
         }
-        .publisher-template-card::after {
-          content: '';
-          position: absolute;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          height: 34%;
-          background: linear-gradient(to top, rgba(0,0,0,0.18), rgba(0,0,0,0));
-          opacity: 0;
-          pointer-events: none;
-          transition: opacity 160ms ease;
-          z-index: 1;
-        }
-        .publisher-template-card:hover::after,
-        .publisher-template-card:focus-within::after {
-          opacity: 1;
-        }
         .publisher-template-card:hover .publisher-card-actions,
         .publisher-template-card:focus-within .publisher-card-actions {
           opacity: 1;
@@ -526,17 +509,19 @@ const templateCardActionsStyle = {
   left: '12px',
   right: '12px',
   bottom: '12px',
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+  display: 'flex',
+  justifyContent: 'center',
   gap: '8px',
   zIndex: 2,
 } as const
 
 const secondaryActionButtonStyle = {
   height: '34px',
+  minWidth: '88px',
+  padding: '0 14px',
   borderRadius: '8px',
   border: '1px solid rgba(255,255,255,0.62)',
-  background: 'rgba(255,255,255,0.82)',
+  background: 'rgba(255,255,255,0.78)',
   color: '#111111',
   display: 'flex',
   alignItems: 'center',
@@ -553,7 +538,7 @@ const secondaryActionButtonStyle = {
 const primaryActionButtonStyle = {
   ...secondaryActionButtonStyle,
   border: '1px solid rgba(255,255,255,0.24)',
-  background: 'rgba(17,17,17,0.78)',
+  background: 'rgba(17,17,17,0.76)',
   color: '#FFFFFF',
   boxShadow: '0 12px 26px rgba(0,0,0,0.30), 0 0 0 1px rgba(255,255,255,0.10) inset',
 } as const
