@@ -1,6 +1,7 @@
 'use client'
 
 import ApiKeysSection from './sections/ApiKeysSection'
+import DembrandtAdvancedSection from './sections/DembrandtAdvancedSection'
 
 interface SettingsViewProps {
   onClose: () => void
@@ -86,6 +87,8 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       }}>
         <div style={{ width: '100%', maxWidth: '640px' }}>
           <ApiKeysSection />
+          <div style={{ height: '32px' }} />
+          <DembrandtAdvancedSection />
         </div>
       </div>
     </div>

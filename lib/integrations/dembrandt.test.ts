@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createFixtureReport } from '@/test/fixtures/dembrandt-report-fixture'
 import {
   applyDembrandtExtraction,
@@ -7,10 +7,13 @@ import {
   buildDembrandtDrift,
   buildDembrandtFindings,
   buildDembrandtTailwindTheme,
+  buildStyleReportFromDembrandt,
   extractDembrandtBranding,
 } from '@/lib/integrations/dembrandt'
 import { extractBranding } from 'dembrandt/extractors'
 import { chromium } from 'playwright'
+import { parseSitemap } from '@/lib/integrations/dembrandt-discovery'
+import { mergeResults } from '@/lib/integrations/dembrandt-merge'
 
 const nativeDembrandtResult = vi.hoisted(() => ({
   url: 'https://example.com',
@@ -172,6 +175,8 @@ vi.mock('dembrandt/findings', () => ({ computeFindings: vi.fn(() => ({
 })) }))
 vi.mock('dembrandt/drift', () => ({ computeDrift: vi.fn(() => ({ score: 0, status: 'stable' })) }))
 vi.mock('@/lib/integrations/dembrandt-tailwind', () => ({ generateTailwindTheme: vi.fn(() => 'mock-tailwind') }))
+vi.mock('@/lib/integrations/dembrandt-discovery', () => ({ parseSitemap: vi.fn(async () => ['https://example.com/pricing']) }))
+vi.mock('@/lib/integrations/dembrandt-merge', () => ({ mergeResults: vi.fn(results => ({ ...results[0], pages: results.map((item: { url: string }) => ({ url: item.url })) })) }))
 vi.mock('playwright', () => ({
   chromium: {
     launch: vi.fn(async () => ({ close: vi.fn() })),
@@ -182,6 +187,16 @@ vi.mock('dembrandt/extractors', () => ({
 }))
 
 describe('dembrandt bridge', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(extractBranding).mockImplementation(async () => nativeDembrandtResult as never)
+    vi.mocked(parseSitemap).mockResolvedValue(['https://example.com/pricing'])
+    vi.mocked(mergeResults).mockImplementation(results => ({
+      ...results[0],
+      pages: results.map((item: { url: string }) => ({ url: item.url })),
+    }))
+  })
+
   it('calls the official Dembrandt extractor for URL input', async () => {
     const result = await extractDembrandtBranding('https://example.com')
 
@@ -207,6 +222,55 @@ describe('dembrandt bridge', () => {
         includeRawColors: true,
       })
     )
+  })
+
+  it('uses Dembrandt official crawl discovery and merge for multi-page extraction', async () => {
+    const homepage = {
+      ...nativeDembrandtResult,
+      _discoveredLinks: [{ href: 'https://example.com/pricing' }],
+    }
+    const pricing = {
+      ...nativeDembrandtResult,
+      url: 'https://example.com/pricing',
+      _discoveredLinks: [],
+    }
+
+    vi.mocked(extractBranding)
+      .mockResolvedValueOnce(homepage as never)
+      .mockResolvedValueOnce(pricing as never)
+
+    const result = await extractDembrandtBranding('https://example.com', { crawl: 2 })
+
+    expect(vi.mocked(extractBranding)).toHaveBeenNthCalledWith(
+      1,
+      'https://example.com',
+      expect.any(Object),
+      expect.any(Object),
+      expect.objectContaining({ discoverLinks: 1 })
+    )
+    expect(vi.mocked(extractBranding)).toHaveBeenNthCalledWith(
+      2,
+      'https://example.com/pricing',
+      expect.any(Object),
+      expect.any(Object),
+      expect.objectContaining({ wcag: true })
+    )
+    expect(vi.mocked(mergeResults)).toHaveBeenCalledWith([homepage, pricing])
+    expect(result.pages).toEqual([{ url: 'https://example.com' }, { url: 'https://example.com/pricing' }])
+  })
+
+  it('delegates sitemap discovery to Dembrandt official parser', async () => {
+    const homepage = { ...nativeDembrandtResult }
+    const pricing = { ...nativeDembrandtResult, url: 'https://example.com/pricing' }
+
+    vi.mocked(extractBranding)
+      .mockResolvedValueOnce(homepage as never)
+      .mockResolvedValueOnce(pricing as never)
+
+    await extractDembrandtBranding('https://example.com', { crawl: 2, sitemap: true })
+
+    expect(vi.mocked(parseSitemap)).toHaveBeenCalledWith('https://example.com', 1)
+    expect(vi.mocked(mergeResults)).toHaveBeenCalledWith([homepage, pricing])
   })
 
   it('delegates DESIGN.md generation to Dembrandt', () => {
@@ -255,5 +319,18 @@ describe('dembrandt bridge', () => {
     expect(report.pageAnalysis?.evidenceSummary?.notes).toContain('Dembrandt native extraction')
     expect(report.pageAnalysis?.auditSummary?.designSystem?.summary).toContain('Dembrandt findings')
     expect(report.pageAnalysis?.auditSummary?.accessibility?.summary).toContain('Dembrandt WCAG pairs')
+  })
+
+  it('builds the URL report directly from Dembrandt native extraction', () => {
+    const report = buildStyleReportFromDembrandt(nativeDembrandtResult as never, {
+      sourceType: 'url',
+      sourceLabel: 'https://example.com',
+      thumbnailUrl: 'https://example.com/screenshot.png',
+    })
+
+    expect(report.thumbnailUrl).toBe('https://example.com/screenshot.png')
+    expect(report.dembrandtResult).toBe(nativeDembrandtResult)
+    expect(report.colors[0].hex).toBe('#111111')
+    expect(report.pageAnalysis?.evidenceSummary?.notes).toContain('Dembrandt native extraction')
   })
 })

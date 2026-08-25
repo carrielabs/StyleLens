@@ -6,6 +6,7 @@ import UrlInput from '@/components/extractor/UrlInput'
 describe('UrlInput', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    localStorage.clear()
   })
 
   it('shows structured measurement helper copy', () => {
@@ -100,6 +101,106 @@ describe('UrlInput', () => {
     expect(extractBody.pageAnalysis).toEqual(screenshotResponse.pageAnalysis)
     expect(extractBody.screenshotUrl).toBe(screenshotResponse.screenshotUrl)
     expect(onStart).toHaveBeenCalled()
+    expect(onSuccess).toHaveBeenCalled()
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('forwards Dembrandt options and the last URL report as baseline when compare mode is enabled', async () => {
+    const onStart = vi.fn()
+    const onSuccess = vi.fn()
+    const onError = vi.fn()
+
+    const baselineReport = {
+      sourceType: 'url',
+      sourceLabel: 'previous.com',
+      summary: '',
+      tags: [],
+      colors: [],
+      gradients: [],
+      typography: {},
+      designDetails: {},
+      createdAt: new Date().toISOString(),
+    }
+
+    localStorage.setItem('stylelens.dembrandtOptions', JSON.stringify({
+      compareWithLastUrl: true,
+      crawl: 2,
+      sitemap: false,
+    }))
+    localStorage.setItem('stylelens.lastUrlReport', JSON.stringify(baselineReport))
+
+    const screenshotResponse = {
+      success: true,
+      screenshotUrl: 'data:image/jpeg;base64,abc',
+      extractedCss: 'body{background:#fff;}',
+      pageAnalysis: {
+        colorCandidates: [],
+        typographyCandidates: [],
+        typographyTokens: [],
+        radiusCandidates: [],
+        radiusTokens: [],
+        shadowCandidates: [],
+        shadowTokens: [],
+        spacingCandidates: [],
+        spacingTokens: [],
+        layoutHints: [],
+        layoutEvidence: [],
+        sourceCount: {
+          inlineStyleBlocks: 0,
+          linkedStylesheets: 0,
+        },
+      },
+    }
+
+    const extractResponse = {
+      success: true,
+      report: {
+        sourceType: 'url',
+        sourceLabel: 'notion.com',
+        summary: '',
+        tags: [],
+        colors: [],
+        gradients: [],
+        typography: {},
+        designDetails: {},
+        createdAt: new Date().toISOString(),
+      },
+    }
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        json: async () => screenshotResponse,
+      })
+      .mockResolvedValueOnce({
+        json: async () => extractResponse,
+      })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <UrlInput
+        onStart={onStart}
+        onSuccess={onSuccess}
+        onError={onError}
+      />
+    )
+
+    fireEvent.change(screen.getByPlaceholderText('粘贴网页 URL，例如 https://linear.app'), {
+      target: { value: 'notion.com' },
+    })
+    fireEvent.submit(screen.getByRole('button', { name: '解析' }).closest('form')!)
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    const extractRequest = fetchMock.mock.calls[1]
+    const extractBody = JSON.parse(extractRequest?.[1]?.body as string)
+
+    expect(extractBody.dembrandtOptions.compareWithLastUrl).toBe(true)
+    expect(extractBody.dembrandtOptions.crawl).toBe(2)
+    expect(extractBody.dembrandtBaseline.sourceLabel).toBe('previous.com')
+    expect(JSON.parse(localStorage.getItem('stylelens.lastUrlReport') || '{}').sourceLabel).toBe('notion.com')
     expect(onSuccess).toHaveBeenCalled()
     expect(onError).not.toHaveBeenCalled()
   })

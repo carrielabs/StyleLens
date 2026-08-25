@@ -8,7 +8,9 @@ import { mergeScreenshotColorSignals } from '@/lib/api/heroVisualAnalyzer'
 import { sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
 import {
   applyDembrandtExtraction,
+  buildDembrandtDrift,
   buildDembrandtFindings,
+  buildStyleReportFromDembrandt,
   extractDembrandtBranding,
 } from '@/lib/integrations/dembrandt'
 
@@ -1141,6 +1143,46 @@ export function applyMeasuredUrlSignals(
 }
 
 export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleReport> {
+  if (req.sourceType === 'url') {
+    const normalizedUrl = /^https?:\/\//i.test(req.sourceLabel) ? req.sourceLabel : `https://${req.sourceLabel}`
+    const inferredDarkMode = req.pageAnalysis?.semanticColorSystem?.pageBackground?.hex
+      ? (() => {
+          const hex = req.pageAnalysis?.semanticColorSystem?.pageBackground?.hex || '#FFFFFF'
+          const brightness = Number.parseInt(hex.slice(1, 3), 16) + Number.parseInt(hex.slice(3, 5), 16) + Number.parseInt(hex.slice(5, 7), 16)
+          return brightness < 384
+        })()
+      : undefined
+    const dembrandtResult = await extractDembrandtBranding(normalizedUrl, {
+      ...(typeof inferredDarkMode === 'boolean' ? { darkMode: inferredDarkMode } : {}),
+      ...req.dembrandtOptions,
+    })
+
+    const report = buildStyleReportFromDembrandt(dembrandtResult, {
+      sourceType: 'url',
+      sourceLabel: req.sourceLabel,
+      thumbnailUrl: req.screenshotUrl,
+      pageAnalysis: req.pageAnalysis,
+    })
+
+    if (req.dembrandtBaseline && report.pageAnalysis) {
+      const drift = buildDembrandtDrift(req.dembrandtBaseline, report)
+      report.pageAnalysis = {
+        ...report.pageAnalysis,
+        auditSummary: {
+          ...report.pageAnalysis.auditSummary,
+          designDrift: {
+            status: drift.status === 'drift' || drift.inconclusive ? 'failed' : 'completed',
+            summary: `Dembrandt drift: ${drift.score}`,
+            findingsCount: drift.changes?.length || 0,
+            updatedAt: report.createdAt,
+          },
+        },
+      }
+    }
+
+    return report
+  }
+
   const geminiKeys = [
     process.env.STYLELENS_GEMINI_API_KEY,
     process.env.STYLELENS_GEMINI_API_KEY_2,
@@ -1179,17 +1221,7 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
   console.log(`[aiExtract] Image prepared. Mime: ${mimeType}, B64 Length: ${base64Data.length}`)
 
   const requestWithAnalysis = await enhancePageAnalysisWithScreenshotSignals(req, base64Data)
-  const dembrandtResult = req.sourceType === 'url'
-    ? await extractDembrandtBranding(/^https?:\/\//i.test(req.sourceLabel) ? req.sourceLabel : `https://${req.sourceLabel}`, {
-        darkMode: requestWithAnalysis.pageAnalysis?.semanticColorSystem?.pageBackground?.hex
-          ? (() => {
-              const hex = requestWithAnalysis.pageAnalysis?.semanticColorSystem?.pageBackground?.hex || '#FFFFFF'
-              const brightness = Number.parseInt(hex.slice(1, 3), 16) + Number.parseInt(hex.slice(3, 5), 16) + Number.parseInt(hex.slice(5, 7), 16)
-              return brightness < 384
-            })()
-          : undefined,
-      })
-    : undefined
+  const dembrandtResult = undefined
 
   if (requestWithAnalysis.extractedCss) {
     console.log(`[aiExtract] Adding CSS context (${requestWithAnalysis.extractedCss.length} bytes)`)

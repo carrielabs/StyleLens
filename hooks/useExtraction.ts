@@ -9,7 +9,7 @@ import type {
   RefObject,
   SetStateAction,
 } from 'react'
-import type { DisplayStyleReport, PageStyleAnalysis, StyleReport } from '@/lib/types'
+import type { DisplayStyleReport, ExtractRequest, PageStyleAnalysis, StyleReport } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
 interface UseExtractionParams {
@@ -31,8 +31,12 @@ interface ExtractApiPayload {
   sourceLabel?: string
   extractedCss?: string
   pageAnalysis?: PageStyleAnalysis
+  dembrandtOptions?: ExtractRequest['dembrandtOptions']
+  dembrandtBaseline?: StyleReport
   sourceType: 'image' | 'url'
 }
+
+const LAST_URL_REPORT_KEY = 'stylelens.lastUrlReport'
 
 interface UseExtractionResult {
   url: string
@@ -81,6 +85,38 @@ export function useExtraction({
   const extractAbortRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
+
+  const readDembrandtOptions = (): ExtractRequest['dembrandtOptions'] | undefined => {
+    if (typeof window === 'undefined') return undefined
+    try {
+      const raw = localStorage.getItem('stylelens.dembrandtOptions')
+      if (!raw) return undefined
+      const parsed = JSON.parse(raw) as ExtractRequest['dembrandtOptions']
+      return parsed
+    } catch {
+      return undefined
+    }
+  }
+
+  const readLastUrlReport = (): StyleReport | undefined => {
+    if (typeof window === 'undefined') return undefined
+    try {
+      const raw = localStorage.getItem(LAST_URL_REPORT_KEY)
+      if (!raw) return undefined
+      return JSON.parse(raw) as StyleReport
+    } catch {
+      return undefined
+    }
+  }
+
+  const saveLastUrlReport = (report: StyleReport) => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.setItem(LAST_URL_REPORT_KEY, JSON.stringify(report))
+    } catch {
+      // Ignore storage failures; extraction already succeeded.
+    }
+  }
 
   useEffect(() => {
     const handleGlobalPaste = (e: globalThis.ClipboardEvent) => {
@@ -206,18 +242,22 @@ export function useExtraction({
       } catch {}
 
       setExtractionPhase('ai')
+      const dembrandtOptions = readDembrandtOptions()
       const result = await callExtractAPI({
         sourceType: 'url',
         screenshotUrl: ssData.screenshotUrl,
         sourceLabel: label,
         extractedCss: ssData.extractedCss,
         pageAnalysis: ssData.pageAnalysis,
+        dembrandtOptions,
+        dembrandtBaseline: dembrandtOptions?.compareWithLastUrl ? readLastUrlReport() : undefined,
       }, abort.signal)
       result.thumbnailUrl = ssData.screenshotUrl
 
       setExtractionPhase('saving')
       setReport(result)
       await saveExtraction(result, ssData.screenshotUrl)
+      saveLastUrlReport(result)
       setUrl('')
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return

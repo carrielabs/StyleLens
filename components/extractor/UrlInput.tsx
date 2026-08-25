@@ -1,7 +1,10 @@
 'use client'
 
 import React, { useState } from 'react'
-import type { StyleReport } from '@/lib/types'
+import type { ExtractRequest, StyleReport } from '@/lib/types'
+
+const DEMBRANDT_OPTIONS_KEY = 'stylelens.dembrandtOptions'
+const LAST_URL_REPORT_KEY = 'stylelens.lastUrlReport'
 
 interface UrlInputProps {
   onStart: () => void
@@ -12,6 +15,34 @@ interface UrlInputProps {
 
 export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlInputProps) {
   const [url, setUrl] = useState('')
+
+  const readDembrandtOptions = () => {
+    try {
+      const raw = localStorage.getItem(DEMBRANDT_OPTIONS_KEY)
+      if (!raw) return undefined
+      return JSON.parse(raw) as ExtractRequest['dembrandtOptions']
+    } catch {
+      return undefined
+    }
+  }
+
+  const readLastUrlReport = () => {
+    try {
+      const raw = localStorage.getItem(LAST_URL_REPORT_KEY)
+      if (!raw) return undefined
+      return JSON.parse(raw) as StyleReport
+    } catch {
+      return undefined
+    }
+  }
+
+  const saveLastUrlReport = (report: StyleReport) => {
+    try {
+      localStorage.setItem(LAST_URL_REPORT_KEY, JSON.stringify(report))
+    } catch {
+      // Ignore storage failures.
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,6 +63,7 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
     onStart()
 
     try {
+      const dembrandtOptions = readDembrandtOptions()
       // 1. Take screenshot
       const screenRes = await fetch('/api/screenshot', {
         method: 'POST',
@@ -53,7 +85,9 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
           extractedCss: screenData.extractedCss,
           pageAnalysis: screenData.pageAnalysis,
           sourceType: 'url',
-          sourceLabel: new URL(targetUrl).hostname
+          sourceLabel: new URL(targetUrl).hostname,
+          dembrandtOptions,
+          dembrandtBaseline: dembrandtOptions?.compareWithLastUrl ? readLastUrlReport() : undefined,
         })
       })
 
@@ -63,6 +97,7 @@ export default function UrlInput({ onStart, onSuccess, onError, disabled }: UrlI
           ...extractData.report,
           pageAnalysis: extractData.report?.pageAnalysis || screenData.pageAnalysis,
         }
+        saveLastUrlReport(report)
         onSuccess(report)
       } else {
         throw new Error(extractData.error || '风格提取失败')

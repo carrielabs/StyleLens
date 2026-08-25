@@ -63,6 +63,7 @@ describe('useExtraction', () => {
     global.fetch = vi.fn()
     URL.createObjectURL = vi.fn(() => 'blob:preview')
     URL.revokeObjectURL = vi.fn(() => undefined)
+    localStorage.clear()
   })
 
   afterAll(() => {
@@ -120,10 +121,69 @@ describe('useExtraction', () => {
       await promise
     })
 
+    const extractBody = JSON.parse((vi.mocked(global.fetch).mock.calls[1][1] as RequestInit).body as string)
+    expect(extractBody.dembrandtBaseline).toBeUndefined()
     expect(saveExtraction).toHaveBeenCalledTimes(1)
     expect(setReport).toHaveBeenCalled()
     expect(result.current.isExtracting).toBe(false)
     expect(result.current.isUrlExtracting).toBe(false)
+  })
+
+  it('passes the last URL report as Dembrandt baseline when compare mode is enabled', async () => {
+    const setReport = vi.fn()
+    const saveExtraction = vi.fn().mockResolvedValue(undefined)
+    const screenshotDeferred = createDeferred<Response>()
+    const extractDeferred = createDeferred<Response>()
+    const baselineReport = createReport({
+      sourceType: 'url',
+      sourceLabel: 'https://previous.example',
+      thumbnailUrl: 'https://previous.example/shot.jpg',
+    })
+
+    localStorage.setItem('stylelens.dembrandtOptions', JSON.stringify({ compareWithLastUrl: true }))
+    localStorage.setItem('stylelens.lastUrlReport', JSON.stringify(baselineReport))
+
+    vi.mocked(global.fetch)
+      .mockImplementationOnce(() => screenshotDeferred.promise)
+      .mockImplementationOnce(() => extractDeferred.promise)
+
+    const { result } = renderHook(() =>
+      useExtraction({
+        user: { id: 'user-1' } as never,
+        guestTrialUsed: false,
+        setIsAuthVisible: vi.fn(),
+        setReport,
+        setError: vi.fn(),
+        setActiveItemId: vi.fn(),
+        setIsSearchOpen: vi.fn(),
+        saveExtraction,
+      })
+    )
+
+    act(() => {
+      result.current.setUrl('https://example.com')
+    })
+
+    let promise!: Promise<void>
+    act(() => {
+      promise = result.current.handleUrlSubmit()
+    })
+
+    screenshotDeferred.resolve({
+      json: async () => ({ success: true, screenshotUrl: 'https://example.com/shot.jpg' }),
+    } as Response)
+    extractDeferred.resolve({
+      json: async () => ({ success: true, report: createReport({ sourceType: 'url' }) }),
+    } as Response)
+
+    await act(async () => {
+      await promise
+    })
+
+    const extractBody = JSON.parse((vi.mocked(global.fetch).mock.calls[1][1] as RequestInit).body as string)
+    expect(extractBody.dembrandtBaseline.sourceLabel).toBe('https://previous.example')
+    expect(extractBody.dembrandtBaseline.sourceType).toBe('url')
+    expect(JSON.parse(localStorage.getItem('stylelens.lastUrlReport') || '{}').sourceLabel).toBe('Sample')
   })
 
   it('uses image-only loading state during image extraction', async () => {

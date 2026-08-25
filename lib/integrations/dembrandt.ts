@@ -23,8 +23,15 @@ import type {
   TypographyToken,
 } from '../types/index.ts'
 import { generateTailwindTheme } from './dembrandt-tailwind'
+import { parseSitemap } from './dembrandt-discovery'
+import { mergeResults } from './dembrandt-merge'
 
 type BrandingResult = DembrandtBrandingResult
+export type DembrandtAdvancedOptions = Partial<DembrandtExtractOptions> & {
+  crawl?: number
+  sitemap?: boolean
+  paths?: string[]
+}
 type CssState = {
   backgroundColor?: string
   color?: string
@@ -51,18 +58,66 @@ function createSilentSpinner(): DembrandtSpinner {
   return spinner
 }
 
-export async function extractDembrandtBranding(url: string, options: Partial<DembrandtExtractOptions> = {}) {
+function buildDembrandtOptions(options: DembrandtAdvancedOptions): Partial<DembrandtExtractOptions> {
+  return {
+    reveal: true,
+    wcag: true,
+    mobile: true,
+    slow: true,
+    keepAnimations: true,
+    includeRawColors: true,
+    navigationTimeout: 90000,
+    ...options,
+  }
+}
+
+function resolveDembrandtPaths(baseUrl: string, paths: string[] = []): string[] {
+  const base = new URL(baseUrl)
+  return paths.map(path => {
+    if (/^https?:\/\//i.test(path)) return path
+    return `${base.protocol}//${base.host}${path.startsWith('/') ? path : `/${path}`}`
+  })
+}
+
+export async function extractDembrandtBranding(url: string, options: DembrandtAdvancedOptions = {}) {
   const browser = await chromium.launch({ headless: true })
   try {
-    return await extractBranding(url, createSilentSpinner(), browser, {
-      reveal: true,
-      wcag: true,
-      mobile: true,
-      slow: true,
-      keepAnimations: true,
-      includeRawColors: true,
-      ...options,
+    const spinner = createSilentSpinner()
+    const { crawl, sitemap, paths, ...extractOptions } = options
+    const maxAdditionalPages = Math.max(0, Math.min(20, Math.floor(Number(crawl || 0)) - 1))
+    const shouldAutoCrawl = maxAdditionalPages > 0 && !sitemap && (!paths || paths.length === 0)
+    const homeResult = await extractBranding(url, spinner, browser, {
+      ...buildDembrandtOptions(extractOptions),
+      discoverLinks: shouldAutoCrawl ? maxAdditionalPages : null,
     })
+
+    let additionalUrls = resolveDembrandtPaths(homeResult.url || url, paths)
+    if (sitemap) {
+      const sitemapLimit = maxAdditionalPages > 0 ? maxAdditionalPages : 20
+      additionalUrls = await parseSitemap(homeResult.url || url, sitemapLimit)
+      if (additionalUrls.length === 0 && homeResult.url !== url) {
+        additionalUrls = await parseSitemap(url, sitemapLimit)
+      }
+    } else if (shouldAutoCrawl) {
+      additionalUrls = (homeResult._discoveredLinks || []).map(item => typeof item === 'string' ? item : item.href)
+    }
+
+    delete homeResult._discoveredLinks
+
+    if (additionalUrls.length === 0) return homeResult
+
+    const allResults: BrandingResult[] = [homeResult]
+    for (const pageUrl of additionalUrls) {
+      try {
+        const pageResult = await extractBranding(pageUrl, spinner, browser, buildDembrandtOptions(extractOptions))
+        delete pageResult._discoveredLinks
+        allResults.push(pageResult)
+      } catch {
+        // Dembrandt CLI also skips failed secondary pages; homepage result remains usable.
+      }
+    }
+
+    return mergeResults(allResults) as BrandingResult
   } finally {
     await browser.close()
   }
@@ -946,6 +1001,69 @@ export function applyDembrandtExtraction(report: StyleReport, result: BrandingRe
         }
       : report.pageAnalysis,
   }
+}
+
+export function buildStyleReportFromDembrandt(
+  result: BrandingResult,
+  input: Pick<StyleReport, 'sourceType' | 'sourceLabel' | 'thumbnailUrl'> & {
+    pageAnalysis?: PageStyleAnalysis
+    createdAt?: string
+  }
+): StyleReport {
+  const createdAt = input.createdAt || result.extractedAt || new Date().toISOString()
+  const siteName = result.siteName || (() => {
+    try {
+      return new URL(result.url).hostname.replace(/^www\./, '')
+    } catch {
+      return input.sourceLabel
+    }
+  })()
+  const frameworks = result.frameworks?.map(item => item.name).filter(Boolean) || []
+  const icons = result.iconSystem?.map(item => item.name).filter(Boolean) || []
+  const tags = Array.from(new Set([
+    'Dembrandt',
+    result.spacing?.scaleType,
+    ...frameworks,
+    ...icons,
+  ].filter(Boolean))).slice(0, 8) as string[]
+
+  return applyDembrandtExtraction({
+    sourceType: input.sourceType,
+    sourceLabel: input.sourceLabel,
+    thumbnailUrl: input.thumbnailUrl,
+    pageAnalysis: input.pageAnalysis,
+    summary: `Dembrandt extracted design system for ${siteName}.`,
+    summaryEn: `Dembrandt extracted design system for ${siteName}.`,
+    summaryZh: `已使用 Dembrandt 官方能力提取 ${siteName} 的设计系统。`,
+    tags,
+    tagsEn: tags,
+    tagsZh: tags,
+    colors: [],
+    gradients: [],
+    typography: {
+      fontFamily: 'System',
+      confidence: 'inferred',
+      headingWeight: 700,
+      bodyWeight: 400,
+      fontSizeScale: 'Measured by Dembrandt',
+      lineHeight: 'normal',
+      letterSpacing: 'normal',
+      alignment: 'left',
+      textTreatment: 'solid',
+    },
+    designDetails: {
+      overallStyle: siteName,
+      colorMode: 'system',
+      borderRadius: 'none',
+      shadowStyle: 'none',
+      spacingSystem: result.spacing?.scaleType || 'custom',
+      borderStyle: 'none',
+      animationTendency: result.motion?.durations?.length ? 'measured motion' : 'none',
+      imageHandling: 'observed',
+      layoutStructure: result.breakpoints?.length ? `${result.breakpoints.length} breakpoint(s)` : 'single layout',
+    },
+    createdAt,
+  }, result)
 }
 
 export function buildDembrandtBrandingResult(report: StyleReport): BrandingResult {

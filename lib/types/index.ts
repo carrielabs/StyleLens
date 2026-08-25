@@ -444,6 +444,7 @@ export interface PageAuditSummary {
   accessibility?: AuditModuleSummary
   performance?: AuditModuleSummary
   designSystem?: AuditModuleSummary
+  designDrift?: AuditModuleSummary
 }
 
 export interface PageStyleAnalysis {
@@ -540,6 +541,29 @@ export interface ExtractRequest {
   screenshotUrl?: string
   extractedCss?: string
   pageAnalysis?: PageStyleAnalysis
+  dembrandtOptions?: {
+    darkMode?: boolean
+    mobile?: boolean
+    slow?: boolean
+    stealth?: boolean
+    wcag?: boolean
+    reveal?: boolean
+    keepAnimations?: boolean
+    includeRawColors?: boolean
+    compareWithLastUrl?: boolean
+    crawl?: number
+    sitemap?: boolean
+    paths?: string[]
+    cookie?: string
+    header?: string
+    userAgent?: string
+    locale?: string
+    timezoneId?: string
+    acceptLanguage?: string
+    screenSize?: string
+    navigationTimeout?: number
+  }
+  dembrandtBaseline?: StyleReport
   sourceType: 'image' | 'url'
   sourceLabel: string
 }

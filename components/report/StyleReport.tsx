@@ -76,9 +76,21 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false, on
   const isElite = isV2 || isV3
   const isDNA = report.id?.startsWith('preset_') || report.id === 'linear'
   const showDNA = FLAGS.ENABLE_DESIGN_AUDITS || !isDNA
+  const dembrandtResult = report.dembrandtResult
   const auditEntries = report.pageAnalysis?.auditSummary
     ? Object.entries(report.pageAnalysis.auditSummary).filter(([, value]) => value && value.status !== 'not-run')
     : []
+  const nativePages = dembrandtResult?.pages || []
+  const nativeInputCount = Array.isArray(dembrandtResult?.components?.inputs)
+    ? dembrandtResult?.components?.inputs.length || 0
+    : dembrandtResult?.components?.inputs?.text?.length || 0
+  const nativeBadgeCount = Array.isArray(dembrandtResult?.components?.badges)
+    ? dembrandtResult?.components?.badges.length || 0
+    : dembrandtResult?.components?.badges?.all?.length || 0
+  const nativeComponentCount = (dembrandtResult?.components?.buttons?.length || 0)
+    + nativeInputCount
+    + (dembrandtResult?.components?.links?.length || 0)
+    + nativeBadgeCount
 
   const contentMap = {
     markdown: buildDembrandtDesignMd(report),
@@ -223,6 +235,63 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false, on
                 )}
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {dembrandtResult && (
+        <section>
+          <SectionLabel>{lang === 'zh' ? '原生结果' : 'Native Result'}</SectionLabel>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+            <NativeStat label={lang === 'zh' ? '页面' : 'Pages'} value={String(nativePages.length || 1)} />
+            <NativeStat label={lang === 'zh' ? '颜色' : 'Colors'} value={String(dembrandtResult.colors?.palette?.length || 0)} />
+            <NativeStat label={lang === 'zh' ? '排版' : 'Typography'} value={String(dembrandtResult.typography?.styles?.length || 0)} />
+            <NativeStat label={lang === 'zh' ? '组件' : 'Components'} value={String(nativeComponentCount)} />
+            <NativeStat label={lang === 'zh' ? '断点' : 'Breakpoints'} value={String(dembrandtResult.breakpoints?.length || 0)} />
+            <NativeStat label={lang === 'zh' ? '框架' : 'Frameworks'} value={String(dembrandtResult.frameworks?.length || 0)} />
+          </div>
+
+          {nativePages.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+              {nativePages.slice(0, 8).map(page => {
+                let label = page.url
+                try {
+                  label = new URL(page.url).pathname || '/'
+                } catch {}
+                return (
+                  <span
+                    key={page.url}
+                    style={{
+                      fontSize: '12px',
+                      color: 'var(--text-secondary)',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      borderRadius: '999px',
+                      padding: '4px 10px',
+                      background: 'rgba(0,0,0,0.02)',
+                    }}
+                  >
+                    {label}
+                  </span>
+                )
+              })}
+            </div>
+          )}
+
+          <div style={{
+            border: '1px solid rgba(0,0,0,0.06)',
+            borderRadius: '14px',
+            padding: '16px',
+            background: '#FFFFFF',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '12px',
+          }}>
+            <NativeBlock label={lang === 'zh' ? '站点' : 'Site'} value={dembrandtResult.siteName || dembrandtResult.url} />
+            <NativeBlock label={lang === 'zh' ? '提取时间' : 'Extracted'} value={dembrandtResult.extractedAt} />
+            <NativeBlock label={lang === 'zh' ? '图标系统' : 'Icons'} value={dembrandtResult.iconSystem?.map(item => item.name).filter(Boolean).join(' · ') || '-'} />
+            <NativeBlock label={lang === 'zh' ? '识别框架' : 'Frameworks'} value={dembrandtResult.frameworks?.map(item => item.name).filter(Boolean).join(' · ') || '-'} />
+            <NativeBlock label={lang === 'zh' ? '设计说明' : 'Note'} value={dembrandtResult.note || '-'} />
+            <NativeBlock label={lang === 'zh' ? 'WCAG 对比' : 'WCAG'} value={String(dembrandtResult.wcag?.length || 0)} />
           </div>
         </section>
       )}
@@ -375,12 +444,14 @@ function auditLabel(key: string, lang: 'zh' | 'en') {
     accessibility: '可访问性',
     performance: '性能',
     designSystem: '设计系统诊断',
+    designDrift: '设计漂移',
   }
   const enMap: Record<string, string> = {
     cssAnalyzer: 'CSS Consistency',
     accessibility: 'Accessibility',
     performance: 'Performance',
     designSystem: 'Design System Findings',
+    designDrift: 'Design Drift',
   }
   return lang === 'zh' ? (zhMap[key] || key) : (enMap[key] || key)
 }
@@ -393,5 +464,28 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     }}>
       {children}
     </h3>
+  )
+}
+
+function NativeStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{
+      border: '1px solid rgba(0,0,0,0.06)',
+      borderRadius: '12px',
+      padding: '12px 14px',
+      background: '#FFFFFF',
+    }}>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>{label}</div>
+      <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</div>
+    </div>
+  )
+}
+
+function NativeBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.6, wordBreak: 'break-word' }}>{value}</div>
+    </div>
   )
 }
