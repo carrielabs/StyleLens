@@ -34,6 +34,13 @@
 - **限制**：文件上限 2MB；模板只能使用当前 28 个 Dashboard 模板。
 - **运行时限制**：`maxDuration = 60`。
 
+## `POST /api/dembrandt/drift`
+
+- **作用**：直接调用 Dembrandt 的 drift 引擎，对两份 `StyleReport` 做设计漂移比较。
+- **输入**：JSON，包含 `baseline` 和 `candidate` 两份报告。
+- **返回**：Dembrandt 原生 drift 结果。
+- **运行时限制**：`maxDuration = 30`。
+
 ## `GET /api/template-preview/[templateId]`
 
 - **作用**：读取 `templates/_incoming/<templateId>/template.html`，用于模板卡片预览和全屏预览。

@@ -6,6 +6,11 @@ import sharp from 'sharp'
 import fs from 'fs'
 import { mergeScreenshotColorSignals } from '@/lib/api/heroVisualAnalyzer'
 import { sanitizePageAnalysis } from '@/lib/api/pageAnalyzer'
+import {
+  applyDembrandtExtraction,
+  buildDembrandtFindings,
+  extractDembrandtBranding,
+} from '@/lib/integrations/dembrandt'
 
 type FetchGlobalWithProxyFlag = typeof globalThis & {
   __gemini_fetch_patched__?: boolean
@@ -1174,6 +1179,17 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
   console.log(`[aiExtract] Image prepared. Mime: ${mimeType}, B64 Length: ${base64Data.length}`)
 
   const requestWithAnalysis = await enhancePageAnalysisWithScreenshotSignals(req, base64Data)
+  const dembrandtResult = req.sourceType === 'url'
+    ? await extractDembrandtBranding(/^https?:\/\//i.test(req.sourceLabel) ? req.sourceLabel : `https://${req.sourceLabel}`, {
+        darkMode: requestWithAnalysis.pageAnalysis?.semanticColorSystem?.pageBackground?.hex
+          ? (() => {
+              const hex = requestWithAnalysis.pageAnalysis?.semanticColorSystem?.pageBackground?.hex || '#FFFFFF'
+              const brightness = Number.parseInt(hex.slice(1, 3), 16) + Number.parseInt(hex.slice(3, 5), 16) + Number.parseInt(hex.slice(5, 7), 16)
+              return brightness < 384
+            })()
+          : undefined,
+      })
+    : undefined
 
   if (requestWithAnalysis.extractedCss) {
     console.log(`[aiExtract] Adding CSS context (${requestWithAnalysis.extractedCss.length} bytes)`)
@@ -1206,7 +1222,7 @@ export async function extractStyleWithAI(req: ExtractRequest): Promise<StyleRepo
       const response = await result.response
       const rawText = response.text().trim()
       
-      return parseAndFormatResponse(rawText, requestWithAnalysis, mimeType, base64Data)
+      return parseAndFormatResponse(rawText, requestWithAnalysis, mimeType, base64Data, dembrandtResult)
     } catch (err: unknown) {
       lastError = err
       const message = getErrorMessage(err)
@@ -1234,7 +1250,8 @@ function parseAndFormatResponse(
   rawText: string, 
   req: ExtractRequest, 
   mimeType: string, 
-  base64Data: string
+  base64Data: string,
+  dembrandtResult?: Awaited<ReturnType<typeof extractDembrandtBranding>>
 ): StyleReport {
   let parsed: Omit<StyleReport, 'id' | 'sourceType' | 'sourceLabel' | 'thumbnailUrl' | 'createdAt'>
   try {
@@ -1254,7 +1271,7 @@ function parseAndFormatResponse(
     })
   }
 
-  return {
+  const report: StyleReport = {
     sourceType: req.sourceType,
     sourceLabel: req.sourceLabel,
     thumbnailUrl: req.screenshotUrl || (base64Data ? `data:${mimeType};base64,${base64Data}` : undefined),
@@ -1272,4 +1289,28 @@ function parseAndFormatResponse(
     designDetails: parsed.designDetails,
     createdAt: new Date().toISOString(),
   }
+
+  const enrichedReport = dembrandtResult
+    ? applyDembrandtExtraction(report, dembrandtResult)
+    : report
+
+  if (enrichedReport.pageAnalysis) {
+    const findings = buildDembrandtFindings(enrichedReport)
+    enrichedReport.pageAnalysis = {
+      ...enrichedReport.pageAnalysis,
+      auditSummary: {
+        ...enrichedReport.pageAnalysis.auditSummary,
+        designSystem: {
+          status: findings.findings.length > 0 && findings.findings.some(item => item.severity === 'error') ? 'failed' : 'completed',
+          summary: findings.findings.length > 0
+            ? `Dembrandt findings: ${findings.findings.length}`
+            : 'Dembrandt findings: 0',
+          findingsCount: findings.findings.length,
+          updatedAt: enrichedReport.createdAt,
+        },
+      },
+    }
+  }
+
+  return enrichedReport
 }

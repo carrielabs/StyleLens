@@ -4,9 +4,7 @@ import { useState } from 'react'
 import type { StyleReport } from '@/lib/types'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
-import { generateJsonToken } from '@/lib/exporters/jsonExporter'
-import { generateMarkdown } from '@/lib/exporters/markdownExporter'
-import { generateTailwindConfig } from '@/lib/exporters/tailwindExporter'
+import { buildDembrandtDesignMd, buildDembrandtDtcg, buildDembrandtTailwindTheme } from '@/lib/integrations/dembrandt'
 
 type Tab = 'prompt_en' | 'prompt_zh' | 'css' | 'tailwind' | 'json' | 'markdown'
 
@@ -18,9 +16,9 @@ export default function ExportPanel({ report }: { report: StyleReport }) {
     prompt_en: generatePrompt(report, 'en'),
     prompt_zh: generatePrompt(report, 'zh'),
     css: generateCssVariables(report),
-    tailwind: generateTailwindConfig(report),
-    json: generateJsonToken(report),
-    markdown: generateMarkdown(report)
+    tailwind: buildDembrandtTailwindTheme(report),
+    json: JSON.stringify(buildDembrandtDtcg(report), null, 2),
+    markdown: buildDembrandtDesignMd(report)
   }
 
   const handleCopy = () => {
@@ -33,9 +31,9 @@ export default function ExportPanel({ report }: { report: StyleReport }) {
     { id: 'prompt_en', label: 'Prompt (EN)' },
     { id: 'prompt_zh', label: 'Prompt (中)' },
     { id: 'css', label: 'CSS Variables' },
-    { id: 'tailwind', label: 'Tailwind Config' },
-    { id: 'json', label: 'Design Tokens' },
-    { id: 'markdown', label: 'Markdown' }
+    { id: 'tailwind', label: 'Tailwind v4' },
+    { id: 'json', label: 'DTCG' },
+    { id: 'markdown', label: 'DESIGN.md' }
   ]
 
   return (

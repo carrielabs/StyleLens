@@ -1,3 +1,5 @@
+import type { BrandingResult as DembrandtBrandingResult } from 'dembrandt/types'
+
 // ─── Style Extract Result ────────────────────────────────────────────────────
 
 export type EvidenceSource =
@@ -441,6 +443,7 @@ export interface PageAuditSummary {
   cssAnalyzer?: AuditModuleSummary
   accessibility?: AuditModuleSummary
   performance?: AuditModuleSummary
+  designSystem?: AuditModuleSummary
 }
 
 export interface PageStyleAnalysis {
@@ -489,6 +492,7 @@ export interface StyleReport {
   sourceLabel: string
   thumbnailUrl?: string
   pageAnalysis?: PageStyleAnalysis
+  dembrandtResult?: DembrandtBrandingResult
   colorSystem?: LayeredColorSystem
   summary: string
   summaryEn?: string

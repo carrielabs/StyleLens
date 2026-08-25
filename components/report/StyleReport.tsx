@@ -10,11 +10,9 @@ import DesignDetailsEliteV3 from './DesignDetailsEliteV3'
 import AtomicSandbox from './AtomicSandbox'
 import StyleInspector from './StyleInspector'
 import DesignInspector from './DesignInspector'
+import { buildDembrandtDesignMd, buildDembrandtDtcg, buildDembrandtTailwindTheme } from '@/lib/integrations/dembrandt'
 import { generatePrompt } from '@/lib/exporters/promptExporter'
 import { generateCssVariables } from '@/lib/exporters/cssExporter'
-import { generateJsonToken } from '@/lib/exporters/jsonExporter'
-import { generateMarkdown } from '@/lib/exporters/markdownExporter'
-import { generateTailwindConfig } from '@/lib/exporters/tailwindExporter'
 import { Copy, Check, Download } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -32,16 +30,16 @@ const i18n = {
     export: '代码输出',
     markdown_desc: '完整设计规范文档，可直接发给设计师或 PM',
     css_desc: '直接可用的 CSS 变量，粘贴进 :root 零修改',
-    json_desc: '标准设计 Token，可导入 Figma 变量库或 Style Dictionary',
+    json_desc: 'DTCG 标准设计 Token，可导入 Figma 变量库或 Style Dictionary',
     prompt_desc: '发给 AI 的设计契约，约束 AI 不乱发挥',
-    tailwind_desc: '粘进 tailwind.config.js 即可，颜色字体圆角一步到位',
+    tailwind_desc: 'Tailwind v4 @theme，可直接接到新项目',
     copy: '复制',
     copied: '已复制',
-    tab_markdown: 'Markdown',
+    tab_markdown: 'DESIGN.md',
     tab_css: 'CSS',
-    tab_json: 'Tokens',
+    tab_json: 'DTCG',
     tab_prompt: 'Prompt',
-    tab_tailwind: 'Tailwind'
+    tab_tailwind: 'Tailwind v4'
   },
   en: {
     vibe: 'Style Vibe',
@@ -52,18 +50,18 @@ const i18n = {
     sandbox: 'Style Preview',
     inspector: 'Style Analysis',
     export: 'Export Assets',
-    markdown_desc: 'Full design spec — share directly with designers or PMs',
+    markdown_desc: 'DESIGN.md export — share directly with designers or PMs',
     css_desc: 'Ready-to-use CSS variables — paste into :root, zero edits needed',
-    json_desc: 'Standard design tokens — import into Figma variables or Style Dictionary',
+    json_desc: 'DTCG design tokens — import into Figma variables or Style Dictionary',
     prompt_desc: 'Design contract for AI — keeps Cursor / v0 from going off-script',
-    tailwind_desc: 'Paste into tailwind.config.js — colors, fonts, and radii all set',
+    tailwind_desc: 'Tailwind v4 @theme — ready for a new project',
     copy: 'Copy',
     copied: 'Copied',
-    tab_markdown: 'Markdown',
+    tab_markdown: 'DESIGN.md',
     tab_css: 'CSS',
-    tab_json: 'Tokens',
+    tab_json: 'DTCG',
     tab_prompt: 'Prompt',
-    tab_tailwind: 'Tailwind'
+    tab_tailwind: 'Tailwind v4'
   }
 }
 
@@ -83,15 +81,15 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false, on
     : []
 
   const contentMap = {
-    markdown: generateMarkdown(report, lang),
+    markdown: buildDembrandtDesignMd(report),
     css: generateCssVariables(report),
-    json: generateJsonToken(report),
+    json: JSON.stringify(buildDembrandtDtcg(report), null, 2),
     prompt: generatePrompt(report, lang),
-    tailwind: generateTailwindConfig(report)
+    tailwind: buildDembrandtTailwindTheme(report)
   }
 
   const fileExtMap: Record<typeof activeCode, string> = {
-    markdown: 'md', css: 'css', json: 'json', prompt: 'md', tailwind: 'js'
+    markdown: 'md', css: 'css', json: 'json', prompt: 'md', tailwind: 'css'
   }
 
   const handleCopy = () => {
@@ -340,8 +338,8 @@ export default function StyleReport({ report, lang = 'zh', fullWidth = false, on
                 {copied ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
               </button>
             </div>
-            <SyntaxHighlighter
-              language={activeCode === 'css' ? 'css' : activeCode === 'json' ? 'json' : activeCode === 'tailwind' ? 'javascript' : 'markdown'}
+              <SyntaxHighlighter
+              language={activeCode === 'css' ? 'css' : activeCode === 'json' ? 'json' : activeCode === 'tailwind' ? 'css' : 'markdown'}
               style={vscDarkPlus}
               showLineNumbers={true}
               lineNumberStyle={{ minWidth: '3.25em', paddingRight: '1em', color: '#555555', textAlign: 'right', fontSize: '11px', userSelect: 'none' }}
@@ -376,11 +374,13 @@ function auditLabel(key: string, lang: 'zh' | 'en') {
     cssAnalyzer: 'CSS 一致性',
     accessibility: '可访问性',
     performance: '性能',
+    designSystem: '设计系统诊断',
   }
   const enMap: Record<string, string> = {
     cssAnalyzer: 'CSS Consistency',
     accessibility: 'Accessibility',
     performance: 'Performance',
+    designSystem: 'Design System Findings',
   }
   return lang === 'zh' ? (zhMap[key] || key) : (enMap[key] || key)
 }
