@@ -73,7 +73,9 @@ const nativeDembrandtResult = vi.hoisted(() => ({
   shadows: [
     { shadow: '0 4px 12px rgba(0,0,0,0.1)', count: 1, confidence: 'high' },
   ],
-  gradients: [],
+  gradients: [
+    { gradient: 'linear-gradient(90deg, #111111, #ffffff)', type: 'linear', stopColors: ['#111111', '#ffffff'], count: 1 },
+  ],
   motion: {
     durations: [
       { value: '150ms', ms: 150, count: 1 },
@@ -85,10 +87,64 @@ const nativeDembrandtResult = vi.hoisted(() => ({
     interactiveDeltas: [],
   },
   components: {
-    buttons: [],
-    inputs: [],
-    links: [],
-    badges: [],
+    buttons: [
+      {
+        states: {
+          default: {
+            backgroundColor: '#111111',
+            color: '#ffffff',
+            borderRadius: '12px',
+            padding: '10px 20px',
+            border: '1px solid #111111',
+          },
+          hover: {
+            backgroundColor: '#222222',
+            color: '#ffffff',
+          },
+        },
+        text: 'Start',
+        fontWeight: '700',
+        fontSize: '15px',
+        classes: '.cta',
+      },
+    ],
+    inputs: [
+      {
+        states: {
+          default: {
+            backgroundColor: '#ffffff',
+            color: '#111111',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            border: '1px solid #dddddd',
+          },
+          focus: {
+            border: '1px solid #111111',
+          },
+        },
+        type: 'text',
+      },
+    ],
+    links: [
+      {
+        states: {
+          default: { color: '#111111' },
+          hover: { color: '#222222', textDecoration: 'underline' },
+        },
+        fontWeight: '500',
+      },
+    ],
+    badges: {
+      all: [
+        {
+          backgroundColor: '#f5f5f5',
+          color: '#111111',
+          borderRadius: '999px',
+          padding: '4px 10px',
+          fontSize: '12px',
+        },
+      ],
+    },
   },
   breakpoints: [
     { px: 1024 },
@@ -142,7 +198,14 @@ describe('dembrandt bridge', () => {
         info: expect.any(Function),
       }),
       expect.any(Object),
-      expect.objectContaining({ reveal: true, wcag: true })
+      expect.objectContaining({
+        reveal: true,
+        wcag: true,
+        mobile: true,
+        slow: true,
+        keepAnimations: true,
+        includeRawColors: true,
+      })
     )
   })
 
@@ -172,8 +235,24 @@ describe('dembrandt bridge', () => {
     expect(report.dembrandtResult).toBe(nativeDembrandtResult)
     expect(report.colors[0].hex).toBe('#111111')
     expect(report.colorSystem?.primaryAction?.hex).toBe('#111111')
+    expect(report.gradients[0].css).toBe('linear-gradient(90deg, #111111, #ffffff)')
     expect(report.typography.fontFamily).toBe('Inter')
     expect(report.designDetails.cssRadius).toBe('12px')
+    expect(report.designDetails.iconEn).toBe('lucide')
+    expect(report.designDetails.signatureEn).toBe('Next.js')
+    expect(report.pageAnalysis?.typographyTokens[0].fontFamily).toBe('Inter')
+    expect(report.pageAnalysis?.spacingTokens[0].value).toBe('8px')
+    expect(report.pageAnalysis?.radiusTokens[0].value).toBe('12px')
+    expect(report.pageAnalysis?.shadowTokens[0].value).toBe('0 4px 12px rgba(0,0,0,0.1)')
+    expect(report.pageAnalysis?.borderTokens?.[0].width).toBe('1px')
+    expect(report.pageAnalysis?.transitionTokens?.[0].duration).toBe('150ms')
+    expect(report.pageAnalysis?.buttonSnapshots?.[0].text).toBe('Start')
+    expect(report.pageAnalysis?.inputSnapshots?.[0].borderRadius).toBe('8px')
+    expect(report.pageAnalysis?.tagSnapshots?.[0].borderRadius).toBe('999px')
+    expect(report.pageAnalysis?.stateTokens?.button?.[0].state).toBe('hover')
+    expect(report.pageAnalysis?.stateTokens?.link?.[0].state).toBe('hover')
+    expect(report.pageAnalysis?.pageMaxWidth).toBe('1024px')
+    expect(report.pageAnalysis?.evidenceSummary?.notes).toContain('Dembrandt native extraction')
     expect(report.pageAnalysis?.auditSummary?.designSystem?.summary).toContain('Dembrandt findings')
     expect(report.pageAnalysis?.auditSummary?.accessibility?.summary).toContain('Dembrandt WCAG pairs')
   })

@@ -9,7 +9,19 @@ import type {
   ExtractOptions as DembrandtExtractOptions,
   Spinner as DembrandtSpinner,
 } from 'dembrandt/types'
-import type { StyleReport } from '../types/index.ts'
+import type {
+  BorderToken,
+  ButtonSnapshot,
+  ComponentKind,
+  EvidenceConfidence,
+  InputSnapshot,
+  PageStyleAnalysis,
+  StateTokenValue,
+  StyleReport,
+  TagSnapshot,
+  TransitionToken,
+  TypographyToken,
+} from '../types/index.ts'
 import { generateTailwindTheme } from './dembrandt-tailwind'
 
 type BrandingResult = DembrandtBrandingResult
@@ -21,6 +33,8 @@ type CssState = {
   border?: string
   boxShadow?: string
   textDecoration?: string
+  opacity?: string
+  transform?: string
 }
 type ColorToken = any
 
@@ -43,6 +57,10 @@ export async function extractDembrandtBranding(url: string, options: Partial<Dem
     return await extractBranding(url, createSilentSpinner(), browser, {
       reveal: true,
       wcag: true,
+      mobile: true,
+      slow: true,
+      keepAnimations: true,
+      includeRawColors: true,
       ...options,
     })
   } finally {
@@ -500,22 +518,412 @@ function buildDesignDetailsFromDembrandt(result: BrandingResult): StyleReport['d
   }
 }
 
+function dembrandtConfidence(value?: string): EvidenceConfidence {
+  return value === 'high' || value === 'low' ? value : 'medium'
+}
+
+function toComponentKinds(context?: string): ComponentKind[] {
+  const text = String(context || '').toLowerCase()
+  if (text.includes('button')) return ['button']
+  if (text.includes('input') || text.includes('form')) return ['input']
+  if (text.includes('link') || text.includes('nav')) return ['link']
+  if (text.includes('card')) return ['card']
+  if (text.includes('hero')) return ['hero', 'text']
+  return ['text']
+}
+
+function toTypographyUsage(context?: string): TypographyToken['usage'] {
+  const text = String(context || '').toLowerCase()
+  if (text.includes('display')) return 'display'
+  if (text.includes('heading') || /^h[1-6]/.test(text)) return 'heading'
+  if (text.includes('title')) return 'title'
+  if (text.includes('caption')) return 'caption'
+  if (text.includes('label') || text.includes('button')) return 'label'
+  return 'body'
+}
+
+function splitPadding(padding?: string) {
+  const values = String(padding || '').trim().split(/\s+/).filter(Boolean)
+  if (values.length === 0) return {}
+  if (values.length === 1) return { paddingV: values[0], paddingH: values[0] }
+  return { paddingV: values[0], paddingH: values[1] }
+}
+
+function parseBorder(border?: string) {
+  const value = String(border || '').trim()
+  if (!value || value === 'none') return undefined
+  const match = value.match(/(\d+(?:\.\d+)?px)\s+(\w+)\s+(.+)/)
+  if (!match) return undefined
+  return {
+    width: match[1],
+    style: match[2],
+    color: normalizeHex(match[3]) || match[3],
+  }
+}
+
+function getInputStyles(components: BrandingResult['components']): any[] {
+  const inputs = components?.inputs
+  if (Array.isArray(inputs)) return inputs
+  return inputs?.text || []
+}
+
+function getBadgeStyles(components: BrandingResult['components']): any[] {
+  const badges = components?.badges
+  if (Array.isArray(badges)) return badges
+  return badges?.all || Object.values(badges?.byVariant || {}).flat()
+}
+
+function buildTransitionTokensFromDembrandt(result: BrandingResult): TransitionToken[] {
+  const durations = result.motion?.durations || []
+  const easings = result.motion?.easings || []
+  const contexts = result.motion?.contexts || {}
+
+  const fromContexts = Object.entries(contexts).flatMap(([context, item]) => (
+    item.durations.map((duration, index) => ({
+      property: item.props[index] || item.props[0] || 'all',
+      duration,
+      easing: item.easingType || easings[0]?.value || 'ease',
+      sampleCount: item.count || 1,
+      componentKinds: toComponentKinds(context),
+      meta: {
+        source: 'dom-computed' as const,
+        confidence: 'high' as const,
+        evidenceCount: item.count || 1,
+        context,
+      },
+    }))
+  ))
+
+  if (fromContexts.length > 0) return fromContexts.slice(0, 12)
+
+  return durations.slice(0, 12).map((duration, index) => ({
+    property: 'all',
+    duration: duration.value,
+    easing: easings[index]?.value || easings[0]?.value || 'ease',
+    sampleCount: duration.count || 1,
+    componentKinds: ['button'],
+    meta: {
+      source: 'dom-computed',
+      confidence: 'medium',
+      evidenceCount: duration.count || 1,
+    },
+  }))
+}
+
+function buildStateTokensFromDembrandt(result: BrandingResult): PageStyleAnalysis['stateTokens'] {
+  const pushState = (
+    items: StateTokenValue[],
+    state: StateTokenValue['state'],
+    style: CssState | undefined,
+    componentKinds: ComponentKind[],
+  ) => {
+    if (!style || state === 'default') return
+    const properties: Array<[StateTokenValue['property'], string | undefined]> = [
+      ['color', style.color],
+      ['background-color', style.backgroundColor],
+      ['border-color', parseBorder(style.border)?.color],
+      ['box-shadow', style.boxShadow],
+      ['opacity', style.opacity],
+      ['transform', style.transform],
+    ]
+
+    properties.forEach(([property, value]) => {
+      if (!value) return
+      items.push({
+        value,
+        property,
+        state,
+        componentKinds,
+        evidenceScore: 80,
+        measured: true,
+        meta: {
+          source: 'dom-computed',
+          confidence: 'high',
+          evidenceCount: 1,
+        },
+      })
+    })
+  }
+
+  const button: StateTokenValue[] = []
+  ;(result.components?.buttons || []).forEach(item => {
+    pushState(button, 'hover', item.states?.hover, ['button'])
+    pushState(button, 'focus', item.states?.focus, ['button'])
+    pushState(button, 'active', item.states?.active, ['button'])
+  })
+
+  const input: StateTokenValue[] = []
+  getInputStyles(result.components).forEach(item => {
+    pushState(input, 'focus', item.states?.focus, ['input'])
+  })
+
+  const link: StateTokenValue[] = []
+  ;(result.components?.links || []).forEach(item => {
+    pushState(link, 'hover', item.states?.hover, ['link'])
+  })
+
+  return { button, input, link }
+}
+
+function buildButtonSnapshotsFromDembrandt(result: BrandingResult): ButtonSnapshot[] {
+  return (result.components?.buttons || []).slice(0, 3).map(item => {
+    const state = item.states?.default || {}
+    return {
+      selectorHint: item.classes,
+      backgroundColor: state.backgroundColor,
+      color: state.color,
+      borderRadius: state.borderRadius,
+      ...splitPadding(state.padding),
+      fontSize: item.fontSize,
+      fontWeight: item.fontWeight,
+      border: state.border,
+      boxShadow: state.boxShadow,
+      text: item.text,
+    }
+  })
+}
+
+function buildInputSnapshotsFromDembrandt(result: BrandingResult): InputSnapshot[] {
+  return getInputStyles(result.components).slice(0, 3).map(item => {
+    const state = item.states?.default || {}
+    return {
+      backgroundColor: state.backgroundColor,
+      color: state.color,
+      borderRadius: item.borderRadius || state.borderRadius,
+      border: item.border || state.border,
+      ...splitPadding(item.padding || state.padding),
+    }
+  })
+}
+
+function buildTagSnapshotsFromDembrandt(result: BrandingResult): TagSnapshot[] {
+  return getBadgeStyles(result.components).slice(0, 3).map(item => ({
+    backgroundColor: item.backgroundColor,
+    color: item.color,
+    borderRadius: item.borderRadius,
+    ...splitPadding(item.padding),
+    fontSize: item.fontSize,
+  }))
+}
+
+function buildBorderTokensFromDembrandt(result: BrandingResult): BorderToken[] {
+  const combinations = result.borders?.combinations || []
+  if (combinations.length > 0) {
+    return combinations.slice(0, 12).map(item => ({
+      width: item.width,
+      style: item.style,
+      color: item.color,
+      sampleCount: item.count || 1,
+      componentKinds: ['surface'],
+      meta: {
+        source: 'dom-computed',
+        confidence: dembrandtConfidence(item.confidence),
+        evidenceCount: item.count || 1,
+      },
+    }))
+  }
+
+  const widths = result.borders?.widths || []
+  const styles = result.borders?.styles || []
+  const colors = result.borders?.colors || []
+  return widths.slice(0, 12).map((item, index) => ({
+    width: item.value,
+    style: styles[index]?.value || styles[0]?.value || 'solid',
+    color: colors[index]?.value || colors[0]?.value,
+    sampleCount: item.count || 1,
+    componentKinds: ['surface'],
+    meta: {
+      source: 'dom-computed',
+      confidence: dembrandtConfidence(item.confidence),
+      evidenceCount: item.count || 1,
+    },
+  }))
+}
+
+function buildPageAnalysisFromDembrandt(result: BrandingResult, previous?: PageStyleAnalysis): PageStyleAnalysis {
+  const typographyTokens = (result.typography?.styles || []).slice(0, 12).map((item, index) => ({
+    id: `dembrandt-type-${index}`,
+    label: item.context || `Typography ${index + 1}`,
+    fontFamily: item.family,
+    fontSize: item.size,
+    fontWeight: String(item.weight),
+    lineHeight: item.lineHeight || 'normal',
+    letterSpacing: item.letterSpacing || 'normal',
+    usage: toTypographyUsage(item.context),
+    sampleCount: item.count || 1,
+    componentKinds: toComponentKinds(item.context),
+    evidenceScore: 90,
+    meta: {
+      source: 'dom-computed' as const,
+      confidence: 'high' as const,
+      evidenceCount: item.count || 1,
+      context: item.context,
+    },
+  }))
+
+  const radiusTokens = (result.borderRadius?.values || []).slice(0, 12).map((item, index) => ({
+    value: item.value,
+    label: `Dembrandt radius ${index + 1}`,
+    sampleCount: item.count || 1,
+    componentKinds: ['button', 'card', 'input'] as ComponentKind[],
+    evidenceScore: 90,
+    meta: {
+      source: 'dom-computed' as const,
+      confidence: dembrandtConfidence(item.confidence),
+      evidenceCount: item.count || 1,
+    },
+  }))
+
+  const shadowTokens = (result.shadows || []).slice(0, 12).map((item, index) => ({
+    value: item.shadow,
+    label: `Dembrandt shadow ${index + 1}`,
+    sampleCount: item.count || 1,
+    componentKinds: ['card', 'button', 'surface'] as ComponentKind[],
+    evidenceScore: 90,
+    meta: {
+      source: 'dom-computed' as const,
+      confidence: dembrandtConfidence(item.confidence),
+      evidenceCount: item.count || 1,
+    },
+  }))
+
+  const spacingTokens = (result.spacing?.commonValues || []).slice(0, 12).map((item, index) => ({
+    value: item.display || `${item.px}px`,
+    label: `Dembrandt spacing ${index + 1}`,
+    sampleCount: item.count || 1,
+    componentKinds: ['section', 'button', 'surface'] as ComponentKind[],
+    evidenceScore: 90,
+    meta: {
+      source: 'dom-computed' as const,
+      confidence: 'high' as const,
+      evidenceCount: item.count || 1,
+    },
+  }))
+
+  const colorCandidates = (result.colors?.palette || []).slice(0, 18).map(item => ({
+    hex: (item.normalized || item.color).toUpperCase(),
+    property: item.isToken ? 'css-variable' : 'computed-color',
+    count: item.count || 1,
+    roleHints: [item.role || 'other'],
+    layerHints: ['global' as const],
+    componentKinds: ['surface' as const],
+    evidenceScore: item.score || 90,
+    meta: {
+      source: 'dom-computed' as const,
+      confidence: dembrandtConfidence(item.confidence),
+      evidenceCount: item.count || 1,
+    },
+  }))
+
+  const buttonSnapshots = buildButtonSnapshotsFromDembrandt(result)
+  const inputSnapshots = buildInputSnapshotsFromDembrandt(result)
+  const tagSnapshots = buildTagSnapshotsFromDembrandt(result)
+  const transitionTokens = buildTransitionTokensFromDembrandt(result)
+  const borderTokens = buildBorderTokensFromDembrandt(result)
+  const stateTokens = buildStateTokensFromDembrandt(result) || {}
+  const stateItems: StateTokenValue[] = Object.values(stateTokens).flatMap((items): StateTokenValue[] => items || [])
+  const totalEvidenceCount = colorCandidates.length + typographyTokens.length + radiusTokens.length + shadowTokens.length + spacingTokens.length + borderTokens.length + transitionTokens.length + buttonSnapshots.length + inputSnapshots.length + tagSnapshots.length
+
+  return {
+    colorCandidates,
+    semanticColorSystem: buildSemanticColorSystemFromDembrandt(result),
+    typographyCandidates: typographyTokens.map(token => ({
+      fontFamily: token.fontFamily,
+      fontSize: token.fontSize,
+      fontWeight: token.fontWeight,
+      lineHeight: token.lineHeight,
+      letterSpacing: token.letterSpacing,
+      count: token.sampleCount,
+      componentKinds: token.componentKinds,
+      evidenceScore: token.evidenceScore,
+      meta: token.meta,
+    })),
+    typographyTokens,
+    radiusCandidates: radiusTokens.map(token => token.value),
+    radiusTokens,
+    shadowCandidates: shadowTokens.map(token => token.value),
+    shadowTokens,
+    spacingCandidates: spacingTokens.map(token => token.value),
+    spacingTokens,
+    layoutHints: previous?.layoutHints || [],
+    layoutEvidence: [
+      ...(previous?.layoutEvidence || []),
+      ...((result.breakpoints || []).map(item => ({
+        label: `Breakpoint ${item.px}px`,
+        kind: 'section' as const,
+        sampleCount: 1,
+        componentKinds: ['section' as const],
+        evidenceScore: 80,
+        meta: {
+          source: 'dom-computed' as const,
+          confidence: 'high' as const,
+          evidenceCount: 1,
+        },
+      }))),
+    ],
+    stateTokens,
+    borderTokens,
+    transitionTokens,
+    pageMaxWidth: result.breakpoints?.[0]?.px ? `${result.breakpoints[0].px}px` : previous?.pageMaxWidth,
+    gridColumns: previous?.gridColumns,
+    buttonSnapshot: buttonSnapshots[0],
+    buttonSnapshots,
+    inputSnapshots,
+    cardSnapshots: previous?.cardSnapshots || [],
+    tagSnapshots,
+    navigationSnapshots: previous?.navigationSnapshots || [],
+    pageSections: previous?.pageSections || [],
+    viewportSlices: previous?.viewportSlices || [],
+    cssTextExcerpt: previous?.cssTextExcerpt,
+    evidenceSummary: {
+      overallConfidence: totalEvidenceCount > 0 ? 'high' : 'medium',
+      totalEvidenceCount,
+      sourceBreakdown: { 'dom-computed': totalEvidenceCount },
+      confidenceBreakdown: { high: totalEvidenceCount },
+      notes: ['Dembrandt native extraction'],
+    },
+    coverageSummary: {
+      overallCoverage: 100,
+      coveredAreas: ['color', 'typography', 'radius', 'shadow', 'spacing', 'layout', 'interaction', 'components'],
+      missingAreas: [],
+      notes: ['URL report uses Dembrandt native tokens as the primary source.'],
+    },
+    colorEvidenceAttribution: previous?.colorEvidenceAttribution,
+    componentEvidence: previous?.componentEvidence,
+    qualityGate: previous?.qualityGate,
+    interactionSummary: {
+      hasInteractiveSignals: transitionTokens.length > 0 || stateItems.length > 0,
+      measuredStates: Array.from(new Set(stateItems.map(item => item.state))),
+      componentKinds: ['button', 'input', 'link'],
+      transitionCount: transitionTokens.length,
+      notes: result.motion?.interactiveDeltas?.map(item => item.pattern).slice(0, 3),
+    },
+    auditSummary: previous?.auditSummary,
+    sourceCount: previous?.sourceCount || { inlineStyleBlocks: 0, linkedStylesheets: 0 },
+  }
+}
+
 export function applyDembrandtExtraction(report: StyleReport, result: BrandingResult): StyleReport {
   const findings = computeFindings(result)
   const wcag = result.wcag || []
+  const dembrandtPageAnalysis = buildPageAnalysisFromDembrandt(result, report.pageAnalysis)
 
   return {
     ...report,
     dembrandtResult: result,
     colors: result.colors?.palette?.map(buildColorTokenFromDembrandt) || report.colors,
     colorSystem: buildSemanticColorSystemFromDembrandt(result),
+    gradients: result.gradients?.map(item => ({
+      css: item.gradient,
+      description: `Dembrandt ${item.type} gradient`,
+    })) || report.gradients,
     typography: buildTypographyFromDembrandt(result),
     designDetails: buildDesignDetailsFromDembrandt(result),
-    pageAnalysis: report.pageAnalysis
+    pageAnalysis: dembrandtPageAnalysis
       ? {
-          ...report.pageAnalysis,
+          ...dembrandtPageAnalysis,
           auditSummary: {
-            ...report.pageAnalysis.auditSummary,
+            ...dembrandtPageAnalysis.auditSummary,
             designSystem: {
               status: findings.findings.length > 0 && findings.findings.some(item => item.severity === 'error') ? 'failed' : 'completed',
               summary: findings.findings.length > 0
